@@ -52,6 +52,7 @@ import lifeCycles from "./science-life-cycles";
 import lifeCyclesEs from "./science-life-cycles-es";
 import energy from "./science-energy";
 import waterCycle from "./science-water-cycle";
+import waterCycleEs from "./science-water-cycle-es";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -107,4 +108,5 @@ export const REGISTRY: CatalogueEntry[] = [
   lifeCyclesEs,
   energy,
   waterCycle,
+  waterCycleEs,
 ];
