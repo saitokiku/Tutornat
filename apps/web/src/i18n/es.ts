@@ -2012,6 +2012,7 @@ const es: Record<Key, string> = {
   "tut.demo.skillYoung": "Vamos con {skill}. Aquí hay uno hecho para ti. Toca Empezar para probar algunos.",
   "tut.demo.hintWorked": "Mira el paso 1 del ejemplo resuelto en la pizarra. Haz ese mismo paso en el tuyo.",
   "tut.label.ai": "Respuestas escritas por IA",
+  "tut.demo.noSimilar": "No tengo otro parecido para resolver. Pide una pista o empieza la práctica: explica cada problema paso a paso.",
 };
 
 export default es;

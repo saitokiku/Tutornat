@@ -1,5 +1,6 @@
 import { tool, type UIMessage } from "ai";
 import { z } from "zod";
+import { similarItem } from "@/components/tutor/similar";
 import { standardUrl, wiktionaryUrl } from "@/components/tutor/sources";
 import { audiobooks, cleanQuery, define, poemsBy, poemTitled, searchBooks, shortPoems, standardText, wikiSummary } from "@/knowledge";
 import type { Grade } from "@/lib/types";
@@ -80,7 +81,9 @@ export function tutorTools(ctx: TutorContext, history: { hintsGiven?: number } =
       execute: async ({ skillId }) => {
         const id = skillId && getSkill(skillId) ? skillId : ctx.item?.skillId;
         if (!id || !getSkill(id)) return { problem: null };
-        const item = makeItem(id, ctx.item?.skillId === id ? ctx.item.level : 1, randomSeed(), ctx.locale);
+        // Never the learner's own problem again: its worked steps would give their answer away.
+        const item = similarItem(id, ctx.item?.skillId === id ? ctx.item.level : 1, ctx.locale, randomSeed(), { item: current() });
+        if (!item) return { problem: null, note: "No different problem of this kind. Give the next hint instead." };
         return { skillId: id, level: item.level, seed: item.seed, problem: item.say, steps: item.steps };
       },
     }),

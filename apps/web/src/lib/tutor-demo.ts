@@ -5,10 +5,11 @@ import { addDays, fromLocalDate } from "@/planner/dates";
 import { readSchoolText } from "@/planner/intake";
 import { matchSkills, sameWord, tokens } from "@/planner/skillmatch";
 import type { EventKind } from "@/planner/types";
-import { getSkill, makeItem, SKILLS } from "@/practice/skills";
+import { getSkill, SKILLS } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { linkOf, resourcesFor } from "@/resources";
 import type { BoardCard } from "./tutor";
+import { similarItem } from "@/components/tutor/similar";
 import { wiktionaryUrl } from "@/components/tutor/sources";
 import type { Grade, Locale, Scene } from "./types";
 
@@ -325,7 +326,11 @@ const definitionCard = (word: string, defs: Definition[]): BoardCard => ({
   url: wiktionaryUrl(defs[0]?.word ?? word),
 });
 const practiceCard = (skillId: string): BoardCard => ({ type: "practice", skillId });
-const workedCard = (skillId: string, ctx: DemoContext, level = 1): BoardCard => ({ type: "worked", item: makeItem(skillId, level, ctx.seed(), ctx.locale) });
+/** One like it, worked out: never the problem on screen, nor one with the numbers the learner typed. */
+const workedCard = (skillId: string, ctx: DemoContext, level = 1, typed?: string): BoardCard[] => {
+  const item = similarItem(skillId, level, ctx.locale, ctx.seed(), { item: ctx.item, typed });
+  return item ? [{ type: "worked", item }] : [];
+};
 const sourcesCard = (ctx: DemoContext, topic: string, skillId?: string): BoardCard[] => {
   const list = resourcesFor({ skillId, topic, grade: skillId ? undefined : ctx.grade, locale: ctx.locale }).slice(0, 3);
   return list.length ? [{ type: "resources", list: list.map((r) => ({ title: r.title, source: r.source, url: linkOf(r, ctx.locale) })) }] : [];
@@ -406,7 +411,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       const skill = getSkill(ask.skillId)!;
       return {
         text: say("tut.demo.problem", { skill: skill.title[l] }),
-        cards: [workedCard(ask.skillId, ctx), practiceCard(ask.skillId)],
+        cards: [...workedCard(ask.skillId, ctx, 1, text), practiceCard(ask.skillId)],
         state: next({ skillId: ask.skillId, topic: skill.title[l] }, ["similar"]),
       };
     }
@@ -415,7 +420,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       // is ours, not a topic, so it is not looked up on Wikipedia.
       const skill = getSkill(ask.skillId)!;
       const lesson = lessonFor(skill.title[l], ctx.grade, l);
-      const shown: BoardCard[] = [...(lesson ? [lesson] : []), workedCard(ask.skillId, ctx)];
+      const shown: BoardCard[] = [...(lesson ? [lesson] : []), ...workedCard(ask.skillId, ctx)];
       const cards = young(ctx.grade) ? [practiceCard(ask.skillId), ...shown] : [...shown, practiceCard(ask.skillId)];
       return {
         text: say(young(ctx.grade) ? "tut.demo.skillYoung" : "tut.demo.skill", { skill: skill.title[l] }),
@@ -427,21 +432,32 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
 
   // With a problem on screen: its own vetted hints and steps, and problems like it worked out.
   if (item) {
+    // The first worked step, unless it is the whole solution (one-step problems: "3 and 1 make 4") and
+    // they haven't tried yet; then the next vetted hint instead, or a nudge to try.
+    const firstStep = (): DemoTurn => {
+      if (item.steps.length > 1 || state.tries > 0) return { text: item.steps[0], cards: [], state: next({}, ["step"]) };
+      if (state.hintsGiven < item.hints.length) return { text: item.hints[state.hintsGiven], cards: [], state: next({ hintsGiven: state.hintsGiven + 1 }, ["step"]) };
+      return { text: say("tutor.demo.tryFirst"), cards: [], state: next({}, ["step"]) };
+    };
     switch (ask.kind) {
       case "hint": {
         if (state.hintsGiven >= item.hints.length) return { text: say("tutor.demo.noMoreHints"), cards: [], state };
         return { text: item.hints[state.hintsGiven], cards: [], state: next({ hintsGiven: state.hintsGiven + 1 }) };
       }
-      case "similar":
-        return { text: say("tutor.demo.similar"), cards: [workedCard(item.skillId, ctx, item.level)], state: next({}, ["similar"]) };
+      case "similar": {
+        const worked = workedCard(item.skillId, ctx, item.level);
+        if (!worked.length) return { text: say("tut.demo.noSimilar"), cards: [], state };
+        return { text: say("tutor.demo.similar"), cards: worked, state: next({}, ["similar"]) };
+      }
       case "answer":
         return { text: state.tries < 1 ? say("tutor.demo.tryFirst") : say("tutor.demo.showHow"), cards: [], state };
       case "step":
-        return { text: item.steps[0], cards: [], state: next({}, ["step"]) };
+        return firstStep();
       case "different": {
         if (item.visual && !shown("visual")) return { text: say("tut.demo.picture"), cards: [{ type: "visual", visual: item.visual, description: item.alt ?? "" }], state: next({}, ["visual"]) };
-        if (!shown("similar")) return { text: say("tutor.demo.similar"), cards: [workedCard(item.skillId, ctx, item.level)], state: next({}, ["similar"]) };
-        if (!shown("step")) return { text: item.steps[0], cards: [], state: next({}, ["step"]) };
+        const worked = shown("similar") ? [] : workedCard(item.skillId, ctx, item.level);
+        if (worked.length) return { text: say("tutor.demo.similar"), cards: worked, state: next({}, ["similar"]) };
+        if (!shown("step")) return firstStep();
         return { text: say("tutor.demo.showHow"), cards: [], state };
       }
       default:
@@ -452,7 +468,11 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
   // An open conversation that has turned to a skill or topic.
   switch (ask.kind) {
     case "similar":
-      if (state.skillId) return { text: say("tutor.demo.similar"), cards: [workedCard(state.skillId, ctx)], state: next({}, ["similar"]) };
+      if (state.skillId) {
+        const worked = workedCard(state.skillId, ctx);
+        if (worked.length) return { text: say("tutor.demo.similar"), cards: worked, state: next({}, ["similar"]) };
+        return { text: say("tut.demo.noSimilar"), cards: [practiceCard(state.skillId)], state };
+      }
       return { text: say("tut.demo.hintTalk"), cards: [], state };
     case "hint":
       // After a worked example, the next nudge is its first step, done the same way on their own problem.
@@ -463,7 +483,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       const skillId = state.skillId ?? skills[0];
       return {
         text: say("tut.demo.homeworkStart"),
-        cards: skillId ? [workedCard(skillId, ctx), practiceCard(skillId)] : [],
+        cards: skillId ? [...workedCard(skillId, ctx), practiceCard(skillId)] : [],
         state: skillId ? next({ skillId }, ["similar"]) : state,
       };
     }
@@ -475,7 +495,8 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
         const defs = await sensesOf(fetchers, topic);
         if (defs.length) return { text: say("tut.demo.define", { word: topic }), cards: [definitionCard(topic, defs)], state: next({}, ["definition"]) };
       }
-      if (state.skillId && !shown("similar")) return { text: say("tutor.demo.similar"), cards: [workedCard(state.skillId, ctx)], state: next({}, ["similar"]) };
+      const worked = state.skillId && !shown("similar") ? workedCard(state.skillId, ctx) : [];
+      if (worked.length) return { text: say("tutor.demo.similar"), cards: worked, state: next({}, ["similar"]) };
       return { text: say("tut.demo.noMore"), cards: state.skillId ? [practiceCard(state.skillId)] : [], state };
     }
   }

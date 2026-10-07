@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import type { Book, Definition, Poem, WikiSummary } from "@/knowledge";
+import { sameProblem } from "@/components/tutor/similar";
 import { makeItem } from "@/practice/skills";
 import type { BoardCard } from "./tutor";
 import { aboutIn, askOf, dateIn, demoAnswer, demoOpening, demoPhoto, lessonFor, problemSkill, skillTitled, topicOf, type DemoContext, type DemoFetchers, type DemoState } from "./tutor-demo";
@@ -278,6 +279,27 @@ describe("the demo tutor beside a problem", () => {
       state = r.state;
     }
     expect(kinds).toEqual(withVisual.visual ? ["visual", "worked", "step"] : ["worked", "step", "text"]);
+  });
+
+  it("a similar one is never the learner's own problem, even when the seed would draw it", async () => {
+    const mine = makeItem("m.count.10", 1, 1, "en");
+    const collide = Array.from({ length: 200 }, (_, i) => i + 2).find((s) => sameProblem(makeItem("m.count.10", 1, s, "en"), mine))!;
+    expect(collide).toBeDefined();
+    const k = ctx({ item: mine, grade: "K", seed: () => collide });
+    const r = await demoAnswer("Show a similar one", k, demoOpening(k).state, fakes());
+    expect(r.cards[0].type).toBe("worked");
+    expect(sameProblem((r.cards[0] as { item: typeof mine }).item, mine)).toBe(false);
+  });
+
+  it("never gives a one-step solution as “the first step” before a try", async () => {
+    const one = Array.from({ length: 50 }, (_, i) => makeItem("m.add.5", 1, i + 1, "en")).find((x) => x.steps.length === 1)!;
+    const k = ctx({ item: one, grade: "K" });
+    const opened = demoOpening(k).state; // the opening gave hint 1
+    const r = await demoAnswer("Explain the first step", k, opened, fakes());
+    expect(r.text).not.toBe(one.steps[0]);
+    expect(r.text).toBe(one.hints[1]);
+    const after = await demoAnswer("Explain the first step", k, { ...opened, tries: 1 }, fakes());
+    expect(after.text).toBe(one.steps[0]);
   });
 
   it("a photo in demo mode says it needs the AI tutor and asks for the problem typed", () => {

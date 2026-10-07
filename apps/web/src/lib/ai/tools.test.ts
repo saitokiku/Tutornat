@@ -4,10 +4,11 @@ import { readUIMessageStream, simulateReadableStream, type UIMessage, type UIMes
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cardsOf, skillsIn } from "@/components/tutor/cards";
+import { sameProblem } from "@/components/tutor/similar";
 import { clearKnowCache } from "@/knowledge/fetch";
 import type { TutorContext } from "./context";
 import { makeItem } from "@/practice/skills";
-import { hintsGiven, knowledgeTools } from "./tools";
+import { hintsGiven, knowledgeTools, tutorTools } from "./tools";
 import { tutorTurn } from "./tutor";
 
 // Each knowledge tool, called by a mock model, runs against stubbed sources and ends up as a board card
@@ -163,6 +164,18 @@ describe("the hint ladder across turns", () => {
     expect(second.output?.hint).toBe(item.hints[1]);
     expect(hintsGiven([first.m, again])).toBe(2);
     expect(JSON.stringify(prompts[0])).not.toContain(JSON.stringify(item.answer)); // no key in what the model sees
+  });
+});
+
+describe("similar_problem", () => {
+  it("never works out the learner's own problem (small skills repeat about one draw in four)", async () => {
+    const practice: TutorContext = { locale: "en", grade: "K", surface: "practice", item: { skillId: "m.count.10", level: 1, seed: 1 }, tries: 0 };
+    const mine = makeItem("m.count.10", 1, 1, "en");
+    const tools = tutorTools(practice);
+    for (let i = 0; i < 60; i++) {
+      const out = (await tools.similar_problem.execute!({}, { toolCallId: `s${i}`, messages: [] } as never)) as { skillId: string; level: number; seed: number };
+      expect(sameProblem(makeItem(out.skillId, out.level, out.seed, "en"), mine)).toBe(false);
+    }
   });
 });
 

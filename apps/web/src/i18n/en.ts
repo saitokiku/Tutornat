@@ -2010,6 +2010,7 @@ const en = {
   "tut.demo.skillYoung": "Let's do {skill}. Here is one done for you. Tap Start to try some.",
   "tut.demo.hintWorked": "Look at step 1 of the worked example on the board. Do that same step on yours.",
   "tut.label.ai": "Replies written by AI",
+  "tut.demo.noSimilar": "I don't have a different one like it to work out. Ask for a hint, or start the practice: it explains each problem step by step.",
 } as const;
 
 export default en;
