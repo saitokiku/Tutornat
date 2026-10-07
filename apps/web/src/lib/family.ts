@@ -63,19 +63,24 @@ export function weekFacts(s: StoreState, profileId: string, now: number): WeekFa
 }
 
 /**
- * The last time the learner did anything here: an answer, time with the tutor, a lesson, a plan line
- * marked done, or reading a grown-up logged. Adding a course is not doing something.
+ * The last time the learner did anything here, up to `now`: an answer, time with the tutor, a lesson,
+ * a plan line marked done, or reading a grown-up logged. Adding a course is not doing something.
  */
-export function lastActive(s: StoreState, profileId: string): number | undefined {
+export function lastActive(s: StoreState, profileId: string, now = Infinity): number | undefined {
   let last: number | undefined;
   const see = (t: number | undefined) => {
-    if (t !== undefined && (last === undefined || t > last)) last = t;
+    if (t !== undefined && t <= now && (last === undefined || t > last)) last = t;
   };
   for (const a of s.attempts) if (a.profileId === profileId) see(a.at);
   for (const e of s.activity) if (e.profileId === profileId && e.type !== "course_added") see(e.at);
   for (const d of s.planDone) if (d.profileId === profileId) see(d.at);
   for (const th of s.threads) if (th.profileId === profileId) see(th.lines.at(-1)?.at ?? th.startedAt);
-  for (const r of s.reading) if (r.profileId === profileId) see(fromLocalDate(r.date).getTime());
+  // Reading is logged by calendar day (read as noon); reading logged for today counts from now.
+  for (const r of s.reading) {
+    if (r.profileId !== profileId) continue;
+    const at = fromLocalDate(r.date).getTime();
+    see(at > now && r.date === localDate(now) ? now : at);
+  }
   return last;
 }
 

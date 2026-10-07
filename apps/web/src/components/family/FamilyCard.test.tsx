@@ -71,7 +71,7 @@ describe("FamilyCard", () => {
   it("hands the device to the child from the keyboard", async () => {
     seed();
     render(<FamilyCard child={ada} now={NOW} />);
-    const open = screen.getByRole("link", { name: "Open Ada's dashboard" });
+    const open = screen.getAllByRole("link", { name: "Open Ada's Today" }).at(-1)!;
     open.focus();
     await userEvent.keyboard("{Enter}");
     expect(read().session.profileId).toBe("ada");

@@ -33,7 +33,7 @@ export function FamilyCard({ child, now }: { child: Profile; now: number }) {
       facts: weekFacts(s, child.id, now),
       plan: todayPlan(s, child, now),
       nudges: nudgesFor(s, child.id, now),
-      last: lastActive(s, child.id),
+      last: lastActive(s, child.id, now),
       help: neededHelp(s.activity.filter((e) => e.profileId === child.id), startOfWeek(now)),
     }),
     [s, child, now],
@@ -58,7 +58,8 @@ export function FamilyCard({ child, now }: { child: Profile; now: number }) {
     ...facts.helpOn.map(skill),
     ...help.slice(0, 3).map((e) => {
       const { course, lesson } = findLesson(courses, e.courseId, e.lessonId);
-      return lesson?.title ?? course?.title ?? "";
+      const title = lesson?.title ?? course?.title;
+      return title ? `“${title}”` : "";
     }),
   ].filter(Boolean);
 
@@ -99,14 +100,14 @@ export function FamilyCard({ child, now }: { child: Profile; now: number }) {
                 t("fam.todayNone")
               ) : (
                 <>
-                  <span className="font-opmono tabular-nums">{t("plan.progress", { done: plan.doneCount, total: items.length })}</span>
+                  {t("plan.progress", { done: plan.doneCount, total: items.length })}
                   {" · "}
                   {next ? t("child.nextUp", { what: itemTitle(next, locale) }) : t("fam.todayDone")}
                 </>
               )}
             </p>
             <Link href="/home" onNavigate={handover} className={btn("secondary", "sm", "min-h-11")}>
-              {t("family.openAs", { name: child.nickname })}
+              {t("fam.act.today", { name: child.nickname })}
             </Link>
           </div>
         </section>
@@ -120,7 +121,7 @@ export function FamilyCard({ child, now }: { child: Profile; now: number }) {
           ) : (
             <dl className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {figures.map(([label, n]) => (
-                <div key={label} className="flex min-w-0 flex-col-reverse rounded-sm bg-panel2 px-3 py-2">
+                <div key={label} className="flex min-w-0 flex-col-reverse justify-end rounded-sm bg-panel2 px-3 py-2">
                   <dt className="text-xs leading-tight text-muted">{t(label)}</dt>
                   <dd className="font-opmono text-t2 font-semibold tabular-nums text-ink">{n}</dd>
                 </div>

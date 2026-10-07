@@ -51,8 +51,12 @@ async function seed(page: Page, opts: Seed) {
   );
 }
 
-const actsFor = (page: Page, learnerId: string) =>
-  page.evaluate(({ key, learnerId }) => JSON.parse(localStorage.getItem(key)!).acts.filter((a: { profileId: string }) => a.profileId === learnerId), { key: STORE, learnerId });
+/** Nudge acts recorded for a learner (other screens log their own kinds of act). */
+const nudgeActs = (page: Page, learnerId: string) =>
+  page.evaluate(
+    ({ key, learnerId }) => JSON.parse(localStorage.getItem(key)!).acts.filter((a: { profileId: string; kind: string }) => a.profileId === learnerId && a.kind === "nudge"),
+    { key: STORE, learnerId },
+  );
 
 test("a test in two days with no prep: the family card says so, and its link opens the test", async ({ page }) => {
   const errors = collectErrors(page);
@@ -67,10 +71,8 @@ test("a test in two days with no prep: the family card says so, and its link ope
   await noOverflow(page);
   await audit(page, "family-with-nudge");
 
-  // Shown to a grown-up = one nudge act for the child, waiting for its outcome.
-  const acts = await actsFor(page, learnerId);
-  expect(acts).toEqual([expect.objectContaining({ kind: "nudge", intent: "parent-acts", ref: `prep:${eventId}`, detail: "prep" })]);
-  expect(acts[0].outcome).toBeUndefined();
+  // Shown to a grown-up = one nudge act for the child; its outcome comes later, from the evidence.
+  expect(await nudgeActs(page, learnerId)).toEqual([expect.objectContaining({ kind: "nudge", intent: "parent-acts", ref: `prep:${eventId}`, detail: "prep" })]);
 
   await card.getByRole("link", { name: "Open the test" }).click();
   await expect(page).toHaveURL(new RegExp(`/calendar/${eventId}$`));
@@ -85,7 +87,8 @@ test("nothing done for days: the nudge hands the device to the child's Today", a
   await asParent(page);
   const card = page.getByRole("article", { name: "Ada" });
   await expect(card.getByText("Ada hasn't done anything here for 6 days.")).toBeVisible();
-  await card.getByRole("link", { name: "Open Ada's Today" }).click();
+  // The nudge's own link (the card's Today row has the same one).
+  await card.getByRole("listitem").filter({ hasText: "hasn't done anything here" }).getByRole("link", { name: "Open Ada's Today" }).click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("heading", { level: 1, name: "Hi, Ada" })).toBeVisible();
   expect(errors, errors.join("\n")).toEqual([]);
@@ -104,7 +107,7 @@ test("nudges never reach the child", async ({ page }) => {
     await expect(page.getByText("no prep set is finished yet", { exact: false })).toHaveCount(0);
     await expect(page.getByText("hasn't done anything here", { exact: false })).toHaveCount(0);
   }
-  expect(await actsFor(page, learnerId)).toEqual([]);
+  expect(await nudgeActs(page, learnerId)).toEqual([]);
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
@@ -128,9 +131,10 @@ test("Growth replays the record week by week; the grown-up sees the detail and t
   await expect(table).toBeVisible();
   await expect(table.getByRole("row", { name: /^This week 1 0 0/ })).toBeVisible();
 
-  await math.getByText(/^Skills \(1\)$/).click();
-  await expect(math.getByText("Add within 5")).toBeVisible();
-  await expect(math.getByText(/^Proved/)).toBeVisible();
+  await math.getByText("Skills (1)").click();
+  const skill = math.getByRole("listitem").filter({ hasText: "Add within 5" });
+  await expect(skill).toBeVisible();
+  await expect(skill).toContainText("Proved");
   await noOverflow(page);
   await audit(page, "growth-parent");
 

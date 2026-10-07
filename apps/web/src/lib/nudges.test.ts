@@ -182,6 +182,14 @@ describe("nudge: nothing done in five days", () => {
     expect(idle(state({ activity: [lesson(fiveDaysAgo), added] }))).toHaveLength(1);
   });
 
+  it("ignores anything dated after now; reading logged for today counts from now", () => {
+    const morning = new Date(2026, 9, 7, 8).getTime();
+    const ahead = { id: "r1", profileId: "ada", date: addDays(TODAY, 1), title: "Logged ahead", minutes: 10 };
+    const today = { id: "r2", profileId: "ada", date: TODAY, title: "This morning", minutes: 10 };
+    expect(lastActive(state({ reading: [ahead, today] }), "ada", morning)).toBe(morning);
+    expect(lastActive(state({ reading: [ahead] }), "ada", morning)).toBeUndefined();
+  });
+
   it("counts reading, the tutor and plan lines marked done as doing something", () => {
     const s = (patch: Partial<StoreState>) => state({ activity: [lesson(fiveDaysAgo)], ...patch });
     expect(idle(s({ reading: [{ id: "r", profileId: "ada", date: addDays(TODAY, -1), title: "Frog and Toad", minutes: 20 }] }))).toEqual([]);

@@ -68,7 +68,7 @@ export function nudgesFor(s: StoreState, profileId: string, now: number): Nudge[
   }
 
   // Nothing done for a while (counting from when the learner was added, if never).
-  const since = localDate(lastActive(s, profileId) ?? profile.createdAt);
+  const since = localDate(lastActive(s, profileId, now) ?? profile.createdAt);
   const idle = daysBetween(since, today);
   if (idle >= NUDGE_RULES.idleDays) out.push({ key: `idle:${since}`, kind: "idle", days: idle, action: TODAY });
 

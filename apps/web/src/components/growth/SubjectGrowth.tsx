@@ -22,8 +22,9 @@ export function SubjectGrowth({ growth, statuses, results, detail, now }: { grow
   const name = t(`subject.${subject}`);
   const id = `growth-${subject}`;
   const last = weeks[weeks.length - 1];
-  const skills = subject !== "other";
   const touched = weeks.some((w) => w.proved + w.ready + w.practicing > 0);
+  // Skill columns and the checks figure only where skills were practiced; lessons and time always.
+  const skills = subject !== "other" && touched;
   const label = t("fam.chart", { subject: name, weeks: weeks.length, from: weeks[0].proved, to: last.proved, ready: last.ready, practicing: last.practicing });
 
   return (
@@ -32,7 +33,7 @@ export function SubjectGrowth({ growth, statuses, results, detail, now }: { grow
         <SubjectDot subject={subject} /> {name}
       </h2>
 
-      {skills &&
+      {subject !== "other" &&
         (touched ? (
           <div className="space-y-3">
             <WeekChart weeks={weeks} label={label} />
@@ -69,8 +70,8 @@ export function SubjectGrowth({ growth, statuses, results, detail, now }: { grow
         )}
       </div>
 
-      <WeekTable growth={growth} name={name} />
-      {detail && skills && <SkillList statuses={statuses} subject={subject} now={now} />}
+      <WeekTable growth={growth} name={name} skills={skills} />
+      {detail && subject !== "other" && <SkillList statuses={statuses} subject={subject} now={now} />}
       {detail && results.length > 0 && <SchoolResults rows={results} />}
     </section>
   );
@@ -78,7 +79,7 @@ export function SubjectGrowth({ growth, statuses, results, detail, now }: { grow
 
 function Figure({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col-reverse rounded-sm bg-panel2 px-3 py-2">
+    <div className="flex min-w-0 flex-col-reverse justify-end rounded-sm bg-panel2 px-3 py-2">
       <dt className="text-xs leading-tight text-muted">{label}</dt>
       <dd className="font-opmono text-t2 font-semibold tabular-nums text-ink">{children}</dd>
     </div>
@@ -100,18 +101,17 @@ export function Disclosure({ summary, children }: { summary: ReactNode; children
   );
 }
 
-function WeekTable({ growth, name }: { growth: Growth; name: string }) {
+function WeekTable({ growth, name, skills }: { growth: Growth; name: string; skills: boolean }) {
   const t = useT();
   const locale = useLocale();
-  const skills = growth.subject !== "other";
   const reading = growth.subject === "english";
   const caption = t("fam.tableCaption", { subject: name });
-  const num = "px-3 py-2 text-right font-opmono tabular-nums";
+  const num = "whitespace-nowrap px-3 py-2 text-right font-opmono tabular-nums";
   return (
     <Disclosure summary={t("fam.byWeek")}>
       {/* Scrolls sideways inside its own box on a phone; the page itself never does. */}
       <div role="region" aria-label={caption} tabIndex={0} className="overflow-x-auto">
-        <table className="w-full min-w-xl text-sm">
+        <table className="w-full min-w-2xl text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead>
             <tr className="border-b border-border text-xs text-muted">

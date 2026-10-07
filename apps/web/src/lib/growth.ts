@@ -89,7 +89,9 @@ export function gradedChecks(attempts: Attempt[]): GradedCheck[] {
   for (const a of attempts) {
     if (a.mode !== "check") continue;
     const key = `${a.skillId}|${a.setId ?? a.id}`;
-    bySet.set(key, [...(bySet.get(key) ?? []), a]);
+    const list = bySet.get(key);
+    if (list) list.push(a);
+    else bySet.set(key, [a]);
   }
   return [...bySet.values()]
     .filter((list) => list.length >= RULES.checkSize)
@@ -111,7 +113,11 @@ export function lessonTallies(events: ActivityEvent[]): Map<string, Tally> {
   const out = new Map<string, Tally>();
   for (const e of [...events].sort((a, b) => a.at - b.at)) {
     const key = `${e.courseId}|${e.lessonId}`;
-    if (e.type === "quiz_answered") open.set(key, [...(open.get(key) ?? []), e]);
+    if (e.type === "quiz_answered") {
+      const list = open.get(key);
+      if (list) list.push(e);
+      else open.set(key, [e]);
+    }
     if (e.type === "lesson_completed") {
       out.set(e.id, tally(open.get(key) ?? []));
       open.delete(key);
@@ -164,7 +170,12 @@ export function weeklyGrowth(s: StoreState, profileId: string, now: number, coun
 
   // 1. Replay the mastery law at each week's end over the evidence up to then.
   const bySkill = new Map<string, Attempt[]>();
-  for (const a of attempts) if (getSkill(a.skillId)) bySkill.set(a.skillId, [...(bySkill.get(a.skillId) ?? []), a]);
+  for (const a of attempts) {
+    if (!getSkill(a.skillId)) continue;
+    const list = bySkill.get(a.skillId);
+    if (list) list.push(a);
+    else bySkill.set(a.skillId, [a]);
+  }
   for (const [id, list] of bySkill) {
     const g = out.get(getSkill(id)!.subject)!;
     g.any = true;
@@ -187,7 +198,9 @@ export function weeklyGrowth(s: StoreState, profileId: string, now: number, coun
 
   // 3. Minutes: practice answers and finished lessons. Tutor help rows are marks, not time.
   const seconds = new Map<GrowthWeek, number>();
-  const addTime = (w: GrowthWeek | null, n: number) => w && seconds.set(w, (seconds.get(w) ?? 0) + n);
+  const addTime = (w: GrowthWeek | null, n: number) => {
+    if (w) seconds.set(w, (seconds.get(w) ?? 0) + n);
+  };
   for (const a of attempts) {
     if (a.mode === "tutor") continue;
     const x = subject.attempt(a);

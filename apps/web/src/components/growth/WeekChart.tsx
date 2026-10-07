@@ -18,7 +18,8 @@ export const SERIES: { key: "proved" | "ready" | "practicing"; label: Key; fill:
  */
 export function WeekChart({ weeks, label }: { weeks: GrowthWeek[]; label: string }) {
   const locale = useLocale();
-  const max = Math.max(1, ...weeks.map((w) => w.proved + w.ready + w.practicing));
+  // A floor, so one skill reads as a start rather than a full column.
+  const max = Math.max(4, ...weeks.map((w) => w.proved + w.ready + w.practicing));
   return (
     <div role="img" aria-label={label}>
       <div className="flex h-28 items-end gap-1 border-b border-border sm:gap-2">
