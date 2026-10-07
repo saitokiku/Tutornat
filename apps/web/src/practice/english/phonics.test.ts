@@ -27,6 +27,10 @@ const TABLE: [id: string, grade: string, standard: string, prereqs: string[], le
   ["e.ending.ed", "1", "RF.1.3f", ["e.short.vowels"], 2],
   ["e.ending.ing", "1", "RF.1.3f", ["e.ending.ed"], 2],
   ["e.sight.grade1", "1", "RF.1.3g", ["e.sight.primer"], 2],
+  ["e.r.controlled", "2", "RF.2.3", ["e.vowel.teams"], 2],
+  ["e.diphthongs", "2", "RF.2.3b", ["e.vowel.teams"], 2],
+  ["e.soft.c.g", "2", "RF.2.3e", ["e.short.vowels"], 2],
+  ["e.silent.letters", "2", "RF.2.3e", ["e.digraphs"], 1],
   ["e.sight.grade2", "2", "RF.2.3f", ["e.sight.grade1"], 2],
 ];
 
@@ -36,6 +40,7 @@ const SIGHT = ["e.sight.preprimer", "e.sight.primer", "e.sight.grade1", "e.sight
 /** Levels a pre-reader answers by listening: every choice is a spoken picture. */
 const LISTENING: [string, number][] = [
   ["e.first.sound", 1], ["e.final.sound", 1], ["e.middle.vowel", 1], ["e.word.families", 1], ["e.blend.onset", 1], ["e.sound.swap", 1],
+  ["e.soft.c.g", 1],
 ];
 /** Levels where reading the choices (or finding a letter shape) is the skill: choices are not read aloud. */
 const SILENT: [string, number][] = [
@@ -43,6 +48,7 @@ const SILENT: [string, number][] = [
   ...SIGHT.flatMap((id): [string, number][] => [[id, 1], [id, 2]]),
   ["e.short.vowels", 1], ...READING.flatMap((id): [string, number][] => [[id, 1], [id, 2]]),
   ["e.silent.e", 1], ["e.silent.e", 2], ["e.ending.ed", 2], ["e.ending.ing", 1], ["e.ending.ing", 2],
+  ["e.r.controlled", 1], ["e.r.controlled", 2], ["e.diphthongs", 1], ["e.diphthongs", 2], ["e.soft.c.g", 2], ["e.silent.letters", 1],
 ];
 
 const LOCALES = ["en", "es"] as const;
@@ -394,7 +400,7 @@ describe("answer keys, checked another way (sight words)", () => {
 // ---- Reading patterns: every miss is re-derived from the key and the wrong word ----
 
 const PAIRS = ["sh", "ch", "th", "wh", "ck", "ng", "ll", "rr"];
-const TEAMS = ["ai", "ay", "ee", "ea", "oa", "ow", "oi", "oy", "ou", "au", "aw", "ew", "ue", "ua", "ui", "ie", "ia", "io", "ei", "eu", "oo"];
+const TEAMS = ["ai", "ay", "ee", "ea", "oa", "ow", "oi", "oy", "ou", "au", "aw", "ew", "ue", "ua", "ui", "ie", "ia", "io", "ei", "eu", "oo", "ey", "uy"];
 const isVowel = (c: string) => "aeiou".includes(c);
 /** Every misconception a wrong word could show, worked out from the two spellings. */
 function kinds(key: string, wrong: string): Set<string> {
@@ -412,6 +418,18 @@ function kinds(key: string, wrong: string): Set<string> {
       const put = d.slice(i, d.length - (k.length - i - 2));
       if (d.startsWith(k.slice(0, i)) && d.endsWith(k.slice(i + 2)) && put !== g && TEAMS.includes(put)) out.add("wrong-team");
     }
+  const R = ["ar", "or", "er", "ir", "ur"];
+  for (const g of R)
+    for (let i = k.indexOf(g); i >= 0; i = k.indexOf(g, i + 1)) {
+      const put = d.slice(i, d.length - (k.length - i - 2));
+      if (!d.startsWith(k.slice(0, i)) || !d.endsWith(k.slice(i + 2)) || put === g || !R.includes(put)) continue;
+      out.add(["er", "ir", "ur"].includes(g) && ["er", "ir", "ur"].includes(put) ? "sound-alike-spelling" : "wrong-r-vowel");
+    }
+  for (let i = 0; i < k.length; i++) {
+    if (k.slice(0, i + 1) + k[i] + k.slice(i + 1) === d) out.add("doubled-letter");
+    if ("iy".includes(k[i]) && k.slice(0, i) + (k[i] === "i" ? "y" : "i") + k.slice(i + 1) === d) out.add("sound-alike-spelling");
+  }
+  if (k.length > 2 && (k.slice(0, -1) === d.slice(0, -1) || (d.startsWith(k) && d.length === k.length + 1))) out.add("wrong-ending");
   for (const g of PAIRS)
     for (let i = k.indexOf(g); i >= 0; i = k.indexOf(g, i + 1)) {
       const [before, after] = [k.slice(0, i), k.slice(i + 2)];
@@ -589,5 +607,100 @@ describe("answer keys, checked another way (silent letters and endings)", () => 
           expect(ok, `${inf}: ${d} (${c.why})`).toBe(true);
         }
       }
+  });
+});
+
+describe("answer keys, checked another way (grade 2 reading)", () => {
+  /** How a Spanish spelling sounds (Latin American): qu/k, ce ci z s, ge gi j, b v, silent h. */
+  const esSound = (w: string) =>
+    norm(w)
+      .replace(/qu(?=[ei])/g, "k")
+      .replace(/gu(?=[ei])/g, "G")
+      .replace(/g(?=[ei])/g, "j")
+      .replace(/c(?=[ei])/g, "s")
+      .replace(/c(?!h)/g, "k")
+      .replace(/z/g, "s")
+      .replace(/v/g, "b")
+      .replace(/(?<!c)h/g, "")
+      .replace(/G/g, "g");
+  /** How an English spelling sounds, for soft c and g only. */
+  const enSoft = (w: string) => w.replace(/dge/g, "je").replace(/c(?=[eiy])/g, "s").replace(/g(?=[eiy])/g, "j");
+
+  it("vowels with r and diphthongs: gaps spell the spoken word; every miss is tagged by how it differs", () => {
+    for (const id of ["e.r.controlled", "e.diphthongs"])
+      for (const locale of LOCALES) {
+        for (const q of lv(id, 1, locale)) {
+          const w = q.say.split(".")[0].toLowerCase();
+          const shown = q.prompt.split(" ").at(-1)!;
+          expect(shown.replace("___", key(q)), q.prompt).toBe(w);
+          for (const c of q.choices.slice(1)) expect(kinds(w, shown.replace("___", c.label)).has(c.why!), `${w}: ${c.label} (${c.why})`).toBe(true);
+        }
+        for (const q of lv(id, 2, locale)) {
+          if (q.alt) expect(norm(q.alt).split(" ").at(-1), q.alt).toBe(norm(key(q)));
+          else expect(q.steps[0], q.prompt).toBe(q.prompt.replace("___", key(q)));
+          for (const c of q.choices.slice(1)) expect(kinds(key(q), c.label).has(c.why!), `${key(q)}: ${c.label} (${c.why})`).toBe(true);
+        }
+      }
+    // Spanish r: one r at the start of a word is strong, so it is never doubled there.
+    for (const q of lv("e.r.controlled", 1, "es")) if (q.prompt.split(" ").at(-1)!.startsWith("___")) expect(key(q), q.prompt).toBe("r");
+  });
+
+  it("soft c and g: the read word's letter and the key picture start with the same sound", () => {
+    const EN_FIRST: Record<string, string> = {
+      sun: "s", sock: "s", seal: "s", saw: "s", sea: "s", kite: "k", key: "k", cat: "k", cow: "k", car: "k", cake: "k",
+      jet: "j", jeans: "j", juice: "j", goat: "g", gift: "g", game: "g", girl: "g",
+    };
+    const enRead = (w: string) => (w[0] === "c" ? (/^c[eiy]/.test(w) ? "s" : "k") : /^g[eiy]/.test(w) ? "j" : "g");
+    const EN_TAG: Record<string, string> = { s: "hard-for-soft", j: "hard-for-soft", k: "soft-for-hard", g: "soft-for-hard" };
+    const ES_TAG: Record<string, string> = { s: "k-sound-for-s", k: "s-sound-for-k", j: "g-sound-for-j", g: "j-sound-for-g" };
+    for (const locale of LOCALES)
+      for (const q of lv("e.soft.c.g", 1, locale)) {
+        const w = /: (\S+)\./.exec(q.prompt)![1];
+        const first = (x: string) => (locale === "en" ? EN_FIRST[x] : esSound(x)[0]);
+        const sound = locale === "en" ? enRead(w) : esSound(w)[0];
+        expect(first(key(q)), `${w} → ${key(q)}`).toBe(sound);
+        const near = q.choices[1];
+        expect(first(near.label), `${w} → ${near.label}`).not.toBe(sound);
+        expect(near.why, `${w} → ${near.label}`).toBe((locale === "en" ? EN_TAG : ES_TAG)[sound]);
+        expect(first(q.choices[2].label), `${w} → ${q.choices[2].label}`).not.toBe(sound);
+      }
+    for (const locale of LOCALES)
+      for (const q of lv("e.soft.c.g", 2, locale))
+        for (const c of q.choices.slice(1)) {
+          const [k, d] = [key(q), c.label];
+          const where = `${k}: ${d} (${c.why})`;
+          if (c.why === "sound-alike-spelling") expect(locale === "en" ? enSoft(k) === d : esSound(k) === esSound(d), where).toBe(true);
+          else if (c.why === "hard-for-soft") expect([k.replace(/c(?=[eiy])/, "k"), k.replace(/g(?=[eiy])/, "gu")], where).toContain(d);
+          else if (c.why === "k-sound-for-s") expect(d, where).toBe(k.replace(/c(?=[eiy])/, "k"));
+          else if (c.why === "g-sound-for-j") expect([k.replace(/g(?=[eiy])/, "gu"), k.replace(/j/, "gu")], where).toContain(d);
+          else if (c.why === "s-sound-for-k") expect([k.replace(/c(?=[aou])/, "s"), k.replace(/qu/, "c")], where).toContain(d);
+          else if (c.why === "j-sound-for-g") expect(d, where).toBe(k.replace(/gu(?=[ei])/, "g"));
+          else expect(kinds(k, d).has(c.why!), where).toBe(true);
+        }
+  });
+
+  it("silent letters: the dropped letter is one you do not hear; the u of que, gue and the dieresis follow the rule", () => {
+    const SILENT: Record<string, string> = { knot: "k", write: "w", wrench: "w", thumb: "b", climb: "b", lamb: "b", castle: "t", ghost: "h", island: "s", scissors: "c", rhino: "h", two: "w", walk: "l" };
+    const SAME: Record<string, string> = { sign: "sine", castle: "cassle", rhino: "rhyno", eight: "ate" };
+    for (const q of lv("e.silent.letters", 1, "en"))
+      for (const c of q.choices.slice(1)) {
+        const [k, d] = [key(q), c.label];
+        if (c.why === "dropped-silent-letter") expect(d, k).toBe(k.replace(SILENT[k], ""));
+        else if (c.why === "sound-alike-spelling") expect(SAME[k], k).toBe(d);
+        else expect(kinds(k, d).has(c.why!), `${k}: ${d} (${c.why})`).toBe(true);
+      }
+    for (const q of lv("e.silent.letters", 1, "es")) {
+      const k = key(q);
+      expect(/(qu|gu|gü)[eiéí]/.test(k), k).toBe(true);
+      for (const c of q.choices.slice(1)) {
+        const d = c.label;
+        const where = `${k}: ${d} (${c.why})`;
+        if (c.why === "dropped-silent-letter") expect([k.replace(/(?<=[qg])u(?=[eiéí])/, ""), k.replace(/^h/, "")], where).toContain(d);
+        else if (c.why === "sound-alike-spelling") expect(esSound(d), where).toBe(esSound(k));
+        else if (c.why === "missing-dieresis") expect(d, where).toBe(k.replace("ü", "u"));
+        else if (c.why === "added-dieresis") expect(d, where).toBe(k.replace("gu", "gü"));
+        else expect(kinds(k, d).has(c.why!), where).toBe(true);
+      }
+    }
   });
 });

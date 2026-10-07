@@ -6,6 +6,7 @@ import { ENDING_ED, ENDING_ING } from "./phonics/endings";
 import { SHORT_VOWELS } from "./phonics/grade1a";
 import { BLENDS_FINAL, BLENDS_INITIAL, DIGRAPHS } from "./phonics/grade1b";
 import { SILENT_E, VOWEL_TEAMS } from "./phonics/grade1c";
+import { DIPHTHONGS, R_CONTROLLED, SILENT_LETTERS, SOFT_C_G } from "./phonics/grade2a";
 import { FINAL_SOUND, FIRST_SOUND, LETTER_NAMES } from "./phonics/letters";
 import { SIGHT_GRADE1, SIGHT_GRADE2, SIGHT_PREPRIMER, SIGHT_PRIMER } from "./phonics/sight";
 import { MIDDLE_VOWEL, WORD_FAMILIES } from "./phonics/sounds";
@@ -39,6 +40,10 @@ export const PHONICS_BANKS: Record<string, Entry[][]> = {
   "e.ending.ed": ENDING_ED,
   "e.ending.ing": ENDING_ING,
   "e.sight.grade1": SIGHT_GRADE1,
+  "e.r.controlled": R_CONTROLLED,
+  "e.diphthongs": DIPHTHONGS,
+  "e.soft.c.g": SOFT_C_G,
+  "e.silent.letters": SILENT_LETTERS,
   "e.sight.grade2": SIGHT_GRADE2,
 };
 
@@ -67,5 +72,9 @@ export const ENGLISH_PHONICS: Skill[] = [
   skill({ id: "e.ending.ing", grade: "1", title: { en: "Endings: -ing", es: "Terminaciones: -ando, -iendo" }, standard: "RF.1.3f", prereqs: ["e.ending.ed"] }, bank("e.ending.ing"), [10, 12]),
   skill({ id: "e.sight.grade1", grade: "1", title: { en: "Sight words: grade 1", es: "Palabras frecuentes 3" }, standard: "RF.1.3g", prereqs: ["e.sight.primer"] }, bank("e.sight.grade1"), [6, 15]),
   // Grade 2
+  skill({ id: "e.r.controlled", grade: "2", title: { en: "Vowels with r", es: "La r suave y la r fuerte" }, standard: "RF.2.3", prereqs: ["e.vowel.teams"] }, bank("e.r.controlled"), [10, 12]),
+  skill({ id: "e.diphthongs", grade: "2", title: { en: "Diphthongs: oi, oy, ou, ow", es: "Diptongos con i y con y" }, standard: "RF.2.3b", prereqs: ["e.vowel.teams"] }, bank("e.diphthongs"), [10, 10]),
+  skill({ id: "e.soft.c.g", grade: "2", title: { en: "Soft c and soft g", es: "La c y la g con e, i" }, standard: "RF.2.3e", prereqs: ["e.short.vowels"] }, bank("e.soft.c.g"), [12, 10]),
+  skill({ id: "e.silent.letters", grade: "2", title: { en: "Silent letters", es: "La u que no suena" }, standard: "RF.2.3e", prereqs: ["e.digraphs"] }, bank("e.silent.letters"), [10]),
   skill({ id: "e.sight.grade2", grade: "2", title: { en: "Sight words: grade 2", es: "Palabras frecuentes 4" }, standard: "RF.2.3f", prereqs: ["e.sight.grade1"] }, bank("e.sight.grade2"), [6, 15]),
 ];
