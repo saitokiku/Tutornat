@@ -31,6 +31,9 @@ const TABLE: [id: string, grade: string, standard: string, prereqs: string[], le
   ["e.diphthongs", "2", "RF.2.3b", ["e.vowel.teams"], 2],
   ["e.soft.c.g", "2", "RF.2.3e", ["e.short.vowels"], 2],
   ["e.silent.letters", "2", "RF.2.3e", ["e.digraphs"], 1],
+  ["e.compound.words", "2", "L.2.4d", ["e.syllables"], 2],
+  ["e.syllable.split", "2", "RF.2.3c", ["e.blends.final", "e.compound.words"], 2],
+  ["e.syllable.types", "2", "RF.2.3c", ["e.syllable.split", "e.r.controlled"], 2],
   ["e.sight.grade2", "2", "RF.2.3f", ["e.sight.grade1"], 2],
 ];
 
@@ -49,6 +52,7 @@ const SILENT: [string, number][] = [
   ["e.short.vowels", 1], ...READING.flatMap((id): [string, number][] => [[id, 1], [id, 2]]),
   ["e.silent.e", 1], ["e.silent.e", 2], ["e.ending.ed", 2], ["e.ending.ing", 1], ["e.ending.ing", 2],
   ["e.r.controlled", 1], ["e.r.controlled", 2], ["e.diphthongs", 1], ["e.diphthongs", 2], ["e.soft.c.g", 2], ["e.silent.letters", 1],
+  ["e.compound.words", 2], ["e.syllable.split", 1], ["e.syllable.split", 2], ["e.syllable.types", 1], ["e.syllable.types", 2],
 ];
 
 const LOCALES = ["en", "es"] as const;
@@ -169,7 +173,9 @@ describe("audio scripts", () => {
         for (const q of lv(id, level, locale)) {
           expect(q.choices.some((c) => c.say), `${id} L${level} ${q.say}`).toBe(false);
           // Letter names and sight-word level 1 say the target on purpose: finding its written form is the task.
-          if (id !== "e.letter.names" && !(SIGHT.includes(id) && level === 1)) expect(norm(q.say).split(/[^\p{L}]+/u), `${id} ${q.say}`).not.toContain(norm(key(q)));
+          // A category question names every choice in its spoken line; that gives nothing away.
+          const lists = q.choices.every((c) => norm(q.say).includes(norm(c.label)));
+          if (id !== "e.letter.names" && !(SIGHT.includes(id) && level === 1) && !lists) expect(norm(q.say).split(/[^\p{L}]+/u), `${id} ${q.say}`).not.toContain(norm(key(q)));
         }
   });
 });
@@ -701,6 +707,113 @@ describe("answer keys, checked another way (grade 2 reading)", () => {
         else if (c.why === "added-dieresis") expect(d, where).toBe(k.replace("gu", "gü"));
         else expect(kinds(k, d).has(c.why!), where).toBe(true);
       }
+    }
+  });
+});
+
+describe("answer keys, checked another way (grade 2 word study)", () => {
+  it("compound words: the key joins the two words; each miss changes the part its tag names", () => {
+    // Spanish compounds that change a letter when joined, typed here separately.
+    const ES_JOINED: Record<string, string> = { "para+aguas": "paraguas", "tela+araña": "telaraña", "pelo+rojo": "pelirrojo", "arco+iris": "arcoíris", "alta+voz": "altavoz", "balón+cesto": "baloncesto" };
+    for (const locale of LOCALES)
+      for (const q of lv("e.compound.words", 1, locale)) {
+        const [a, b] = q.prompt.replace(" = ___", "").split(" + ");
+        expect(key(q), q.prompt).toBe(locale === "es" ? (ES_JOINED[`${a}+${b}`] ?? a + b) : a + b);
+        for (const c of q.choices.slice(1)) {
+          const d = c.label;
+          const ok = {
+            "wrong-first-word": d.endsWith(b) && !d.startsWith(a),
+            "wrong-last-word": d.startsWith(a) && !d.endsWith(b),
+            "one-part-only": [a, b, norm(b).replace(/s$/, ""), norm(a).replace(/a$/, "o")].includes(norm(d)),
+            "reversed-parts": d === b + a,
+            "no-spelling-change": d === a + b && d !== key(q),
+            "kept-accent": d === a + b && /[áéíóú]/.test(a),
+          }[c.why!];
+          expect(ok, `${a} + ${b}: ${d} (${c.why})`).toBe(true);
+        }
+      }
+    for (const locale of LOCALES)
+      for (const q of lv("e.compound.words", 2, locale)) {
+        const [a, b] = q.steps[0].split(":")[0].split(" + ");
+        const stem = (w: string) => norm(w).slice(0, 4);
+        const head = locale === "en" ? b : b;
+        expect(norm(key(q)), q.prompt).toContain(stem(head).slice(0, 3));
+        expect(norm(label(q, "reversed-meaning")), q.prompt).toContain(stem(locale === "en" ? a : b).slice(0, 3));
+        expect(label(q, "one-part-only").startsWith(locale === "en" ? `a kind of ${a}` : "un tipo de"), q.prompt).toBe(true);
+      }
+  });
+
+  it("syllable splits match the dictionary; each wrong split is tagged by where it goes wrong", () => {
+    const DICTIONARY =
+      "rab-bit nap-kin bas-ket kit-ten mit-ten pup-pet sun-set muf-fin pic-nic hel-met tab-let in-sect pen-cil mag-net den-tist but-ton " +
+      "ti-ger ro-bot pa-per mu-sic ba-by spi-der ze-ro ba-con cab-in lem-on wag-on sev-en cam-el ta-ble can-dle puz-zle " +
+      "pe-lo-ta ca-mi-sa to-ma-te za-pa-to pa-lo-ma gu-sa-no co-ne-jo pe-pi-no ma-le-ta le-chu-ga mu-ñe-ca ca-ba-llo co-me-ta he-la-do cu-cha-ra ba-na-na " +
+      "li-bro cua-der-no es-tre-lla a-vión ca-mión puer-ta ti-gre a-bra-zo bi-ci-cle-ta ven-ta-na can-ción dien-tes san-dí-a rí-o pa-ís hor-mi-ga";
+    const right = new Map(DICTIONARY.split(" ").map((x) => [x.replace(/-/g, ""), x]));
+    const cuts = (x: string) => [...x].reduce<number[]>((acc, ch, i) => (ch === "-" ? [...acc, i - acc.length] : acc), []);
+    const V = (ch: string) => "aeiouáéíóú".includes(ch);
+    for (const locale of LOCALES)
+      for (const level of [1, 2])
+        for (const q of lv("e.syllable.split", level, locale)) {
+          const w = /(?:does|separa) (\S+) (?:split|en)/.exec(q.prompt)![1];
+          expect(key(q), w).toBe(right.get(w));
+          const good = cuts(key(q));
+          for (const c of q.choices.slice(1)) {
+            const bad = cuts(c.label);
+            const where = `${w}: ${c.label} (${c.why})`;
+            expect(c.label.replace(/-/g, ""), where).toBe(w);
+            const at = bad.find((x) => !good.includes(x));
+            const left = (x: number) => w[x - 1], rightOf = (x: number) => w[x];
+            const ok = {
+              "split-too-early": at !== undefined && at < good[bad.indexOf(at)],
+              "split-too-late": at !== undefined && at > good[bad.indexOf(at)],
+              "closed-for-open": bad.length === 1 && bad[0] === good[0] + 1 && V(w[good[0] - 1]),
+              "open-for-closed": bad.length === 1 && bad[0] === good[0] - 1 && V(w[bad[0] - 1]),
+              "missed-a-syllable": bad.length < good.length && bad.every((x) => good.includes(x)) && !good.some((x) => !bad.includes(x) && V(left(x)) && V(rightOf(x))),
+              "split-letter-pair": at !== undefined && ["ch", "ll", "rr"].includes(w.slice(at - 1, at + 1)),
+              "split-blend": at !== undefined && /^[bcdfgpt][lr]$/.test(w.slice(at - 1, at + 1)),
+              "split-diphthong": at !== undefined && V(left(at)) && V(rightOf(at)),
+              "joined-hiatus": good.some((x) => !bad.includes(x) && V(left(x)) && V(rightOf(x))),
+            }[c.why!];
+            expect(ok, where).toBe(true);
+          }
+        }
+  });
+
+  it("syllable types follow the spelling rules; Spanish stress follows the accent rules", () => {
+    const type = (s: string) =>
+      /[^aeiou]le$/.test(s) ? "consonant-le" : /[aeiou]r/.test(s) ? "r-controlled" : /(ai|ay|ee|ea|oa|ow|oe|oi|oy|ou)/.test(s) ? "vowel team" : /[aeiou][^aeiou]e$/.test(s) ? "silent e" : /[aeiou]$/.test(s) ? "open" : "closed";
+    for (const level of [1, 2])
+      for (const q of lv("e.syllable.types", level, "en")) {
+        const s = q.steps[0].split(":")[0];
+        expect(key(q), s).toBe(type(s));
+        for (const c of q.choices.slice(1)) expect(c.why, s).toBe(`${key(q).replace(" ", "-")}-as-${c.label.replace(" ", "-")}`);
+      }
+    // Stressed syllables, typed here separately.
+    const STRONG: Record<string, string> = {
+      pelota: "lo", zapato: "pa", ventana: "ta", tomate: "ma", camisa: "mi", helado: "la", sábado: "sá", música: "mú",
+      pájaro: "pá", plátano: "plá", corazón: "zón", jabalí: "lí", colibrí: "brí", autobús: "bús", cámara: "cá", brújula: "brú",
+    };
+    for (const q of lv("e.syllable.types", 1, "es")) {
+      const w = /de (\S+)\?$/.exec(q.prompt)![1];
+      expect(key(q), w).toBe(STRONG[w]);
+      const parts = q.steps[0].split("-");
+      const names = ["stress-on-first", "stress-on-middle", "stress-on-last"];
+      for (const c of q.choices.slice(1)) expect(c.why, `${w} ${c.label}`).toBe(names[parts.indexOf(c.label)]);
+    }
+    const KIND: Record<string, string> = {
+      corazón: "aguda", reloj: "aguda", papel: "aguda", ratón: "aguda", ciudad: "aguda", pelota: "llana", árbol: "llana", lápiz: "llana",
+      mesa: "llana", fácil: "llana", sábado: "esdrújula", música: "esdrújula", pájaro: "esdrújula", teléfono: "esdrújula", murciélago: "esdrújula", cámara: "esdrújula",
+    };
+    for (const q of lv("e.syllable.types", 2, "es")) {
+      const w = norm(q.prompt.split(":")[0]);
+      const entry = Object.entries(KIND).find(([k]) => norm(k) === w)!;
+      expect(key(q), w).toBe(entry[1]);
+      // Accent rules: a written accent on the last syllable, or none and ending in a consonant other than n or s, is aguda.
+      const word = entry[0];
+      const last = q.steps[0].split(":")[0].split("-");
+      const strong = /[áéíóú]/.test(word) ? last.findIndex((p) => /[áéíóú]/.test(p)) : /[aeiouns]$/.test(word) ? last.length - 2 : last.length - 1;
+      expect(["aguda", "llana", "esdrújula"][last.length - 1 - strong], w).toBe(key(q));
     }
   });
 });
