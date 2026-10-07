@@ -42,6 +42,8 @@ describe("PhotoButton", () => {
     render(<PhotoButton onFile={onFile} />);
     const input = screen.getByTestId("tutor-photo") as HTMLInputElement;
     expect(input).toHaveAttribute("accept", "image/*");
+    // Nothing expands with a mouse, so the button doesn't say it does.
+    expect(screen.getByRole("button", { name: "Photo of the problem" })).not.toHaveAttribute("aria-expanded");
     const opened = vi.spyOn(input, "click");
     await user.click(screen.getByRole("button", { name: "Photo of the problem" }));
     expect(opened).toHaveBeenCalled();
@@ -51,7 +53,14 @@ describe("PhotoButton", () => {
     expect(input.value).toBe(""); // the same photo can be picked again
   });
 
-  it("is 56px for young learners and can be turned off while busy", () => {
+  it("is 56px for young learners, menu included, and can be turned off while busy", async () => {
+    pointer(true);
+    const user = userEvent.setup();
+    const menu = render(<PhotoButton onFile={() => {}} big />);
+    await user.click(screen.getByRole("button", { name: "Photo of the problem" }));
+    expect(screen.getByRole("button", { name: "Take a photo" }).className).toContain("min-h-14");
+    expect(screen.getByRole("button", { name: "Choose a photo" }).className).toContain("min-h-14");
+    menu.unmount();
     pointer(false);
     const { rerender } = render(<PhotoButton onFile={() => {}} big />);
     expect(screen.getByRole("button", { name: "Photo of the problem" }).className).toContain("size-14");

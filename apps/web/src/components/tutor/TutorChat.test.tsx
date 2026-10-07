@@ -72,8 +72,10 @@ describe("Talk with the demo tutor", () => {
     expect(s.threads[0]).toMatchObject({ profileId: "p1", surface: "talk", title: "what is a logical fallacy" });
     expect(s.threads[0].lines.map((l) => l.role)).toEqual(["tutor", "learner", "tutor"]);
 
-    // Start the practice in one keypress.
-    await tabTo(user, within(practice).getByRole("button", { name: "Start" }));
+    // Start the practice in one keypress: the newest offer is the one ink button, named for its skill.
+    const start = within(practice).getByRole("button", { name: "Start: Spot the fallacy" });
+    expect(start.className).toContain("k-btn-primary");
+    await tabTo(user, start);
     await user.keyboard("{Enter}");
     expect(push).toHaveBeenCalledWith(expect.stringMatching(/^\/practice\/.+/));
     expect(read().sets.at(-1)).toMatchObject({ skillId: "e.fallacies", profileId: "p1" });
@@ -145,12 +147,24 @@ describe("a young learner", () => {
     vi.stubGlobal("speechSynthesis", { speak: (u: { text: string }) => said.push(u.text), cancel: vi.fn(), getVoices: () => [] });
     const user = userEvent.setup();
     const { unmount } = render(<TutorChat board setup={{ learner: learner({ grade: "1" }), surface: "talk", title: "Talk" }} />);
-    await waitFor(() => expect(said).toEqual(["I'm the demo tutor.", "What do you want to learn about?", "Tap one."]));
+    // The opening names the choices, in the chips' order, so a child who can't read hears what to tap.
+    const chips = within(await screen.findByRole("group", { name: "Quick asks" })).getAllByRole("button");
+    const labels = chips.map((c) => c.textContent);
+    await waitFor(() => expect(said.slice(0, 2)).toEqual(["I'm the demo tutor.", "What do you want to learn about?"]));
+    expect(said[2]).toBe(`${new Intl.ListFormat("en-US", { type: "disjunction" }).format([...labels.slice(0, -1), "a poem"] as string[])}?`);
+    expect(said[3]).toBe("Tap one.");
     expect(screen.getByRole("button", { name: "Reading aloud" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Reading aloud" }).className).toContain("min-h-14");
+    // Reached by keyboard, a chip says its own name.
+    said.length = 0;
+    await user.tab();
+    while (document.activeElement !== chips[0]) await user.tab();
+    expect(said).toEqual([labels[0]]);
     // The speaker beside each reply is a big target too.
     expect(screen.getAllByRole("button", { name: /^Read aloud: / })[0].className).toContain("size-14");
+    said.length = 0;
     await user.click(screen.getByRole("button", { name: "Read me a poem" }));
-    await waitFor(() => expect(said.length).toBeGreaterThan(3));
+    await waitFor(() => expect(said.length).toBeGreaterThan(0));
     unmount();
 
     // Older learners turn reading aloud on themselves.
@@ -165,17 +179,73 @@ describe("a young learner", () => {
   it("is greeted first with big tap chips and needs no typing", async () => {
     const user = userEvent.setup();
     render(<TutorChat board setup={{ learner: learner({ grade: "K" }), surface: "talk", title: "Talk" }} />);
-    expect(await screen.findByText(/I'm the demo tutor\.\s+What do you want to learn about\? Tap one\./)).toBeInTheDocument();
+    expect(await screen.findByText(/I'm the demo tutor\.\s+What do you want to learn about\? .+ or a poem\? Tap one\./)).toBeInTheDocument();
     const poem = screen.getByRole("button", { name: "Read me a poem" });
     expect(poem.className).toContain("min-h-14");
-    const chips = screen.getAllByRole("button").filter((b) => b.className.includes("min-h-14") && b !== poem);
+    const group = screen.getByRole("group", { name: "Quick asks" });
+    const chips = within(group).getAllByRole("button").filter((b) => b !== poem);
     expect(chips.length).toBeGreaterThan(0); // the next skills on their map, to tap
+    for (const c of chips) {
+      expect(c.className).toContain("min-h-14");
+      expect(c.querySelector("[aria-hidden=true].rounded-full")).not.toBeNull(); // its subject's mark
+    }
+    expect(within(group).queryByRole("button", { name: "What does … mean?" })).not.toBeInTheDocument(); // nothing that needs typing
     await user.click(chips[0]);
-    const start = await screen.findAllByRole("button", { name: "Start" });
+    const start = await screen.findAllByRole("button", { name: /^Start: / });
     expect(start[0].className).toContain("min-h-14");
     expect(screen.getByRole("region", { name: "Board" }).querySelector("article")).toHaveAccessibleName(/^Practice: /); // practice first
     expect(requests.some((u) => u.startsWith("/api/know/wiki"))).toBe(false); // a skill on the map, not a search
     expect(screen.getByRole("button", { name: "Send" }).className).toContain("size-14");
+  });
+});
+
+describe("a conversation that moves on", () => {
+  it("records a teaching act for each skill it turns to, and when each line was said", async () => {
+    let now = 1_000_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const user = userEvent.setup();
+    render(<TutorChat board setup={{ learner: learner({ grade: "5" }), surface: "talk", title: "Talk" }} />);
+    await user.type(await screen.findByRole("textbox"), "what is a logical fallacy{Enter}");
+    await screen.findByRole("article", { name: "Fallacy" });
+    now += 90_000;
+    await user.type(screen.getByRole("textbox"), "3/4 + 1/6{Enter}");
+    await screen.findByText(/That looks like Add and subtract fractions with unlike denominators/);
+    await waitFor(() => expect(read().acts.filter((a) => a.kind === "tutor").map((a) => a.skillId)).toEqual(["e.fallacies", "m.frac.addunlike"]));
+    const acts = read().acts.filter((a) => a.kind === "tutor");
+    expect(acts[0].ref).toBe(acts[1].ref); // the thread
+    expect(acts[0].ref).toBe(read().threads[0].id);
+    const at = read().threads[0].lines.map((l) => l.at);
+    expect(at[0]).toBe(1_000_000);
+    expect(at.at(-1)).toBe(1_090_000);
+    vi.restoreAllMocks();
+  });
+
+  it("shows a practice offer on the board once, however often it is offered", async () => {
+    const user = userEvent.setup();
+    render(<TutorChat board setup={{ learner: learner(), surface: "talk", title: "Talk" }} />);
+    await user.type(await screen.findByRole("textbox"), "what is a logical fallacy{Enter}");
+    await screen.findByRole("article", { name: "Fallacy" });
+    await user.type(screen.getByRole("textbox"), "what are logical fallacies{Enter}");
+    await waitFor(() => expect(screen.getAllByRole("article", { name: "Fallacy" })).toHaveLength(2));
+    const board = screen.getByRole("region", { name: "Board" });
+    expect(within(board).getAllByRole("article", { name: "Practice: Spot the fallacy" })).toHaveLength(1);
+    // The older reply's pointer still finds it.
+    const pointers = screen.getAllByRole("button", { name: /^On the board:/ });
+    await user.click(pointers[0]);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getAllByRole("article", { name: "Fallacy" })[1]));
+  });
+
+  it("a keyboard user keeps their place when the chip they pressed goes away", async () => {
+    const user = userEvent.setup();
+    render(<TutorChat board setup={{ learner: learner(), surface: "talk", title: "Talk" }} />);
+    const group = await screen.findByRole("group", { name: "Quick asks" });
+    const topic = within(group).getAllByRole("button").find((b) => !/…/.test(b.textContent ?? ""))!;
+    await tabTo(user, topic);
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(within(group).queryByText(topic.textContent!)).not.toBeInTheDocument());
+    expect(document.activeElement).toBe(group);
+    await user.tab();
+    expect(group.contains(document.activeElement)).toBe(true); // the next Tab lands on the new chips
   });
 });
 
@@ -185,13 +255,13 @@ describe("dates the tutor offers", () => {
     render(<TutorChat board setup={{ learner: learner({ grade: "4" }), surface: "talk", title: "Talk" }} />);
     await user.type(await screen.findByRole("textbox"), "I have a fractions test on Friday{Enter}");
     const card = await screen.findByRole("article", { name: "Fractions test" });
-    await user.click(within(card).getByRole("button", { name: "Add to calendar" }));
+    await user.click(within(card).getByRole("button", { name: /^Add to calendar: Fractions test, Friday, / }));
     expect(within(card).getByRole("status")).toHaveTextContent("Added");
     expect(read().events).toEqual([expect.objectContaining({ profileId: "p1", title: "Fractions test", kind: "test", source: "tutor" })]);
 
     await user.type(screen.getByRole("textbox"), "I have a fractions test on Friday{Enter}");
     await waitFor(() => expect(screen.getAllByRole("article", { name: "Fractions test" })).toHaveLength(2));
-    for (const c of screen.getAllByRole("article", { name: "Fractions test" })) expect(within(c).queryByRole("button", { name: "Add to calendar" })).not.toBeInTheDocument();
+    for (const c of screen.getAllByRole("article", { name: "Fractions test" })) expect(within(c).queryByRole("button", { name: /^Add to calendar/ })).not.toBeInTheDocument();
     expect(read().events).toHaveLength(1);
   });
 });

@@ -17,7 +17,7 @@ import { addEvent } from "@/lib/school";
 import { read, useStore } from "@/lib/store";
 import type { BoardCard } from "@/lib/tutor";
 import type { Locale, Profile } from "@/lib/types";
-import { fromLocalDate } from "@/planner/dates";
+import { fromLocalDate, localDate } from "@/planner/dates";
 import { getSkill } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 
@@ -103,11 +103,25 @@ function Shell({ id, label, children, aside }: { id?: string; label: string; chi
   );
 }
 
-export function CardView({ card, learner, id }: { card: BoardCard; learner: Profile; id?: string }) {
+/** A day the tutor offers, with the year when it isn't this year's ("Friday, Mar 14, 2027"). */
+export function offeredDay(day: string, today: string, locale: Locale): string {
+  const at = fromLocalDate(day).getTime();
+  if (day.slice(0, 4) === today.slice(0, 4)) return dayLabel(at, locale);
+  return new Intl.DateTimeFormat(locale === "es" ? "es-US" : "en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" }).format(at);
+}
+
+/**
+ * One card. `lead` marks the newest practice card on the board: its Start is the one ink button there;
+ * older offers stay as outlined ones next to what they act on.
+ */
+export function CardView({ card, learner, id, lead = false }: { card: BoardCard; learner: Profile; id?: string; lead?: boolean }) {
   const t = useT();
   const router = useRouter();
   const locale = learner.locale;
   const young = youngGrade(learner);
+  // Young learners get 56px targets for everything they act on; everyone else 44px.
+  const tap = young ? "min-h-14 px-6 text-base" : "";
+  const [today] = useState(() => localDate(Date.now()));
   // A date already on this learner's calendar shows as added, so the same card can't add it twice.
   const added = useStore(
     (s) => card.type === "calendar" && !!card.date && s.events.some((e) => e.profileId === learner.id && e.date === card.date && e.kind === card.kind && e.title === card.title.replace(/\s+/g, " ").trim()),
@@ -148,7 +162,9 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
               )}
             </span>
             <Button
+              variant={lead ? "primary" : "secondary"}
               className={young ? "min-h-14 px-7 text-base" : ""}
+              aria-label={`${t("practice.start")}: ${skill.title[locale]}`}
               onClick={() => {
                 const setId = startSet(read(), { profile: learner, kind: "pick", skillIds: [skill.id], now: Date.now() });
                 if (setId) router.push(`/practice/${setId}`);
@@ -165,13 +181,13 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
         <Shell id={id} label={label}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium text-ink">{card.title}</span>
+              <span className={`block font-medium text-ink ${young ? "text-base" : "text-sm"}`}>{card.title}</span>
               <span className="block text-xs text-muted">
-                {card.date ? t("tut.card.calendarFor", { kind: t(`event.${card.kind}`), date: dayLabel(fromLocalDate(card.date).getTime(), locale) }) : t(`event.${card.kind}`)}
+                {card.date ? t("tut.card.calendarFor", { kind: t(`event.${card.kind}`), date: offeredDay(card.date, today, locale) }) : t(`event.${card.kind}`)}
               </span>
             </span>
             {!card.date ? (
-              <Link href={`/calendar?add=${card.kind === "event" ? "other" : card.kind}`} className={btn("secondary", "md")}>
+              <Link href={`/calendar?add=${card.kind === "event" ? "other" : card.kind}`} aria-label={`${t("tut.card.pickDate")}: ${card.title}`} className={btn("secondary", "md", tap)}>
                 {t("tut.card.pickDate")}
               </Link>
             ) : added ? (
@@ -179,7 +195,12 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
                 <IconCheck size={16} /> {t("tutor.added")}
               </span>
             ) : (
-              <Button variant="secondary" onClick={() => addEvent(learner.id, { title: card.title, kind: card.kind, date: card.date!, skillIds: card.skillIds }, "tutor")}>
+              <Button
+                variant="secondary"
+                className={tap}
+                aria-label={`${t("tutor.addToCalendar")}: ${card.title}, ${offeredDay(card.date, today, locale)}`}
+                onClick={() => addEvent(learner.id, { title: card.title, kind: card.kind, date: card.date!, skillIds: card.skillIds }, "tutor")}
+              >
                 <IconPlus size={16} /> {t("tutor.addToCalendar")}
               </Button>
             )}
@@ -239,20 +260,29 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
           </p>
         </Shell>
       );
-    case "lesson":
+    case "lesson": {
+      // Our course may only exist in the other language: marked, and read in that language's voice.
+      const lang = card.lang ?? locale;
       return (
-        <Shell id={id} label={label} aside={<SayButton text={[card.lead, ...card.points].filter(Boolean).join(" ")} locale={locale} big={young} />}>
-          <h3 className="font-brand text-t3 font-semibold text-ink">{card.lessonTitle}</h3>
-          {card.lead && <p className="mt-1 text-sm text-ink">{card.lead}</p>}
-          <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-ink">
-            {card.points.map((p, i) => (
-              <li key={i}>{p}</li>
-            ))}
-          </ul>
+        <Shell id={id} label={label} aside={<SayButton text={[card.lead, ...card.points].filter(Boolean).join(" ")} locale={lang} big={young} />}>
+          <div lang={lang}>
+            <h3 className="font-brand text-t3 font-semibold text-ink">{card.lessonTitle}</h3>
+            {card.lead && <p className="mt-1 text-sm text-ink">{card.lead}</p>}
+            <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-ink">
+              {card.points.map((p, i) => (
+                <li key={i}>{p}</li>
+              ))}
+            </ul>
+          </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="min-w-0 flex-1 text-xs text-muted">{t("tut.card.fromLesson", { lesson: card.lessonTitle, course: card.courseTitle })}</span>
+            <span className="min-w-0 flex-1 text-xs text-muted">
+              {t("tut.card.fromLesson", { lesson: card.lessonTitle, course: card.courseTitle })}
+              {lang !== locale && <> · {t(lang === "en" ? "tut.card.inEnglish" : "tut.card.inSpanish")}</>}
+            </span>
             <Button
               variant="secondary"
+              className={tap}
+              aria-label={`${t("tut.card.openLesson")}: ${card.lessonTitle}`}
               onClick={() => {
                 const courseId = addFromCatalogue(card.catalogueId, learner.id);
                 if (courseId) router.push(`/learn/${courseId}/${card.lessonId}`);
@@ -263,6 +293,7 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
           </div>
         </Shell>
       );
+    }
     case "books":
       return (
         <Shell id={id} label={label}>
@@ -353,6 +384,8 @@ export type BoardItem = { key: string; card: BoardCard };
  */
 export function Board({ items, learner, open, onToggle }: { items: BoardItem[]; learner: Profile; open: boolean; onToggle: () => void }) {
   const t = useT();
+  const young = youngGrade(learner);
+  const lead = items.find((x) => x.card.type === "practice")?.key;
   return (
     <section aria-labelledby="board-title" className="flex min-h-0 flex-col border-b border-border bg-paper lg:w-[44%] lg:max-w-xl lg:border-b-0 lg:border-l lg:pl-6">
       <div className="flex items-center gap-2 py-2 lg:py-3">
@@ -366,7 +399,7 @@ export function Board({ items, learner, open, onToggle }: { items: BoardItem[]; 
             onClick={onToggle}
             aria-expanded={open}
             aria-controls="board-cards"
-            className="ml-auto inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-medium text-muted hover:bg-panel2 hover:text-ink lg:hidden"
+            className={`ml-auto inline-flex ${young ? "min-h-14 px-5 text-base" : "min-h-11 px-3 text-xs"} items-center gap-1 rounded-full font-medium text-muted hover:bg-panel2 hover:text-ink lg:hidden`}
           >
             {t("tut.board.toggle", { n: items.length })}
             {open ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
@@ -378,7 +411,7 @@ export function Board({ items, learner, open, onToggle }: { items: BoardItem[]; 
       ) : (
         <div id="board-cards" className={`${open ? "block" : "hidden"} max-h-[38dvh] min-h-0 space-y-3 overflow-y-auto pb-3 lg:block lg:max-h-none lg:flex-1`}>
           {items.map((x) => (
-            <CardView key={x.key} id={`card-${x.key}`} card={x.card} learner={learner} />
+            <CardView key={x.key} id={`card-${x.key}`} card={x.card} learner={learner} lead={x.key === lead} />
           ))}
         </div>
       )}

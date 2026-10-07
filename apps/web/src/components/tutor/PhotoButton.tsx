@@ -10,6 +10,9 @@ import { useT } from "@/i18n";
 export function PhotoButton({ onFile, disabled, big = false }: { onFile: (file: File) => void; disabled?: boolean; big?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  // A phone (coarse pointer) gets a menu of camera or library; elsewhere the chooser opens straight away,
+  // so only the phone's button says it expands.
+  const [coarse] = useState(() => typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches);
   const camera = useRef<HTMLInputElement>(null);
   const library = useRef<HTMLInputElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
@@ -42,6 +45,7 @@ export function PhotoButton({ onFile, disabled, big = false }: { onFile: (file: 
     if (file) onFile(file);
   };
   const size = big ? "size-14" : "size-11";
+  const item = `${big ? "min-h-14 text-base" : "min-h-11 text-sm"} rounded-sm px-3 text-left text-ink hover:bg-panel2`;
 
   return (
     <div ref={box} className="relative shrink-0">
@@ -50,22 +54,18 @@ export function PhotoButton({ onFile, disabled, big = false }: { onFile: (file: 
         type="button"
         disabled={disabled}
         aria-label={t("tut.photo.add")}
-        aria-expanded={open}
-        onClick={() => {
-          // A phone gets the choice of camera or library; elsewhere the chooser opens straight away.
-          if (typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches) setOpen(!open);
-          else library.current?.click();
-        }}
+        aria-expanded={coarse ? open : undefined}
+        onClick={() => (coarse ? setOpen(!open) : library.current?.click())}
         className={`grid ${size} place-items-center rounded-full border border-border bg-panel text-ink hover:bg-panel2 disabled:opacity-40`}
       >
         <CameraIcon />
       </button>
       {open && (
         <div className="absolute bottom-full left-0 z-20 mb-2 flex w-52 flex-col gap-1 rounded-md border border-border bg-panel p-1.5 shadow-lift">
-          <button ref={first} type="button" onClick={() => camera.current?.click()} className="min-h-11 rounded-sm px-3 text-left text-sm text-ink hover:bg-panel2">
+          <button ref={first} type="button" onClick={() => camera.current?.click()} className={item}>
             {t("tut.photo.take")}
           </button>
-          <button type="button" onClick={() => library.current?.click()} className="min-h-11 rounded-sm px-3 text-left text-sm text-ink hover:bg-panel2">
+          <button type="button" onClick={() => library.current?.click()} className={item}>
             {t("tut.photo.choose")}
           </button>
         </div>

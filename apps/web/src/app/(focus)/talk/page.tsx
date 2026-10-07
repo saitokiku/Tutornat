@@ -48,9 +48,9 @@ export default function TalkPage() {
     return () => clearInterval(id);
   }, [startedAt]);
 
-  const homework = event ? { title: event.title, notes: event.notes ?? event.attachment?.text?.slice(0, 1000) } : about ? { title: about.slice(0, 160) } : undefined;
-  // A question carried in from elsewhere (the magic box, a lesson): asked as soon as the tutor opens.
-  const [ask] = useState(() => params.get("ask")?.slice(0, 500) || undefined);
+  // The family's own notes on the item. Pasted school text (event.attachment) stays out: a teacher's
+  // email usually names the child, and nothing of it is needed to help with the work.
+  const homework = event ? { title: event.title, notes: event.notes?.slice(0, 1000) } : about ? { title: about.slice(0, 160) } : undefined;
   return (
     <HearContext.Provider value={{ hear: true, young, locale: learner.locale }}>
       <div className="flex h-dvh flex-col bg-paper">
@@ -77,7 +77,7 @@ export default function TalkPage() {
           )}
           <TutorChat
             board
-            setup={{ learner, surface: homework ? "homework" : "talk", homework, ask, title: homework?.title ?? t("talk.title") }}
+            setup={{ learner, surface: homework ? "homework" : "talk", homework, title: homework?.title ?? t("talk.title") }}
           />
         </main>
       </div>

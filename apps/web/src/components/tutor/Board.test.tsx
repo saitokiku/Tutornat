@@ -5,7 +5,7 @@ import { read, resetMemory } from "@/lib/store";
 import type { BoardCard } from "@/lib/tutor";
 import type { Profile } from "@/lib/types";
 import { makeItem } from "@/practice/skills";
-import { Board, CardView } from "./Board";
+import { Board, CardView, offeredDay } from "./Board";
 
 // Every card on the tutor's board names where it came from and links there; the lesson and the date
 // it offers are one tap away.
@@ -65,14 +65,23 @@ describe("knowledge cards carry their source", () => {
   });
 });
 
+describe("a lesson in the other language", () => {
+  it("is marked, carries its language and is read in that language's voice", () => {
+    card({ type: "lesson", catalogueId: "english-rhetoric", courseTitle: "Rhetoric", lessonId: "three-appeals", lessonTitle: "Three ways to persuade", points: ["Ethos is trust."], lang: "en" }, learner({ locale: "es" }));
+    const lesson = screen.getByRole("article", { name: "Three ways to persuade" });
+    expect(within(lesson).getByText("Ethos is trust.").closest("[lang]")).toHaveAttribute("lang", "en");
+    expect(within(lesson).getByText(/In English/)).toBeInTheDocument(); // in the interface language
+  });
+});
+
 describe("one tap to what the tutor offers", () => {
   it("opens our lesson from its key points, adding the course once", async () => {
     const user = userEvent.setup();
     card({ type: "lesson", catalogueId: "english-rhetoric", courseTitle: "Rhetoric", lessonId: "misused-appeals", lessonTitle: "When appeals mislead", points: ["False authority"] });
     const lesson = screen.getByRole("article", { name: "When appeals mislead" });
     expect(within(lesson).getByText("False authority")).toBeInTheDocument();
-    await user.click(within(lesson).getByRole("button", { name: "Open the lesson" }));
-    await user.click(within(lesson).getByRole("button", { name: "Open the lesson" }));
+    await user.click(within(lesson).getByRole("button", { name: "Open the lesson: When appeals mislead" }));
+    await user.click(within(lesson).getByRole("button", { name: "Open the lesson: When appeals mislead" }));
     const courses = read().courses.filter((c) => c.catalogueId === "english-rhetoric" && c.profileId === "p1");
     expect(courses).toHaveLength(1);
     expect(push).toHaveBeenLastCalledWith(`/learn/${courses[0].id}/misused-appeals`);
@@ -80,9 +89,39 @@ describe("one tap to what the tutor offers", () => {
 
   it("a date with no day opens the calendar's add form for that kind", () => {
     card({ type: "calendar", key: "q", title: "Spelling quiz", kind: "quiz" });
-    expect(screen.getByRole("link", { name: "Add it with the date" })).toHaveAttribute("href", "/calendar?add=quiz");
+    expect(screen.getByRole("link", { name: "Add it with the date: Spelling quiz" })).toHaveAttribute("href", "/calendar?add=quiz");
     card({ type: "calendar", key: "e", title: "Science fair", kind: "event" });
-    expect(screen.getAllByRole("link", { name: "Add it with the date" })[1]).toHaveAttribute("href", "/calendar?add=other");
+    expect(screen.getByRole("link", { name: "Add it with the date: Science fair" })).toHaveAttribute("href", "/calendar?add=other");
+  });
+
+  it("a date shows its year when it isn't this year's", () => {
+    expect(offeredDay("2026-10-09", "2026-10-07", "en")).toBe("Friday, Oct 9");
+    expect(offeredDay("2027-01-08", "2026-12-30", "en")).toBe("Friday, Jan 8, 2027");
+    expect(offeredDay("2027-01-08", "2026-12-30", "es")).toMatch(/2027/);
+  });
+
+  it("only the newest practice offer is the ink button; each Start names its skill", () => {
+    render(
+      <Board
+        items={[
+          { key: "b-0", card: { type: "practice", skillId: "m.frac.addlike" } },
+          { key: "a-0", card: { type: "practice", skillId: "e.fallacies" } },
+        ]}
+        learner={learner()}
+        open
+        onToggle={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Start: Add and subtract fractions with like denominators" }).className).toContain("k-btn-primary");
+    expect(screen.getByRole("button", { name: "Start: Spot the fallacy" }).className).toContain("k-btn-secondary");
+  });
+
+  it("a young learner's buttons on the board are 56px", () => {
+    const k = learner({ grade: "1" });
+    card({ type: "lesson", catalogueId: "english-rhetoric", courseTitle: "Rhetoric", lessonId: "misused-appeals", lessonTitle: "When appeals mislead", points: ["False authority"] }, k);
+    expect(screen.getByRole("button", { name: /^Open the lesson/ }).className).toContain("min-h-14");
+    card({ type: "calendar", key: "c", title: "Spelling quiz", kind: "quiz", date: "2099-01-01" }, k);
+    expect(screen.getByRole("button", { name: /^Add to calendar/ }).className).toContain("min-h-14");
   });
 
   it("a worked example shows the picture a pre-reader needs, described", () => {

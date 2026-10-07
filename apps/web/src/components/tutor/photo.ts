@@ -70,8 +70,19 @@ export async function shrinkPhoto(file: Blob): Promise<Photo> {
   }
 }
 
-/** Only the newest photo travels with each request; older ones stay on screen but aren't re-sent. */
-export function keepNewestPhoto<M extends UIMessage>(messages: M[]): M[] {
-  const newest = messages.findLastIndex((m) => m.parts.some((p) => p.type === "file"));
-  return messages.map((m, i) => (i === newest || !m.parts.some((p) => p.type === "file") ? m : { ...m, parts: m.parts.filter((p) => p.type !== "file") }));
+const hasPhoto = (m: UIMessage) => m.parts.some((p) => p.type === "file");
+
+/** The message without its photo: what is sent once the photo has had its turn, or was refused. */
+export const withoutPhoto = <M extends UIMessage>(m: M): M => (hasPhoto(m) ? { ...m, parts: m.parts.filter((p) => p.type !== "file") } : m);
+
+/**
+ * What travels with a request: the newest photo, only on the turn it was sent with and the one right
+ * after (a follow-up about it). After that it stays on screen but isn't uploaded again with every
+ * message, so a phone on cellular data isn't sending megabytes per reply.
+ */
+export function photoForTurn<M extends UIMessage>(messages: M[]): M[] {
+  const users = messages.flatMap((m, i) => (m.role === "user" ? [i] : []));
+  const newest = messages.findLastIndex(hasPhoto);
+  const keep = users.slice(-2).includes(newest) ? newest : -1;
+  return messages.map((m, i) => (i === keep ? m : withoutPhoto(m)));
 }

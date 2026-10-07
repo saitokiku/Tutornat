@@ -1,8 +1,8 @@
 import type { UIMessage } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fitWithin, keepNewestPhoto, PHOTO_EDGE, PHOTO_MAX_CHARS, PhotoError, shrinkPhoto } from "./photo";
+import { fitWithin, PHOTO_EDGE, PHOTO_MAX_CHARS, PhotoError, photoForTurn, shrinkPhoto, withoutPhoto } from "./photo";
 
-// A phone photo is made small in the browser before it goes anywhere, and only the newest one travels.
+// A phone photo is made small in the browser before it goes anywhere, and travels only while it is the subject.
 
 describe("fitWithin", () => {
   it("fits the long edge, keeps the shape, never upscales", () => {
@@ -57,17 +57,22 @@ describe("shrinkPhoto", () => {
   });
 });
 
-describe("keepNewestPhoto", () => {
+describe("photoForTurn", () => {
   const file = { type: "file" as const, mediaType: "image/jpeg", url: "data:image/jpeg;base64,AAAA" };
-  it("sends only the newest photo again; older ones keep their words", () => {
-    const messages: UIMessage[] = [
-      { id: "1", role: "user", parts: [{ type: "text", text: "first" }, file] },
-      { id: "2", role: "assistant", parts: [{ type: "text", text: "What did you try?" }] },
-      { id: "3", role: "user", parts: [{ type: "text", text: "second" }, file] },
-      { id: "4", role: "user", parts: [{ type: "text", text: "and now?" }] },
-    ];
-    const out = keepNewestPhoto(messages);
-    expect(out.map((m) => m.parts.map((p) => p.type))).toEqual([["text"], ["text"], ["text", "file"], ["text"]]);
+  const said = (id: string, text: string, photo = false): UIMessage => ({ id, role: "user", parts: [{ type: "text", text }, ...(photo ? [file] : [])] });
+  const answer: UIMessage = { id: "a", role: "assistant", parts: [{ type: "text", text: "What did you try?" }] };
+  const shape = (ms: UIMessage[]) => ms.map((m) => m.parts.map((p) => p.type));
+
+  it("sends the newest photo with its turn and the next one; older ones keep their words", () => {
+    const messages = [said("1", "first", true), answer, said("3", "second", true), answer, said("5", "and now?")];
+    expect(shape(photoForTurn(messages))).toEqual([["text"], ["text"], ["text", "file"], ["text"], ["text"]]);
     expect(messages[0].parts).toHaveLength(2); // the conversation on screen is untouched
+  });
+
+  it("stops sending it once the learner has moved on", () => {
+    const messages = [said("1", "my worksheet", true), answer, said("3", "number 3"), answer, said("5", "what is a volcano")];
+    expect(photoForTurn(messages).some((m) => m.parts.some((p) => p.type === "file"))).toBe(false);
+    expect(withoutPhoto(messages[0]).parts.map((p) => p.type)).toEqual(["text"]);
+    expect(withoutPhoto(answer)).toBe(answer);
   });
 });

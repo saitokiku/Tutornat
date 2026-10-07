@@ -4,6 +4,8 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useRef, useState } from "react";
 import { IconArrowRight, IconSpeaker, IconStop, IconX } from "@/components/icons";
+import { speakText } from "@/components/stage/hear";
+import { SubjectDot } from "@/components/ui";
 import { useT, type Key } from "@/i18n";
 import type { TutorContext } from "@/lib/ai/context";
 import { useAiMode } from "@/lib/ai/client";
@@ -12,8 +14,8 @@ import { know } from "@/lib/knowledge";
 import { nextSkillFor, recentSkills, settingsOf } from "@/lib/practice";
 import { addNote } from "@/lib/profiles";
 import { read } from "@/lib/store";
-import { logTutorAct, saveThread, type BoardCard } from "@/lib/tutor";
-import { demoAnswer, demoOpening, demoPhoto, type DemoContext, type DemoState } from "@/lib/tutor-demo";
+import { familyNames, logTutorAct, saveThread, withoutNames, type BoardCard } from "@/lib/tutor";
+import { demoAnswer, demoOpening, demoPhoto, openTalk, type DemoContext, type DemoState } from "@/lib/tutor-demo";
 import type { Profile, Subject } from "@/lib/types";
 import { localDate } from "@/planner/dates";
 import type { TutorThread } from "@/planner/types";
@@ -21,8 +23,8 @@ import { randomSeed } from "@/practice/rng";
 import { getSkill } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { Board, CardView, SayButton, youngGrade, type BoardItem } from "./Board";
-import { cardsOf, skillsIn } from "./cards";
-import { keepNewestPhoto, PhotoError, shrinkPhoto, type Photo } from "./photo";
+import { cardsOf, repliesIn, skillsIn } from "./cards";
+import { PhotoError, photoForTurn, shrinkPhoto, withoutPhoto, type Photo } from "./photo";
 import { PhotoButton } from "./PhotoButton";
 import { useListen, useSpeakStream } from "./useVoice";
 
@@ -48,56 +50,81 @@ export type ChatSetup = {
   lesson?: { title: string; scene: string };
   homework?: { title: string; notes?: string };
   title: string;
-  /** A first question to send as soon as the conversation opens (e.g. /talk?ask=…). */
-  ask?: string;
 };
 
-function opening(setup: ChatSetup, t: ReturnType<typeof useT>): string {
+function opening(setup: ChatSetup, t: ReturnType<typeof useT>, choices: string[]): string {
   if (setup.item) return t("tutor.open.problem");
   if (setup.homework) return t("tutor.open.homework", { title: setup.homework.title });
   if (setup.lesson) return t("tutor.open.lesson");
-  return t(youngGrade(setup.learner) ? "tut.open.young" : "tutor.open.talk");
+  return openTalk(setup.learner.locale, setup.learner.grade, choices);
 }
 
 export function TutorChat({ setup, board = false }: { setup: ChatSetup; board?: boolean }) {
   const mode = useAiMode();
   const t = useT();
+  // Topics to tap for an open conversation: the next skill in each subject on this learner's map.
+  const [topics] = useState(() =>
+    setup.item || setup.homework || setup.lesson
+      ? []
+      : (["math", "english", "science"] as Subject[]).map((sub) => nextSkillFor(read(), setup.learner, sub, Date.now())).filter((id): id is string => !!id && !!getSkill(id)),
+  );
   if (mode === null) return <p className="px-4 py-6 text-sm text-muted">{t("common.loading")}</p>;
-  return mode === "demo" ? <DemoChat setup={setup} board={board} /> : <AiChat setup={setup} board={board} />;
+  return mode === "demo" ? <DemoChat setup={setup} board={board} topics={topics} /> : <AiChat setup={setup} board={board} topics={topics} />;
 }
+
+const titles = (ids: string[], setup: ChatSetup) => ids.map((id) => getSkill(id)!.title[setup.learner.locale]);
 
 /* ------------------------------------------------------------------ AI */
 
 const photoOf = (m: UIMessage) => (m.parts.find((p) => p.type === "file") as { url?: string } | undefined)?.url;
 
-function AiChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
+function AiChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; topics: string[] }) {
   const t = useT();
   const { learner } = setup;
   const [working] = useState(() => recentSkills(read(), learner.id, Date.now()).slice(0, 6));
   // The learner's day for the dates the tutor offers: sent with every turn, and used to check them here.
   const [today] = useState(() => localDate(Date.now()));
+  // Learner names never go to a model: the family's names are taken out of everything sent, including a
+  // teacher's note on homework and anything the child types.
+  const [names] = useState(() => familyNames(read(), learner.id));
+  const clean = (text: string) => withoutNames(text, names);
   const context: TutorContext = {
     locale: learner.locale,
     grade: learner.grade,
     surface: setup.surface,
     item: setup.item ? { skillId: setup.item.skillId, level: setup.item.level, seed: setup.item.seed } : undefined,
     tries: setup.tries,
-    lastAnswer: setup.lastAnswer,
-    lesson: setup.lesson,
-    homework: setup.homework,
+    lastAnswer: setup.lastAnswer && clean(setup.lastAnswer),
+    lesson: setup.lesson && { title: clean(setup.lesson.title), scene: clean(setup.lesson.scene) },
+    homework: setup.homework && { title: clean(setup.homework.title), notes: setup.homework.notes && clean(setup.homework.notes) },
     interests: learner.interests,
     working,
   };
-  // Only the newest photo travels with each request; the server checks it again either way.
+  // A photo travels only with its turn and the next; the server checks it again either way.
   const [transport] = useState(
     () =>
       new DefaultChatTransport({
         api: "/api/tutor",
-        prepareSendMessagesRequest: ({ id, messages, body, trigger, messageId }) => ({ body: { ...body, id, messages: keepNewestPhoto(messages), trigger, messageId } }),
+        prepareSendMessagesRequest: ({ id, messages, body, trigger, messageId }) => ({
+          body: {
+            ...body,
+            id,
+            // Every line, the child's and our own opening ("Let's look at Ada's science fair") alike.
+            messages: photoForTurn(messages).map((m) => ({ ...m, parts: m.parts.map((p) => (p.type === "text" ? { ...p, text: withoutNames(p.text, names) } : p)) })),
+            trigger,
+            messageId,
+          },
+        }),
       }),
   );
-  const [initial] = useState<UIMessage[]>(() => [{ id: "open", role: "assistant", parts: [{ type: "text", text: opening(setup, t) }] }]);
-  const { messages, sendMessage, status, error, stop } = useChat({ transport, messages: initial });
+  const [initial] = useState<UIMessage[]>(() => [{ id: "open", role: "assistant", parts: [{ type: "text", text: opening(setup, t, titles(topics, setup)) }] }]);
+  const { messages, sendMessage, setMessages, status, error, stop } = useChat({ transport, messages: initial });
+  const failure = error?.message ?? "";
+  const photoRefused = /photo_too_big|bad_photo/.test(failure);
+  // A photo the server refused is taken off the message, so the next turn doesn't send it (and fail) again.
+  useEffect(() => {
+    if (photoRefused) setMessages((ms) => ms.map((m) => (m.role === "user" ? withoutPhoto(m) : m)));
+  }, [photoRefused, setMessages]);
 
   const entries: Entry[] = messages.map((m, i) => ({
     id: m.id,
@@ -109,8 +136,8 @@ function AiChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
     flag: (m.metadata as { flag?: string } | undefined)?.flag,
     photo: m.role === "user" ? photoOf(m) : undefined,
   }));
-  const skillId = setup.item?.skillId ?? messages.flatMap(skillsIn)[0];
-  const failure = error?.message ?? "";
+  const skillIds = [...new Set([...(setup.item ? [setup.item.skillId] : []), ...messages.flatMap(skillsIn)])];
+  const last = messages.at(-1);
 
   return (
     <ChatView
@@ -123,14 +150,16 @@ function AiChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
       onStop={stop}
       label={t("tut.label.ai")}
       readsPhotos
-      skillId={skillId}
+      skillIds={skillIds}
+      topics={topics}
+      replies={status === "ready" && last?.role === "assistant" ? repliesIn(last) : []}
     />
   );
 }
 
 /* ------------------------------------------------------------------ demo */
 
-function DemoChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
+function DemoChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; topics: string[] }) {
   const { learner, item } = setup;
   const t = useT();
   const [ctx] = useState<DemoContext>(() => ({
@@ -141,11 +170,12 @@ function DemoChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
     hintsSeen: setup.hintsSeen,
     homework: setup.homework,
     lesson: setup.lesson ? { title: setup.lesson.title } : undefined,
+    choices: titles(topics, setup),
     seed: randomSeed,
   }));
   const [first] = useState(() => demoOpening(ctx));
   const state = useRef<DemoState>({ ...first.state, tries: setup.tries ?? 0 });
-  const [skillId, setSkillId] = useState(first.state.skillId);
+  const [skillIds, setSkillIds] = useState<string[]>(first.state.skillId ? [first.state.skillId] : []);
   const [entries, setEntries] = useState<Entry[]>(() => [{ id: "open", role: "tutor", text: first.text, cards: first.cards }]);
   const [busy, setBusy] = useState(false);
   const photos = useRef<string[]>([]);
@@ -159,9 +189,11 @@ function DemoChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
     if (s.kind !== "ok") return add({ role: "tutor", text: s.reply, cards: [], flag: s.kind });
     setBusy(true);
     try {
-      const r = await demoAnswer(text, ctx, state.current, know);
+      // Today as of this message: "tomorrow" said after midnight means the day after the new today.
+      const r = await demoAnswer(text, { ...ctx, today: localDate(Date.now()) }, state.current, know);
       state.current = r.state;
-      setSkillId(r.state.skillId);
+      const skill = r.state.skillId;
+      if (skill) setSkillIds((ids) => (ids.includes(skill) ? ids : [...ids, skill]));
       add({ role: "tutor", text: r.text, cards: r.cards });
     } finally {
       setBusy(false);
@@ -185,14 +217,15 @@ function DemoChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
       onDevicePhoto={photo}
       label={t("tutor.demoLabel")}
       readsPhotos={false}
-      skillId={skillId}
+      skillIds={skillIds}
+      topics={topics}
     />
   );
 }
 
 /* ------------------------------------------------------------------ view */
 
-type Quick = { label: string; fill?: [string, string] };
+type Quick = { label: string; fill?: [string, string]; subject?: Subject };
 
 function ChatView({
   setup,
@@ -205,7 +238,9 @@ function ChatView({
   onDevicePhoto,
   label,
   readsPhotos,
-  skillId,
+  skillIds,
+  topics,
+  replies = [],
 }: {
   setup: ChatSetup;
   board: boolean;
@@ -219,8 +254,12 @@ function ChatView({
   label: string | null;
   /** True when the tutor can read photos (AI connected): the photo is shrunk and sent with the message. */
   readsPhotos: boolean;
-  /** The skill the conversation is about, once known. */
-  skillId?: string;
+  /** The skills the conversation has turned to, in order. */
+  skillIds: string[];
+  /** Skills to tap at the start of an open conversation. */
+  topics: string[];
+  /** Answers the tutor offered to tap (AI, young learners). */
+  replies?: string[];
 }) {
   const t = useT();
   const { learner } = setup;
@@ -233,27 +272,38 @@ function ChatView({
   const listen = useListen(locale, (text) => submit(text));
   const end = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
+  const chips = useRef<HTMLDivElement>(null);
   const [threadId] = useState(() => crypto.randomUUID());
   const [startedAt] = useState(() => Date.now());
   const handled = useRef(new Set<string>());
-  const asked = useRef(false);
+  // When each line was first seen, so a grown-up's view says when it was said.
+  const said = useRef(new Map<string, number>());
   const [boardOpen, setBoardOpen] = useState(true);
   const [pending, setPending] = useState<Photo | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<"tut.photo.tooBig" | "tut.photo.unreadable" | null>(null);
-  // Topics to tap for an open conversation: the next skill in each subject on this learner's map.
-  const [topics] = useState(() =>
-    setup.item || setup.homework || setup.lesson
-      ? []
-      : (["math", "english", "science"] as Subject[]).map((sub) => nextSkillFor(read(), learner, sub, Date.now())).filter((id): id is string => !!id && !!getSkill(id)),
-  );
+  const skillId = skillIds.at(-1);
+  // Whether the learner is moving by keyboard (not tapping), so a chip reached by Tab can say its name.
+  const byKeyboard = useRef(false);
+  useEffect(() => {
+    const keys = () => (byKeyboard.current = true);
+    const taps = () => (byKeyboard.current = false);
+    window.addEventListener("keydown", keys, true);
+    window.addEventListener("pointerdown", taps, true);
+    return () => {
+      window.removeEventListener("keydown", keys, true);
+      window.removeEventListener("pointerdown", taps, true);
+    };
+  }, []);
 
   // What changed in the conversation, as one string: the AI view rebuilds `entries` on every render.
   const changed = entries.map((e) => `${e.id}:${e.text.length}:${e.cards.length}:${e.streaming ? 1 : 0}:${e.flag ?? ""}:${e.photo ? 1 : 0}`).join("|");
 
   // Read replies aloud as they arrive; keep the transcript for grown-ups; act on safety flags and notes
-  // once; record that the conversation turned to a skill.
+  // once; record each skill the conversation turned to.
   useEffect(() => {
+    const now = Date.now();
+    for (const e of entries) if (!said.current.has(e.id)) said.current.set(e.id, e.id === "open" ? startedAt : now);
     const last = entries.at(-1);
     if (last?.role === "tutor") {
       // Sentence by sentence (useSpeakStream queues each one), as it streams or all at once.
@@ -278,9 +328,10 @@ function ChatView({
     // Beside a problem the conversation is about its skill from the start (opening the drawer is help);
     // elsewhere, once the learner has asked something and the talk has turned to a skill.
     const talked = !!setup.item || entries.some((e) => e.role === "learner");
-    if (talked && skillId && !handled.current.has(`act:${skillId}`)) {
-      handled.current.add(`act:${skillId}`);
-      logTutorAct(learner.id, threadId, skillId, setup.item?.skillId === skillId ? setup.setId : undefined);
+    for (const id of talked ? skillIds : []) {
+      if (handled.current.has(`act:${id}`)) continue;
+      handled.current.add(`act:${id}`);
+      logTutorAct(learner.id, threadId, id, setup.item?.skillId === id ? setup.setId : undefined);
     }
     if (entries.some((e) => e.streaming)) return; // the transcript is saved when the reply is complete
     const firstAsk = entries.find((e) => e.role === "learner");
@@ -292,19 +343,10 @@ function ChatView({
       surface: setup.surface,
       title: setup.surface === "talk" && firstAsk ? line(firstAsk).slice(0, 80) : setup.title,
       flagged: entries.some((e) => e.flag && e.flag !== "offLimits") || undefined,
-      lines: entries.filter((e) => e.text || e.photo).map((e) => ({ role: e.role, text: line(e), at: startedAt })),
+      lines: entries.filter((e) => e.text || e.photo).map((e) => ({ role: e.role, text: line(e), at: said.current.get(e.id) ?? startedAt })),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs per change of the conversation
-  }, [changed, skillId]);
-
-  // A question carried in by a link is asked once, as if typed.
-  useEffect(() => {
-    if (setup.ask && !asked.current) {
-      asked.current = true;
-      onSend(setup.ask.trim().slice(0, 1000));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
-  }, []);
+  }, [changed, skillIds.join(",")]);
 
   function submit(text: string) {
     const clean = text.trim().slice(0, 1000);
@@ -337,29 +379,51 @@ function ChatView({
     });
   };
 
+  const skillChip = (id: string): Quick => ({ label: getSkill(id)!.title[locale], subject: getSkill(id)!.subject });
   const define: Quick = { label: t("tut.quick.define"), fill: [t("tut.quick.defineStart"), t("tut.quick.defineEnd")] };
   const book: Quick = { label: t("tut.quick.book"), fill: [t("tut.quick.bookStart"), ""] };
   const explain: Quick = { label: t("tutor.quick.explain") };
-  const asks: Quick[] = setup.item
-    ? [{ label: t("tutor.quick.hint") }, { label: t("tutor.quick.similar") }, explain, ...(young ? [] : [define])]
-    : setup.homework
-      ? [{ label: t("tutor.quick.whereStart") }, explain, define]
-      : setup.lesson
-        ? [explain, ...(young ? [] : [define])]
-        : skillId && entries.some((e) => e.role === "learner")
-          ? young
-            ? [{ label: t("tut.quick.example") }, explain, { label: t("tut.quick.poem") }]
-            : [{ label: t("tutor.quick.hint") }, { label: t("tut.quick.example") }, explain, define, book]
-          : young
-            ? [...topics.map((id) => ({ label: getSkill(id)!.title[locale] })), { label: t("tut.quick.poem") }]
-            : [define, book, ...topics.slice(0, 2).map((id) => ({ label: getSkill(id)!.title[locale] }))];
+  // A young learner never gets a chip that needs typing.
+  const typing = young ? [] : [define];
+  const asks: Quick[] = [
+    ...replies.map((label) => ({ label })),
+    ...(setup.item
+      ? [{ label: t("tutor.quick.hint") }, { label: t("tutor.quick.similar") }, explain, ...typing]
+      : setup.homework
+        ? [{ label: t("tutor.quick.whereStart") }, explain, ...typing]
+        : setup.lesson
+          ? [explain, ...typing]
+          : skillId && entries.some((e) => e.role === "learner")
+            ? young
+              ? [{ label: t("tut.quick.example") }, explain, { label: t("tut.quick.poem") }]
+              : [{ label: t("tutor.quick.hint") }, { label: t("tut.quick.example") }, explain, define, book]
+            : young
+              ? [...topics.map(skillChip), { label: t("tut.quick.poem") }]
+              : [define, book, ...topics.slice(0, 2).map(skillChip)]),
+  ].filter((q, i, all) => all.findIndex((x) => x.label === q.label) === i);
 
-  // The newest reply's cards on top, each reply's cards in the order the tutor gave them.
-  const items: BoardItem[] = board ? [...entries].reverse().flatMap((e) => e.cards.flatMap((card, i) => (card.type === "note" ? [] : [{ key: `${e.id}-${i}`, card }]))) : [];
+  // The newest reply's cards on top, each reply's cards in the order the tutor gave them. A practice
+  // offer already on the board isn't drawn twice; the older reply's pointer goes to the one shown.
+  const items: BoardItem[] = [];
+  const shownAt = new Map<string, string>();
+  if (board) {
+    const practiceAt = new Map<string, string>();
+    for (const e of [...entries].reverse())
+      e.cards.forEach((card, i) => {
+        const key = `${e.id}-${i}`;
+        if (card.type === "note") return;
+        if (card.type === "practice") {
+          const newer = practiceAt.get(card.skillId);
+          if (newer) return void shownAt.set(key, newer);
+          practiceAt.set(card.skillId, key);
+        }
+        items.push({ key, card });
+      });
+  }
   const show = (key: string) => {
     setBoardOpen(true);
     requestAnimationFrame(() => {
-      const el = document.getElementById(`card-${key}`);
+      const el = document.getElementById(`card-${shownAt.get(key) ?? key}`);
       el?.scrollIntoView?.({ block: "nearest" });
       el?.focus();
     });
@@ -385,7 +449,7 @@ function ChatView({
             <div key={e.id} className="mr-4 space-y-2">
               {e.text && (
                 <div className="flex items-start gap-2">
-                  <p className={`whitespace-pre-wrap rounded-lg rounded-bl-sm bg-panel2 px-3.5 py-2.5 text-ink ${young ? "text-base" : "text-sm"} ${e.flag && e.flag !== "offLimits" ? "border border-accent/40" : ""}`}>
+                  <p className={`min-w-0 whitespace-pre-wrap break-words rounded-lg rounded-bl-sm bg-panel2 px-3.5 py-2.5 text-ink ${young ? "text-base" : "text-sm"} ${e.flag && e.flag !== "offLimits" ? "border border-accent/40" : ""}`}>
                     {e.text}
                     {e.streaming && <span aria-hidden="true" className="ml-1 inline-block size-2 animate-pulse rounded-full bg-muted align-middle" />}
                   </p>
@@ -399,7 +463,7 @@ function ChatView({
                     <button
                       type="button"
                       onClick={() => show(`${e.id}-${e.cards.findIndex((c) => c.type !== "note")}`)}
-                      className="flex min-h-11 w-full items-center rounded-sm border border-border bg-panel px-3 text-left text-xs text-muted hover:border-ink/30 hover:text-ink"
+                      className={`flex ${young ? "min-h-14 text-base" : "min-h-11 text-xs"} w-full items-center rounded-sm border border-border bg-panel px-3 text-left text-muted hover:border-ink/30 hover:text-ink`}
                     >
                       {t("tut.board.on", { what: [...new Set(e.cards.filter((c) => c.type !== "note").map((c) => t(`tut.kind.${c.type}` as Key)))].join(", ") })}
                     </button>
@@ -416,26 +480,38 @@ function ChatView({
         <div ref={end} />
       </div>
       <div className={`border-t border-border ${board ? "pt-3" : "p-3"}`}>
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          {asks.map((q) => (
-            <button
-              key={q.label}
-              type="button"
-              disabled={busy}
-              onClick={() => (q.fill ? fill(q.fill) : submit(q.label))}
-              className={young ? "k-btn-secondary min-h-14 px-5 text-base" : "k-btn-secondary min-h-11 px-3.5 text-xs"}
-            >
-              {q.label}
-            </button>
-          ))}
+        <div className="mb-2 flex flex-wrap items-start gap-2">
+          {/* Focus stays here when a tapped chip goes away or waits for the reply, so keyboard users keep their place. */}
+          <div ref={chips} tabIndex={-1} role="group" aria-label={t("tut.quick.label")} className="flex min-w-0 flex-1 flex-wrap gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-accent">
+            {asks.map((q) => (
+              <button
+                key={q.label}
+                type="button"
+                disabled={busy}
+                onFocus={() => {
+                  // A young learner who can't read the chip hears it when they reach it by keyboard.
+                  if (young && readAloud && byKeyboard.current) speakText(q.label, locale);
+                }}
+                onClick={() => {
+                  if (q.fill) return fill(q.fill);
+                  chips.current?.focus();
+                  submit(q.label);
+                }}
+                className={`${young ? "k-btn-secondary min-h-14 px-5 text-base" : "k-btn-secondary min-h-11 px-3.5 text-xs"} gap-2`}
+              >
+                {q.subject && <SubjectDot subject={q.subject} />}
+                {q.label}
+              </button>
+            ))}
+          </div>
           {speak.supported && (
             <button
               type="button"
               aria-pressed={readAloud}
               onClick={() => (readAloud && speak.stop(), setReadAloud(!readAloud))}
-              className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-xs text-muted hover:bg-panel2 aria-pressed:text-accent"
+              className={`ml-auto inline-flex ${young ? "min-h-14 px-4 text-base" : "min-h-11 px-3 text-xs"} items-center gap-1.5 rounded-full text-muted hover:bg-panel2 aria-pressed:text-accent`}
             >
-              <IconSpeaker size={14} /> {readAloud ? t("tutor.readingOn") : t("tutor.readingOff")}
+              <IconSpeaker size={young ? 18 : 14} /> {readAloud ? t("tutor.readingOn") : t("tutor.readingOff")}
             </button>
           )}
         </div>
@@ -454,7 +530,7 @@ function ChatView({
               <span className="block text-xs text-muted">{t("tut.photo.privacy")}</span>
             </span>
             {pending && (
-              <button type="button" onClick={() => setPending(null)} aria-label={t("tut.photo.remove")} className="grid size-11 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
+              <button type="button" onClick={() => setPending(null)} aria-label={t("tut.photo.remove")} className={`grid ${young ? "size-14" : "size-11"} shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink`}>
                 <IconX size={18} />
               </button>
             )}

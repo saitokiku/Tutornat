@@ -24,6 +24,28 @@ export function saveThread(thread: TutorThread) {
 export const threadsOf = (s: StoreState, profileId: string) =>
   s.threads.filter((x) => x.profileId === profileId).sort((a, b) => b.startedAt - a.startedAt);
 
+/** Every name the family entered: the learners' nicknames (and each word of them) and the grown-up's name. */
+export function familyNames(s: StoreState, profileId: string): string[] {
+  const accountId = s.profiles.find((p) => p.id === profileId)?.accountId;
+  const names = [...s.profiles.filter((p) => p.accountId === accountId).map((p) => p.nickname), ...s.accounts.filter((a) => a.id === accountId).map((a) => a.displayName)];
+  return [...new Set(names.flatMap((n) => [n, ...n.split(/\s+/)]).map((n) => n.trim()).filter((n) => n.length >= 2))];
+}
+
+/**
+ * Text for the AI tutor with the family's names taken out: learner names never go to a model, but a
+ * teacher's note ("Ada still needs page 4") or a child typing "my name is Ada" would carry them. A name
+ * is matched as a whole word, as entered, Capitalized or in capitals ("will" in a sentence stays; "Will"
+ * goes, which errs toward privacy).
+ */
+export function withoutNames(text: string, names: string[]): string {
+  let out = text;
+  for (const name of [...names].sort((a, b) => b.length - a.length)) {
+    const forms = [...new Set([name, name[0].toUpperCase() + name.slice(1), name.toUpperCase()])].map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    out = out.replace(new RegExp(`(?<![\\p{L}\\p{N}])(?:${forms.join("|")})(?![\\p{L}\\p{N}])`, "gu"), "[name]");
+  }
+  return out;
+}
+
 /**
  * A conversation turned to a skill: the tutor's help is meant to make the next try on it right. One act
  * per conversation (ref = thread id), skill and day, with the practice set when the tutor sat beside one;
