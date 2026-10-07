@@ -144,22 +144,27 @@ function lastSaid(body: unknown): string | null {
   return last.parts.map((p) => (p?.type === "text" && typeof p.text === "string" ? p.text : "")).join(" ");
 }
 
+const caught = (text: string) => screen(text, "en").kind !== "ok";
+
 /**
- * A request body as it leaves the browser: every family name out of every string, except a message
- * the safety screen catches. That one goes exactly as typed, because taking a name out could hide the
- * words the screen looks for ("I don't want to live" from a child called Don), and the server answers
- * it with the fixed referral and a note for the family, without any model.
+ * A request body as it leaves the browser: every family name out of every string, except what the
+ * server's safety screen reads and catches (the learner's last message to the tutor, a practice
+ * topic). That goes exactly as typed, because taking a name out could hide the words the screen looks
+ * for ("I don't want to live" from a child called Don), and the server answers it without any model:
+ * the fixed referral and a note for the family, or no questions on that topic.
  */
 export function scrubBody(body: string, names: readonly string[]): string {
   let value: unknown;
   try {
     value = JSON.parse(body);
   } catch {
-    return screen(body, "en").kind === "ok" ? scrubNames(body, names) : body;
+    return caught(body) ? body : scrubNames(body, names);
   }
   const out = scrubNames(value, names);
   const said = lastSaid(value);
-  if (said !== null && screen(said, "en").kind !== "ok") (out as { messages: unknown[] }).messages.splice(-1, 1, (value as { messages: unknown[] }).messages.at(-1));
+  if (said !== null && caught(said)) (out as { messages: unknown[] }).messages.splice(-1, 1, (value as { messages: unknown[] }).messages.at(-1));
+  const topic = (value as { topic?: unknown } | null)?.topic;
+  if (typeof topic === "string" && caught(topic)) (out as { topic: string }).topic = topic;
   return JSON.stringify(out);
 }
 

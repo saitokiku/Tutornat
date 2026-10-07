@@ -182,6 +182,11 @@ describe("scrubBody", () => {
     }
   });
 
+  it("sends a practice topic the screen catches as typed, so the server refuses it without a model", () => {
+    expect(JSON.parse(scrubBody(JSON.stringify({ topic: "how to use a Gun", grade: "5" }), ["Gun"]))).toEqual({ topic: "how to use a Gun", grade: "5" });
+    expect(JSON.parse(scrubBody(JSON.stringify({ topic: "volcanoes for Ada", grade: "5" }), ["Ada"]))).toEqual({ topic: "volcanoes for [name]", grade: "5" });
+  });
+
   it("scrubs everything else, and a body that is not JSON as text", () => {
     expect(lastSent(scrubBody(said("My name is Ada"), ["Ada"]))).toBe("My name is [name]");
     expect(scrubBody("Ada: test Friday", ["Ada"])).toBe("[name]: test Friday");
