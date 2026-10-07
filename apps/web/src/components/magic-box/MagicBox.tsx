@@ -12,14 +12,25 @@ import { guessSubject } from "@/lib/generate";
 import { DEMO } from "@/lib/mode";
 import { SUBJECTS, type CourseLength, type Locale, type Profile, type SourceItem, type Subject } from "@/lib/types";
 import { EXAMPLES } from "./examples";
+import { IntakeBox } from "./IntakeBox";
 
 export const GOAL_MAX = 2000;
 
 /**
- * The magic box: one input for "what do you want to learn", plus files. Submitting saves a draft
- * course and opens the outline builder. Same component on Home (compact) and /courses/new (page).
+ * The magic box. As the universal intake (Home's default) it takes homework, a test, practice or
+ * something to learn and shows its guess before anything is made. As the course builder (the
+ * default on /courses/new, `variant="page"`) it turns a goal and files into a draft course.
  */
-export function MagicBox({ learner, variant = "compact", initialGoal = "" }: { learner: Profile; variant?: "compact" | "page"; initialGoal?: string }) {
+export function MagicBox({ learner, variant = "compact", initialGoal = "", mode }: { learner: Profile; variant?: "compact" | "page"; initialGoal?: string; mode?: "intake" | "course" }) {
+  return (mode ?? (variant === "page" ? "course" : "intake")) === "intake" ? (
+    <IntakeBox learner={learner} variant={variant} initialText={initialGoal} />
+  ) : (
+    <CourseBox learner={learner} variant={variant} initialGoal={initialGoal} />
+  );
+}
+
+/** One input for "what do you want to learn", plus files. Submitting saves a draft course and opens the outline builder. */
+function CourseBox({ learner, variant, initialGoal }: { learner: Profile; variant: "compact" | "page"; initialGoal: string }) {
   const t = useT();
   const router = useRouter();
   const id = useId();

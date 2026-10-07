@@ -2,6 +2,7 @@ import { isDay } from "@/planner/dates";
 import { classify, parseIcs } from "@/planner/ics";
 import { matchSkills } from "@/planner/skillmatch";
 import type { EventKind, Feedback, SchoolClass, SchoolEvent, SchoolResult } from "@/planner/types";
+import { deleteBlob } from "./blobs";
 import { newId, update, type StoreState } from "./store";
 import type { Subject } from "./types";
 
@@ -44,7 +45,24 @@ export function removeClass(id: string) {
   });
 }
 
-export type EventInput = { title: string; kind: EventKind; date: string; time?: string; classId?: string; notes?: string; skillIds?: string[] };
+export type EventInput = { title: string; kind: EventKind; date: string; time?: string; classId?: string; notes?: string; skillIds?: string[]; attachment?: SchoolEvent["attachment"] };
+
+/** One school item, only for the learner it belongs to (undefined for a wrong id or someone else's). */
+export const getEvent = (s: StoreState, id: string, profileId: string) => s.events.find((e) => e.id === id && e.profileId === profileId);
+
+/** What may be kept with an item: pasted text (capped), and a pointer to a file in the browser's file store. */
+function cleanAttachment(a: SchoolEvent["attachment"]): SchoolEvent["attachment"] {
+  if (!a) return undefined;
+  const out: NonNullable<SchoolEvent["attachment"]> = {};
+  const text = typeof a.text === "string" ? a.text.trim().slice(0, 4000) : "";
+  if (text) out.text = text;
+  if (typeof a.blobId === "string" && /^[\w-]{1,64}$/.test(a.blobId)) {
+    out.blobId = a.blobId;
+    if (typeof a.name === "string" && a.name.trim()) out.name = clean(a.name, 120);
+    if (typeof a.mediaType === "string" && /^[\w.+-]+\/[\w.+-]+$/.test(a.mediaType)) out.mediaType = a.mediaType.slice(0, 80);
+  }
+  return out.text || out.blobId ? out : undefined;
+}
 
 export function checkEvent(input: EventInput): "err.title" | "err.date" | null {
   if (!clean(input.title, 160)) return "err.title";
@@ -75,12 +93,15 @@ export function addEvent(profileId: string, input: EventInput, source: SchoolEve
       source,
       createdAt: Date.now(),
     };
+    const attachment = cleanAttachment(input.attachment);
+    if (attachment) made.attachment = attachment;
     s.events.push(made);
   });
   return made;
 }
 
 export function updateEvent(id: string, patch: Partial<EventInput & { done: boolean }>) {
+  let dropped: string | undefined;
   update((s) => {
     const e = s.events.find((x) => x.id === id);
     if (!e) return;
@@ -92,14 +113,26 @@ export function updateEvent(id: string, patch: Partial<EventInput & { done: bool
     if (patch.notes !== undefined) e.notes = patch.notes.trim().slice(0, 1000) || undefined;
     if (patch.skillIds) e.skillIds = patch.skillIds;
     if (patch.done !== undefined) e.done = patch.done;
+    if ("attachment" in patch) {
+      const next = cleanAttachment(patch.attachment);
+      if (e.attachment?.blobId && e.attachment.blobId !== next?.blobId) dropped = e.attachment.blobId;
+      if (next) e.attachment = next;
+      else delete e.attachment;
+    }
   });
+  // A photo or PDF the item no longer points to leaves the file store too.
+  if (dropped) void deleteBlob(dropped);
 }
 
 export function removeEvent(id: string) {
+  let blobId: string | undefined;
   update((s) => {
+    blobId = s.events.find((e) => e.id === id)?.attachment?.blobId;
     s.events = s.events.filter((e) => e.id !== id);
     s.planDone = s.planDone.filter((d) => !d.key.endsWith(id));
   });
+  // The photo or PDF goes with the item.
+  if (blobId) void deleteBlob(blobId);
 }
 
 export type Draft = { key: string; title: string; date: string; time?: string; kind: EventKind; classId?: string; skillIds: string[]; uid?: string; include: boolean };
