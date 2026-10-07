@@ -69,14 +69,17 @@ test("a family's first evening", async ({ page }, info) => {
   ]);
 
   // A course from the magic box, built without AI from real sources, with something to start right
-  // now. The journey never depends on outside sites: here they find nothing (Wikipedia, word lists and
-  // books are covered in courses.spec.ts), so the course is built from what is on the device, and says so.
+  // now. The journey never depends on outside sites or an AI provider: no AI writer is set up here, and
+  // the sources find nothing (Wikipedia, word lists and books are covered in courses.spec.ts), so the
+  // course is built from what is on the device, and says so.
+  await page.route("**/api/ai/status", (r) => r.fulfill({ json: { mode: "demo" } }));
   await page.route("**/api/know/**", (r) => r.fulfill({ json: {} }));
   await page.goto("/courses/new");
   await page.getByLabel("What do you want to learn?").fill("dinosaurs");
   await page.getByRole("button", { name: /Build my course/ }).click();
   await expect(page.getByRole("button", { name: /Create course/ })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Create course/ }).click();
+  await page.unroute("**/api/ai/status");
   await page.unroute("**/api/know/**");
   const course = page.locator("header", { has: page.getByRole("heading", { level: 1, name: "Dinosaurs" }) });
   await expect(course.getByText("Built from real sources", { exact: true })).toBeVisible();
