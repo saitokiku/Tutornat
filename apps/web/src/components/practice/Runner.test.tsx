@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PracticeSet, Slot } from "@/learning/types";
@@ -38,7 +38,16 @@ function setOf(p: Profile, kind: PracticeSet["kind"], slots: Slot[]): PracticeSe
 /** Renders a set and waits until its first problem has focus, the way the runner presents it. */
 async function show(set: PracticeSet, p: Profile) {
   render(<Runner set={set} learner={p} exitHref="/practice" />);
-  await waitFor(() => expect(document.getElementById("problem")).toHaveFocus());
+  await settled();
+}
+
+/** Waits for the runner to move focus to the problem on screen, as it does for every new problem. */
+const settled = () => waitFor(() => expect(document.getElementById("problem")).toHaveFocus());
+
+/** Presses a button that moves on to another problem, then waits until that problem has focus. */
+async function moveOn(name: string | RegExp) {
+  await userEvent.click(screen.getByRole("button", { name }));
+  await settled();
 }
 
 /** The first seed whose item fits. */
@@ -119,6 +128,139 @@ describe("Runner", () => {
     await userEvent.keyboard("{Enter}");
     expect(screen.getByText("Right.", { exact: true })).toBeInTheDocument();
     expect(read().attempts[0]).toMatchObject({ correct: true, assisted: false, response: item.answer.kind === "text" ? item.answer.accept[0] : "" });
+  });
+
+  it("a problem missed, skipped and fixed at the end counts as right with help", async () => {
+    const p = await learner("1");
+    const [a, b] = [5, 9].map((seed) => makeItem("m.add.20", 1, seed, "en"));
+    const set = setOf(p, "pick", [
+      { skillId: "m.add.20", seed: 5, role: "main", level: 1 },
+      { skillId: "m.add.20", seed: 9, role: "main", level: 1 },
+    ]);
+    await show(set, p);
+    const value = (it: Item) => (it.answer.kind === "number" ? it.answer.value : NaN);
+    await userEvent.keyboard(`${value(a) + 1}{Enter}`);
+    expect(screen.getByText(/^Not yet/)).toBeInTheDocument();
+    await moveOn("Skip for now");
+    await userEvent.keyboard(`${value(b)}{Enter}`);
+    expect(screen.getByText("Right.", { exact: true })).toBeInTheDocument();
+    await moveOn(/^Next/);
+    // The fix pass brings the skipped problem back, and it still remembers the miss.
+    expect(screen.getByText(/Fix the ones you skipped/)).toBeInTheDocument();
+    await userEvent.keyboard(`${value(a)}{Enter}`);
+    expect(screen.getByText("Right, with help.")).toBeInTheDocument();
+    expect(read().attempts.map((x) => [x.seed, x.correct, x.assisted])).toEqual([
+      [9, true, false],
+      [5, true, true],
+    ]);
+    await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+    expect(await screen.findByRole("heading", { name: "Set done" })).toBeInTheDocument();
+    expect(screen.getAllByRole("definition").map((d) => d.textContent)).toEqual(["1", "1", "0"]);
+  });
+
+  it("hints and steps taken before a skip come back with the problem, and are not logged twice", async () => {
+    const p = await learner("1");
+    const a = makeItem("m.add.20", 1, 5, "en");
+    const set = setOf(p, "pick", [
+      { skillId: "m.add.20", seed: 5, role: "main", level: 1 },
+      { skillId: "m.add.20", seed: 9, role: "main", level: 1 },
+    ]);
+    await show(set, p);
+    for (const name of [/^Hint/, /Another hint/, /Another hint/]) await userEvent.click(screen.getByRole("button", { name }));
+    await userEvent.click(screen.getByRole("button", { name: "Show me how" }));
+    await moveOn("Skip for now");
+    const b = makeItem("m.add.20", 1, 9, "en");
+    await userEvent.keyboard(`${b.answer.kind === "number" ? b.answer.value : ""}{Enter}`);
+    await moveOn(/^Next/);
+    // Back for fixing: the three hints and the worked steps are still there; nothing new to take.
+    expect(within(screen.getByRole("list", { name: "Hints" })).getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.getByText("How it's done")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /hint/i })).toBeNull();
+    await userEvent.keyboard(`${a.answer.kind === "number" ? a.answer.value : ""}{Enter}`);
+    expect(read().attempts.find((x) => x.seed === 5)).toMatchObject({ correct: true, assisted: true });
+    expect(read().acts.filter((x) => x.setId === set.id).map((x) => [x.kind, x.detail])).toEqual([
+      ["hint", "1"],
+      ["hint", "2"],
+      ["hint", "3"],
+      ["steps", undefined],
+    ]);
+  });
+
+  it("leaving a problem in the fix pass records the last miss and the misconception it shows", async () => {
+    const p = await learner("3");
+    const seed = seedWhere("m.frac.numberline", 3, (it) => it.input === "number-line" && it.answer.kind === "fraction" && it.answer.n >= 2 && it.answer.n < it.answer.d);
+    const item = makeItem("m.frac.numberline", 3, seed, "en");
+    const { n, d } = item.answer as { n: number; d: number };
+    const other = makeItem("m.add.20", 1, 9, "en");
+    const set = setOf(p, "pick", [
+      { skillId: "m.frac.numberline", seed, role: "main", level: 3 },
+      { skillId: "m.add.20", seed: 9, role: "main", level: 1 },
+    ]);
+    await show(set, p);
+    screen.getByRole("slider", { name: "Number line: place your point" }).focus();
+    for (let k = 0; k < n; k++) await userEvent.keyboard("{ArrowRight}");
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByText(/^Not yet/)).toBeInTheDocument();
+    await moveOn("Skip for now");
+    await userEvent.keyboard(`${other.answer.kind === "number" ? other.answer.value : ""}{Enter}`);
+    await moveOn(/^Next/);
+    await userEvent.click(screen.getByRole("button", { name: "Leave this one" }));
+    expect(read().attempts.find((x) => x.seed === seed)).toMatchObject({ correct: false, assisted: true, response: `${n - 1}/${d}`, why: "counted-ticks-not-jumps" });
+  });
+
+  it("on a keypad problem, Enter on a counter marks it and never answers; Tab from the question reaches the counters", async () => {
+    const p = await learner("1");
+    const seed = seedWhere("m.add.10", 1, (it) => it.markable === true);
+    const item = makeItem("m.add.10", 1, seed, "en");
+    const set = setOf(p, "pick", [{ skillId: "m.add.10", seed, role: "main", level: 1 }]);
+    await show(set, p);
+    await userEvent.keyboard(String(item.answer.kind === "number" ? item.answer.value : ""));
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: `Read aloud: ${item.say.slice(0, 60)}` })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Dot 1" })).toHaveFocus();
+    await userEvent.keyboard("{Enter}{ArrowRight} ");
+    expect(screen.getByText("2 marked")).toBeInTheDocument();
+    expect(read().attempts).toEqual([]);
+    // Enter on Hint takes a hint; it does not send the typed answer either.
+    await userEvent.click(screen.getByRole("button", { name: /^Hint/ }));
+    expect(read().attempts).toEqual([]);
+    expect(screen.getByRole("list", { name: "Hints" })).toBeInTheDocument();
+  });
+
+  it("the draft label follows the problem on screen, and the finish names draft questions", async () => {
+    const p = await learner("K");
+    const math = makeItem("m.count.10", 1, 3, "en");
+    const draftSeed = 4;
+    const english = makeItem("e.rhyme", 1, draftSeed, "en");
+    const set = setOf(p, "pick", [
+      { skillId: "m.count.10", seed: 3, role: "main", level: 1 },
+      { skillId: "e.rhyme", seed: draftSeed, role: "review", level: 1 },
+    ]);
+    await show(set, p);
+    expect(screen.queryByText("Draft questions")).toBeNull();
+    const label = (it: Item) => (it.answer.kind === "choice" ? it.choices![it.answer.index].label : "");
+    await userEvent.click(screen.getByRole("button", { name: label(math) }));
+    await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+    expect(await screen.findByText("Draft questions")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: label(english) }));
+    await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+    expect(await screen.findByText("These questions are a draft. A teacher hasn't reviewed them yet.")).toBeInTheDocument();
+  });
+
+  it("a clock left at 12:00 answers 12:00, and after a right answer the clock stays, showing it", async () => {
+    const p = await learner("1");
+    const seed = seedWhere("m.time.clock", 1, (it) => it.input === "clock" && it.answer.kind === "text" && it.answer.accept[0] === "12:00");
+    const set = setOf(p, "pick", [{ skillId: "m.time.clock", seed, role: "main", level: 1 }]);
+    await show(set, p);
+    const check = screen.getByRole("button", { name: "Check" });
+    expect(check).toBeEnabled();
+    await userEvent.click(check);
+    expect(screen.getByText("Right.", { exact: true })).toBeInTheDocument();
+    expect(read().attempts[0]).toMatchObject({ correct: true, response: "12:00" });
+    expect(screen.getByRole("img", { name: /Clock face showing 12:00/ })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Hour" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: /^Next/ })).toHaveFocus();
   });
 
   it("finishing never starts another set; the next thing starts only when chosen, and done-for-today goes to Today", async () => {
