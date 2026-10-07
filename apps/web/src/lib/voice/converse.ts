@@ -153,7 +153,8 @@ export function converse({
   function check() {
     clearTimeout(timer);
     if (!output || !midReply() || onsetAt == null || !heard) return;
-    const recent = onsetNearVoice && state() !== "paused" ? playedBetween(onsetAt - ECHO_LAG_MS, now()) : [];
+    // While the voice plays, what we hear may be the voice itself (even if the learner's sound began before it did).
+    const recent = state() === "speaking" ? playedBetween(onsetAt - ECHO_LAG_MS, now()) : [];
     if (shouldBargeIn({ speaking: true, heard, onsetAt, now: now(), tutorRecent: recent, minMs: minBargeMs })) return bargeIn(onsetAt);
     // Real words but not long enough yet: look again when they would be.
     const left = onsetAt + minBargeMs - now();
@@ -194,7 +195,7 @@ export function converse({
         onsetPlaying = onsetNearVoice = false;
         heard = "";
         const s = state();
-        if (wasNearVoice && s !== "paused" && echoVerdict(text, playedBetween(at - ECHO_LAG_MS, t)) === "echo") return onEcho?.(text);
+        if ((wasNearVoice || nearVoice(t)) && s !== "paused" && echoVerdict(text, playedBetween(at - ECHO_LAG_MS, t)) === "echo") return onEcho?.(text);
         if ((s !== "idle" || wasPlaying) && isBackchannel(text)) {
           // "Yes" while the tutor asks something answers it (once the tutor finishes); otherwise it's listening.
           const asked = s !== "waiting" && !!sentenceAt(indexAt(t))?.question;

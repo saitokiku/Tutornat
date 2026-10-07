@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { sentenceFeed } from "./chunk";
 import { converse, type ConverseOptions } from "./converse";
 import { fakeIn, fakeOut } from "./fakes";
 
@@ -248,6 +249,23 @@ describe("talking with the tutor", () => {
     s.input.endOfTurn("Mhm.");
     expect(s.onTurn).not.toHaveBeenCalled();
     expect(s.onBackchannel).toHaveBeenCalledWith("Mhm.");
+  });
+
+  it("the voice is still recognized as echo when a noise started the turn before the voice began", async () => {
+    const s = setup();
+    const feed = sentenceFeed();
+    void s.talk.say(feed.sentences);
+    s.input.speechStart(); // a chair scrapes while the reply is on its way
+    await vi.advanceTimersByTimeAsync(200);
+    feed.write("Each part is one fourth of the bar. ");
+    feed.end();
+    await tick();
+    expect(s.output.state).toBe("speaking");
+    await vi.advanceTimersByTimeAsync(500);
+    s.input.partial("each part is one fourth");
+    await vi.advanceTimersByTimeAsync(400);
+    expect(s.output.state).toBe("speaking");
+    expect(s.onBargeIn).not.toHaveBeenCalled();
   });
 
   it("a noise long before doesn't count toward the 300 ms", async () => {
