@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { LangTag } from "@/components/courses/LangTag";
 import { NotFound } from "@/components/courses/NotFound";
+import { Related } from "@/components/courses/Related";
 import { Guard } from "@/components/gate";
 import { IconArrowLeft, IconArrowRight, IconCheck, IconTrash } from "@/components/icons";
 import { Badge, Button, Notice, SubjectDot, btn } from "@/components/ui";
@@ -49,6 +50,7 @@ function CourseView() {
     );
 
   const p = courseProgress(course, events);
+  const outlineOnly = course.lessons.every((l) => l.scenes.length === 0);
   const target = p.next ?? course.lessons[0];
   const cta = p.done === p.total ? t("course.again") : p.started ? t("course.continue") : t("course.start");
 
@@ -75,12 +77,21 @@ function CourseView() {
           </p>
         )}
         <div className="flex flex-wrap items-center gap-4 pt-2">
-          <Link href={`/learn/${course.id}/${target.id}`} className={btn("primary")}>
-            {cta} <IconArrowRight size={16} />
-          </Link>
+          {!outlineOnly && (
+            <Link href={`/learn/${course.id}/${target.id}`} className={btn("primary")}>
+              {cta} <IconArrowRight size={16} />
+            </Link>
+          )}
           <span className="font-opmono text-xs tabular-nums text-muted">{t("courses.progress", { done: p.done, total: p.total })}</span>
         </div>
       </header>
+
+      {outlineOnly && (
+        <section className="space-y-3">
+          <Notice>{t("course.outlineNote")}</Notice>
+          <Related course={course} learner={learner} />
+        </section>
+      )}
 
       <section aria-labelledby="lessons">
         <h2 id="lessons" className="mb-3 font-brand text-t2 font-semibold text-ink">

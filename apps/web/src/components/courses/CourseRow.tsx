@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { IconChevronRight } from "@/components/icons";
-import { Badge, SubjectDot } from "@/components/ui";
+import { Badge } from "@/components/ui";
+import { CourseArt } from "./CourseArt";
 import { useLocale, useT } from "@/i18n";
 import { LangTag } from "./LangTag";
 import { courseProgress } from "@/lib/activity";
@@ -15,7 +16,7 @@ export function CourseRow({ course, events }: { course: Course; events: Activity
   return (
     <li>
       <Link href={`/courses/${course.id}`} className="group flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-panel2/60 sm:px-5">
-        <SubjectDot subject={course.subject} />
+        <CourseArt lessons={course.lessons} subject={course.subject} size="sm" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-ink">{course.title}</span>
           <span className="mt-0.5 block font-opmono text-xs tabular-nums text-muted">{t("courses.progress", { done: p.done, total: p.total })}</span>

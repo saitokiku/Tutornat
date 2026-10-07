@@ -1,4 +1,4 @@
-import type { Grade, Locale } from "@/lib/types";
+import type { Grade, Locale, Subject } from "@/lib/types";
 import argument from "./english-argument";
 import mainIdea from "./english-main-idea";
 import rhetoric from "./english-rhetoric";
@@ -44,3 +44,10 @@ export function catalogueFor(grade: Grade, locale: Locale): CatalogueEntry[] {
 const sameTopic = (a: CatalogueEntry, b: CatalogueEntry) => a.id.replace(/-es$/, "") === b.id.replace(/-es$/, "");
 
 export const catalogueEntry = (id: string) => CATALOGUE.find((c) => c.id === id) ?? null;
+
+/** The ready-made course closest to a learner's request: same subject, nearest grade, their language. */
+export function relatedEntry(subject: Subject, grade: Grade, locale: Locale): CatalogueEntry | null {
+  const n = (g: Grade) => (g === "K" ? 0 : g === "adult" ? 10 : Number(g));
+  const pool = catalogueFor(grade, locale).filter((c) => subject === "other" || c.subject === subject);
+  return [...pool].sort((a, b) => Math.abs(n(a.grade) - n(grade)) - Math.abs(n(b.grade) - n(grade)))[0] ?? null;
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { IconCheck, IconLightbulb } from "@/components/icons";
-import { Button } from "@/components/ui";
+import { Button, SUBJECT_TINT } from "@/components/ui";
 import { useT } from "@/i18n";
 import type { InteractiveScene, ProjectScene, QuizScene, SlideScene, Subject, Widget } from "@/lib/types";
 import { Hear, useHear } from "./hear";
@@ -13,12 +13,7 @@ import { NumberLineWidget } from "./widgets/NumberLine";
 import { Sorter } from "./widgets/Sorter";
 import { StatesOfMatter } from "./widgets/StatesOfMatter";
 
-export const TINT: Record<Subject, string> = {
-  math: "var(--color-math)",
-  science: "var(--color-science)",
-  english: "var(--color-english)",
-  other: "var(--color-ink)",
-};
+export const TINT: Record<Subject, string> = SUBJECT_TINT;
 
 /** Everything a learner checks reports here: right or not, and whether help was used. */
 export type OnAnswer = (a: { sceneId: string; correct: boolean; assisted: boolean }) => void;

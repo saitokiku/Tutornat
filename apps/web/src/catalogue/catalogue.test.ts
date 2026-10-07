@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CATALOGUE, catalogueFor } from ".";
+import { CATALOGUE, catalogueFor, relatedEntry } from ".";
 
 const onStep = (v: number, min: number, step: number) => Math.abs((v - min) / step - Math.round((v - min) / step)) < 1e-9;
 
@@ -38,5 +38,11 @@ describe("catalogue", () => {
     const es = catalogueFor("3", "es").map((c) => c.id);
     expect(es).toContain("math-fractions-es");
     expect(es).not.toContain("math-fractions");
+  });
+
+  it("finds a related ready-made course for an outline-only request", () => {
+    expect(relatedEntry("science", "1", "en")?.id).toBe("science-matter");
+    expect(relatedEntry("math", "8", "en")?.subject).toBe("math");
+    expect(relatedEntry("math", "3", "es")?.id).toBe("math-fractions-es");
   });
 });

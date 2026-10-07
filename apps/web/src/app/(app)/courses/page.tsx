@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { bandOf, CATALOGUE, type Band } from "@/catalogue";
+import { CourseArt } from "@/components/courses/CourseArt";
 import { CourseRow } from "@/components/courses/CourseRow";
+import { LangTag } from "@/components/courses/LangTag";
 import { Guard } from "@/components/gate";
 import { IconCheck, IconPlus } from "@/components/icons";
-import { Button, EmptyState, SubjectDot } from "@/components/ui";
+import { Button, EmptyState } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
 import { courseProgress } from "@/lib/activity";
 import { addFromCatalogue, coursesOf } from "@/lib/courses";
@@ -92,33 +94,35 @@ function Courses() {
             {t("courses.allBands")}
           </button>
         </div>
-        <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-panel">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {catalogue.map((entry) => {
             const mine = courses.find((c) => c.catalogueId === entry.id);
             return (
-              <li key={entry.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 sm:px-5">
-                <div className="min-w-0 flex-1 basis-64">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                    <SubjectDot subject={entry.subject} />
+              <li key={entry.id} className="flex flex-col rounded-md border border-border bg-panel p-3">
+                <CourseArt lessons={entry.lessons} subject={entry.subject} />
+                <div className="flex flex-1 flex-col px-1 pb-1 pt-3">
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
                     <span lang={entry.locale}>{entry.title}</span>
+                    <LangTag course={entry.locale} learner={learner.locale} />
                   </p>
-                  <p className="mt-1 text-xs text-muted" lang={entry.locale}>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted" lang={entry.locale}>
                     {entry.summary}
                   </p>
-                  <p className="mt-1.5 font-opmono text-xs text-muted">
-                    {gradeLabel(learner.locale, entry.grade)} · {t("course.lessons", { n: entry.lessons.length })}
-                    {entry.locale !== learner.locale && ` · ${t(`lang.${entry.locale}` as const)}`}
-                  </p>
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+                    <span className="font-opmono text-xs text-muted">
+                      {gradeLabel(learner.locale, entry.grade, true)} · {t("course.lessons", { n: entry.lessons.length })}
+                    </span>
+                    {mine ? (
+                      <Link href={`/courses/${mine.id}`} className="k-btn-secondary min-h-9 px-3.5 text-xs">
+                        <IconCheck size={14} /> {t("course.open")}
+                      </Link>
+                    ) : (
+                      <Button size="sm" variant="secondary" onClick={() => addFromCatalogue(entry.id, learner.id)}>
+                        <IconPlus size={14} /> {t("courses.add")}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                {mine ? (
-                  <Link href={`/courses/${mine.id}`} className="k-btn-secondary min-h-9 px-3.5 text-xs">
-                    <IconCheck size={14} /> {t("courses.added")}
-                  </Link>
-                ) : (
-                  <Button size="sm" variant="secondary" onClick={() => addFromCatalogue(entry.id, learner.id)}>
-                    <IconPlus size={14} /> {t("courses.add")}
-                  </Button>
-                )}
               </li>
             );
           })}

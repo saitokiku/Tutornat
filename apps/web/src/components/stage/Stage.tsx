@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { IconArrowLeft, IconArrowRight, IconBoard, IconCheck, IconCheckCircle, IconChat, IconEye, IconHand, IconHome, IconLayers, IconSpeaker, IconStop } from "@/components/icons";
 import { Button, EmptyState, Notice, SubjectDot, btn } from "@/components/ui";
 import { useT } from "@/i18n";
+import { Related } from "@/components/courses/Related";
 import { lessonState, record } from "@/lib/activity";
 import { read } from "@/lib/store";
 import type { Course, Lesson, Profile, Scene } from "@/lib/types";
@@ -98,7 +99,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     return (
       <div className="min-h-dvh bg-paper">
         {header}
-        <main className="mx-auto max-w-2xl px-4 py-12">
+        <main className="mx-auto max-w-2xl space-y-6 px-4 py-12">
           <EmptyState
             art={<IconLayers size={28} className="mb-3 text-muted" />}
             title={t("stage.lessonNotReady")}
@@ -116,6 +117,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
               </div>
             }
           />
+          <Related course={course} learner={learner} />
         </main>
       </div>
     );

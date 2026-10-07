@@ -109,3 +109,11 @@ export const SUBJECT_COLOR = { math: "bg-math", science: "bg-science", english: 
 export function SubjectDot({ subject }: { subject: keyof typeof SUBJECT_COLOR }) {
   return <span aria-hidden="true" className={`inline-block size-2 shrink-0 rounded-full ${SUBJECT_COLOR[subject]}`} />;
 }
+
+/** Subject colour as a CSS value, for drawings and tints. */
+export const SUBJECT_TINT = {
+  math: "var(--color-math)",
+  science: "var(--color-science)",
+  english: "var(--color-english)",
+  other: "var(--color-ink)",
+} as const;
