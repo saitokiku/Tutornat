@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { collectErrors, family } from "./helpers";
+import { asParent, collectErrors, family } from "./helpers";
 
 // The shell: places reachable by keyboard, the K–2 band on <html>, and switching learners.
 
@@ -8,9 +8,12 @@ test("tabs move by keyboard and land focus on the page title", async ({ page }, 
   await family(page, "shell-keys", [["Sofía", "4"]]);
   await page.getByRole("button", { name: /Sofía/ }).click();
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Hi, Sofía" })).toBeVisible();
+  // Arriving by navigation, focus lands on the page title.
+  await expect(page.getByRole("heading", { level: 1, name: "Hi, Sofía" })).toBeFocused();
 
-  // The skip link is the first stop and takes focus past the rail.
+  // On a fresh load the skip link is the first stop and takes focus past the rail.
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Hi, Sofía" })).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
@@ -38,14 +41,12 @@ test("tabs move by keyboard and land focus on the page title", async ({ page }, 
     // A child's rail carries no settings or ops lines; the grown-up view owns the switch.
     await expect(page.getByRole("button", { name: "Turn off" })).toHaveCount(0);
     await expect(page.getByText("Saved on this device")).toHaveCount(0);
-    await page.goto("/profiles");
-    await page.getByRole("button", { name: /Parent/ }).click();
-    await expect(page).toHaveURL(/\/family$/);
+    await asParent(page);
     await page.getByRole("button", { name: "Turn off" }).click();
     await page.locator("body").click({ position: { x: 600, y: 10 } });
     await page.keyboard.press("2");
     await expect(page).toHaveURL(/\/family$/);
-    await expect(page.getByText("Number keys are off")).toBeVisible();
+    await expect(nav.getByText("Number keys are off")).toBeVisible();
   }
   expect(errors).toEqual([]);
 });
@@ -55,7 +56,7 @@ test("the switcher keeps focus while it's open: a sheet on phones, a panel that 
   await page.getByRole("button", { name: /Sofía/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Hi, Sofía" })).toBeVisible();
   const switcher = page.locator("#k-switcher");
-  await page.getByRole("button", { name: /switch learner/ }).click();
+  await page.getByRole("button", { name: /switch learner/i }).click();
   await expect(switcher).toBeVisible();
   const inside = () => page.evaluate(() => Boolean(document.activeElement?.closest("#k-switcher")) || document.activeElement === document.body);
   if (info.project.name === "phone") {
@@ -67,7 +68,7 @@ test("the switcher keeps focus while it's open: a sheet on phones, a panel that 
     await expect(switcher).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(switcher).toBeHidden();
-    await expect(page.getByRole("button", { name: /switch learner/ })).toBeFocused();
+    await expect(page.getByRole("button", { name: /switch learner/i })).toBeFocused();
   } else {
     // Not modal: tabbing on past "Sign out" closes it instead of leaving it open behind the focus.
     for (let i = 0; i < 9 && (await switcher.isVisible()); i++) await page.keyboard.press("Tab");
@@ -99,7 +100,7 @@ test("the switcher hands the device to a sibling in one tap and asks a grown-up 
   await page.getByRole("button", { name: /Sofía/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Hi, Sofía" })).toBeVisible();
 
-  const open = () => page.getByRole("button", { name: /switch learner/ }).click();
+  const open = () => page.getByRole("button", { name: /switch learner/i }).click();
   const switcher = page.locator("#k-switcher");
 
   // Open it, see who's current, pick a sibling.
@@ -119,7 +120,7 @@ test("the switcher hands the device to a sibling in one tap and asks a grown-up 
   await expect(switcher).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(switcher).toBeHidden();
-  await expect(page.getByRole("button", { name: /switch learner/ })).toBeFocused();
+  await expect(page.getByRole("button", { name: /switch learner/i })).toBeFocused();
 
   // The grown-up view asks the grown-up question in place (a child chose last).
   await open();

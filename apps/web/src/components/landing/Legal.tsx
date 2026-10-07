@@ -49,26 +49,28 @@ export function Legal({ kind }: { kind: LegalKind }) {
           <KaizenWordmark size={17} />
         </Link>
         {canSwitch && (
-          <button type="button" lang={other} onClick={() => update((s) => void (s.prefs.locale = other))} className={btn("ghost", "sm")}>
+          <button type="button" lang={other} onClick={() => update((s) => void (s.prefs.locale = other))} className={btn("ghost", "sm", "-mr-3")}>
             {t("land.otherLang")}
           </button>
         )}
       </header>
 
-      <main className="mx-auto max-w-prose px-gutter pt-8 pb-20 sm:px-8 sm:pt-14 sm:pb-28">
+      {/* Headings in a narrow left column, the words at a reading measure beside them. Names of
+          services never break across lines, so the prose here doesn't hyphenate. */}
+      <main className="mx-auto max-w-[58rem] px-gutter pt-8 pb-20 sm:px-8 sm:pt-14 sm:pb-28">
         <h1 className="font-brand text-d3 font-semibold text-ink sm:text-d2">{t(doc.title)}</h1>
         <p className="mt-3 text-sm text-muted">
           {t("land.legal.updated")} <time dateTime={UPDATED}>{date}</time>
         </p>
-        <p className="mt-8 text-t3 text-ink/85">{t(doc.intro)}</p>
+        <p className="mt-8 max-w-[40rem] text-t3 text-ink/85 hyphens-manual">{t(doc.intro)}</p>
 
-        <div className="mt-12 border-t border-ink">
+        <div className="mt-12 divide-y divide-border border-t border-ink">
           {doc.sections.map((s) => (
-            <section key={s} aria-labelledby={`${kind}-${s}`} className="grid gap-x-10 gap-y-2 border-b border-border py-7 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
+            <section key={s} aria-labelledby={`${kind}-${s}`} className="grid gap-x-10 gap-y-2 py-7 sm:grid-cols-[minmax(0,13rem)_minmax(0,40rem)]">
               <h2 id={`${kind}-${s}`} className="font-brand text-t3 font-semibold text-ink">
                 {t(`land.${kind}.${s}.t` as Key)}
               </h2>
-              <p className="text-body text-ink/85">{t(`land.${kind}.${s}.b` as Key, vars)}</p>
+              <p className="text-body text-ink/85 hyphens-manual">{t(`land.${kind}.${s}.b` as Key, vars)}</p>
             </section>
           ))}
         </div>

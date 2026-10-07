@@ -122,7 +122,7 @@ export function Landing({ data }: { data: LandingData }) {
         <Status data={data} aiOn={aiOn} />
 
         <section aria-labelledby="close" className="border-t border-border">
-          <div className="mx-auto grid max-w-wide gap-10 px-gutter py-16 sm:px-8 sm:py-24 lg:grid-cols-12 lg:gap-14">
+          <div className="mx-auto grid max-w-wide gap-10 px-gutter py-14 sm:px-8 sm:py-24 lg:grid-cols-12 lg:gap-14">
             <div className="lg:col-span-6">
               <h2 id="close" className="font-brand text-t1 font-semibold text-ink sm:text-d2">
                 {t("land.close.title")}

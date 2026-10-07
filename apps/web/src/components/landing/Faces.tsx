@@ -37,7 +37,7 @@ export function Engine({ set, item, locale, aiOn }: { set: HeroSet; item: Item; 
   const t = useT();
   return (
     <section aria-labelledby="how" className="border-t border-border">
-      <div className="mx-auto max-w-wide px-gutter py-16 sm:px-8 sm:py-24">
+      <div className="mx-auto max-w-wide px-gutter py-14 sm:px-8 sm:py-24">
         <div className="max-w-[40rem]">
           <h2 id="how" className="font-brand text-t1 font-semibold text-ink sm:text-d3">
             {t("landing.how")}
@@ -63,27 +63,29 @@ export function Engine({ set, item, locale, aiOn }: { set: HeroSet; item: Item; 
         </div>
 
         {/* The other two parts, one ruled line each. */}
-        <dl className="mt-14 border-t border-ink sm:mt-16">
-          <div className="grid gap-x-10 gap-y-1.5 border-b border-border py-5 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        {/* Ruled above and between, never below: the section's own rule is the next line down. */}
+        <dl className="mt-14 divide-y divide-border border-t border-ink sm:mt-16">
+          <div className="grid gap-x-10 gap-y-1.5 py-5 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
             <dt className="font-brand text-t3 font-semibold text-ink">{t("land.f.cal.title")}</dt>
             <dd className="text-sm text-muted">{t("land.f.cal.body")}</dd>
           </div>
-          <div className="grid gap-x-10 gap-y-1.5 border-b border-border py-5 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div className="grid gap-x-10 gap-y-1.5 pt-5 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
             <dt className="font-brand text-t3 font-semibold text-ink">{t("land.f.sources.title")}</dt>
             <dd className="text-sm text-muted">
               {t("land.f.sources.body")}
-              <span className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+              {/* Each source is a line of text that wraps like text; the line itself is the hit area. */}
+              <span className="mt-2 flex flex-col gap-x-6 sm:flex-row sm:flex-wrap">
                 {set.sources.map((s) => (
                   <a
                     key={s.id}
                     href={locale === "es" && s.urlEs ? s.urlEs : s.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group k-tap gap-1.5 rounded-sm font-medium text-ink"
+                    className="group -mx-1 block rounded-sm px-1 py-1.5 font-medium text-ink pointer-coarse:py-2.5"
                   >
-                    <span className="underline decoration-border-strong transition-[text-decoration-color] duration-(--duration-quick) group-hover:decoration-accent">{s.title}</span>
-                    <span className="font-normal text-muted">· {s.source}</span>
-                    <IconExternal size={14} className="text-muted" />
+                    <span className="underline decoration-border-strong transition-[text-decoration-color] duration-(--duration-quick) group-hover:decoration-accent">{s.title}</span>{" "}
+                    <span className="font-normal text-muted">· {s.source}</span>{" "}
+                    <IconExternal size={14} className="inline-block align-[-0.125em] text-muted" />
                     <span className="sr-only">({t("land.f.sources.newTab")})</span>
                   </a>
                 ))}

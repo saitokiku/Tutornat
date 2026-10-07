@@ -25,25 +25,28 @@ export function Parents({ data, outcomes }: { data: LandingData; outcomes: Outco
   const { rules } = data;
   return (
     <section aria-labelledby="parents" className="border-t border-border">
-      <div className="mx-auto grid max-w-wide gap-12 px-gutter py-16 sm:px-8 sm:py-24 lg:grid-cols-12 lg:gap-14">
-        <div className="lg:col-span-5">
+      {/* Phones: the record comes straight after the first paragraph, so it's the next thing under the
+          problem. Wide screens: it sits in the right column, under the problem it reacts to. */}
+      <div className="mx-auto grid max-w-wide gap-10 px-gutter py-14 sm:px-8 sm:py-24 lg:grid-cols-12 lg:gap-x-14 lg:gap-y-10">
+        <div className="lg:col-span-5 lg:row-start-1">
           <h2 id="parents" className="font-brand text-t1 font-semibold text-ink sm:text-d3">
             {t("landing.parents.title")}
           </h2>
           <p className="mt-4 max-w-[34rem] text-body text-muted">{t("land.f.parent.body", { days: rules.secondCheckDays, pass: rules.checkPass, size: rules.checkSize })}</p>
-          <h3 className="mt-10 border-b border-ink pb-3 font-brand text-t3 font-semibold text-ink">{t("land.parents.see.title")}</h3>
+        </div>
+        <div className="min-w-0 lg:col-span-7 lg:col-start-6 lg:row-span-2 lg:row-start-1 lg:pt-2">
+          <Ledger outcomes={outcomes} />
+        </div>
+        <div className="lg:col-span-5 lg:row-start-2">
+          <h3 className="border-b border-ink pb-3 font-brand text-t3 font-semibold text-ink">{t("land.parents.see.title")}</h3>
           <ul className="divide-y divide-border">
             {SEE.map((k) => (
-              <li key={k} className="flex items-start gap-3 py-3 text-body text-ink">
+              <li key={k} className="flex items-start gap-3 py-2.5 text-body text-ink">
                 <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 rounded-full bg-accent" />
                 {t(k)}
               </li>
             ))}
           </ul>
-        </div>
-        {/* Under the problem on wide screens, so the record visibly fills in from the answer above. */}
-        <div className="min-w-0 lg:col-span-7 lg:pt-2">
-          <Ledger outcomes={outcomes} />
         </div>
       </div>
     </section>
@@ -54,7 +57,7 @@ export function SkillMap({ data, locale, onLocale }: { data: LandingData; locale
   const t = useT();
   return (
     <section aria-labelledby="subjects" className="border-t border-border">
-      <div className="mx-auto grid max-w-wide gap-12 px-gutter py-16 sm:px-8 sm:py-24 lg:grid-cols-12 lg:gap-16">
+      <div className="mx-auto grid max-w-wide gap-12 px-gutter py-14 sm:px-8 sm:py-24 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-5">
           <h2 id="subjects" className="font-brand text-t1 font-semibold text-ink sm:text-d3">
             {t("land.subjects.title")}
@@ -166,7 +169,7 @@ export function Courses({ courses, locale }: { courses: CourseLine[]; locale: Lo
   const shown = [...mine, ...courses.filter((c) => c.locale !== locale && !mine.some((m) => sameTopic(m, c)))];
   return (
     <section aria-labelledby="courses" className="border-t border-border">
-      <div className="mx-auto max-w-wide px-gutter py-16 sm:px-8 sm:py-24">
+      <div className="mx-auto max-w-wide px-gutter py-14 sm:px-8 sm:py-24">
         <div className="max-w-[40rem]">
           <h2 id="courses" className="font-brand text-t1 font-semibold text-ink sm:text-d3">
             {t("landing.inside.title")}
@@ -185,7 +188,7 @@ export function Courses({ courses, locale }: { courses: CourseLine[]; locale: Lo
                 </h3>
                 <ul className="divide-y divide-border">
                   {list.map((c) => (
-                    <li key={c.id} className="flex items-baseline gap-3 py-3">
+                    <li key={c.id} className="flex items-baseline gap-3 py-2.5">
                       <span className="min-w-0 flex-1">
                         <span className="text-sm font-medium text-ink" lang={c.locale}>
                           {c.title}
@@ -234,7 +237,7 @@ export function Status({ data, aiOn }: { data: LandingData; aiOn: boolean }) {
 
   return (
     <section aria-labelledby="status" className="border-t border-border">
-      <div className="mx-auto grid max-w-wide gap-12 px-gutter py-16 sm:px-8 sm:py-24 lg:grid-cols-12 lg:gap-14">
+      <div className="mx-auto grid max-w-wide gap-12 px-gutter py-14 sm:px-8 sm:py-24 lg:grid-cols-12 lg:gap-14">
         <div className="lg:col-span-5">
           <h2 id="status" className="font-brand text-t1 font-semibold text-ink sm:text-d3">
             {t("landing.honest.title")}
