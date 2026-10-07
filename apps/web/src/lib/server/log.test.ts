@@ -1,9 +1,106 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { log, logRequestError, scrub, scrubPath, scrubText } from "./log";
+import { register } from "@/instrumentation";
+import { dropsKey, installConsoleScrub, log, logRequestError, scrub, scrubFreeText, scrubPath, scrubText } from "./log";
 
+let uninstall: (() => void) | null = null;
 afterEach(() => {
+  uninstall?.();
+  uninstall = null;
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+});
+
+describe("which keys are dropped", () => {
+  it("drops personal keys by their ending too, so camelCase and kebab-case names can't slip through", () => {
+    for (const k of ["learnerName", "childName", "displayName", "parentEmail", "userMessage", "studentAnswer", "eventTitle", "searchQuery", "x-api-key", "set-cookie", "accessToken", "ipAddress", "promptText", "tutor_transcript", "note", "q", "to"])
+      expect(dropsKey(k), k).toBe(true);
+    for (const k of ["route", "routeType", "status", "requestId", "learners", "locale", "context", "contentType", "photo", "digest", "method", "path", "count"]) expect(dropsKey(k), k).toBe(false);
+    expect(scrub({ learnerName: "Ada", parentEmail: "maria@example.com", details: { childName: "Bo", studentAnswer: "3/4" }, status: 500 })).toEqual({
+      learnerName: "[redacted]",
+      parentEmail: "[redacted]",
+      details: { childName: "[redacted]", studentAnswer: "[redacted]" },
+      status: 500,
+    });
+  });
+});
+
+describe("text nobody here wrote", () => {
+  it("masks quoted text, where errors repeat their input, and keeps property names", () => {
+    let parseError = "";
+    try {
+      JSON.parse("Ada is my name and I live at 12 Elm St");
+    } catch (e) {
+      parseError = (e as Error).message;
+    }
+    expect(parseError).toContain("Ada");
+    expect(scrubFreeText(parseError)).not.toContain("Ada");
+    expect(scrubFreeText(`Unexpected token 'A', "Ada is my "... is not valid JSON`)).toBe(`Unexpected token 'A', [quoted]... is not valid JSON`);
+    expect(scrubFreeText("Cannot read properties of undefined (reading 'nickname')")).toBe("Cannot read properties of undefined (reading 'nickname')");
+    expect(scrubFreeText("said “my name is Bo” to `Ana`")).toBe("said [quoted] to [quoted]");
+  });
+});
+
+describe("installConsoleScrub", () => {
+  function capture() {
+    const lines: string[] = [];
+    vi.spyOn(console, "error").mockImplementation((l: string) => void lines.push(l));
+    vi.spyOn(console, "warn").mockImplementation((l: string) => void lines.push(l));
+    vi.spyOn(console, "info").mockImplementation((l: string) => void lines.push(l));
+    return lines;
+  }
+
+  it("turns Next's raw console.error(err) for an uncaught error into one scrubbed line", () => {
+    const lines = capture();
+    uninstall = installConsoleScrub();
+    // What Next does before onRequestError: the error as thrown, own properties and cause included.
+    let err: Error;
+    try {
+      JSON.parse("Hi, I'm Ada Lopez, my email is ada.lopez@example.com");
+    } catch (e) {
+      err = Object.assign(e as Error, { learnerName: "Ada", cause: { transcript: "my name is Ada" } });
+    }
+    console.error(err!);
+    console.warn("retrying send to maria@example.com", { childName: "Bo", attempt: 2 });
+    expect(lines).toHaveLength(2);
+    const [e, w] = lines.map((l) => JSON.parse(l));
+    expect(e).toMatchObject({ level: "error", event: "console", args: [{ name: "SyntaxError" }] });
+    expect(w).toMatchObject({ level: "warn", event: "console", args: ["retrying send to [email example.com]", { childName: "[redacted]", attempt: 2 }] });
+    expect(lines.join("\n")).not.toMatch(/Ada|Lopez|ada\.lopez|maria@|\bBo\b|transcript/);
+  });
+
+  it("writes log() lines once, untouched, and puts the console back when removed", () => {
+    const lines = capture();
+    const before = console.error;
+    uninstall = installConsoleScrub();
+    expect(console.error).not.toBe(before);
+    log("error", "email_failed", { status: 502 }, new Date("2026-10-07T12:00:00Z"));
+    expect(lines).toEqual([JSON.stringify({ ts: "2026-10-07T12:00:00.000Z", level: "error", event: "email_failed", status: 502 })]);
+    // Installing twice changes nothing.
+    installConsoleScrub()();
+    uninstall();
+    uninstall = null;
+    expect(console.error).toBe(before);
+  });
+
+  it("is installed by instrumentation's register() in production only, never during the build", () => {
+    capture();
+    const before = console.error;
+    vi.stubEnv("NODE_ENV", "development");
+    register();
+    expect(console.error).toBe(before);
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PHASE", "phase-production-build");
+    register();
+    expect(console.error).toBe(before);
+    vi.stubEnv("NEXT_PHASE", "");
+    register();
+    expect(console.error).not.toBe(before);
+    uninstall = installConsoleScrub(); // already installed: a no-op…
+    const g = globalThis as Record<symbol, unknown>;
+    // …so put it back by hand.
+    console.error = before;
+    delete g[Symbol.for("kaizenedu.log.rawConsole")];
+  });
 });
 
 describe("scrubText", () => {
