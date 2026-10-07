@@ -97,6 +97,8 @@ describe("Draft: demo mode builds from real sources", () => {
     expect(screen.getByText("Built from Wikipedia and real sources")).toBeInTheDocument();
     expect(screen.getByText(/^Built without AI from Wikipedia, Wiktionary \(through Datamuse\), .*Open Library.* The links are on the course page\.$/)).toBeInTheDocument();
     expect(screen.queryByText(/Demo: this outline comes from a template/)).toBeNull();
+    // No ready-made course is about volcanoes, so none is offered (a reading course's "about" doesn't count).
+    expect(screen.queryByText("A ready-made course already covers this")).toBeNull();
     // Saved as a source-built draft right away, so a reload keeps it.
     expect(saved(id)).toMatchObject({ status: "outlining", template: false, ai: undefined });
     expect(courseOrigin(saved(id))).toBe("sources");
@@ -150,6 +152,17 @@ describe("Draft: demo mode builds from real sources", () => {
     expect(screen.getByRole("button", { name: /Create course/ })).toBeInTheDocument();
     expect(screen.getByText("Built from real sources")).toBeInTheDocument();
     expect(screen.queryByText(/Change my request/, { selector: "[role=status] button" })).toBeNull();
+  });
+
+  it("a request a ready-made course covers offers it next to the built outline", async () => {
+    const draft = createDraft({ goal: "why does the moon change shape", grade: "5", subject: "science", length: "short", locale: "en", sources: [] }, learner.id);
+    nav.params = { draftId: draft.id };
+    render(<Draft fetchers={sources().f} />);
+    const offer = await screen.findByRole("region", { name: "A ready-made course already covers this" });
+    expect(within(offer).getByText("Why the Moon changes shape")).toBeInTheDocument();
+    await userEvent.click(within(offer).getByRole("button", { name: /Use the ready-made course/ }));
+    expect(read().courses.find((c) => c.catalogueId === "science-moon")).toBeDefined();
+    expect(nav.push).toHaveBeenCalledWith(expect.stringMatching(/^\/learn\//));
   });
 
   it("online with nothing anywhere says so plainly", async () => {

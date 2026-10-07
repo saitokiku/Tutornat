@@ -16,6 +16,7 @@ import {
   plainPrompt,
   practiceSkillsFor,
   questionFrom,
+  readyMadeMatch,
   relatedLessons,
   skillQuestions,
   SourceError,
@@ -522,6 +523,20 @@ describe("pieces", () => {
     // Too far from the learner's grade: Solid, liquid, gas is grade 2.
     expect(closestLesson({ goal: "volcanoes" }, "science", "6", "en")).toBeNull();
     expect(relatedLessons({ goal: "melting ice" }, "science", "2", "en", 2).map((r) => r.lesson.id)).toEqual(["melt-freeze", "three-states"]);
+  });
+
+  it("offers a whole ready-made course only when it is about what was asked", () => {
+    const id = (goal: string, subject: Course["subject"], grade: Course["grade"], locale: Course["locale"] = "en", avoid: string[] = []) => readyMadeMatch(goal, subject, grade, locale, avoid)?.id ?? null;
+    expect(id("I want to learn fractions", "math", "3")).toBe("math-fractions");
+    expect(id("why does the moon change shape", "science", "5")).toBe("science-moon");
+    expect(id("quiero aprender fracciones", "math", "3", "es")).toBe("math-fractions-es");
+    // "about" and "what" are in a reading course's summary; they don't make it a course about volcanoes.
+    expect(id("I want to learn about volcanoes", "science", "4")).toBeNull();
+    expect(id("what is knitting about", "other", "4")).toBeNull();
+    // Not three grades past the learner, not another subject, not a name.
+    expect(id("slope as a rate of change", "math", "3")).toBeNull();
+    expect(id("fractions", "science", "3")).toBeNull();
+    expect(id("Moon", "science", "5", "en", ["Moon"])).toBeNull();
   });
 
   it("turns practice prompts into one line of text", () => {

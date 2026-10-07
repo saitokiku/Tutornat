@@ -366,6 +366,23 @@ export function relatedLessons(query: { goal: string; title?: string; extract?: 
   return out;
 }
 
+/**
+ * A whole ready-made course that already covers the request, for the builder to offer instead: same
+ * subject, within three grades, sharing the most words that say what was asked (never "about" or
+ * "what", never a name). Null rather than a course about something else.
+ */
+export function readyMadeMatch(goal: string, subject: Subject, grade: Grade, locale: Locale, avoid: string[] = []): CatalogueEntry | null {
+  const asked = new Set(words(topicOf(goal, avoid)).filter((w) => !LOGISTICS.has(w)));
+  let best: CatalogueEntry | null = null;
+  let most = 0;
+  for (const e of catalogueFor(grade, locale)) {
+    if ((subject !== "other" && e.subject !== subject) || Math.abs(gradeN(e.grade) - gradeN(grade)) > 3) continue;
+    const shared = words(`${e.title} ${e.summary}`).filter((w) => asked.has(w)).length;
+    if (shared > most) [best, most] = [e, shared];
+  }
+  return best;
+}
+
 /** The single closest ready-made lesson, or null rather than a lesson about something else. */
 export const closestLesson = (query: Parameters<typeof relatedLessons>[0], subject: Subject, grade: Grade, locale: Locale) => relatedLessons(query, subject, grade, locale, 1)[0] ?? null;
 

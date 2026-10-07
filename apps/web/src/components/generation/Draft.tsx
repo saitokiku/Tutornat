@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { matchEntry } from "@/catalogue";
 import { CourseArt } from "@/components/courses/CourseArt";
 import { NotFound } from "@/components/courses/NotFound";
 import { OriginBadge } from "@/components/courses/Origin";
@@ -20,7 +19,7 @@ import { generateOutline } from "@/lib/generate";
 import { recentSkills } from "@/lib/practice";
 import { addNote, currentLearner } from "@/lib/profiles";
 import { isReviewed } from "@/lib/review";
-import { buildSourceCourse, keepCitations, knowFetchers, namesOnAccount, sourcesUsed, topicOf, type Fetchers, type SourceStep } from "@/lib/source-course";
+import { buildSourceCourse, keepCitations, knowFetchers, namesOnAccount, readyMadeMatch, sourcesUsed, topicOf, type Fetchers, type SourceStep } from "@/lib/source-course";
 import { read, useStore } from "@/lib/store";
 import type { Course, Lesson, Profile } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
@@ -213,7 +212,7 @@ export function Draft({ fetchers = knowFetchers }: { fetchers?: Fetchers }) {
 
   const searchable = topicOf(draft.goal, names).length >= 2;
   const stale = !running && lessons.length === 0 && !note && !failed;
-  const match = matchEntry(draft.goal, draft.grade, learner.locale);
+  const match = readyMadeMatch(draft.goal, draft.subject, draft.grade, draft.locale, names);
   const useMatch = () => {
     if (!match) return;
     const id = addFromCatalogue(match.id, learner.id);
