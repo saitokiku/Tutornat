@@ -45,6 +45,7 @@ import fallaciesEs from "./english-fallacies-es";
 import themePov from "./english-theme-pov";
 import thesis from "./english-thesis";
 import thesisEs from "./english-thesis-es";
+import living from "./science-living";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -93,4 +94,5 @@ export const REGISTRY: CatalogueEntry[] = [
   themePov,
   thesis,
   thesisEs,
+  living,
 ];
