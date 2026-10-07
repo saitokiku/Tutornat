@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { IconCheck, IconChevronLeft, IconChevronRight, IconPlus } from "@/components/icons";
+import { IconCheck, IconChevronLeft, IconChevronRight, IconPlus, IconSpeaker } from "@/components/icons";
+import { speakText } from "@/components/stage/hear";
 import { t as tr, useLocale, useT } from "@/i18n";
 import { classesOf } from "@/lib/school";
 import { useStore } from "@/lib/store";
@@ -24,7 +25,8 @@ export function lineText(line: WeekLine, locale: Locale): string {
   const subject = (s?: Subject) => tr(locale, `subject.${s ?? "other"}`);
   switch (line.kind) {
     case "check":
-      return tr(locale, line.opens ? "calendar.checkOpens" : "plan.check", { skill: skill(line.skillIds[0]) });
+      // Our own check, worded apart from a school quiz ("Prueba corta") that can sit in the same day.
+      return tr(locale, line.opens ? "cal.checkOpens" : "cal.check", { skill: skill(line.skillIds[0]) });
     case "prep":
       return tr(locale, "calendar.prep", { title: line.event?.title ?? "" });
     case "due":
@@ -41,34 +43,45 @@ export function lineText(line: WeekLine, locale: Locale): string {
     case "set": {
       const kind = line.set?.kind ?? "pick";
       if (kind === "placement") return tr(locale, "practice.kind.placement");
-      if (kind === "check") return tr(locale, "plan.check", { skill: skill(line.skillIds[0]) });
+      if (kind === "check") return tr(locale, "cal.check", { skill: skill(line.skillIds[0]) });
       const what = line.set?.topic ?? skill(line.skillIds[0]);
       return what ? `${tr(locale, `practice.kind.${kind}`)}: ${what}` : tr(locale, `practice.kind.${kind}`);
     }
   }
 }
 
-type Shown = { key: string; status: LineStatus; text: string; named: boolean };
+type Shown = { key: string; status: LineStatus; text: string; named: boolean; more: boolean };
 
 /**
  * The lines a day shows. Work due on the item's own day is the school item itself, so it isn't
  * repeated; on coming days the daily sets read as one line ("Practice: Math and English"), because
- * which skill they hold can change before then.
+ * which skill they hold can change before then. Lines past the day's minutes budget come last, marked
+ * `more`, the way Today keeps them under "if you have more time".
  */
 export function shownLines(day: WeekDay, locale: Locale): Shown[] {
   const lines = day.lines.filter((l) => !(l.kind === "due" && l.event?.date === day.date));
-  const out: Shown[] = [];
-  const planned = day.when === "future" ? lines.filter((l) => l.kind === "daily" && l.status === "planned") : [];
-  for (const l of lines) {
-    if (planned.includes(l)) {
-      if (l !== planned[0]) continue;
-      const subjects = new Intl.ListFormat(tag(locale), { type: "conjunction" }).format(planned.map((x) => tr(locale, `subject.${x.subject ?? "other"}`)));
-      out.push({ key: "daily", status: "planned", text: tr(locale, "cal.practicePlanned", { subjects }), named: false });
-      continue;
+  const group = (more: boolean) => {
+    const mine = lines.filter((l) => !!l.more === more);
+    const planned = day.when === "future" ? mine.filter((l) => l.kind === "daily" && l.status === "planned") : [];
+    const out: Shown[] = [];
+    for (const l of mine) {
+      if (planned.includes(l)) {
+        if (l !== planned[0]) continue;
+        const subjects = new Intl.ListFormat(tag(locale), { type: "conjunction" }).format(planned.map((x) => tr(locale, `subject.${x.subject ?? "other"}`)));
+        out.push({ key: more ? "daily:more" : "daily", status: "planned", text: tr(locale, "cal.practicePlanned", { subjects }), named: false, more });
+        continue;
+      }
+      out.push({ key: l.key, status: l.status, text: lineText(l, locale), named: l.kind === "prep" || (l.kind === "check" && !!l.opens), more });
     }
-    out.push({ key: l.key, status: l.status, text: lineText(l, locale), named: l.kind === "prep" || (l.kind === "check" && !!l.opens) });
-  }
-  return out;
+    return out;
+  };
+  return [...group(false), ...group(true)];
+}
+
+/** One day in words, for reading aloud: the day, its school items, then its plan. */
+export function dayAloud(day: WeekDay, lines: Shown[], locale: Locale): string {
+  const items = day.events.map((e) => `${tr(locale, `event.${e.kind}`)}: ${e.title}`);
+  return [fullDay(day.date, locale), ...items, ...lines.map((l) => l.text)].join(". ");
 }
 
 const STATUS_WORD = { done: "cal.statusDone", todo: "cal.statusTodo", planned: "cal.statusPlanned" } as const;
@@ -96,7 +109,7 @@ function EventRow({ e, classes, today, locale }: { e: SchoolEvent; classes: Scho
           <span className="block text-xs text-muted">
             {t(`event.${e.kind}`)}
             {e.time ? ` · ${e.time}` : ""}
-            {cls ? <span className="xl:hidden"> · {cls.name}</span> : null}
+            {cls ? ` · ${cls.name}` : ""}
             {e.done ? ` · ${t("cal.statusDone")}` : ""}
           </span>
           {noPrep && <span className="block text-xs text-warn">{t("cal.noPrep")}</span>}
@@ -107,12 +120,45 @@ function EventRow({ e, classes, today, locale }: { e: SchoolEvent; classes: Scho
   );
 }
 
+function Line({ l }: { l: Shown }) {
+  const t = useT();
+  return (
+    <li className={`flex items-start gap-1.5 px-1.5 py-1 text-xs leading-snug xl:gap-1 xl:px-0.5 ${(l.status === "planned" && !l.named) || l.more ? "text-muted" : "text-ink"} ${l.named ? "font-medium" : ""}`}>
+      <Mark status={l.status} />
+      <span className="min-w-0 hyphens-auto break-words">
+        <span className="sr-only">{t(STATUS_WORD[l.status])}: </span>
+        {l.text}
+      </span>
+    </li>
+  );
+}
+
 /**
  * One learner's week: each day's school items and its plan. Past days show what was done, today shows
  * today's plan, coming days show the plan as it stands now, marked planned. A 7-column week on wide
- * screens, a day list on phones. Arrow keys move between days; Page Up / Page Down change the week.
+ * screens, a day list on phones (opening at today). Arrow keys move between days; Page Up / Page Down
+ * change the week. `onAdd` gives each day an add button; `young` adds a read-aloud button per day;
+ * `learner` (the learner's own view) links today's plan to Today, where it starts.
  */
-export function WeekView({ profile, now, start, onWeek, onAdd }: { profile: Profile; now: number; start: string; onWeek: (start: string) => void; onAdd: (date: string) => void }) {
+export function WeekView({
+  profile,
+  now,
+  start,
+  onWeek,
+  onAdd,
+  young = false,
+  learner = false,
+  scrollToToday = false,
+}: {
+  profile: Profile;
+  now: number;
+  start: string;
+  onWeek: (start: string) => void;
+  onAdd?: (date: string) => void;
+  young?: boolean;
+  learner?: boolean;
+  scrollToToday?: boolean;
+}) {
   const t = useT();
   const locale = useLocale();
   const today = localDate(now);
@@ -134,6 +180,16 @@ export function WeekView({ profile, now, start, onWeek, onAdd }: { profile: Prof
     refs.current[pending.current.i]?.focus();
     pending.current = null;
   }, [start]);
+
+  // On a phone the week is a list from Monday; from Wednesday on, open it at today so the coming
+  // days are on screen. Once, when the page opens (not when a form closes), and never animated.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    if (!scrollToToday || todayIndex < 2 || window.matchMedia?.("(min-width: 80rem)").matches) return;
+    refs.current[todayIndex]?.scrollIntoView?.({ block: "start" });
+  }, [scrollToToday, todayIndex]);
 
   const moveTo = (i: number) => {
     if (i >= 0 && i < days.length) {
@@ -173,21 +229,26 @@ export function WeekView({ profile, now, start, onWeek, onAdd }: { profile: Prof
         <h2 id="week" aria-live="polite" className="mr-auto font-brand text-t2 font-semibold text-ink">
           {range}
         </h2>
-        <button type="button" onClick={() => onWeek(addDays(start, -7))} aria-label={t("calendar.prevWeek")} className="grid size-11 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30">
-          <IconChevronLeft size={18} />
-        </button>
-        <button type="button" onClick={() => onWeek(thisWeek)} aria-current={start === thisWeek ? "date" : undefined} className="k-btn-secondary px-4 aria-[current=date]:border-ink/40">
-          {t("calendar.thisWeek")}
-        </button>
-        <button type="button" onClick={() => onWeek(addDays(start, 7))} aria-label={t("calendar.nextWeek")} className="grid size-11 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30">
-          <IconChevronRight size={18} />
-        </button>
+        {/* The three week buttons wrap as one row, never split. */}
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => onWeek(addDays(start, -7))} aria-label={t("calendar.prevWeek")} className="grid size-11 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30">
+            <IconChevronLeft size={18} />
+          </button>
+          <button type="button" onClick={() => onWeek(thisWeek)} aria-current={start === thisWeek ? "date" : undefined} className="k-btn-secondary px-4 aria-[current=date]:border-ink/40">
+            {t("calendar.thisWeek")}
+          </button>
+          <button type="button" onClick={() => onWeek(addDays(start, 7))} aria-label={t("calendar.nextWeek")} className="grid size-11 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30">
+            <IconChevronRight size={18} />
+          </button>
+        </div>
       </div>
 
       <ol className="grid gap-2 xl:grid-cols-7 xl:gap-1.5">
         {days.map((d, i) => {
           const isToday = d.when === "today";
           const lines = shownLines(d, locale);
+          const lead = lines.filter((l) => !l.more);
+          const more = lines.filter((l) => l.more);
           const empty = !d.events.length && !lines.length && !d.answers.n;
           const full = fullDay(d.date, locale);
           return (
@@ -198,7 +259,7 @@ export function WeekView({ profile, now, start, onWeek, onAdd }: { profile: Prof
                 tabIndex={i === active ? 0 : -1}
                 onKeyDown={(e) => onKey(e, i)}
                 onFocus={(e) => e.target === e.currentTarget && setFocus({ start, i })}
-                className={`flex h-full flex-col rounded-md border outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper xl:min-h-52 ${isToday ? "border-accent bg-panel" : d.when === "past" ? "border-border bg-panel2/40" : "border-border bg-panel"}`}
+                className={`flex h-full scroll-mt-4 flex-col rounded-md border outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper xl:min-h-52 ${isToday ? "border-accent bg-panel" : d.when === "past" ? "border-border bg-panel2/40" : "border-border bg-panel"}`}
               >
                 <div className="flex items-center gap-1 border-b border-border py-1 pl-3 pr-1 xl:pl-2 xl:pr-0">
                   <h3 id={`day-${d.date}`} className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1.5">
@@ -213,9 +274,16 @@ export function WeekView({ profile, now, start, onWeek, onAdd }: { profile: Prof
                       </span>
                     )}
                   </h3>
-                  <button type="button" onClick={() => onAdd(d.date)} aria-label={t("calendar.addOn", { day: full })} className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
-                    <IconPlus size={16} />
-                  </button>
+                  {young && (
+                    <button type="button" onClick={() => speakText(dayAloud(d, lines, locale), locale)} aria-label={`${t("stage.readAloud")}: ${full}`} className="grid size-14 shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
+                      <IconSpeaker size={18} />
+                    </button>
+                  )}
+                  {onAdd && (
+                    <button type="button" onClick={() => onAdd(d.date)} aria-label={t("calendar.addOn", { day: full })} className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
+                      <IconPlus size={16} />
+                    </button>
+                  )}
                 </div>
                 <div className="flex flex-1 flex-col gap-1 p-1.5 xl:p-1">
                   {d.events.length > 0 && (
@@ -225,18 +293,29 @@ export function WeekView({ profile, now, start, onWeek, onAdd }: { profile: Prof
                       ))}
                     </ul>
                   )}
-                  {lines.length > 0 && (
+                  {lead.length > 0 && (
                     <ul aria-label={t(d.when === "past" ? "cal.doneThatDay" : d.when === "today" ? "cal.planToday" : "cal.planned")} className={`space-y-0.5 ${d.events.length ? "border-t border-border pt-1" : ""}`}>
-                      {lines.map((l) => (
-                        <li key={l.key} className={`flex items-start gap-1.5 px-1.5 py-1 text-xs leading-snug xl:gap-1 xl:px-0.5 ${l.status === "planned" && !l.named ? "text-muted" : "text-ink"} ${l.named ? "font-medium" : ""}`}>
-                          <Mark status={l.status} />
-                          <span className="min-w-0 hyphens-auto break-words">
-                            <span className="sr-only">{t(STATUS_WORD[l.status])}: </span>
-                            {l.text}
-                          </span>
-                        </li>
+                      {lead.map((l) => (
+                        <Line key={l.key} l={l} />
                       ))}
                     </ul>
+                  )}
+                  {more.length > 0 && (
+                    <div>
+                      <p aria-hidden="true" className="px-1.5 pt-1 text-xs text-muted xl:px-0.5">
+                        {t("cal.ifTime")}
+                      </p>
+                      <ul aria-label={t("cal.ifTime")} className="space-y-0.5">
+                        {more.map((l) => (
+                          <Line key={l.key} l={l} />
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {learner && isToday && lines.some((l) => l.status === "todo") && (
+                    <Link href="/home" className={`inline-flex items-center px-1.5 font-medium text-accent hover:underline xl:px-0.5 ${young ? "min-h-14 text-sm" : "min-h-11 text-xs"}`}>
+                      {t("cal.startOnToday")}
+                    </Link>
                   )}
                   {d.answers.n > 0 && <p className="px-1.5 font-opmono text-xs tabular-nums text-muted xl:px-1">{t("cal.answers", { n: d.answers.n, own: d.answers.own })}</p>}
                   {empty && <p className="px-1.5 py-1 text-xs text-muted">{t(d.when === "past" ? "cal.nothingDone" : "cal.nothingPlanned")}</p>}

@@ -6,12 +6,23 @@ import { limited } from "@/lib/server/rate";
 // the browser so the family reviews every item before anything is saved.
 //
 // The guard lives in lib/server/safe-fetch.ts: https (or webcal) only, no credentials or odd ports,
-// every hop's address checked against private ranges, redirects followed by hand (at most 4), a 2 MB
-// cap read as a stream, a 10 s timeout, and the body must be an iCalendar document. Here: JSON
-// requests only (a cross-site form can't send one without a CORS preflight), a small request body, a
-// per-address rate limit, and the answer served as an inert calendar download that is never cached.
+// each hop's host looked up and refused if any address is private, redirects followed by hand (at most
+// 4), a 2 MB cap read as a stream, a 10 s timeout, and the body must be an iCalendar document (it
+// stands in for a Content-Type check: feeds are often served as text/plain or octet-stream).
+// Known gap, filed against safe-fetch.ts: the address is looked up for the check and again by fetch,
+// so a DNS-rebinding host could answer differently the second time; the connection is not yet pinned
+// to the checked address. Here: JSON requests only (a cross-site form can't send one without a CORS
+// preflight), a small request body, a per-address rate limit, and the answer served as an inert
+// calendar download that is never cached.
 
 const MAX_REQUEST = 4096;
+
+/** Why a feed couldn't be read. A timeout can also land while the body is still arriving. */
+function code(e: unknown) {
+  if (e instanceof FeedError) return e.code;
+  const name = (e as { name?: string } | null)?.name;
+  return name === "TimeoutError" || name === "AbortError" ? "timeout" : "status";
+}
 
 export async function POST(req: Request) {
   if (!/^application\/json\b/i.test(req.headers.get("content-type") ?? "")) return Response.json({ error: "url" }, { status: 415 });
@@ -35,7 +46,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (e) {
-    const code = e instanceof FeedError ? e.code : "status";
-    return Response.json({ error: code }, { status: code === "url" || code === "blocked" ? 400 : 502 });
+    const c = code(e);
+    return Response.json({ error: c }, { status: c === "url" || c === "blocked" ? 400 : 502 });
   }
 }

@@ -131,6 +131,25 @@ describe("planForWeek", () => {
     expect(planForWeek(input({ statuses: { "m.add.5": status({ skillId: "m.add.5", checkOpensAt: NOW - 864e5 }) } }), addDays(MON, 7)).some((d) => d.lines.some((l) => l.kind === "check"))).toBe(false);
   });
 
+  it("plans open checks past the two-a-day cap on the following days, two a day", () => {
+    const ids = ["m.add.5", "m.add.10", "m.sub.10", "m.make.10", "m.add.20"];
+    const statuses = Object.fromEntries(ids.map((id) => [id, status({ skillId: id, checkOpensAt: NOW - 864e5 })]));
+    const week = planForWeek(input({ statuses }), TODAY, 4);
+    const checks = (d: WeekDay) => d.lines.filter((l) => l.kind === "check").map((l) => l.skillIds[0]);
+    expect(week.map(checks)).toEqual([["m.add.5", "m.add.10"], ["m.sub.10", "m.make.10"], ["m.add.20"], []]);
+    expect(week[1].lines.find((l) => l.kind === "check")).toMatchObject({ status: "planned", opens: undefined });
+  });
+
+  it("marks lines past the minutes budget as more, as Today does", () => {
+    const week = planForWeek(input({ events: [test({})], settings: { ...settings, dailyMinutes: 10 } }), TODAY);
+    const prepDay = day(week, addDays(TODAY, 2));
+    expect(prepDay.lines.map((l) => [l.key, !!l.more])).toEqual([
+      ["prep:t1", false],
+      ["daily:math", false],
+      ["daily:english", true],
+    ]);
+  });
+
   it("names a check that opens later today as planned", () => {
     const week = planForWeek(input({ statuses: { "m.add.5": status({ skillId: "m.add.5", checkOpensAt: at(TODAY, 20) }) } }), TODAY, 1);
     expect(week[0].lines.find((l) => l.kind === "check")).toMatchObject({ status: "planned", opens: true });

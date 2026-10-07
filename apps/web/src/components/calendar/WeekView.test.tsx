@@ -2,11 +2,11 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addEvent } from "@/lib/school";
+import { addClass, addEvent } from "@/lib/school";
 import { resetMemory, update } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { addDays, localDate, weekStart } from "@/planner/dates";
-import { WeekView } from "./WeekView";
+import { lineText, WeekView } from "./WeekView";
 
 const NOW = new Date("2026-10-07T16:00:00").getTime(); // a Wednesday
 const TODAY = localDate(NOW);
@@ -103,6 +103,51 @@ describe("WeekView", () => {
     expect(screen.getByRole("button", { name: "Add on Wednesday, October 7" })).toHaveFocus();
     await user.keyboard("{Enter}");
     expect(onAdd).toHaveBeenCalledWith(TODAY);
+  });
+
+  it("names each item's class in words, not only by its color", () => {
+    const cls = addClass("p1", { name: "Math 4", subject: "math" })!;
+    addEvent("p1", { title: "Fractions quiz", kind: "quiz", date: addDays(TODAY, 1), classId: cls.id });
+    render(<Harness />);
+    expect(within(day("Thursday, October 8")).getByRole("link", { name: /Fractions quiz\s*Quiz · Math 4/ })).toBeInTheDocument();
+  });
+
+  it("keeps lines past the day's minutes budget under “If there's time”, as Today does", () => {
+    addEvent("p1", { title: "Multiplication test", kind: "test", date: addDays(TODAY, 3), skillIds: ["m.mult.facts"] });
+    render(<Harness />);
+    const thu = day("Thursday, October 8");
+    const lead = within(thu).getByRole("list", { name: "Planned" });
+    expect(within(lead).getByText("Prep: Multiplication test")).toBeInTheDocument();
+    const extra = within(thu).getByRole("list", { name: "If there's time" });
+    expect(within(extra).getByText(/^Practice:/)).toBeInTheDocument();
+  });
+
+  it("words our own check apart from a school quiz in Spanish", () => {
+    const line = { key: "check:m.add.5", kind: "check", status: "planned", skillIds: ["m.add.5"] } as const;
+    expect(lineText({ ...line, skillIds: [...line.skillIds] }, "es")).toMatch(/^Prueba sin ayuda: /);
+    expect(lineText({ ...line, skillIds: [...line.skillIds], opens: true }, "es")).toMatch(/^Desde hoy, prueba sin ayuda: /);
+    expect(lineText({ ...line, skillIds: [...line.skillIds] }, "en")).toMatch(/^Check: /);
+  });
+
+  it("reads a day aloud for a young learner, and leaves adding to grown-ups", async () => {
+    const user = userEvent.setup();
+    const speak = vi.fn();
+    vi.stubGlobal("speechSynthesis", { speak, cancel: vi.fn(), getVoices: () => [] });
+    vi.stubGlobal("SpeechSynthesisUtterance", function (this: { text: string }, text: string) {
+      this.text = text;
+    });
+    addEvent("p1", { title: "Spelling quiz", kind: "quiz", date: TODAY });
+    render(<WeekView profile={{ ...ada, grade: "1" }} now={NOW} start={MON} onWeek={() => {}} young learner />);
+    expect(screen.queryByRole("button", { name: /^Add on/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Read aloud: Wednesday, October 7" }));
+    expect(speak.mock.calls[0][0].text).toMatch(/^Wednesday, October 7\. Quiz: Spelling quiz\. /);
+    vi.unstubAllGlobals();
+  });
+
+  it("sends the learner from today's plan to Today, where it starts", () => {
+    render(<WeekView profile={ada} now={NOW} start={MON} onWeek={() => {}} learner />);
+    expect(within(day("Wednesday, October 7")).getByRole("link", { name: "Start on Today" })).toHaveAttribute("href", "/home");
+    expect(within(day("Thursday, October 8")).queryByRole("link", { name: "Start on Today" })).toBeNull();
   });
 
   it("shows what was done on a past day, with honest numbers", () => {

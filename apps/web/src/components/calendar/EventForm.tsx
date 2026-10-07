@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, Field } from "@/components/ui";
+import { Button, Field, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { shortDate } from "@/lib/format";
 import { addEvent, checkEvent, removeEvent, suggestSkills, updateEvent, type EventInput } from "@/lib/school";
@@ -18,8 +18,9 @@ const WORK: EventKind[] = ["test", "quiz", "homework", "project"];
 export type FormDone = { message: string; date?: string } | undefined;
 
 /**
- * Add or edit one school item. Inline, not a modal: the week stays visible below it. A new test or
- * homework with no skill chosen is linked to the first suggestion, and the form says so beforehand.
+ * Add or edit one school item. Inline, not a modal: the week stays visible below it. For a new test
+ * or homework, the skill its name points to is shown already linked, as a chip the grown-up can
+ * remove; once they change the skills, their choice (none included) is what is saved.
  */
 export function EventForm({ profileId, event, date, kind, classes, locale, onDone }: { profileId: string; event?: SchoolEvent; date?: string; kind?: EventKind; classes: SchoolClass[]; locale: Locale; onDone: (done: FormDone) => void }) {
   const t = useT();
@@ -32,17 +33,28 @@ export function EventForm({ profileId, event, date, kind, classes, locale, onDon
     notes: event?.notes ?? "",
     skillIds: event?.skillIds ?? [],
   }));
+  // A grown-up who picked or removed a skill decided; until then the first suggestion stands in.
+  const [picked, setPicked] = useState(!!event);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
   const dateInput = useRef<HTMLInputElement>(null);
+  const deleteButton = useRef<HTMLButtonElement>(null);
+  const backToDelete = useRef(false);
   const set = <K extends keyof EventInput>(k: K, v: EventInput[K]) => setForm((f) => ({ ...f, [k]: v }));
   const suggestions = form.title.trim().length > 2 ? suggestSkills(read(), `${form.title} ${form.notes ?? ""}`, form.classId || undefined) : [];
-  const autoLink = !event && !form.skillIds?.length && WORK.includes(form.kind) && suggestions.length > 0;
+  const auto = !picked && WORK.includes(form.kind) && suggestions.length > 0;
+  const skillIds = auto ? suggestions.slice(0, 1) : (form.skillIds ?? []);
 
   // Opening the form moves focus to it, so keyboard and screen-reader users land where they asked to go.
   useEffect(() => heading.current?.focus(), []);
+  // Cancelling a delete puts focus back on the Delete button that asked.
+  useEffect(() => {
+    if (confirm || !backToDelete.current) return;
+    backToDelete.current = false;
+    deleteButton.current?.focus();
+  }, [confirm]);
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,10 +64,14 @@ export function EventForm({ profileId, event, date, kind, classes, locale, onDon
       (err === "err.title" ? titleInput : dateInput).current?.focus();
       return;
     }
-    const input = { ...form, classId: form.classId || undefined, skillIds: autoLink ? suggestions.slice(0, 1) : form.skillIds };
+    const input = { ...form, classId: form.classId || undefined, skillIds };
     if (event) updateEvent(event.id, input);
     else addEvent(profileId, input);
     onDone({ message: t("cal.saved", { title: form.title.trim(), when: shortDate(fromLocalDate(form.date).getTime(), locale) }), date: form.date });
+  };
+  const cancelDelete = () => {
+    backToDelete.current = true;
+    setConfirm(false);
   };
 
   return (
@@ -102,8 +118,8 @@ export function EventForm({ profileId, event, date, kind, classes, locale, onDon
         </Field>
       )}
       <div className="space-y-1.5">
-        <SkillPicker value={form.skillIds ?? []} onChange={(ids) => set("skillIds", ids)} suggestions={suggestions} locale={locale} label={t("calendar.skills")} />
-        {autoLink && <p className="text-xs text-muted">{t("cal.autoLink")}</p>}
+        <SkillPicker value={skillIds} onChange={(ids) => (setPicked(true), set("skillIds", ids))} suggestions={suggestions} locale={locale} label={t("calendar.skills")} />
+        {auto && <p className="text-xs text-muted">{t("cal.autoLinked")}</p>}
       </div>
       <Field label={t("calendar.notes")} hint={t("calendar.optional")}>
         {(a) => <textarea {...a} rows={2} className="k-input min-h-20 py-2" value={form.notes} maxLength={1000} onChange={(e) => set("notes", e.target.value)} />}
@@ -115,19 +131,19 @@ export function EventForm({ profileId, event, date, kind, classes, locale, onDon
         </Button>
         {event &&
           (confirm ? (
-            <span className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            <span role="group" aria-label={t("cal.deleteItem", { title: event.title })} className="flex flex-wrap items-center gap-2 sm:ml-auto">
               <span className="text-sm text-ink">{t("cal.deleteItem", { title: event.title })}</span>
-              <Button variant="secondary" className="text-bad" onClick={() => (removeEvent(event.id), onDone({ message: t("cal.deleted", { title: event.title }) }))}>
+              <Button variant="secondary" className="text-bad" autoFocus onClick={() => (removeEvent(event.id), onDone({ message: t("cal.deleted", { title: event.title }) }))}>
                 {t("common.confirmDelete")}
               </Button>
-              <Button variant="ghost" onClick={() => setConfirm(false)}>
+              <Button variant="ghost" onClick={cancelDelete}>
                 {t("common.cancel")}
               </Button>
             </span>
           ) : (
-            <Button variant="ghost" className="sm:ml-auto" onClick={() => setConfirm(true)}>
+            <button ref={deleteButton} type="button" className={btn("ghost", "md", "sm:ml-auto")} onClick={() => setConfirm(true)}>
               {t("common.delete")}
-            </Button>
+            </button>
           ))}
       </div>
     </form>

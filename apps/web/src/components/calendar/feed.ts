@@ -13,6 +13,12 @@ export const FEED_ERROR: Record<FeedErrorCode, Key> = {
   network: "cal.offline",
 };
 
-/** One class's refresh, in words: what came in, or why it couldn't. */
-export const refreshText = (r: RefreshResult, t: (key: Key, vars?: Record<string, string | number>) => string) =>
-  !r.ok ? t(FEED_ERROR[r.error]) : r.added || r.updated ? t("cal.refreshed", { added: r.added, updated: r.updated }) : t("cal.refreshedSame");
+/** One class's refresh, in words: what changed, what is new to review, what the school took off — or why it couldn't. */
+export function refreshText(r: RefreshResult, t: (key: Key, vars?: Record<string, string | number>) => string): string {
+  if (!r.ok) return t(FEED_ERROR[r.error]);
+  const parts: string[] = [];
+  if (r.updated) parts.push(t("cal.refreshChanged", { n: r.updated }));
+  if (r.fresh.length) parts.push(t("cal.refreshNew", { n: r.fresh.length }));
+  if (r.gone.length) parts.push(t("cal.refreshGone", { n: r.gone.length, titles: r.gone.join(", ") }));
+  return parts.length ? parts.join(" ") : t("cal.refreshedSame");
+}

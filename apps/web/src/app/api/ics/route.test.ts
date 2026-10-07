@@ -1,9 +1,20 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
-// The route end to end with the real guard (lib/server/safe-fetch.ts); only the network is faked.
-// Hosts are public IP literals so no DNS lookup happens in tests.
+// The route end to end with the real guard (lib/server/safe-fetch.ts); only the network is faked:
+// fetch, and the DNS answers for host names (IP literals never reach a lookup).
+const dns = vi.hoisted(() => ({ lookup: vi.fn() }));
+vi.mock("node:dns/promises", () => ({ ...dns, default: dns }));
+type Answer = { address: string; family?: number }[];
+const resolves = (table: Record<string, Answer>) =>
+  dns.lookup.mockImplementation(async (host: string) => {
+    if (table[host]) return table[host];
+    throw Object.assign(new Error(`getaddrinfo ENOTFOUND ${host}`), { code: "ENOTFOUND" });
+  });
+beforeEach(() => {
+  dns.lookup.mockReset();
+});
 
 const CAL = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:1\r\nDTSTART;VALUE=DATE:20261021\r\nSUMMARY:Unit 3 Test\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
 let ip = 0;
@@ -70,6 +81,44 @@ describe("POST /api/ics", () => {
     expect(f).not.toHaveBeenCalled();
   });
 
+  it("looks a host name up and refuses it when any address is private, before any request", async () => {
+    const f = upstream(async () => new Response(CAL));
+    const private_: Record<string, Answer> = {
+      "loopback.example": [{ address: "127.0.0.1" }],
+      "metadata.example": [{ address: "169.254.169.254" }],
+      "mixed.example": [{ address: "8.8.8.8" }, { address: "10.0.0.1" }],
+      "empty.example": [],
+      "v6.example": [{ address: "::1", family: 6 }],
+      "ula.example": [{ address: "fd12:3456::1", family: 6 }],
+      "mapped.example": [{ address: "::ffff:192.168.1.1", family: 6 }],
+    };
+    resolves(private_);
+    for (const host of [...Object.keys(private_), "nowhere.example"]) {
+      const res = await call({ url: `https://${host}/class.ics` });
+      expect(res.status, host).toBe(400);
+      expect(await res.json(), host).toEqual({ error: "blocked" });
+    }
+    expect(dns.lookup).toHaveBeenCalledWith("mixed.example", { all: true });
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("lets a host name through when every address is public", async () => {
+    resolves({ "calendar.school.example": [{ address: "8.8.8.8" }, { address: "2607:f8b0:4004:800::200e", family: 6 }] });
+    const f = upstream(async () => new Response(CAL));
+    const res = await call({ url: "webcal://calendar.school.example/class.ics" });
+    expect(res.status).toBe(200);
+    expect(String(f.mock.calls[0][0])).toBe("https://calendar.school.example/class.ics");
+  });
+
+  it("looks up the host of every redirect hop: a public feed can't bounce to a name that points inside", async () => {
+    resolves({ "calendar.school.example": [{ address: "8.8.8.8" }], "intranet.example": [{ address: "10.1.2.3" }] });
+    const f = upstream(async () => new Response(null, { status: 302, headers: { location: "https://intranet.example/admin.ics" } }));
+    const res = await call({ url: "https://calendar.school.example/a.ics" });
+    expect(await res.json()).toEqual({ error: "blocked" });
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(dns.lookup).toHaveBeenLastCalledWith("intranet.example", { all: true });
+  });
+
   it("checks every redirect hop: a public feed can't bounce to a private address", async () => {
     const f = upstream(async (url) => (url.toString().includes("8.8.8.8") ? new Response(null, { status: 302, headers: { location: "https://192.168.1.1/admin" } }) : new Response(CAL)));
     const res = await call({ url: "https://8.8.8.8/a.ics" });
@@ -110,6 +159,25 @@ describe("POST /api/ics", () => {
     const res = await call({ url: "https://8.8.8.8/a.ics" });
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "status" });
+  });
+
+  it("reports a timeout that lands while the calendar is still arriving as a timeout", async () => {
+    for (const name of ["TimeoutError", "AbortError"]) {
+      upstream(
+        async () =>
+          new Response(
+            new ReadableStream({
+              start(c) {
+                c.enqueue(new TextEncoder().encode("BEGIN:VCALENDAR\r\n"));
+                c.error(new DOMException("The operation was aborted due to timeout", name));
+              },
+            }),
+          ),
+      );
+      const res = await call({ url: "https://8.8.8.8/slow.ics" });
+      expect(res.status, name).toBe(502);
+      expect(await res.json(), name).toEqual({ error: "timeout" });
+    }
   });
 
   it("passes a timeout signal to the request", async () => {

@@ -76,7 +76,8 @@ test("a test five days out puts prep on the three days before it", async ({ page
   const form = page.getByRole("form", { name: "Add to the calendar" });
   await form.getByLabel("What").fill("Multiplication test");
   await form.getByLabel("Date").fill(iso(plus(5)));
-  await form.getByRole("button", { name: /Link Multiplication facts/ }).click();
+  // The skill its name points to is shown already linked, and can be removed.
+  await expect(form.getByRole("button", { name: /^Remove: Multiplication facts/ })).toBeVisible();
   await form.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText(/^Saved: Multiplication test,/)).toBeVisible();
 
@@ -95,6 +96,43 @@ test("a test five days out puts prep on the three days before it", async ({ page
   await showWeekOf(page, shown, plus(5));
   await expect(day(page, plus(5)).getByText("Work on Multiplication test")).toHaveCount(0);
   await noOverflow(page);
+  // The item opens its own page (notes, skills, prep, edit and delete live there).
+  await day(page, plus(5)).getByRole("link", { name: /Multiplication test/ }).click();
+  await expect(page).toHaveURL(/\/calendar\/[^/?]+$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Multiplication test" })).toBeVisible();
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
+test("a panel opened on the page is one step back: Back closes it", async ({ page }) => {
+  await family(page, "cal-back", [["Ada", "4"]]);
+  await page.getByRole("button", { name: /Ada/ }).click();
+  await page.goto("/calendar");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("form", { name: "Add to the calendar" })).toBeVisible();
+  await page.getByRole("button", { name: "Import from school" }).click();
+  await expect(page.getByRole("region", { name: "Bring in school dates" })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/calendar$/);
+  await expect(page.getByRole("region", { name: "Bring in school dates" })).toHaveCount(0);
+  await expect(page.getByRole("form", { name: "Add to the calendar" })).toHaveCount(0);
+  // Cancel does the same, and leaves nothing to go back through.
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page).toHaveURL(/\/calendar$/);
+  await expect(page.getByRole("button", { name: "Add", exact: true })).toBeFocused();
+});
+
+test("a young learner sees the week read aloud; adding and school records wait for a grown-up", async ({ page }) => {
+  const errors = collectErrors(page);
+  await family(page, "cal-k", [["Kai", "K"]]);
+  await page.getByRole("button", { name: /Kai/ }).click();
+  await page.goto("/calendar");
+  await expect(page.getByRole("button", { name: /^Read aloud: / }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Import from school" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "For grown-ups" })).toBeVisible();
+  await audit(page, "calendar-young");
+  await noOverflow(page);
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
@@ -112,11 +150,12 @@ test("the week reads by keyboard: arrow keys move between days", async ({ page }
   await expect(day(page, plus(7))).toBeFocused();
 });
 
-test("a class calendar link: review, save, then refresh updates by UID without duplicates", async ({ page }) => {
+test("a class calendar link: review, save, then refresh updates by UID; new items are reviewed, left-out ones stay out", async ({ page }) => {
   const errors = collectErrors(page);
   let feed = ics([
     { uid: "u1@school", date: plus(3), title: "Unit 3 Test" },
     { uid: "u2@school", date: plus(1), title: "Reading log due" },
+    { uid: "m1@school", date: plus(2), title: "Class meeting" },
   ]);
   await page.route("**/api/ics", (route) => route.fulfill({ status: 200, contentType: "text/calendar; charset=utf-8", body: feed }));
   await family(page, "cal-feed", [["Ada", "6"]]);
@@ -128,8 +167,15 @@ test("a class calendar link: review, save, then refresh updates by UID without d
   await panel.getByLabel("Calendar link (iCal / .ics address)").fill("webcal://school.example/math6.ics");
   await panel.getByLabel("Class name").fill("Math 6");
   await panel.getByRole("button", { name: "Get the events" }).click();
-  await expect(panel.getByText("Found 2. Check the names, dates and types, then save.")).toBeVisible();
+  await expect(panel.getByText("Found 3. Check the names, dates and types, then save.")).toBeVisible();
   await audit(page, "calendar-import-review");
+  // Typing in a row keeps focus there; leaving one out is a tap.
+  const name = panel.getByLabel("What: Unit 3 Test");
+  await name.fill("");
+  await name.pressSequentially("Unit 3 Test: fractions");
+  await expect(name).toBeFocused();
+  await expect(name).toHaveValue("Unit 3 Test: fractions");
+  await panel.getByRole("checkbox", { name: "Include: Class meeting" }).uncheck();
   await panel.getByRole("button", { name: "Save 2" }).click();
   await expect(page.getByText("Saved: 2 new, 0 updated. Math 6 keeps the link, so Refresh brings in changes later.")).toBeVisible();
   await expect(page.getByText("calendar linked", { exact: false })).toBeVisible();
@@ -138,18 +184,29 @@ test("a class calendar link: review, save, then refresh updates by UID without d
   feed = ics([
     { uid: "u1@school", date: plus(4), title: "Unit 3 Test" },
     { uid: "u2@school", date: plus(1), title: "Reading log due" },
+    { uid: "m1@school", date: plus(2), title: "Class meeting" },
     { uid: "u3@school", date: plus(2), title: "Lab report" },
   ]);
   await page.getByRole("button", { name: "Refresh class calendars" }).click();
-  await expect(page.getByText("Math 6: 1 new, 1 changed.")).toBeVisible();
-  // Saving showed the week of the first coming item (the reading log, tomorrow); refreshing keeps it.
+  await expect(page.getByText("Math 6: 1 changed. 1 new to review.")).toBeVisible();
+  await page.getByRole("button", { name: "Review 1 new from Math 6" }).click();
+  const review = page.getByRole("region", { name: "New on Math 6's calendar" });
+  await expect(review.getByLabel("What: Lab report")).toBeVisible();
+  await expect(review.getByLabel("What: Class meeting")).toHaveCount(0);
+  await review.getByRole("button", { name: "Save 1" }).click();
+  await expect(page.getByText("Saved: 1 new, 0 updated.")).toBeVisible();
+
+  // Saving showed the week of the first coming item (the reading log, tomorrow).
   const shown = { monday: mondayOf(plus(1)) };
   await showWeekOf(page, shown, plus(4));
   await expect(day(page, plus(4)).getByRole("link", { name: /Unit 3 Test/ })).toHaveCount(1);
+  await showWeekOf(page, shown, plus(2));
+  await expect(day(page, plus(2)).getByRole("link", { name: /Lab report/ })).toHaveCount(1);
+  await expect(day(page, plus(2)).getByRole("link", { name: /Class meeting/ })).toHaveCount(0);
   await showWeekOf(page, shown, plus(3));
   await expect(day(page, plus(3)).getByRole("link", { name: /Unit 3 Test/ })).toHaveCount(0);
 
-  // Refreshing again changes nothing.
+  // Refreshing again changes nothing and brings nothing back.
   await page.getByRole("button", { name: "Refresh class calendars" }).click();
   await expect(page.getByText("Math 6: Up to date, nothing new.")).toBeVisible();
   await page.getByRole("button", { name: "Refresh: Math 6" }).click();

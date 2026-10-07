@@ -1,8 +1,8 @@
-import type { SkillStatus } from "@/learning/engine";
+import { checksOpen, type SkillStatus } from "@/learning/engine";
 import type { Attempt, PracticeSet, SetKind } from "@/learning/types";
 import type { Subject } from "@/lib/types";
 import { addDays, daysBetween, fromLocalDate, localDate } from "./dates";
-import { planFor, type PlanInput, type PlanItem, type PlanKind } from "./plan";
+import { PLAN_RULES, planFor, type PlanInput, type PlanItem, type PlanKind } from "./plan";
 import type { Feedback, SchoolEvent } from "./types";
 
 // The calendar's week, computed from the same record as Today and never stored:
@@ -12,7 +12,8 @@ import type { Feedback, SchoolEvent } from "./types";
 //   marks. It is what the plan would hold if nothing changed, so every line is "planned".
 // Nothing is projected into the past. One-time lines (a check, a teacher-note set, a review) are
 // planned on the first day they appear; recurring lines (daily sets, prep, work due, the lesson) on
-// every day they would appear.
+// every day they would appear. Open checks past the plan's two-a-day cap are planned on the
+// following days, two a day, the way the plan would offer them once the first ones are taken.
 
 export type LessonRef = NonNullable<PlanItem["lesson"]>;
 
@@ -152,7 +153,7 @@ function answersOn(attempts: Attempt[], day: string): DayAnswers {
 const opening = (statuses: Record<string, SkillStatus>, from: number, to: number) =>
   Object.values(statuses).filter((s) => (s.state === "ready" || s.state === "checked" || s.state === "refresh") && s.checkOpensAt !== undefined && s.checkOpensAt >= from && s.checkOpensAt <= to);
 
-const checkLine = (s: SkillStatus): WeekLine => ({ key: `check:${s.skillId}`, kind: "check", status: "planned", skillIds: [s.skillId], minutes: 3, opens: true });
+const checkLine = (s: SkillStatus, opens = true): WeekLine => ({ key: `check:${s.skillId}`, kind: "check", status: "planned", skillIds: [s.skillId], minutes: 3, opens: opens || undefined });
 
 function todayLines(input: WeekInput): WeekLine[] {
   const plan = planFor(input);
@@ -190,6 +191,14 @@ export function planForWeek(input: WeekInput, from: string, days = 7): WeekDay[]
   const remember = (lines: WeekLine[]) => lines.forEach((l) => l.status !== "done" && ONCE.includes(l.kind) && waiting.add(onceKey(l)));
   const fresh = (lines: WeekLine[]) => lines.filter((l) => !(ONCE.includes(l.kind) && waiting.has(onceKey(l))));
 
+  // Open checks past the plan's daily cap wait their turn: each coming day plans the next ones, as the
+  // plan would once the earlier checks are taken.
+  const queued = (lines: WeekLine[], day: string) => {
+    const room = PLAN_RULES.maxChecks - lines.filter((l) => l.kind === "check").length;
+    const next = checksOpen(input.statuses, endOfDay(day)).filter((s) => !waiting.has(onceKey(checkLine(s))) && !lines.some((l) => l.key === `check:${s.skillId}`));
+    return room > 0 ? [...next.slice(0, room).map((s) => checkLine(s, false)), ...lines] : lines;
+  };
+
   let cursor = input.date;
   if (from > input.date && daysBetween(input.date, from) > MAX_LOOKAHEAD) cursor = from;
   const byDay = new Map<string, WeekLine[]>();
@@ -200,7 +209,7 @@ export function planForWeek(input: WeekInput, from: string, days = 7): WeekDay[]
     cursor = addDays(cursor, 1);
   }
   for (; cursor <= last; cursor = addDays(cursor, 1)) {
-    const lines = fresh(projected(input, cursor));
+    const lines = queued(fresh(projected(input, cursor)), cursor);
     remember(lines);
     if (cursor >= from) byDay.set(cursor, lines);
   }
