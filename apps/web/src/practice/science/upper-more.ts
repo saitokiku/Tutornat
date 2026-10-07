@@ -6,6 +6,8 @@ import { BODY_JOBS, BODY_TOGETHER, ORG_PARTS, ORG_THEORY } from "./upper-more/g6
 import { MATTER_ENERGY, MIXTURES, PHOTO_IO, REACTION_SIGNS, RESOURCES } from "./upper-more/g7-banks";
 import { FOSSIL_EVIDENCE, GEOLOGIC_TIME, NATURAL_SELECTION } from "./upper-more/g8-life";
 import { CLIMATE_IMPACT, GRAVITY_ORBITS, WAVES_INFO } from "./upper-more/g8-physical";
+import { BONDING, NUCLEAR, PERIODIC_TRENDS } from "./upper-more/g9-matter";
+import { CARRYING_CAPACITY, CLAIM_EVIDENCE, DNA_PROTEIN, EARTH_ENERGY } from "./upper-more/g9-systems";
 import { balanceItem, halfLifeItem, percentItem } from "./upper-more/chem";
 import { populationItem, rateItem } from "./upper-more/data";
 import { moonItem } from "./upper-more/moon";
@@ -41,6 +43,13 @@ export const SCIENCE_6_9_MORE_BANKS: Record<string, Bank[]> = {
   "s.gravity.orbits": [GRAVITY_ORBITS],
   "s.climate.impact": [CLIMATE_IMPACT],
   "s.waves.info": [WAVES_INFO],
+  "s.periodic.trends": [PERIODIC_TRENDS],
+  "s.bonding": [BONDING],
+  "s.nuclear": [NUCLEAR],
+  "s.dna.protein": [DNA_PROTEIN],
+  "s.carrying.capacity": [CARRYING_CAPACITY],
+  "s.earth.energy": [EARTH_ENERGY],
+  "s.claim.evidence": [CLAIM_EVIDENCE],
 };
 
 const fromBank = (id: string) => (r: Rng, level: number, locale: Locale) => bankItem(r, SCIENCE_6_9_MORE_BANKS[id][level - 1], locale);
@@ -294,7 +303,28 @@ export const SCIENCE_6_9_MORE: Skill[] = [
     generate: fromBank("s.waves.info"),
   },
   // Grade 9
-  // @@GRADE9A
+  {
+    id: "s.periodic.trends",
+    subject: "science",
+    grade: "9",
+    title: { en: "Periodic table trends", es: "Tendencias de la tabla periódica" },
+    standard: "HS-PS1-1",
+    prereqs: ["s.atoms"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.periodic.trends"),
+  },
+  {
+    id: "s.bonding",
+    subject: "science",
+    grade: "9",
+    title: { en: "Ionic and covalent bonds", es: "Enlaces iónicos y covalentes" },
+    standard: "HS-PS1-2",
+    prereqs: ["s.periodic.trends"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.bonding"),
+  },
   {
     id: "s.balance.equations",
     subject: "science",
@@ -350,5 +380,59 @@ export const SCIENCE_6_9_MORE: Skill[] = [
     levels: 2,
     generate: halfLifeItem,
   },
-  // @@GRADE9B
+  {
+    id: "s.nuclear",
+    subject: "science",
+    grade: "9",
+    title: { en: "Fission, fusion and radiation", es: "Fisión, fusión y radiación" },
+    standard: "HS-PS1-8",
+    prereqs: ["s.half.life"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.nuclear"),
+  },
+  {
+    id: "s.dna.protein",
+    subject: "science",
+    grade: "9",
+    title: { en: "From DNA to proteins", es: "Del ADN a las proteínas" },
+    standard: "HS-LS1-1",
+    prereqs: ["s.organelles", "s.genetics"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.dna.protein"),
+  },
+  {
+    id: "s.carrying.capacity",
+    subject: "science",
+    grade: "9",
+    title: { en: "Carrying capacity and limiting factors", es: "Capacidad de carga y factores limitantes" },
+    standard: "HS-LS2-1",
+    prereqs: ["s.population.growth"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.carrying.capacity"),
+  },
+  {
+    id: "s.earth.energy",
+    subject: "science",
+    grade: "9",
+    title: { en: "Earth's internal energy", es: "La energía interna de la Tierra" },
+    standard: "HS-ESS2-3",
+    prereqs: ["s.plate.tectonics", "s.rock.cycle"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.earth.energy"),
+  },
+  {
+    id: "s.claim.evidence",
+    subject: "science",
+    grade: "9",
+    title: { en: "Claim, evidence and reasoning", es: "Afirmación, evidencia y razonamiento" },
+    standard: "RST.9-10.8",
+    prereqs: ["s.variables", "s.graph.rates"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.claim.evidence"),
+  },
 ];

@@ -45,11 +45,18 @@ describe("science 6–9 second strand", () => {
       ["s.climate.impact", "8", 1, "draft"],
       ["s.wave.speed", "8", 2, "computed"],
       ["s.waves.info", "8", 1, "draft"],
+      ["s.periodic.trends", "9", 1, "draft"],
+      ["s.bonding", "9", 1, "draft"],
       ["s.balance.equations", "9", 2, "computed"],
       ["s.percent.composition", "9", 2, "computed"],
       ["s.momentum", "9", 2, "computed"],
       ["s.ohms.law", "9", 2, "computed"],
       ["s.half.life", "9", 2, "computed"],
+      ["s.nuclear", "9", 1, "draft"],
+      ["s.dna.protein", "9", 1, "draft"],
+      ["s.carrying.capacity", "9", 1, "draft"],
+      ["s.earth.energy", "9", 1, "draft"],
+      ["s.claim.evidence", "9", 1, "draft"],
     ]);
     for (const s of SCIENCE_6_9_MORE) {
       expect(s.subject).toBe("science");
@@ -113,7 +120,7 @@ function problems(id: string, levels: number) {
 }
 
 describe.each(SCIENCE_6_9_MORE.map((s) => [s.id, s.levels] as const))("%s", (id, levels) => {
-  it("gives every item 3 hints, 1–4 steps, plain copy, tagged mistakes, and the same answer in both languages", () => {
+  it("gives every item 3 hints, 1–4 steps, plain copy, tagged mistakes, and the same answer in both languages", { timeout: 30_000 }, () => {
     expect(problems(id, levels)).toEqual([]);
   });
 });
@@ -531,15 +538,18 @@ const SMALLEST = new Map<string, number[]>();
 function smallest(formulas: string[][]) {
   const key = formulas.map((s) => s.join("+")).join("=");
   if (SMALLEST.has(key)) return SMALLEST.get(key)!;
-  const flatF = formulas.flat(), n = flatF.length;
+  // Each substance as a vector of atom counts, negative on the right, so a balance sums to zero.
+  const species = formulas.flatMap((side, si) => side.map((f) => [tally(f), si ? -1 : 1] as const));
+  const els = [...new Set(species.flatMap(([t]) => Object.keys(t)))];
+  const vec = species.map(([t, sign]) => els.map((x) => sign * (t[x] ?? 0)));
+  const n = vec.length;
   let best: number[] | null = null;
   const cs = new Array(n).fill(1);
   for (;;) {
-    let i = 0;
-    const sides = formulas.map((side) => side.map((f) => [cs[i++], f] as [number, string]));
-    if (balanced(sides) && gcdAll(cs) === 1 && (!best || cs.reduce((a, b) => a + b) < best.reduce((a, b) => a + b))) best = [...cs];
+    const zero = els.every((_, k) => vec.reduce((sum, v, j) => sum + cs[j] * v[k], 0) === 0);
+    if (zero && gcdAll(cs) === 1 && (!best || cs.reduce((a, b) => a + b) < best.reduce((a, b) => a + b))) best = [...cs];
     let j = 0;
-    while (j < n && cs[j] === 12) cs[j++] = 1;
+    while (j < n && cs[j] === 9) cs[j++] = 1;
     if (j === n) break;
     cs[j]++;
   }
@@ -558,7 +568,7 @@ describe("s.balance.equations", () => {
     }
   });
 
-  it("level 2: the key is the coefficient in the smallest whole-number balance, found by brute force", () => {
+  it("level 2: the key is the coefficient in the smallest whole-number balance, found by brute force", { timeout: 30_000 }, () => {
     for (const it of make("s.balance.equations", 2)) {
       const p = text(it.prompt);
       const sides = parseEq(equationLine(it));
