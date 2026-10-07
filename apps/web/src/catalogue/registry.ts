@@ -33,6 +33,7 @@ import rhymesSyllables from "./english-rhymes-syllables";
 import rhymesSyllablesEs from "./english-rhymes-syllables-es";
 import shortWords from "./english-short-words";
 import partsOfSpeech from "./english-parts-of-speech";
+import partsOfSpeechEs from "./english-parts-of-speech-es";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -69,4 +70,5 @@ export const REGISTRY: CatalogueEntry[] = [
   rhymesSyllablesEs,
   shortWords,
   partsOfSpeech,
+  partsOfSpeechEs,
 ];
