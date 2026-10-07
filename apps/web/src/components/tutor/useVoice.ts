@@ -25,7 +25,16 @@ const SpeechRec = () =>
 
 const lang = (l: Locale) => (l === "es" ? "es-US" : "en-US");
 
-/** Reads text aloud as it streams: each finished sentence is queued once. */
+/** Where each finished sentence in `text` ends: after its end marks, when whitespace follows. */
+export function sentenceEnds(text: string): number[] {
+  return [...text.matchAll(/[.?!…]+["”’)]*(?=\s)/g)].map((m) => m.index + m[0].length);
+}
+
+/**
+ * Reads text aloud as it streams. Each finished sentence is queued once, as its own utterance, so a
+ * young listener hears short pieces and can cut in between them; an unfinished sentence waits for more
+ * text, or for `done`.
+ */
 export function useSpeakStream(locale: Locale, enabled: boolean) {
   const spoken = useRef(new Map<string, number>());
   const supported = typeof window !== "undefined" && "speechSynthesis" in window;
@@ -34,17 +43,21 @@ export function useSpeakStream(locale: Locale, enabled: boolean) {
       if (!enabled || !supported) return;
       const from = spoken.current.get(id) ?? 0;
       const rest = text.slice(from);
-      // Speak up to the last sentence end; the rest waits for more text (or the end of the reply).
-      const m = done ? rest.length : Math.max(rest.lastIndexOf(". "), rest.lastIndexOf("? "), rest.lastIndexOf("! ")) + 1;
-      if (m <= 0) return;
-      const chunk = rest.slice(0, m).trim();
-      spoken.current.set(id, from + m);
-      if (!chunk) return;
-      const u = new SpeechSynthesisUtterance(chunk);
-      u.lang = lang(locale);
-      u.voice = speechSynthesis.getVoices().find((v) => v.lang.startsWith(locale)) ?? null;
-      u.rate = 0.95;
-      speechSynthesis.speak(u);
+      const ends = sentenceEnds(rest);
+      const upTo = done ? rest.length : (ends.at(-1) ?? 0);
+      if (upTo <= 0) return;
+      spoken.current.set(id, from + upTo);
+      let start = 0;
+      for (const end of [...ends.filter((e) => e < upTo), upTo]) {
+        const chunk = rest.slice(start, end).trim();
+        start = end;
+        if (!chunk) continue;
+        const u = new SpeechSynthesisUtterance(chunk);
+        u.lang = lang(locale);
+        u.voice = speechSynthesis.getVoices().find((v) => v.lang.startsWith(locale)) ?? null;
+        u.rate = 0.95;
+        speechSynthesis.speak(u);
+      }
     },
     [enabled, supported, locale],
   );

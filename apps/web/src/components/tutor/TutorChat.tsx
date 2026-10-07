@@ -248,8 +248,7 @@ function ChatView({
   useEffect(() => {
     const last = entries.at(-1);
     if (last?.role === "tutor") {
-      // Sentence by sentence, so a young listener hears short pieces and can cut in between them.
-      if (!last.streaming) for (const m of last.text.matchAll(/[.?!](?=\s)/g)) speak.feed(last.id, last.text.slice(0, m.index + 2), false);
+      // Sentence by sentence (useSpeakStream queues each one), as it streams or all at once.
       speak.feed(last.id, last.text, !last.streaming);
     }
     const still = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;

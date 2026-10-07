@@ -14,6 +14,7 @@ export function PhotoButton({ onFile, disabled, big = false }: { onFile: (file: 
   const library = useRef<HTMLInputElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const first = useRef<HTMLButtonElement>(null);
+  const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -24,8 +25,14 @@ export function PhotoButton({ onFile, disabled, big = false }: { onFile: (file: 
       setOpen(false);
       toggle.current?.focus();
     };
+    // A tap anywhere else closes the menu too.
+    const away = (e: PointerEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
     window.addEventListener("keydown", esc, true);
-    return () => window.removeEventListener("keydown", esc, true);
+    window.addEventListener("pointerdown", away);
+    return () => {
+      window.removeEventListener("keydown", esc, true);
+      window.removeEventListener("pointerdown", away);
+    };
   }, [open]);
 
   const picked = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,7 +44,7 @@ export function PhotoButton({ onFile, disabled, big = false }: { onFile: (file: 
   const size = big ? "size-14" : "size-11";
 
   return (
-    <div className="relative shrink-0">
+    <div ref={box} className="relative shrink-0">
       <button
         ref={toggle}
         type="button"
