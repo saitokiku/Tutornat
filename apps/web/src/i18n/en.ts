@@ -1531,7 +1531,8 @@ const en = {
   "pr.finish.done": "I'm done for today",
   "pr.finish.more": "If you want to keep going",
   "pr.finish.planDone": "That was the last thing on today's plan.",
-  "pr.finish.say": "{own} right on your own, {help} right with help, {missed} not yet.",
+  "pr.finish.say": "On your own: {own}. With help: {help}. Not yet: {missed}.",
+  "pr.finish.sayChoice": "You can stop here for today, or keep going.",
   "pr.finish.draft": "These questions are a draft. A teacher hasn't reviewed them yet.",
   "pr.pace.quicker": "{n} min, quicker than the usual pace of about {pace} min.",
   "pr.pace.usual": "{n} min, about the usual pace for this set.",
@@ -1548,6 +1549,9 @@ const en = {
   "pr.std.english": "The standard is published in English.",
   "pr.std.failed": "The wording of this standard didn't load just now.",
   "pr.std.loading": "Loading what the standard says…",
+  "pr.std.missing": "We couldn't find the wording of {code} in the Common Core text.",
+  "pr.howNote": "Now answer it to move on. It counts as done with help.",
+  "pr.blank": "blank",
 } as const;
 
 export default en;

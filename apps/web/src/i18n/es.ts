@@ -1533,7 +1533,8 @@ const es: Record<Key, string> = {
   "pr.finish.done": "Terminé por hoy",
   "pr.finish.more": "Si quieres seguir",
   "pr.finish.planDone": "Eso era lo último del plan de hoy.",
-  "pr.finish.say": "{own} correctos tú solo, {help} correctos con ayuda, {missed} todavía no.",
+  "pr.finish.say": "Sin ayuda: {own}. Con ayuda: {help}. Todavía no: {missed}.",
+  "pr.finish.sayChoice": "Puedes parar aquí por hoy o seguir.",
   "pr.finish.draft": "Estas preguntas son un borrador. Ningún maestro las ha revisado todavía.",
   "pr.pace.quicker": "{n} min, más rápido que el ritmo habitual de unos {pace} min.",
   "pr.pace.usual": "{n} min, más o menos el ritmo habitual de esta práctica.",
@@ -1550,6 +1551,9 @@ const es: Record<Key, string> = {
   "pr.std.english": "El estándar está publicado en inglés.",
   "pr.std.failed": "El texto de este estándar no se cargó en este momento.",
   "pr.std.loading": "Cargando lo que dice el estándar…",
+  "pr.std.missing": "No encontramos el texto de {code} en los estándares Common Core.",
+  "pr.howNote": "Ahora respóndela para seguir. Cuenta como hecha con ayuda.",
+  "pr.blank": "espacio en blanco",
 };
 
 export default es;

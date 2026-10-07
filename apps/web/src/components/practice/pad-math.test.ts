@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { check } from "@/practice/answer";
-import { angleAt, clockText, handAngles, hourAt, linePoints, minuteAt, nearestPoint, pointOf, startPoint, stepHour, stepMinute } from "./pad-math";
+import { angleAt, clockText, handAngles, hourAt, labelsCrowded, linePoints, minuteAt, nearestPoint, pointOf, responseOf, startPoint, stepHour, stepMinute } from "./pad-math";
 
 describe("number-line points", () => {
   it("a whole-number line has one point per step, labels on round values, and checker-ready responses", () => {
@@ -30,6 +30,19 @@ describe("number-line points", () => {
     expect(pts[1].label).toBe("−1/2");
   });
 
+  it("labels are thinned on a phone only when they would collide", () => {
+    // 0–10: eleven one-digit labels about 26 px apart fit a 320 px phone.
+    expect(labelsCrowded(linePoints({ kind: "number-line", min: 0, max: 10, step: 1 }))).toBe(false);
+    // −10–10 labels every 5 (−10, −5, 0, 5, 10): five labels, plenty of room.
+    const sym = linePoints({ kind: "number-line", min: -10, max: 10, step: 1 });
+    expect(sym.filter((p) => p.major).map((p) => p.value)).toEqual([-10, -5, 0, 5, 10]);
+    expect(labelsCrowded(sym)).toBe(false);
+    // Fourths from 0 to 2 label only 0, 1 and 2.
+    expect(labelsCrowded(linePoints({ kind: "number-line", min: 0, max: 2, step: 1, denominator: 4 }))).toBe(false);
+    // Three-digit labels every 10 on a 0–100 line would touch, so a phone shows every other one.
+    expect(labelsCrowded(linePoints({ kind: "number-line", min: -100, max: 100, step: 1 }))).toBe(true);
+  });
+
   it("taps snap to the nearest point; the keyboard starts at 0", () => {
     expect(nearestPoint(0, 11)).toBe(0);
     expect(nearestPoint(0.52, 11)).toBe(5);
@@ -55,7 +68,7 @@ describe("clock arithmetic", () => {
     expect(angleAt(200, 100, 100, 100)).toBeCloseTo(90);
     expect(angleAt(100, 200, 100, 100)).toBeCloseTo(180);
     expect(angleAt(0, 100, 100, 100)).toBeCloseTo(270);
-    expect([0, 14, 16, 90, 345, 359].map(hourAt)).toEqual([12, 12, 1, 3, 12, 12]);
+    expect([0, 14, 16, 90, 345, 359].map((deg) => hourAt(deg))).toEqual([12, 12, 1, 3, 12, 12]);
     expect(hourAt(100)).toBe(3);
     expect(minuteAt(90, 5)).toBe(15);
     expect(minuteAt(92, 5)).toBe(15);
@@ -81,5 +94,26 @@ describe("clock arithmetic", () => {
     expect(handAngles(3, 0)).toEqual({ hour: 90, minute: 0 });
     expect(handAngles(3, 30)).toEqual({ hour: 105, minute: 180 });
     expect(handAngles(12, 45).hour).toBeCloseTo(22.5);
+  });
+
+  it("a tap on the face is read as where the short hand sits at those minutes", () => {
+    // Half past 3: the short hand is half way from 3 to 4 (105°). A tap there is 3, not 4.
+    expect(hourAt(105, 30)).toBe(3);
+    expect(hourAt(handAngles(3, 30).hour, 30)).toBe(3);
+    // Quarter to 4 is 3:45: the short hand is three quarters of the way to 4.
+    expect(hourAt(112, 45)).toBe(3);
+    expect(hourAt(handAngles(3, 45).hour, 45)).toBe(3);
+    // Near the top, the wrap to 12 still works at any minutes.
+    expect(hourAt(handAngles(12, 55).hour, 55)).toBe(12);
+    expect(hourAt(handAngles(11, 50).hour, 50)).toBe(11);
+    // Every hour, at every 5 minutes: a tap exactly on the drawn short hand gives back that hour.
+    for (let h = 1; h <= 12; h++) for (let m = 0; m < 60; m += 5) expect(hourAt(handAngles(h, m).hour, m), `${h}:${m}`).toBe(h);
+  });
+
+  it("an untouched clock answers with the time it shows; other pads send nothing until used", () => {
+    expect(responseOf("clock", "")).toBe("12:00");
+    expect(responseOf("clock", "3:30")).toBe("3:30");
+    expect(responseOf("number-line", "")).toBe("");
+    expect(responseOf("keypad", "7")).toBe("7");
   });
 });

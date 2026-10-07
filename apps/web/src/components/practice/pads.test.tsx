@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import { check } from "@/practice/answer";
 import type { Pad } from "@/practice/types";
 import { AnswerInput } from "./AnswerPad";
-import { layoutCounters, MarkCounters } from "./MarkCounters";
+import { counterCell, layoutCounters, MarkCounters, type MarkableVisual } from "./MarkCounters";
+import { hourAt, responseOf } from "./pad-math";
 
 /** A pad in the Runner's shoes: it owns the value and shows what the checker would receive. */
 function Harness({ input, pad, onSubmit = () => {} }: { input: "number-line" | "fraction-bar" | "clock"; pad: Pad; onSubmit?: () => void }) {
@@ -13,7 +14,8 @@ function Harness({ input, pad, onSubmit = () => {} }: { input: "number-line" | "
   return (
     <>
       <AnswerInput input={input} pad={pad} value={value} onChange={setValue} onSubmit={onSubmit} onPick={() => {}} label="Your answer" />
-      <output data-testid="response">{value}</output>
+      {/* What Check would send, the way the Runner reads the pad. */}
+      <output data-testid="response">{responseOf(input, value)}</output>
     </>
   );
 }
@@ -127,9 +129,11 @@ describe("ClockPad", () => {
     expect(screen.getByRole("img", { name: /Clock face showing 12:00/ })).toBeInTheDocument();
     const hour = screen.getByRole("spinbutton", { name: "Hour" });
     const minutes = screen.getByRole("spinbutton", { name: "Minutes" });
+    // The face shows 12:00 before anything moves, and that is an answer too ("Set the clock to 12:00").
+    expect(response()).toBe("12:00");
     hour.focus();
     await userEvent.keyboard("{Enter}");
-    expect(onSubmit).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
     await userEvent.keyboard("{ArrowUp}{ArrowUp}{ArrowUp}");
     expect(response()).toBe("3:00");
     expect(hour).toHaveAttribute("aria-valuenow", "3");
@@ -138,7 +142,7 @@ describe("ClockPad", () => {
     expect(response()).toBe("3:30");
     expect(minutes).toHaveAttribute("aria-valuetext", "30 minutes");
     await userEvent.keyboard("{ArrowDown}{ArrowUp}{Enter}");
-    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
     expect(check({ kind: "text", accept: ["3:30"] }, response()!).correct).toBe(true);
     expect(screen.getByRole("img", { name: /Clock face showing 3:30/ })).toBeInTheDocument();
   });
@@ -156,6 +160,33 @@ describe("ClockPad", () => {
     expect(response()).toBe("3:45");
     await userEvent.click(screen.getByRole("button", { name: "Move the short hand forward one hour" }));
     expect(response()).toBe("4:45");
+  });
+
+  it("at half past and quarter to, a tap where the short hand really sits keeps the hour", async () => {
+    render(<Harness input="clock" pad={{ kind: "clock", stepMinutes: 15 }} />);
+    const face = screen.getByRole("img", { name: /Clock face/ });
+    box(face, 200, 200);
+    const at = (deg: number, len = 60) => ({ clientX: 100 + Math.sin((deg * Math.PI) / 180) * len, clientY: 100 - Math.cos((deg * Math.PI) / 180) * len });
+    await userEvent.click(screen.getByRole("button", { name: "Long hand" }));
+    fireEvent.click(face, at(180, 80)); // the 6: half past
+    await userEvent.click(screen.getByRole("button", { name: "Short hand" }));
+    fireEvent.click(face, at(105)); // half way between 3 and 4
+    expect(response()).toBe("3:30");
+    expect(hourAt(105, 30)).toBe(3);
+    await userEvent.click(screen.getByRole("button", { name: "Long hand" }));
+    fireEvent.click(face, at(270, 80)); // the 9: quarter to
+    await userEvent.click(screen.getByRole("button", { name: "Short hand" }));
+    fireEvent.click(face, at(112)); // three quarters of the way from 3 to 4
+    expect(response()).toBe("3:45");
+    expect(screen.getByRole("img", { name: /Clock face showing 3:45/ })).toBeInTheDocument();
+  });
+
+  it("disabled after a right answer: the hands stay where they were set, and nothing moves them", async () => {
+    render(<AnswerInput input="clock" pad={{ kind: "clock", stepMinutes: 5 }} value="4:20" disabled onChange={() => {}} onSubmit={() => {}} onPick={() => {}} label="Your answer" />);
+    expect(screen.getByRole("img", { name: /Clock face showing 4:20/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Move the short hand forward one hour" })).toBeDisabled();
+    expect(screen.getByRole("spinbutton", { name: "Hour" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByText(/Tap the clock/)).toBeNull();
   });
 
   it("o'clock items move only the short hand", async () => {
@@ -207,12 +238,35 @@ describe("MarkCounters", () => {
     expect(new Set(wide.counters.map((c) => c.y)).size).toBe(1);
     expect(new Set(narrow.counters.map((c) => c.y)).size).toBe(2);
     expect(narrow.width).toBeLessThanOrEqual(288);
-    const frames = layoutCounters({ kind: "ten-frame", filled: 14, frames: 2 }, 288, 52);
-    expect(frames.counters).toHaveLength(20);
-    expect(frames.counters.filter((c) => c.filled)).toHaveLength(14);
-    expect(frames.width).toBeLessThanOrEqual(288);
     const array = layoutCounters({ kind: "array", rows: 3, cols: 9 }, 288, 46);
     expect(array.cell).toBeLessThan(46);
     expect(array.width).toBeLessThanOrEqual(288);
+  });
+
+  it("K–2 counters are 56 px squares in the room a 320 px phone gives them, and never under 44 px", () => {
+    // The Runner lets the counters use the problem card's side padding on phones: 320 − 2 × 16 − 2 = 286.
+    const young = counterCell(true);
+    expect(young).toBe(56);
+    const pictures: MarkableVisual[] = [
+      { kind: "ten-frame", filled: 7 },
+      { kind: "ten-frame", filled: 14, frames: 2 },
+      { kind: "dots", groups: [5] },
+      { kind: "dots", groups: [10] },
+      { kind: "dots", groups: [4, 5] },
+      { kind: "dots", groups: [9], crossed: 3 },
+    ];
+    for (const v of pictures) {
+      const lay = layoutCounters(v, 286, young);
+      expect(lay.cell, JSON.stringify(v)).toBe(56);
+      expect(lay.width, JSON.stringify(v)).toBeLessThanOrEqual(286);
+    }
+    const frames = layoutCounters({ kind: "ten-frame", filled: 14, frames: 2 }, 286, young);
+    expect(frames.counters).toHaveLength(20);
+    expect(frames.counters.filter((c) => c.filled)).toHaveLength(14);
+    // Narrower than one row of five needs: the squares shrink to fit, but stay at least 44 px.
+    const tight = layoutCounters({ kind: "ten-frame", filled: 3 }, 246, young);
+    expect(tight.cell).toBe(48);
+    expect(tight.width).toBeLessThanOrEqual(246);
+    expect(layoutCounters({ kind: "ten-frame", filled: 3 }, 200, young).cell).toBe(44);
   });
 });

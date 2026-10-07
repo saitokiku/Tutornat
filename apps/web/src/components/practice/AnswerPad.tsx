@@ -297,7 +297,7 @@ export function TextAnswer({ value, onChange, onSubmit, disabled, algebra, label
   );
 }
 
-export function AnswerInput(props: PadProps & { input: Input; keys?: ("-" | ".")[]; choices?: Choice[]; onPick: (i: number) => void; label: string; pad?: Pad; tint?: string }) {
+export function AnswerInput(props: PadProps & { input: Input; keys?: ("-" | ".")[]; choices?: Choice[]; onPick: (i: number) => void; label: string; pad?: Pad; tint?: string; picked?: number }) {
   const { pad } = props;
   switch (props.input) {
     case "number-line":
@@ -313,7 +313,7 @@ export function AnswerInput(props: PadProps & { input: Input; keys?: ("-" | ".")
     case "remainder":
       return <RemainderPad {...props} />;
     case "choices":
-      return <ChoiceTiles choices={props.choices ?? []} onPick={props.onPick} disabled={props.disabled} young={props.young} />;
+      return <ChoiceTiles choices={props.choices ?? []} onPick={props.onPick} disabled={props.disabled} young={props.young} picked={props.picked} />;
     case "expr":
       return <TextAnswer {...props} algebra />;
     case "text":

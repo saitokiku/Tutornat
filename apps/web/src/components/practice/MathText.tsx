@@ -1,7 +1,9 @@
+import { useT } from "@/i18n";
 import type { MathPart } from "@/practice/types";
 
 /** Renders a practice prompt: text, stacked fractions, powers and the answer blank. */
 export function MathText({ parts, blank, center }: { parts: MathPart[]; blank?: React.ReactNode; center?: boolean }) {
+  const t = useT();
   return (
     <span className={`inline-flex flex-wrap items-center gap-x-1 gap-y-2 ${center ? "justify-center" : ""}`}>
       {parts.map((p, i) => {
@@ -23,7 +25,7 @@ export function MathText({ parts, blank, center }: { parts: MathPart[]; blank?: 
           );
         return (
           <span key={i} className={`inline-flex min-w-12 items-center justify-center rounded-md border-2 px-2 py-0.5 ${blank ? "border-good/60" : "border-dashed border-accent/60 text-accent"}`}>
-            {blank ?? <span className="sr-only">blank</span>}
+            {blank ?? <span className="sr-only">{t("pr.blank")}</span>}
             {!blank && <span aria-hidden="true">?</span>}
           </span>
         );
