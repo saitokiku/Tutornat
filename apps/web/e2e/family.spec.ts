@@ -84,8 +84,9 @@ test("a test in two days with no prep: the family card says so, and its link han
   await at320(page);
   await audit(page, "family-with-nudge");
 
-  // Shown to a grown-up = one nudge act for the child; its outcome comes later, from the evidence.
-  expect(await nudgeActs(page, learnerId)).toEqual([expect.objectContaining({ kind: "nudge", intent: "parent-acts", ref: `prep:${eventId}`, detail: "prep" })]);
+  // Shown to a grown-up = one nudge act for the child (logged from an effect, so wait for it); its
+  // outcome comes later, from the evidence.
+  await expect.poll(() => nudgeActs(page, learnerId)).toEqual([expect.objectContaining({ kind: "nudge", intent: "parent-acts", ref: `prep:${eventId}`, detail: "prep" })]);
   // Seeing the page again the same day records nothing new.
   await page.reload();
   await expect(card.getByText(/no prep set is finished yet/)).toBeVisible();
@@ -172,14 +173,15 @@ test("Growth replays the record week by week; the grown-up sees the detail and t
   await expect(math.getByRole("img", { name: /^Math, the last 8 weeks: skills proved went from 0 to 1\./ })).toBeVisible();
 
   // The table opens from the keyboard and says the same thing.
-  const summary = math.getByText("Week by week");
+  // The summary itself: the table's caption ("Math, week by week") holds the same words.
+  const summary = math.locator("summary", { hasText: "Week by week" });
   await summary.focus();
   await page.keyboard.press("Enter");
   const table = math.getByRole("table", { name: "Math, week by week" });
   await expect(table).toBeVisible();
   await expect(table.getByRole("row", { name: /^This week 1 0 0/ })).toBeVisible();
 
-  await math.getByText("Skills (1)").click();
+  await math.locator("summary", { hasText: "Skills (1)" }).click();
   const skill = math.getByRole("listitem").filter({ hasText: "Add within 5" });
   await expect(skill).toBeVisible();
   await expect(skill).toContainText("Proved");
