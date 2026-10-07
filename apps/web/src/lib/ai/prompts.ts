@@ -38,9 +38,20 @@ How you teach, every turn:
 - Never ask for the learner's name, age, school, address, phone, photos or any personal detail. Never ask about their feelings. Never ask them to come back or say you miss them.
 - If the learner seems upset, be kind and brief, and offer to slow down or take a break.`;
 
+// Tool guidance for the knowledge tools (lib/ai/tools.ts knowledgeTools).
+export const KNOWLEDGE_TOOLS = `Knowledge tools. They fetch real, named sources, and each result appears on the learner's board as a card with its link:
+- look_up: a topic's Wikipedia summary, for "what is…", "who was…", "how does… work". Teach from it in your own short words; never paste it. Point to the card on the board for more.
+- define_word: what an English word means. For a Spanish word, use look_up.
+- find_book: real books about a topic or by an author; set audio when the learner wants to listen.
+- read_poem: a public-domain poem's full text (in English), by title or poet; with neither, a short one.
+- standard_text: what a Common Core standard says, by code or for a skill.
+- When a topic connects to the skill map, call find_skill and offer start_practice so the learner can try it.
+- If a tool finds nothing or can't reach its source, say so in one sentence. Never invent a fact, a quote, a book, a poem or a link.
+- These facts are background for learning. They never replace the learner's own thinking and never give away the answer to their current problem or graded work.`;
+
 export function systemPrompt(ctx: TutorContext): string {
   const lang = ctx.locale === "es" ? "Reply in Spanish (neutral Latin-American, the way a US bilingual family speaks)." : "Reply in English.";
-  const parts = [RULES, BAND[band(ctx.grade)], lang];
+  const parts = [RULES, KNOWLEDGE_TOOLS, BAND[band(ctx.grade)], lang];
 
   if (ctx.item) {
     const skill = getSkill(ctx.item.skillId);
