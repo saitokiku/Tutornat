@@ -62,7 +62,7 @@ const PARALLEL_PICK: Bi<Entry>[] = [
   },
   {
     en: ["", "Both the teachers and the students voted for the change.", [["Both the teachers and also the students voted for the change.", "unbalanced-pair"], ["Both the teachers as well as the students voted for the change.", "unbalanced-pair"]], "“Both” has a partner word. Which one?", "“Both” pairs with “and,” with nothing extra."],
-    es: ["", "Tanto los maestros como los estudiantes votaron por el cambio.", [["Tanto los maestros y los estudiantes votaron por el cambio.", "unbalanced-pair"], ["Tanto los maestros como también los estudiantes votaron por el cambio.", "unbalanced-pair"]], "“Tanto” va en pareja. ¿Con qué palabra?", "“Tanto” va con “como”, sin nada más."],
+    es: ["", "Tanto los maestros como los estudiantes votaron por el cambio.", [["Tanto los maestros y los estudiantes votaron por el cambio.", "unbalanced-pair"], ["Tanto los maestros como a los estudiantes votaron por el cambio.", "unbalanced-pair"]], "“Tanto” va en pareja. ¿Con qué palabra?", "“Tanto” va con “como”, y las dos partes tienen la misma forma: “los maestros” y “los estudiantes”."],
   },
 ];
 
@@ -121,7 +121,7 @@ const PARALLEL_FILL: Bi<Entry>[] = [
   },
   {
     en: ["Both the singer and ___ bowed at the end of the show.", "the drummer", [["also the drummer", "unbalanced-pair"], ["as well as the drummer", "unbalanced-pair"]], "“Both” pairs with “and.” What should come after “and”?", "Match “the singer” with a plain noun phrase and nothing extra."],
-    es: ["Tanto la cantante como ___ saludaron al final del concierto.", "el baterista", [["también el baterista", "unbalanced-pair"], ["y el baterista", "unbalanced-pair"]], "“Tanto” va con “como”. ¿Qué debe seguir?", "Después de “como” va solo el sustantivo, sin palabras extra."],
+    es: ["Tanto la cantante como ___ saludaron al final del concierto.", "el baterista", [["al baterista", "unbalanced-pair"], ["y el baterista", "unbalanced-pair"]], "“Tanto” va con “como”. ¿Qué debe seguir?", "Después de “como” va la misma forma que después de “tanto”: “la cantante” y “el baterista”."],
   },
 ];
 

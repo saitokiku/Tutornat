@@ -27,6 +27,14 @@ const ARGUMENTS_4: Bi<[string, string, string, string]>[] = [
     en: ["Every middle school should have a garden.", "At Lincoln Middle School, students who worked in the garden ate twice as many vegetables at lunch.", "Critics say gardens take too much time away from classes.", "In fact, teachers can use the garden to teach science and math lessons."],
     es: ["Toda escuela secundaria debería tener un huerto.", "En la Secundaria Lincoln, los estudiantes que trabajaron en el huerto comieron el doble de verduras en el almuerzo.", "Hay quienes dicen que el huerto le quita demasiado tiempo a las clases.", "En realidad, los maestros pueden usar el huerto para dar lecciones de ciencias y matemáticas."],
   },
+  {
+    en: ["Our school should offer a free coding club after school.", "Last year, more than sixty students signed a petition asking for one.", "Some people say there are no teachers available to run it.", "However, two parents who work as programmers have offered to lead it for free."],
+    es: ["Nuestra escuela debería ofrecer un club gratuito de programación después de clases.", "El año pasado, más de sesenta estudiantes firmaron una petición para pedirlo.", "Algunas personas dicen que no hay maestros disponibles para dirigirlo.", "Sin embargo, dos madres que trabajan como programadoras se ofrecieron a dirigirlo gratis."],
+  },
+  {
+    en: ["Our town should plant more trees along Main Street.", "A county study found that shaded sidewalks on Main Street were more than twenty degrees cooler on summer afternoons.", "Some store owners worry that trees would block their signs.", "Yet the trees could go between the stores, where they would not cover any signs."],
+    es: ["Nuestro pueblo debería plantar más árboles en la calle principal.", "Un estudio del condado encontró que las aceras con sombra de la calle principal estaban más de diez grados más frescas en las tardes de verano.", "Algunos comerciantes temen que los árboles tapen sus letreros.", "No obstante, los árboles podrían ir entre las tiendas, donde no taparían ningún letrero."],
+  },
 ];
 
 const ROLE_CLUES: Bi<Record<Role, string>> = {

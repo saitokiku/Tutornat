@@ -376,7 +376,7 @@ const SENSES: Bi<Entry>[] = [
 ];
 
 const MULTIPLE_MEANINGS = skill(
-  { id: "e.multiple.meanings", grade: "6", title: { en: "Words with several meanings", es: "Palabras con varios significados" }, standard: "L.6.4c", prereqs: ["e.context.clues"] },
+  { id: "e.multiple.meanings", grade: "6", title: { en: "Words with several meanings", es: "Palabras con varios significados" }, standard: "L.6.4a", prereqs: ["e.context.clues"] },
   [
     {
       bank: SENSES,

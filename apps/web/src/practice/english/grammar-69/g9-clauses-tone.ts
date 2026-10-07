@@ -29,7 +29,7 @@ const CLAUSE_KIND = cats<ClauseKind>(
     },
     {
       en: ["Whoever finishes first can choose the game.", "noun", "Ask: who can choose the game?", "The clause is the subject, so it is a noun clause.", "Whoever finishes first"],
-      es: ["Quien termine primero puede elegir el juego.", "noun", "Pregúntate: ¿quién puede elegir el juego?", "Es el sujeto de la oración: es sustantiva.", "Quien termine primero"],
+      es: ["Es importante que todos lleguen a tiempo.", "noun", "Pregúntate: ¿qué es importante?", "La subordinada es el sujeto de “es importante”: es sustantiva.", "que todos lleguen a tiempo"],
     },
     {
       en: ["Mia, who loves astronomy, joined the science club.", "relative", "The clause gives information about Mia.", "It describes a noun and starts with “who,” so it is a relative clause.", "who loves astronomy"],
@@ -41,7 +41,7 @@ const CLAUSE_KIND = cats<ClauseKind>(
     },
     {
       en: ["What you said surprised me.", "noun", "Ask: what surprised me?", "The clause is the subject, so it is a noun clause.", "What you said"],
-      es: ["Me sorprendió lo que dijiste.", "noun", "Pregúntate: ¿qué me sorprendió?", "Es el sujeto de “sorprendió”: es sustantiva.", "lo que dijiste"],
+      es: ["Me sorprendió que llegaras tan temprano.", "noun", "Pregúntate: ¿qué me sorprendió?", "La subordinada es el sujeto de “sorprendió”: es sustantiva.", "que llegaras tan temprano"],
     },
     {
       en: ["The town where my grandmother grew up is near the ocean.", "relative", "Ask: which town?", "The clause describes “the town,” so it is a relative clause.", "where my grandmother grew up"],

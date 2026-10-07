@@ -9,7 +9,7 @@ import { skill, PUNCTUATED, type Bi, type Entry } from "./shared";
 
 const MISPLACED: Bi<Entry>[] = [
   {
-    en: ["The girl is wearing a pink sweater. She is walking her dog.", "The girl in a pink sweater walked her dog.", [["The girl walked her dog in a pink sweater.", "misplaced-modifier"], ["In a pink sweater, her dog was walked by the girl.", "misplaced-modifier"]], "Who wears the sweater? Put the phrase right next to that word.", "“In a pink sweater” goes right after “the girl.”"],
+    en: ["The girl is wearing a pink sweater. She is walking her dog.", "The girl in a pink sweater is walking her dog.", [["The girl is walking her dog in a pink sweater.", "misplaced-modifier"], ["In a pink sweater, her dog is being walked by the girl.", "misplaced-modifier"]], "Who wears the sweater? Put the phrase right next to that word.", "“In a pink sweater” goes right after “the girl.”"],
     es: ["Las camisas son de algodón y son para hombre.", "Se venden camisas de algodón para hombre.", [["Se venden camisas para hombre de algodón.", "misplaced-modifier"], ["De algodón se venden camisas para hombre.", "misplaced-modifier"]], "¿Qué es de algodón: las camisas o el hombre?", "“De algodón” va junto a “camisas”."],
   },
   {
@@ -101,7 +101,7 @@ const DANGLING: Bi<Entry>[] = [
   },
   {
     en: ["Running to catch the bus, my backpack fell open.", "As I ran to catch the bus, my backpack fell open.", [["Running to catch the bus, my backpack spilled everywhere.", "still-dangling"], ["My backpack, running to catch the bus, fell open.", "misplaced-modifier"], ["As I ran to catch the bus, I zipped my backpack shut.", "changed-meaning"]], "Who was running? A backpack cannot run.", "Give the running its own subject: “As I ran.”"],
-    es: ["Cansada de la caminata, el sofá se veía muy cómodo.", "Como Ella estaba cansada de la caminata, el sofá le pareció muy cómodo.", [["Cansada de la caminata, el sofá se veía blando.", "still-dangling"], ["El sofá, cansado de la caminata, se veía muy cómodo.", "misplaced-modifier"], ["Ella no estaba cansada, así que no usó el sofá.", "changed-meaning"]], "¿Quién estaba cansada? El sofá no.", "Convierte la frase en una oración con su propio sujeto: “Como Ella estaba cansada”."],
+    es: ["Cansada de la caminata, el sofá se veía muy cómodo.", "Como Elena estaba cansada de la caminata, el sofá le pareció muy cómodo.", [["Cansada de la caminata, el sofá se veía blando.", "still-dangling"], ["El sofá, cansado de la caminata, se veía muy cómodo.", "misplaced-modifier"], ["Elena no estaba cansada, así que no usó el sofá.", "changed-meaning"]], "¿Quién estaba cansada? El sofá no.", "Convierte la frase en una oración con su propio sujeto: “Como Elena estaba cansada”."],
   },
   {
     en: ["At the age of five, my family moved to Ohio.", "When I was five, my family moved to Ohio.", [["At the age of five, my family moved to Ohio from Texas.", "still-dangling"], ["My family, at the age of five, moved to Ohio.", "misplaced-modifier"], ["When my family moved to Ohio, I was ten.", "changed-meaning"]], "Who was five years old? Not the whole family.", "Give the age its own subject: “When I was five.”"],
@@ -200,7 +200,7 @@ const ADJECTIVE_COMMAS: Bi<Entry>[] = [
     es: ["", "Nos sentamos en el pasto suave, verde y fresco.", [["Nos sentamos en el pasto suave, verde, y fresco.", "comma-before-y"], ["Nos sentamos en el pasto suave verde y fresco.", "missing-comma-series"], ["Nos sentamos en el pasto, suave, verde y fresco.", "comma-between-noun-and-adjective"]], "Hay tres adjetivos en serie.", "En una serie, los adjetivos se separan con comas, pero antes de “y” no va coma."],
   },
   {
-    en: ["", "We sat on the soft green grass.", [["We sat on the soft, green grass.", "comma-between-cumulative"], ["We sat on the soft green, grass.", "comma-before-noun"]], "Try “the green soft grass” and “the soft and green grass.”", "The adjectives do not sound right swapped or with “and,” so no comma goes between them."],
+    en: ["", "We sat on the old stone bench.", [["We sat on the old, stone bench.", "comma-between-cumulative"], ["We sat on the old stone, bench.", "comma-before-noun"]], "Try “the stone old bench” and “the old and stone bench.”", "The adjectives do not sound right swapped or with “and,” so no comma goes between them."],
     es: ["", "Ana se puso sus tenis azules favoritos.", [["Ana se puso sus tenis, azules favoritos.", "comma-between-noun-and-adjective"], ["Ana se puso sus tenis azules, favoritos.", "comma-between-cumulative"]], "“Tenis azules favoritos” es un solo grupo: no es una serie.", "Las palabras que van juntas no se separan con coma."],
   },
   {
@@ -209,7 +209,7 @@ const ADJECTIVE_COMMAS: Bi<Entry>[] = [
   },
   {
     en: ["", "Ana wore her favorite blue sneakers.", [["Ana wore her favorite, blue sneakers.", "comma-between-cumulative"], ["Ana wore her favorite blue, sneakers.", "comma-before-noun"]], "Try “her blue favorite sneakers” and “her favorite and blue sneakers.”", "The adjectives do not sound right swapped or with “and,” so no comma goes between them."],
-    es: ["", "Mi tía hizo un pastel delicioso de chocolate.", [["Mi tía hizo un pastel delicioso, de chocolate.", "comma-between-cumulative"], ["Mi tía hizo un pastel, delicioso de chocolate.", "comma-between-noun-and-adjective"]], "“Pastel delicioso de chocolate” es un solo grupo: no es una serie.", "Las palabras que van juntas no se separan con coma."],
+    es: ["", "Mi tía hizo un delicioso pastel de chocolate.", [["Mi tía hizo un delicioso, pastel de chocolate.", "comma-between-cumulative"], ["Mi tía hizo un delicioso pastel, de chocolate.", "comma-between-noun-and-adjective"]], "“Delicioso pastel de chocolate” es un solo grupo: no es una serie.", "Las palabras que van juntas no se separan con coma."],
   },
 ];
 

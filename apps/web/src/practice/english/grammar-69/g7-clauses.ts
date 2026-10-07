@@ -50,7 +50,7 @@ const GROUP_KIND = cats<GroupKind>(
     },
     {
       en: ["Running down the hill, Leo tripped on a root.", "phrase", "Is there a subject doing the running inside these words?", "“Running down the hill” has a verb form but no subject, so it is a phrase.", "Running down the hill"],
-      es: ["Bajando la colina, Leo tropezó con una raíz.", "phrase", "“Bajando” es un gerundio. ¿Es un verbo conjugado?", "El gerundio no es un verbo conjugado, así que “bajando la colina” es una frase.", "Bajando la colina"],
+      es: ["En la bajada de la colina, Leo tropezó con una raíz.", "phrase", "¿Hay un verbo conjugado en esas palabras?", "“En la bajada de la colina” no tiene verbo conjugado, así que es una frase.", "En la bajada de la colina"],
     },
     {
       en: ["If it snows tomorrow, school will close.", "dependent", "Look at the first word of the group.", "It has a subject and a verb but starts with “if,” so it cannot stand alone: a dependent clause.", "If it snows tomorrow"],
