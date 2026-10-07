@@ -39,8 +39,11 @@ describe("science 6–9 second strand", () => {
       ["s.energy.ke.pe", "7", 2, "computed"],
       ["s.sci.notation", "8", 2, "computed"],
       ["s.wave.speed", "8", 2, "computed"],
+      ["s.balance.equations", "9", 2, "computed"],
+      ["s.percent.composition", "9", 2, "computed"],
       ["s.momentum", "9", 2, "computed"],
       ["s.ohms.law", "9", 2, "computed"],
+      ["s.half.life", "9", 2, "computed"],
     ]);
     for (const s of SCIENCE_6_9_MORE) {
       expect(s.subject).toBe("science");
@@ -470,6 +473,150 @@ describe("s.momentum", () => {
       }
     }
     expect([...kinds].sort()).toEqual(["push", "stick"]);
+  });
+});
+
+// ── Chemistry ───────────────────────────────────────────────────────────────────────────────────
+
+/** Atoms in a formula, by expanding parentheses as text ("Ca(OH)2" → "CaOHOH") and reading symbol by symbol. */
+const tally = (f: string) => {
+  let s = f.replace(/[₀-₉]/g, (c) => String(c.charCodeAt(0) - 0x2080));
+  while (/\(([^()]*)\)(\d+)/.test(s)) s = s.replace(/\(([^()]*)\)(\d+)/, (_, inner: string, k: string) => inner.repeat(Number(k)));
+  const out: Record<string, number> = {};
+  for (const [, sym, n] of s.matchAll(/([A-Z][a-z]?)(\d*)/g)) out[sym] = (out[sym] ?? 0) + Number(n || 1);
+  return out;
+};
+/** The equation line of a prompt, with the answer blank written as "?". */
+const equationLine = (it: Item) =>
+  it.prompt
+    .map((p) => (typeof p === "string" ? p : "blank" in p ? "?" : ""))
+    .join("")
+    .split("\n")[1];
+/** "2 H₂ + ? O₂ → 2 H₂O" → [[[2, "H₂"], [null, "O₂"]], [[2, "H₂O"]]]; "?" and "__" are unknown coefficients. */
+const parseEq = (line: string) =>
+  line.split(" → ").map((side) =>
+    side.split(" + ").map((term) => {
+      const m = /^(?:(\d+|\?|__) )?(\S+)$/.exec(term.trim())!;
+      return [m[1] === undefined ? 1 : /\d/.test(m[1]) ? Number(m[1]) : null, m[2]] as [number | null, string];
+    }),
+  );
+const balanced = (sides: [number, string][][]) => {
+  const count = (side: [number, string][]) => {
+    const out: Record<string, number> = {};
+    for (const [c, f] of side) for (const [x, n] of Object.entries(tally(f))) out[x] = (out[x] ?? 0) + c * n;
+    return out;
+  };
+  const [l, r] = sides.map(count);
+  return Object.keys({ ...l, ...r }).every((x) => l[x] === r[x]);
+};
+const gcdAll = (xs: number[]) => xs.reduce((a, b) => { while (b) [a, b] = [b, a % b]; return a; });
+/** Smallest whole-number coefficients that balance the formulas, by brute force (cached per equation). */
+const SMALLEST = new Map<string, number[]>();
+function smallest(formulas: string[][]) {
+  const key = formulas.map((s) => s.join("+")).join("=");
+  if (SMALLEST.has(key)) return SMALLEST.get(key)!;
+  const flatF = formulas.flat(), n = flatF.length;
+  let best: number[] | null = null;
+  const cs = new Array(n).fill(1);
+  for (;;) {
+    let i = 0;
+    const sides = formulas.map((side) => side.map((f) => [cs[i++], f] as [number, string]));
+    if (balanced(sides) && gcdAll(cs) === 1 && (!best || cs.reduce((a, b) => a + b) < best.reduce((a, b) => a + b))) best = [...cs];
+    let j = 0;
+    while (j < n && cs[j] === 12) cs[j++] = 1;
+    if (j === n) break;
+    cs[j]++;
+  }
+  SMALLEST.set(key, best!);
+  return best!;
+}
+
+describe("s.balance.equations", () => {
+  it("level 1: putting the key in the blank balances every element", () => {
+    for (const it of make("s.balance.equations", 1)) {
+      const line = equationLine(it);
+      const sides = parseEq(line);
+      expect(sides.flat().filter(([c]) => c === null).length, line).toBe(1);
+      const filled = sides.map((s) => s.map(([c, f]) => [c ?? num(it), f] as [number, string]));
+      expect(balanced(filled), `${line} → ${num(it)}`).toBe(true);
+    }
+  });
+
+  it("level 2: the key is the coefficient in the smallest whole-number balance, found by brute force", () => {
+    for (const it of make("s.balance.equations", 2)) {
+      const p = text(it.prompt);
+      const sides = parseEq(equationLine(it));
+      expect(sides.flat().every(([c]) => c === null), p).toBe(true);
+      const formulas = sides.map((s) => s.map(([, f]) => f));
+      const coefs = smallest(formulas);
+      const asked = /in front of (\S+)\?/.exec(p)![1];
+      expect(num(it), p).toBe(coefs[formulas.flat().indexOf(asked)]);
+    }
+  });
+});
+
+// Standard atomic weights (IUPAC), typed here independently: the masses in the prompts may be rounded, never wrong.
+const WEIGHT: Record<string, number> = { H: 1.008, C: 12.011, N: 14.007, O: 15.999, Na: 22.99, Mg: 24.305, Al: 26.982, S: 32.06, Cl: 35.45, K: 39.098, Ca: 40.078, Fe: 55.845, Cu: 63.546 };
+
+describe("s.percent.composition", () => {
+  const read = (p: string) => {
+    const f = /, (\S+), (?:in atomic|is )/.exec(p)![1];
+    const masses = Object.fromEntries([...p.matchAll(/([A-Z][a-z]?) = (\d+(?:\.\d+)?)/g)].map((m) => [m[1], Number(m[2])]));
+    return { f, masses, atoms: tally(f) };
+  };
+  it("level 1: the formula mass is the sum over the atoms, and the given masses round the real ones", () => {
+    for (const it of make("s.percent.composition", 1)) {
+      const p = text(it.prompt);
+      const { masses, atoms } = read(p);
+      expect(Object.keys(masses).sort(), p).toEqual(Object.keys(atoms).sort());
+      for (const [x, m] of Object.entries(masses)) expect(Math.abs(m - WEIGHT[x]), `${p} ${x}`).toBeLessThanOrEqual(0.5);
+      expect(near(num(it), Object.entries(atoms).reduce((s, [x, n]) => s + masses[x] * n, 0)), p).toBe(true);
+    }
+  });
+
+  it("level 2: the percent times the formula mass gives the element's share of the mass", () => {
+    for (const it of make("s.percent.composition", 2)) {
+      const p = text(it.prompt);
+      const { masses, atoms } = read(p);
+      const el = /\(([A-Z][a-z]?)\)\?/.exec(p)![1];
+      const total = Object.entries(atoms).reduce((s, [x, n]) => s + masses[x] * n, 0);
+      expect(near((num(it) * total) / 100, masses[el] * atoms[el]), `${p} → ${num(it)}`).toBe(true);
+    }
+  });
+});
+
+describe("s.half.life", () => {
+  it("amounts, times, and carbon-14 fractions and ages agree with halving step by step", () => {
+    const kinds = new Set<string>();
+    for (const level of [1, 2])
+      for (const it of make("s.half.life", level)) {
+        const p = text(it.prompt);
+        if (/How many (grams|milligrams) are left/.test(p)) {
+          const [A, T, t] = nums(p.replace(/-\d+/, ""));
+          let left = A;
+          for (let done = 0; done < t - 1e-9; done += T) left /= 2;
+          expect(near(num(it), left), p).toBe(true);
+          kinds.add("left");
+        } else if (/until only/.test(p)) {
+          const [A, T, R] = nums(p.replace(/-\d+/, ""));
+          let n = 0;
+          for (let x = A; x > R; x /= 2) n++;
+          expect(near(num(it), n * T), p).toBe(true);
+          kinds.add("time");
+        } else if (/What fraction/.test(p)) {
+          const age = nums(p).at(-1)!;
+          const n = age / 5730;
+          expect(Number.isInteger(n), p).toBe(true);
+          expect(it.answer).toEqual({ kind: "fraction", n: 1, d: 2 ** n });
+          kinds.add("fraction");
+        } else {
+          const frac = it.prompt.find((x): x is { frac: [number, number] } => typeof x === "object" && "frac" in x)!.frac;
+          expect(frac[0]).toBe(1);
+          expect(num(it), p).toBe(5730 * Math.log2(frac[1]));
+          kinds.add("age");
+        }
+      }
+    expect([...kinds].sort()).toEqual(["age", "fraction", "left", "time"]);
   });
 });
 

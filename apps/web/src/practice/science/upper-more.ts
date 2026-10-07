@@ -4,6 +4,7 @@ import type { Skill } from "../types";
 import { AIR_MASSES, DESIGN, HEAT_TRANSFER, ROCK_CYCLE } from "./upper-more/g6-earth";
 import { BODY_JOBS, BODY_TOGETHER, ORG_PARTS, ORG_THEORY } from "./upper-more/g6-life";
 import { MATTER_ENERGY, MIXTURES, PHOTO_IO, REACTION_SIGNS, RESOURCES } from "./upper-more/g7-banks";
+import { balanceItem, halfLifeItem, percentItem } from "./upper-more/chem";
 import { populationItem, rateItem } from "./upper-more/data";
 import { moonItem } from "./upper-more/moon";
 import { notationItem } from "./upper-more/notation";
@@ -223,6 +224,28 @@ export const SCIENCE_6_9_MORE: Skill[] = [
   // Grade 9
   // @@GRADE9A
   {
+    id: "s.balance.equations",
+    subject: "science",
+    grade: "9",
+    title: { en: "Balancing chemical equations", es: "Balancear ecuaciones químicas" },
+    standard: "HS-PS1-7",
+    prereqs: ["s.formula.atoms", "s.reaction.signs"],
+    content: "computed",
+    levels: 2,
+    generate: balanceItem,
+  },
+  {
+    id: "s.percent.composition",
+    subject: "science",
+    grade: "9",
+    title: { en: "Formula mass and percent composition", es: "Masa fórmula y composición porcentual" },
+    standard: "HS-PS1-7",
+    prereqs: ["s.formula.atoms"],
+    content: "computed",
+    levels: 2,
+    generate: percentItem,
+  },
+  {
     id: "s.momentum",
     subject: "science",
     grade: "9",
@@ -243,6 +266,17 @@ export const SCIENCE_6_9_MORE: Skill[] = [
     content: "computed",
     levels: 2,
     generate: ohmsItem,
+  },
+  {
+    id: "s.half.life",
+    subject: "science",
+    grade: "9",
+    title: { en: "Half-life", es: "Vida media" },
+    standard: "HS-PS1-8",
+    prereqs: ["s.atoms"],
+    content: "computed",
+    levels: 2,
+    generate: halfLifeItem,
   },
   // @@GRADE9B
 ];
