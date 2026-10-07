@@ -35,14 +35,44 @@ test("tabs move by keyboard and land focus on the page title", async ({ page }, 
     await page.keyboard.type("2");
     await expect(page).toHaveURL(/\/home$/);
     await expect(box).toHaveValue(/2/);
-    // And they can be turned off.
+    // A child's rail carries no settings or ops lines; the grown-up view owns the switch.
+    await expect(page.getByRole("button", { name: "Turn off" })).toHaveCount(0);
+    await expect(page.getByText("Saved on this device")).toHaveCount(0);
+    await page.goto("/profiles");
+    await page.getByRole("button", { name: /Parent/ }).click();
+    await expect(page).toHaveURL(/\/family$/);
     await page.getByRole("button", { name: "Turn off" }).click();
     await page.locator("body").click({ position: { x: 600, y: 10 } });
     await page.keyboard.press("2");
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/family$/);
     await expect(page.getByText("Number keys are off")).toBeVisible();
   }
   expect(errors).toEqual([]);
+});
+
+test("the switcher keeps focus while it's open: a sheet on phones, a panel that lets go on wide screens", async ({ page }, info) => {
+  await family(page, "shell-focus", [["Sofía", "4"], ["Leo", "1"]]);
+  await page.getByRole("button", { name: /Sofía/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Hi, Sofía" })).toBeVisible();
+  const switcher = page.locator("#k-switcher");
+  await page.getByRole("button", { name: /switch learner/ }).click();
+  await expect(switcher).toBeVisible();
+  const inside = () => page.evaluate(() => Boolean(document.activeElement?.closest("#k-switcher")) || document.activeElement === document.body);
+  if (info.project.name === "phone") {
+    // Modal: Tab never reaches the dimmed page behind it.
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press("Tab");
+      expect(await inside()).toBe(true);
+    }
+    await expect(switcher).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(switcher).toBeHidden();
+    await expect(page.getByRole("button", { name: /switch learner/ })).toBeFocused();
+  } else {
+    // Not modal: tabbing on past "Sign out" closes it instead of leaving it open behind the focus.
+    for (let i = 0; i < 9 && (await switcher.isVisible()); i++) await page.keyboard.press("Tab");
+    await expect(switcher).toBeHidden();
+  }
 });
 
 test("a K–2 learner puts the K–2 band on <html>; others and the grown-up view don't", async ({ page }) => {

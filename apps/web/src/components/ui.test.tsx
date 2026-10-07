@@ -214,7 +214,7 @@ describe("Row, Stat, Skeleton", () => {
     expect(screen.getByRole("list", { name: "Today" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Adjectives" })).toHaveAttribute("href", "/practice/a");
     expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
-    expect(screen.getByText("8 min")).toHaveClass("font-opmono");
+    expect(screen.getByText("8 min")).toHaveClass("k-meta");
   });
 
   it("a stat is a term and its figure", () => {

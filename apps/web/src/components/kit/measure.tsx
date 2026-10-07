@@ -45,7 +45,7 @@ export function ProgressBar({ value, max, label, figure, size = "md", tone = "in
       >
         <span className={`k-progress-fill absolute inset-0 ${FILL[tone]}`} style={{ "--v": ratio(value, 0, max) } as CSSProperties} />
       </div>
-      {figure !== false && <span className="shrink-0 font-opmono text-xs text-muted">{figure ?? text}</span>}
+      {figure !== false && <span className="k-meta shrink-0">{figure ?? text}</span>}
     </div>
   );
 }
@@ -74,7 +74,7 @@ export function Meter({ value, min = 0, max, high, label, figure, size = "md", c
           <span key={x} aria-hidden="true" className="absolute inset-y-0 w-px bg-panel/80" style={{ left: `${x * 100}%` }} />
         ))}
       </div>
-      {figure !== false && <span className={`shrink-0 font-opmono text-xs ${over ? "text-warn" : "text-muted"}`}>{figure ?? text}</span>}
+      {figure !== false && <span className={`k-meta shrink-0 ${over ? "text-warn" : ""}`}>{figure ?? text}</span>}
     </div>
   );
 }

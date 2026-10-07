@@ -38,13 +38,14 @@ const ICON: Partial<Record<Place, IconFn>> = {
 const TAB_TYPES = ["k-tab"];
 const KEYS_PREF = "kaizenedu.tabKeys";
 
-/** "Me" on the phone bar is the learner's own initial: outlined at rest, filled in their colour when current. */
+/** "Me" on the phone bar is the learner's own initial in ink, ringed in their colour. Identity is the ring;
+ *  being the current place is the rose rule above it, as for every other tab. Never a colour fill. */
 function MeMark({ learner, on, size }: { learner: Profile; on: boolean; size: number }) {
   return (
     <span
       aria-hidden="true"
-      className="k-icon grid place-items-center rounded-full border-[1.5px] font-brand text-xs font-semibold"
-      style={{ "--k-icon-size": `${size}px`, borderColor: learner.color, background: on ? learner.color : undefined, color: on ? "var(--color-paper)" : learner.color } as CSSProperties}
+      className={`k-icon grid place-items-center rounded-full border-2 font-brand text-xs font-semibold text-ink transition-colors duration-(--duration-quick) ${on ? "bg-panel" : "bg-panel2"}`}
+      style={{ "--k-icon-size": `${size}px`, borderColor: learner.color } as CSSProperties}
     >
       {learner.nickname.slice(0, 1).toUpperCase()}
     </span>
@@ -129,7 +130,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const scope = useScopeKey();
   const [firstScope] = useState(scope);
 
-  const status = <StatusLines online={online} />;
+  // A child sees only what needs doing something about (not saving, offline); the grown-up view also
+  // sees where work is saved and which tutor is answering.
+  const status = <StatusLines online={online} full={!learner} />;
   const railLabels = rail.map((tab) => t(tab.label));
   const barLabels = bar.map((tab) => t(tab.label));
   const iconSize = k2 ? 26 : 20;
@@ -151,7 +154,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         {learner && (
           <div className="px-3 pb-4">
-            <Link href="/courses/new" className={btn("primary", "md", "w-full")}>
+            {/* Secondary: the page owns the one ink action (Start on Today's next thing). */}
+            <Link href="/courses/new" className={btn("secondary", "md", "w-full")}>
               <IconPlus size={18} /> {t("nav.new")}
             </Link>
           </div>
@@ -186,7 +190,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               })}
             </ul>
           </div>
-          {!k2 && (
+          {/* The number keys are a grown-up's setting: a child learns them from the key shown on hover. */}
+          {!learner && (
             <p className="mt-3 hidden flex-wrap items-center gap-x-2 gap-y-0.5 px-4 text-xs text-muted pointer-fine:flex">
               {keys ? (
                 <span className="inline-flex items-center gap-1 whitespace-nowrap">
@@ -199,7 +204,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={toggleKeys}
-                className="inline-flex min-h-6 items-center rounded-sm font-medium whitespace-nowrap underline decoration-border-strong transition-colors hover:text-ink hover:decoration-accent"
+                className="-mx-1.5 inline-flex min-h-8 items-center rounded-sm px-1.5 font-medium whitespace-nowrap underline decoration-border-strong transition-colors hover:text-ink hover:decoration-accent"
               >
                 {keys ? t("shell.keysOff") : t("shell.keysOn")}
               </button>
@@ -207,7 +212,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </nav>
         <div className="border-t border-border px-3 pt-3 pb-3">
-          <StatusLines online={online} className="px-2 pb-3" />
+          <StatusLines online={online} full={!learner} className="px-2 pb-3 empty:hidden" />
           <div className="flex items-center gap-1">
             <WhoButton variant="rail" open={switcherOpen} />
             <Link

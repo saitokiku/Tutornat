@@ -10,6 +10,8 @@
   --color-panel2: #f1f1ef;
   --color-border: #e4e3df;
   --color-border-strong: #cfccc5;
+  /* A field's edge: 3.4:1 on panel, 3.3:1 on paper, 3:1 on panel2 (WCAG 1.4.11). Cards keep the hairline. */
+  --color-field: #8e8a82;
   --color-ink: #1a1917;
   --color-muted: #6b6862;
   --color-accent: #a93b5d;
@@ -248,6 +250,7 @@
       --color-muted: #4a4743;
       --color-border: #aaa69d;
       --color-border-strong: #78746b;
+      --color-field: #6b6862;
       --ring: 3px solid var(--color-accent);
     }
   }
@@ -261,6 +264,15 @@
   &:active { transform: scale(0.98); }
   &:disabled { pointer-events: none; }
   &[aria-busy="true"] { cursor: progress; }
+}
+
+/* A text-style button or link that stands on its own line gets a real hit area: 32px for a mouse, 44px
+   for a finger. Not for links inside a sentence. */
+@utility k-tap {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  @media (pointer: coarse) { min-height: 2.75rem; }
 }
 
 /* View Transition opt-ins (see <PageTransition> in components/kit/motion.tsx). */
@@ -314,9 +326,9 @@
   .k-chip[aria-pressed="true"] { @apply border-ink bg-ink text-paper; }
 
   .k-input {
-    @apply w-full rounded-sm border border-border bg-panel px-4 py-3 text-body text-ink;
+    @apply w-full rounded-sm border border-field bg-panel px-4 py-3 text-body text-ink;
     transition: border-color var(--duration-quick) var(--ease-out-quart), background-color var(--duration-quick) var(--ease-out-quart);
-    @media (hover: hover) { &:hover { border-color: var(--color-border-strong); } }
+    @media (hover: hover) { &:hover { border-color: var(--color-muted); } }
     /* Fields carry the ring on their edge so the text never moves. */
     &:focus-visible { border-color: var(--color-accent); outline: var(--ring); outline-offset: -1px; }
     &[aria-invalid="true"] { border-color: var(--color-bad); }
@@ -332,11 +344,17 @@
   }
   textarea.k-input { resize: vertical; }
 
-  .k-label { @apply font-opmono text-micro font-medium uppercase text-muted; }
+  /* A field or group label in the body face. Never above a heading (no eyebrows). */
+  .k-label { @apply font-body text-xs font-semibold text-muted; }
+  /* A status word: Demo, Draft, From a grown-up. Set in the body face at a small size, sentence case;
+     mono capitals read as a console's costume. */
   .k-badge {
-    @apply inline-flex items-center gap-1 rounded-full bg-panel2 px-2 py-0.5 font-opmono text-micro leading-none font-medium tracking-[0.06em] text-ink/75 uppercase;
-    min-height: 1.25rem;
+    @apply inline-flex items-center gap-1 rounded-full bg-panel2 px-2 py-0.5 font-body text-xs leading-none font-semibold text-ink/80;
+    min-height: 1.375rem;
+    letter-spacing: 0.005em;
   }
+  /* Meta beside a title: counts, minutes, dates. The body face with tabular figures, never mono. */
+  .k-meta { @apply font-body text-xs text-muted; font-variant-numeric: tabular-nums lining-nums; }
 
   .k-link {
     @apply font-medium text-ink underline decoration-border-strong;
@@ -511,6 +529,22 @@
   .k-toast { pointer-events: auto; animation: var(--animate-enter); }
   .k-toast[data-leaving] { animation: var(--animate-exit); }
 }
+
+/* Browser surfaces belong to the system, so these sit outside the layers and a screen's utilities can't
+   undo them. Placeholders are full muted (5.3:1): often the only hint of what to type. A focus ring
+   written as `outline-none focus-visible:outline-2` draws solid (Tailwind's outline-none would otherwise
+   leave the ring's style at none); a plain `outline-none` still hides it on purpose. */
+::placeholder { color: var(--color-muted); opacity: 1; }
+:focus-visible { --tw-outline-style: solid; }
+
+/* K–2: every small control a child taps is a full K–2 target (56px): chips, small buttons, small icon
+   buttons. Sized from --spacing-target, not the spacing scale, so the 320px rule never shrinks them. */
+:root[data-band="k2"] :is(.k-chip, .k-btn-sm) {
+  min-height: var(--spacing-target);
+}
+:root[data-band="k2"] .k-chip { padding-inline: 1rem; font-size: var(--text-sm); }
+:root[data-band="k2"] .k-btn-sm { padding-inline: 1.125rem; font-size: var(--text-sm); }
+:root[data-band="k2"] .k-btn-sm.px-0 { min-width: var(--spacing-target); padding-inline: 0; }
 
 /* View transitions, opt-in per page with <PageTransition>. The old page steps back fast; the new one
    rises a few pixels and settles. The rail and tab bar (k-vt-rail / k-vt-tabbar) never move. */

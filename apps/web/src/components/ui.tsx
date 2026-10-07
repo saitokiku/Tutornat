@@ -116,7 +116,7 @@ export function EmptyState({ title, body, action, art }: { title: ReactNode; bod
   );
 }
 
-/** A short status word in mono capitals: Demo, Draft, From a grown-up. Never a score. */
+/** A short status word: Demo, Draft, From a grown-up. Never a score. */
 export function Badge({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "accent" | "good" | "warn" | "bad" }) {
   const t = { muted: "bg-panel2", accent: "bg-accent/10 text-accent", good: "bg-good/10 text-good", warn: "bg-warn/10 text-warn", bad: "bg-bad/10 text-bad" }[tone];
   return <span className={`k-badge ${t}`}>{children}</span>;

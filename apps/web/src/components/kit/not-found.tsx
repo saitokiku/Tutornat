@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { KaizenMark } from "@/components/brand";
+import { useTitle } from "@/components/LangSync";
 import { useT } from "@/i18n";
 import { btn } from "./btn";
 
 /** The 404 body: renders English on the server, then the family's language once the browser store is read. */
 export function NotFoundBody() {
   const t = useT();
+  useTitle(t("ds.notFound.docTitle"));
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-paper px-5 py-16 text-center">
       <KaizenMark size={64} grow />

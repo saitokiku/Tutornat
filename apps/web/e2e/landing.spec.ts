@@ -63,6 +63,38 @@ test("each door leads to the right place", async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-up$/);
 });
 
+test("Check pressed too early points at the empty place instead of marking it", async ({ page }) => {
+  await page.goto("/");
+  const sheet = page.getByRole("region", { name: "Try a real problem" });
+  await sheet.getByRole("button", { name: "Check" }).click();
+  await expect(sheet.getByText("Type both numbers first.")).toBeVisible();
+  await expect(sheet.getByRole("textbox", { name: "Top number" })).toBeFocused();
+  await expect(sheet.getByText("nothing yet")).toBeVisible();
+});
+
+test("the privacy notice and the terms are real pages, from the parents' section and the footer", async ({ page }) => {
+  const errors = collectErrors(page);
+  const links: [string, RegExp, string][] = [
+    ["Privacy notice", /\/privacy$/, "Privacy notice"],
+    ["Terms of use", /\/terms$/, "Terms of use"],
+    ["Privacy", /\/privacy$/, "Privacy notice"],
+    ["Terms", /\/terms$/, "Terms of use"],
+  ];
+  for (const [name, url, title] of links) {
+    await page.goto("/");
+    const link = name.length > 7 ? page.getByRole("link", { name, exact: true }) : page.getByRole("contentinfo").getByRole("link", { name, exact: true });
+    await link.click();
+    await expect(page).toHaveURL(url);
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    await expect(page).toHaveTitle(`${title} · KaizenEDU`);
+    await noOverflow(page);
+  }
+  // The 404 says what it is in the tab too.
+  await page.goto("/this-page-does-not-exist");
+  await expect(page).toHaveTitle("Page not found · KaizenEDU");
+  expect(errors.filter((e) => !/404/.test(e)), errors.join("\n")).toEqual([]);
+});
+
 test("no horizontal overflow at 320px, in every grade band and in Spanish", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await page.goto("/");

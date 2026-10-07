@@ -279,6 +279,13 @@ export const IconX = (p: P) => (
     <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
   </I>
 );
+/** Delete the last digit: a key pointing left with a small x. On a keypad an IconX reads as "times". */
+export const IconBackspace = (p: P) => (
+  <I {...p}>
+    <path d="M8.2 5.5h10.3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8.2L3.5 12l4.7-6.5Z" />
+    <path d="m11.5 9.75 4.5 4.5M16 9.75l-4.5 4.5" />
+  </I>
+);
 export const IconArrowRight = (p: P) => (
   <I {...p}>
     <path d="M5 12h13.5M13 6l5.5 6-5.5 6" />

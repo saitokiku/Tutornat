@@ -16,10 +16,10 @@ export function IconButton({
   label: string;
   icon: ReactNode;
   variant?: "ghost" | "secondary" | "primary";
-  /** md = the band's primary target (44px, 56px in K–2); sm = 36px with a 44px target on touch. */
+  /** md = the band's primary target (44px, 56px in K–2); sm = 36px with a 44px target on touch (56px in K–2). */
   size?: "md" | "sm";
 }) {
-  const box = size === "md" ? "size-target" : "size-9 min-h-0 pointer-coarse:size-11";
+  const box = size === "md" ? "size-target" : "k-btn-sm size-9 min-h-0 pointer-coarse:size-11";
   return (
     <button
       type="button"
@@ -43,7 +43,7 @@ export function RowList({ children, label, className = "" }: { children: ReactNo
 }
 
 /**
- * One line in a list: dot · title · mono meta · one action. With `href` the whole row opens it; the
+ * One line in a list: dot · title · meta · one action. With `href` the whole row opens it; the
  * action stays its own target. `done` greys the title and keeps it readable.
  */
 export function Row({
@@ -88,7 +88,7 @@ export function Row({
       </span>
       {(meta || action) && (
         <span className="ml-auto flex shrink-0 items-center gap-3">
-          {meta && <span className="font-opmono text-xs text-muted">{meta}</span>}
+          {meta && <span className="k-meta">{meta}</span>}
           {action && <span className="relative z-10">{action}</span>}
         </span>
       )}
@@ -96,7 +96,8 @@ export function Row({
   );
 }
 
-/** Honest numbers in a ledger strip: a mono figure over its plain label. Counts, never scores or grades. */
+/** Honest numbers in a ledger strip: the figure over its plain label, so every figure in the group sits
+ *  on one line. Counts, never scores or grades; four at most, so it reads at a glance. */
 export function StatGroup({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <dl className={`grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-px overflow-hidden rounded-md border border-border bg-border ${className}`.trim()}>
@@ -108,8 +109,8 @@ export function StatGroup({ children, className = "" }: { children: ReactNode; c
 export function Stat({ label, value, detail }: { label: ReactNode; value: ReactNode; detail?: ReactNode }) {
   return (
     <div className="flex flex-col gap-1 bg-panel px-4 py-3.5">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="order-first font-opmono text-t2 font-medium text-ink">{value}</dd>
+      <dt className="line-clamp-2 text-xs text-muted">{label}</dt>
+      <dd className="order-first font-brand text-t1 font-semibold text-ink tabular-nums">{value}</dd>
       {detail && <dd className="text-xs text-muted">{detail}</dd>}
     </div>
   );
@@ -168,7 +169,7 @@ export function Disclosure({
     <details open={defaultOpen} className={`k-disclosure rounded-md border border-border bg-panel ${className}`.trim()}>
       <summary className="flex min-h-12 items-center gap-3 rounded-md px-4 text-sm font-medium text-ink transition-colors duration-(--duration-quick) hover:bg-panel2/50 sm:px-5">
         <span className="min-w-0 flex-1">{summary}</span>
-        {meta && <span className="font-opmono text-xs text-muted">{meta}</span>}
+        {meta && <span className="k-meta">{meta}</span>}
         <IconChevronDown size={18} className="k-disclosure-chevron text-muted" />
       </summary>
       <div className="border-t border-border">{children}</div>

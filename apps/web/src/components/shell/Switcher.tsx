@@ -5,7 +5,7 @@
 // Built on the native popover (top layer, Escape, outside tap, focus back to the opener).
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { IconArrowLeft, IconCheck, IconGrownUp, IconLock, IconLogout, IconPlus } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
 import { Button, Field, IconButton, VisuallyHidden, announce } from "@/components/ui";
@@ -178,7 +178,14 @@ function arrows(e: KeyboardEvent<HTMLElement>) {
   items[next]?.focus();
 }
 
-/** The switcher itself. `status` is shown at its foot on phones (the rail shows it on wide screens). */
+/** Everything beside the switcher in the shell, made inert (or live again). */
+function holdPage(el: HTMLElement | null, hold: boolean) {
+  for (const sib of Array.from(el?.parentElement?.children ?? [])) if (sib !== el) (sib as HTMLElement).inert = hold;
+}
+
+/** The switcher itself. `status` is shown at its foot on phones (the rail shows it on wide screens).
+ *  Phones: a bottom sheet over a dimmed page, so it is modal: the page behind is inert until it closes.
+ *  Wide screens: a light panel by the rail that closes when focus moves on past it. */
 export function Switcher({ status, onOpenChange }: { status: ReactNode; onOpenChange: (open: boolean) => void }) {
   const t = useT();
   const locale = useLocale();
@@ -186,6 +193,11 @@ export function Switcher({ status, onOpenChange }: { status: ReactNode; onOpenCh
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<"choose" | "check">("choose");
+  const [modal, setModal] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    return () => holdPage(el, false);
+  }, []);
   const kids = useStore(learnersOf);
   const learner = useStore(currentLearner);
   const unlocked = useStore((s) => Boolean(s.session.unlocked));
@@ -206,12 +218,26 @@ export function Switcher({ status, onOpenChange }: { status: ReactNode; onOpenCh
       id={SWITCHER_ID}
       popover="auto"
       role="dialog"
+      aria-modal={modal || undefined}
       aria-labelledby={titleId}
       data-k-chrome
       className="k-switcher"
       onKeyDown={arrows}
+      onBlur={(e) => {
+        // Wide screens: Tab past the last choice (or a click elsewhere that takes focus) closes it.
+        const to = e.relatedTarget as Element | null;
+        if (modal || !to || ref.current?.contains(to) || to.closest(`[popovertarget="${SWITCHER_ID}"]`)) return;
+        ref.current?.hidePopover();
+      }}
+      // Before it closes, the page is live again, so focus can go back to the button that opened it.
+      onBeforeToggle={(e) => {
+        if (e.newState === "closed") holdPage(ref.current, false);
+      }}
       onToggle={(e) => {
         const open = e.newState === "open";
+        const sheet = open && window.matchMedia("(width < 64rem)").matches;
+        setModal(sheet);
+        if (sheet) holdPage(ref.current, true);
         onOpenChange(open);
         if (open) ref.current?.querySelector<HTMLElement>("[aria-current=true], [data-k-item]")?.focus();
         else setStep("choose");

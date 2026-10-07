@@ -11,6 +11,17 @@
   --k-rail: 17rem;
 }
 
+/* Phones: whatever Tab or a scroll-into-view brings up stops above the fixed tab bar (WCAG 2.4.11), never
+   under it. The bar is 3.5rem plus the safe area (K–2: about 4.75rem); the extra is breathing room. */
+@media (width < 64rem) {
+  :root:has(.k-vt-tabbar) {
+    scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+  :root[data-band="k2"]:has(.k-vt-tabbar) {
+    scroll-padding-bottom: calc(6.25rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* —— Rail. One white tile with a 2px rose mark rides behind the links; rows have a fixed height, so the
    tile's place is arithmetic (no measuring, nothing shifts on first paint) and it grows with K–2. */
 .k-rail-list {

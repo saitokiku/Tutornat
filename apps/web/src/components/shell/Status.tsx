@@ -46,8 +46,9 @@ function Line({ tone, children }: { tone: keyof typeof DOT; children: string }) 
   );
 }
 
-/** Two quiet lines: saving/connection, then the tutor. The tutor line holds its height while it's asked for. */
-export function StatusLines({ online, className = "" }: { online: boolean; className?: string }) {
+/** Two quiet lines: saving/connection, then the tutor. The tutor line holds its height while it's asked for.
+ *  `full` is the grown-up view; a child sees only a problem worth acting on (not saving, offline). */
+export function StatusLines({ online, full = true, className = "" }: { online: boolean; full?: boolean; className?: string }) {
   const t = useT();
   const mode = useAiMode();
   const health = storeHealth();
@@ -58,12 +59,12 @@ export function StatusLines({ online, className = "" }: { online: boolean; class
       ) : !online ? (
         <Line tone="warn">{t("shell.offline")}</Line>
       ) : (
-        DEMO && <Line tone="quiet">{t("demo.saved")}</Line>
+        DEMO && full && <Line tone="quiet">{t("demo.saved")}</Line>
       )}
-      {mode === null ? (
+      {!full ? null : mode === null ? (
         <li aria-hidden="true" className="h-[1.5em]" />
       ) : mode === "demo" ? (
-        <Line tone="warn">{t("demo.status")}</Line>
+        <Line tone="quiet">{t("shell.tutorBuiltIn")}</Line>
       ) : (
         <Line tone="good">{t("settings.aiOn")}</Line>
       )}

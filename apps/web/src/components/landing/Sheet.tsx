@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
-import { IconArrowRight, IconCheck, IconHint, IconMinus, IconNotYet, IconReadAloud, IconRefresh, IconStop } from "@/components/icons";
+import { IconArrowRight, IconCheck, IconHint, IconInfo, IconMinus, IconNotYet, IconReadAloud, IconRefresh, IconStop } from "@/components/icons";
 import { MathText } from "@/components/practice/MathText";
 import { speakText } from "@/components/stage/hear";
 import { VisualView } from "@/components/stage/visuals";
-import { Button, Segmented, SUBJECT_TINT, SubjectDot, announce, btn } from "@/components/ui";
+import { Button, Segmented, SUBJECT_TINT, SubjectDot, btn } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
 import type { Locale } from "@/lib/types";
 import { check, type Verdict } from "@/practice/answer";
@@ -55,25 +55,27 @@ export function Sheet({
   const young = band === "k2";
   return (
     <section aria-labelledby="sheet-title" data-young={young || undefined} className="rounded-lg border border-border bg-panel shadow-lift">
-      <h2 id="sheet-title" className="sr-only">
-        {t("land.sheet.title")}
-      </h2>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border px-4 py-3 sm:px-6">
-        <p className="flex min-w-0 items-center gap-2 text-xs text-muted">
-          <SubjectDot subject="math" />
-          <span className="font-medium text-ink">{t("subject.math")}</span>
-          <span aria-hidden="true">·</span>
-          <span className="whitespace-nowrap">{gradeLabel(locale, set.grade)}</span>
-          <span aria-hidden="true" className="hidden sm:inline">
-            ·
-          </span>
-          <span className="hidden truncate sm:inline">{set.title[locale]}</span>
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border px-4 py-3.5 sm:px-6">
+        <div className="min-w-0">
+          <h2 id="sheet-title" className="font-brand text-t3 font-semibold text-ink">
+            {t("land.sheet.title")}
+          </h2>
+          <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 text-xs text-muted">
+            <SubjectDot subject="math" />
+            <span>{t("subject.math")}</span>
+            <span aria-hidden="true">·</span>
+            <span className="whitespace-nowrap">{gradeLabel(locale, set.grade)}</span>
+            <span aria-hidden="true" className="hidden sm:inline">
+              ·
+            </span>
+            <span className="hidden sm:inline">{set.title[locale]}</span>
+          </p>
+        </div>
         <Segmented
           label={t("land.sheet.grade")}
           value={band}
           onChange={(v) => onBand(v as BandKey)}
-          options={BAND_ORDER.map((b) => ({ value: b, label: <span className="font-opmono tabular-nums">{t(BAND_LABEL[b])}</span> }))}
+          options={BAND_ORDER.map((b) => ({ value: b, label: <span className="tabular-nums">{t(BAND_LABEL[b])}</span> }))}
         />
       </div>
       <Problem key={`${item.id}:${locale}`} item={item} skill={set.title[locale]} locale={locale} young={young} onResult={onResult} onNext={onNext} />
@@ -81,7 +83,7 @@ export function Sheet({
   );
 }
 
-type Feedback = { kind: "right" } | { kind: "notYet"; form?: Verdict["form"] } | null;
+type Feedback = { kind: "right" } | { kind: "notYet"; form?: Verdict["form"] } | { kind: "empty" } | null;
 
 function Problem({
   item,
@@ -137,11 +139,17 @@ function Problem({
 
   const submit = (answer: string | number) => {
     if (done) return;
+    // Check is always ready to press; pressed too early, it points at the empty place instead of failing.
+    if (item.input !== "choices" && !ready) {
+      setFeedback({ kind: "empty" });
+      (item.input === "fraction" ? (top ? bottomRef : topRef) : numRef).current?.focus();
+      return;
+    }
     const verdict = check(item.answer, answer);
+    // The feedback line below is a live region, so the verdict is announced once, from there.
     if (verdict.correct) {
       setFeedback({ kind: "right" });
       onResult({ id: item.id, skill, result: helped ? "helped" : "own", tries: tries + 1, hints });
-      announce(helped ? t("practice.rightHelped") : t("practice.right"));
       return;
     }
     setTries((n) => n + 1);
@@ -159,7 +167,7 @@ function Problem({
   };
   const edit = (set: (v: string) => void, v: string) => {
     set(v);
-    if (feedback?.kind === "notYet") setFeedback(null);
+    if (feedback?.kind === "notYet" || feedback?.kind === "empty") setFeedback(null);
   };
 
   const next = () => {
@@ -196,9 +204,11 @@ function Problem({
 
   const mark: Mark = done ? "right" : feedback?.kind === "notYet" ? "notYet" : "none";
   const answerMark =
-    item.answer.kind === "fraction" ? <Stacked n={item.answer.n} d={item.answer.d} className="text-t2" /> : item.answer.kind === "number" ? <span className="font-opmono text-t2 font-medium">{String(item.answer.value).replace("-", "−")}</span> : null;
+    item.answer.kind === "fraction" ? <Stacked n={item.answer.n} d={item.answer.d} className="text-t2" /> : item.answer.kind === "number" ? <span className="text-t2 font-semibold tabular-nums">{String(item.answer.value).replace("-", "−")}</span> : null;
 
-  const well = `rounded-sm border border-border bg-panel2 text-center font-opmono font-medium text-ink inset-shadow-well tabular-nums transition-colors duration-(--duration-quick) hover:border-border-strong focus-visible:border-accent focus-visible:bg-panel focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-accent disabled:text-ink ${
+  // Where the answer goes: a recessed white slot with a 3:1 edge, ready to type into (not a grey tile that
+  // reads as switched off). Figures in the body face: the plain, footless 1 children learn to write.
+  const well = `rounded-sm border border-field bg-panel text-center font-semibold text-ink inset-shadow-well tabular-nums transition-colors duration-(--duration-quick) hover:border-muted focus-visible:border-accent focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-accent disabled:border-border disabled:bg-panel2 disabled:text-ink ${
     young ? "size-16 text-d3" : "size-14 text-t1"
   }`;
 
@@ -322,7 +332,7 @@ function Problem({
                     type="button"
                     onClick={() => pick(i)}
                     disabled={done && !right}
-                    className={`relative grid min-h-18 place-items-center rounded-md border bg-panel font-opmono text-d3 font-medium text-ink shadow-soft transition-[border-color,background-color,box-shadow,transform] duration-(--duration-quick) ease-out-quart hover:border-border-strong active:scale-[0.98] active:shadow-none disabled:opacity-45 ${
+                    className={`relative grid min-h-18 place-items-center rounded-md border bg-panel text-d3 font-semibold text-ink tabular-nums shadow-soft transition-[border-color,background-color,box-shadow,transform] duration-(--duration-quick) ease-out-quart hover:border-border-strong active:scale-[0.98] active:shadow-none disabled:opacity-45 ${
                       right ? "border-good bg-good/8 shadow-none" : miss ? "border-dashed border-border-strong bg-panel2 text-muted shadow-none" : "border-border"
                     }`}
                   >
@@ -340,7 +350,7 @@ function Problem({
               </button>
             ) : (
               item.input !== "choices" && (
-                <Button onClick={() => submit(response)} disabled={!ready} className="min-w-32">
+                <Button onClick={() => submit(response)} className="min-w-32">
                   {t("practice.check")}
                 </Button>
               )
@@ -349,6 +359,12 @@ function Problem({
               {done && (
                 <p className="flex items-center gap-2 font-semibold text-good">
                   <IconCheck size={18} className="k-draw" /> {helped ? t("practice.rightHelped") : t("practice.right")}
+                </p>
+              )}
+              {feedback?.kind === "empty" && (
+                <p className="k-enter flex items-start gap-2 text-muted">
+                  <IconInfo size={18} className="mt-0.5 shrink-0" />
+                  <span>{t(item.input === "fraction" ? "land.sheet.needFraction" : "land.sheet.needNumber")}</span>
                 </p>
               )}
               {feedback?.kind === "notYet" && (
@@ -400,7 +416,7 @@ function Problem({
             </Button>
           )}
         </div>
-        {young && <p className="mt-4 text-sm text-muted">{t("land.sheet.k2")}</p>}
+        {young && <p className="mt-4 text-sm text-muted">{t("land.sheet.k2tap")}</p>}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5 rounded-b-lg border-t border-border bg-panel2/60 px-4 py-3 sm:px-8">

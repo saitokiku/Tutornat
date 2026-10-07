@@ -115,7 +115,7 @@ export function Tabs({
             >
               {it.icon}
               {it.label}
-              {it.meta != null && <span className="font-opmono text-xs text-muted">{it.meta}</span>}
+              {it.meta != null && <span className="k-meta">{it.meta}</span>}
             </button>
           );
         })}

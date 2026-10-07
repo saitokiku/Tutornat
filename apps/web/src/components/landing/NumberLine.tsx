@@ -53,7 +53,7 @@ export function HeroLine({
         {marks.map((m) => (
           <span
             key={m}
-            className={`absolute top-[5.25rem] -translate-x-1/2 font-opmono leading-none ${dense ? "text-micro tracking-normal text-muted sm:text-xs" : "text-body text-ink"}`}
+            className={`absolute top-[5.25rem] -translate-x-1/2 leading-none font-medium tabular-nums ${dense ? "text-xs text-muted" : "text-body text-ink"}`}
             style={{ left: at(m) }}
           >
             {fractionLabel(m, denominator)}
@@ -83,7 +83,7 @@ export function HeroLine({
 /** A fraction set the way it is written on paper: numerator over a bar over denominator. */
 export function Stacked({ n, d, className = "" }: { n: number | string; d: number | string; className?: string }) {
   return (
-    <span className={`inline-flex flex-col items-center font-opmono leading-none font-medium tabular-nums ${className}`.trim()}>
+    <span className={`inline-flex flex-col items-center leading-none font-semibold tabular-nums ${className}`.trim()}>
       <span className="px-1 pb-1">{n}</span>
       <span className="h-0.5 w-full rounded-full bg-current" />
       <span className="px-1 pt-1">{d}</span>
