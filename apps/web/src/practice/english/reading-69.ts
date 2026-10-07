@@ -192,7 +192,8 @@ export function locate(passage: Passage, quote: string, locale: Locale, article:
   const texts = lang(locale, passage);
   const t = texts.findIndex((x) => x.paras.some((p) => p.includes(quote)));
   const p = texts[t].paras.findIndex((x) => x.includes(quote));
-  const unit = passage.genre === "poem" ? tr(locale, "stanza", "estrofa") : tr(locale, "paragraph", "párrafo");
+  // A poem's stanzas hold line breaks, also when the poem is one of a pair.
+  const unit = texts[t].paras.some((x) => x.includes("\n")) ? tr(locale, "stanza", "estrofa") : tr(locale, "paragraph", "párrafo");
   const where = texts.length > 1 ? `${tr(locale, "Text", "texto")} ${t + 1}, ${unit} ${p + 1}` : `${unit} ${p + 1}`;
   if (article) return locale === "es" ? `el ${where}` : where;
   return where.charAt(0).toUpperCase() + where.slice(1);
