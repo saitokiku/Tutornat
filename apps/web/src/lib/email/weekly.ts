@@ -1,7 +1,11 @@
 import { useEffect } from "react";
-import { addDays, localDate } from "@/planner/dates";
+import { RULES, type SkillStatus } from "@/learning/engine";
+import { getSkill } from "@/practice/skills";
+import { daysBetween, fromLocalDate, localDate } from "@/planner/dates";
+import { PLAN_RULES } from "@/planner/plan";
 import { startOfWeek, summarizeWeek } from "../activity";
 import { weekFacts } from "../family";
+import { statusesOf } from "../practice";
 import { read, update, useStore, type StoreState } from "../store";
 import type { Account, Profile } from "../types";
 import { isQuiet, renderWeekly, tr, withoutNames, type Email, type LearnerWeek, type WeeklyInput } from "./render";
@@ -13,7 +17,8 @@ import { isQuiet, renderWeekly, tr, withoutNames, type Email, type LearnerWeek, 
 // sends to an address that confirmed by clicking a link. With the backend, a scheduled job calls the
 // same composer.
 
-const WEEK = 7 * 864e5;
+const DAY = 864e5;
+const WEEK = 7 * DAY;
 
 /** Kept on the account record, so export includes it and deleting the account removes it. */
 export type WeeklyOptIn = {
@@ -42,48 +47,68 @@ function patch(change: (w: WeeklyOptIn) => WeeklyOptIn) {
 
 // ----- composing -----
 
-/** The last moment a learner did anything: an answer, a lesson event, a reading entry. */
-function lastActive(s: StoreState, profileId: string) {
-  let at = 0;
-  for (const a of s.attempts) if (a.profileId === profileId && a.at > at) at = a.at;
-  for (const e of s.activity) if (e.profileId === profileId && e.at > at) at = e.at;
-  for (const r of s.reading) if (r.profileId === profileId) at = Math.max(at, new Date(`${r.date}T12:00`).getTime());
-  return at;
+/**
+ * When "worth a look" items count, the same as the Family page's nudges: a test or quiz from tomorrow
+ * to the plan's prep window with no prep set finished, a check open 14 days (the mastery law's
+ * overdue line), a stuck skill still practiced in the last 14 days, 5 days in a row with nothing done.
+ */
+export const LOOK_RULES = { prepDays: PLAN_RULES.prepDays, checkWaitMs: RULES.overdueCheckMs, stuckRecentMs: 14 * DAY, idleDays: 5 };
+
+/** The last time a learner did anything, up to `now`: an answer, a lesson, the tutor, a plan line, reading. */
+function lastActive(s: StoreState, profileId: string, now: number): number | undefined {
+  let last: number | undefined;
+  const see = (t: number | undefined) => {
+    if (t !== undefined && t <= now && (last === undefined || t > last)) last = t;
+  };
+  for (const a of s.attempts) if (a.profileId === profileId) see(a.at);
+  for (const e of s.activity) if (e.profileId === profileId && e.type !== "course_added") see(e.at);
+  for (const d of s.planDone) if (d.profileId === profileId) see(d.at);
+  for (const th of s.threads) if (th.profileId === profileId) see(th.lines.at(-1)?.at ?? th.startedAt);
+  for (const r of s.reading) if (r.profileId === profileId && r.date <= localDate(now)) see(Math.min(now, fromLocalDate(r.date).getTime()));
+  return last;
 }
+
+type Tally = { own: number; helped: number; missed: number };
 
 function learnerWeek(s: StoreState, p: Profile, weekStart: number, now: number, scrub: (text: string) => string): LearnerWeek {
   const at = Math.min(now, weekStart + WEEK - 1);
   const f = weekFacts(s, p.id, at);
-  // Lesson checks and practice answers together, exactly as the Family page adds them.
-  const lessons = summarizeWeek(
+  // Lesson checks are added to practice answers, as the Family page adds them. weekFacts carries its
+  // own count of them once it has one (lessonChecks); until then, the week's lesson events.
+  const week = summarizeWeek(
     s.activity.filter((e) => e.profileId === p.id),
     weekStart,
   );
+  const checks: Tally = (f as typeof f & { lessonChecks?: Tally }).lessonChecks ?? { own: week.own, helped: week.help, missed: week.missed };
+
   const today = localDate(now);
-  const soon = addDays(today, 3);
-  const prepped = new Set(s.sets.filter((x) => x.profileId === p.id && x.kind === "prep" && x.eventId).map((x) => x.eventId));
+  const prepped = new Set(s.sets.filter((x) => x.profileId === p.id && x.kind === "prep" && x.finishedAt).map((x) => x.eventId));
   const tests = s.events
-    .filter((e) => e.profileId === p.id && !e.done && (e.kind === "test" || e.kind === "quiz") && e.date >= today && e.date <= soon && !prepped.has(e.id))
+    .filter((e) => e.profileId === p.id && !e.done && (e.kind === "test" || e.kind === "quiz") && !prepped.has(e.id))
+    .filter((e) => daysBetween(today, e.date) >= 1 && daysBetween(today, e.date) <= LOOK_RULES.prepDays)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5)
     .map((e) => ({ kind: e.kind as "test" | "quiz", date: e.date, title: scrub(e.title).slice(0, 80) }));
-  const last = lastActive(s, p.id);
-  const idle = last ? Math.floor((now - last) / 864e5) : 0;
+  const statuses = Object.values(statusesOf(s, p.id, now)).filter((st) => getSkill(st.skillId));
+  const open = (st: SkillStatus) => st.state === "ready" || st.state === "checked" || st.state === "refresh";
+  const overdue = statuses.filter((st) => open(st) && st.checkOpensAt !== undefined && now - st.checkOpensAt >= LOOK_RULES.checkWaitMs).map((st) => st.skillId);
+  const stuck = statuses.filter((st) => st.stuck && st.lastPracticeAt !== undefined && now - st.lastPracticeAt <= LOOK_RULES.stuckRecentMs).map((st) => st.skillId);
+  const idle = daysBetween(localDate(lastActive(s, p.id, now) ?? p.createdAt), today);
   return {
     grade: p.grade,
     minutes: f.minutes + f.readingMinutes,
     lessons: f.lessons,
     sets: f.sets,
-    own: f.own + lessons.own,
-    helped: f.helped + lessons.help,
-    missed: f.missed + lessons.missed,
+    own: f.own + checks.own,
+    helped: f.helped + checks.helped,
+    missed: f.missed + checks.missed,
     proved: f.proved,
     checksWaiting: f.checksWaiting,
     helpOn: f.helpOn,
-    overdue: f.overdue,
-    stuck: f.stuck,
+    overdue: overdue.slice(0, 20),
+    stuck: stuck.slice(0, 20),
     tests,
-    ...(idle >= 5 ? { idleDays: Math.min(idle, 400) } : {}),
+    ...(idle >= LOOK_RULES.idleDays ? { idleDays: Math.min(idle, 400) } : {}),
   };
 }
 

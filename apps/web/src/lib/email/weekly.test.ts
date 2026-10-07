@@ -5,9 +5,11 @@ import { signUp } from "../auth";
 import { weekFacts } from "../family";
 import { createLearner } from "../profiles";
 import { read, resetMemory, update } from "../store";
+import type { SchoolEvent } from "@/planner/types";
 import type { Profile } from "../types";
 import { renderWeekly, WeeklyInput, withoutNames } from "./render";
-import { askConfirmation, confirmWeekly, previewWeekly, resetEmailMode, sendDueWeekly, setWeeklyOn, useWeeklyEmail, weeklyInput, weeklyOf } from "./weekly";
+import { askConfirmation, confirmWeekly, LOOK_RULES, previewWeekly, resetEmailMode, sendDueWeekly, setWeeklyOn, useWeeklyEmail, weeklyInput, weeklyOf } from "./weekly";
+import { getSkill } from "@/practice/skills";
 
 const H = 3600_000;
 const NOW = new Date(2026, 9, 8, 10, 0).getTime(); // Thursday, Oct 8 2026
@@ -83,29 +85,81 @@ describe("weeklyInput", () => {
     expect(text).toContain("Grade 4, learner 2");
   });
 
-  it("lists a test in the next 3 days with no prep, with names taken out of its title", async () => {
+  it("lists a test from tomorrow to 3 days out with no prep set finished, with names taken out of its title", async () => {
     const { accountId, kids } = await family();
     adaWeek(kids[0]);
+    const ev = (id: string, title: string, kind: "test" | "quiz", date: string, done?: boolean): SchoolEvent => ({
+      id,
+      profileId: kids[0].id,
+      title,
+      kind,
+      date,
+      skillIds: ["m.add.10"],
+      source: "typed",
+      createdAt: NOW,
+      ...(done ? { done } : {}),
+    });
     update((s) => {
-      s.events.push({ id: "e1", profileId: kids[0].id, title: "Ada's spelling quiz", kind: "quiz", date: "2026-10-10", skillIds: [], source: "typed", createdAt: NOW });
-      s.events.push({ id: "e2", profileId: kids[0].id, title: "Fractions test", kind: "test", date: "2026-10-09", skillIds: [], source: "typed", createdAt: NOW });
-      s.events.push({ id: "e3", profileId: kids[0].id, title: "Far away test", kind: "test", date: "2026-10-20", skillIds: [], source: "typed", createdAt: NOW });
-      s.events.push({ id: "e4", profileId: kids[0].id, title: "Prepped test", kind: "test", date: "2026-10-09", skillIds: [], source: "typed", createdAt: NOW });
-      s.sets.push({ id: "p", profileId: kids[0].id, createdAt: NOW, kind: "prep", subject: "math", skillId: "m.add.10", slots: [], eventId: "e4" });
+      s.events.push(ev("e1", "Ada's spelling quiz", "quiz", "2026-10-10"));
+      s.events.push(ev("e2", "Fractions test", "test", "2026-10-09"));
+      s.events.push(ev("e3", "Far away test", "test", "2026-10-20"));
+      s.events.push(ev("e4", "Prepped test", "test", "2026-10-09"));
+      s.events.push(ev("e5", "Prep started, not finished", "test", "2026-10-11"));
+      s.events.push(ev("e6", "Today's test", "test", "2026-10-08"));
+      s.events.push(ev("e7", "Done already", "quiz", "2026-10-09", true));
+      s.sets.push({ id: "p4", profileId: kids[0].id, createdAt: NOW, finishedAt: NOW, kind: "prep", subject: "math", skillId: "m.add.10", slots: [], eventId: "e4" });
+      s.sets.push({ id: "p5", profileId: kids[0].id, createdAt: NOW, kind: "prep", subject: "math", skillId: "m.add.10", slots: [], eventId: "e5" });
     });
     const ada = weeklyInput(read(), accountId, MON, NOW)!.learners[0];
     expect(ada.tests).toEqual([
       { kind: "test", date: "2026-10-09", title: "Fractions test" },
       { kind: "quiz", date: "2026-10-10", title: "your child's spelling quiz" },
+      { kind: "test", date: "2026-10-11", title: "Prep started, not finished" },
     ]);
   });
 
-  it("notes 5 or more days without activity", async () => {
+  it("names checks open 14 days and stuck skills still being practiced, as the Family page's nudges do", async () => {
     const { accountId, kids } = await family(["4"]);
-    update((s) => void s.attempts.push({ id: "x", profileId: kids[0].id, at: MON + 2 * H, skillId: "m.add.10", level: 1, seed: 1, mode: "practice", correct: true, assisted: false, seconds: 30 }));
+    const ada = kids[0].id;
+    const D = 24 * H;
+    update((s) => {
+      // m.add.10: ten right answers at the top level 20 days ago → ready, its check open since then.
+      const top = getSkill("m.add.10")!.levels;
+      for (let i = 0; i < 10; i++) s.attempts.push({ id: `r${i}`, profileId: ada, at: NOW - 20 * D + i, skillId: "m.add.10", level: top, seed: i, mode: "practice", correct: true, assisted: false, seconds: 10 });
+      // m.sub.10: three hard sets this week → stuck. m.add.20: three hard sets a month ago → stuck, but not recent.
+      const hardSets = (skillId: string, at: number) => {
+        for (let set = 0; set < 3; set++)
+          for (let i = 0; i < 5; i++) s.attempts.push({ id: `${skillId}-${set}-${i}`, profileId: ada, at: at + set * H + i, skillId, level: 1, seed: i, mode: "practice", setId: `${skillId}-${set}`, correct: i === 0, assisted: false, seconds: 10 });
+      };
+      hardSets("m.sub.10", MON + 2 * H);
+      hardSets("m.add.20", NOW - 30 * D);
+    });
+    const week = weeklyInput(read(), accountId, MON, NOW)!.learners[0];
+    expect(week.overdue).toEqual(["m.add.10"]);
+    expect(week.stuck).toEqual(["m.sub.10"]);
+    const { text } = previewWeekly(read(), accountId, NOW, ORIGIN)!;
+    expect(text).toContain(`Worth a look:\n- A check open for 2 weeks or more: ${getSkill("m.add.10")!.title.en}\n- Stuck, three hard sets in a row: ${getSkill("m.sub.10")!.title.en}`);
+    // By hand: the check opened 20 days ago minus the 20-hour quiet time, which is past 14 days.
+    expect(NOW - (NOW - 20 * D + 9 + 20 * H)).toBeGreaterThanOrEqual(LOOK_RULES.checkWaitMs);
+  });
+
+  it("notes 5 or more calendar days without activity, counting a never-active learner from when they were added", async () => {
+    const { accountId, kids } = await family(["4", "K"]);
+    update((s) => {
+      s.attempts.push({ id: "x", profileId: kids[0].id, at: MON + 2 * H, skillId: "m.add.10", level: 1, seed: 1, mode: "practice", correct: true, assisted: false, seconds: 30 });
+      s.profiles.find((p) => p.id === kids[0].id)!.createdAt = MON - 30 * 24 * H;
+      s.profiles.find((p) => p.id === kids[1].id)!.createdAt = MON - 4 * 24 * H;
+    });
     const later = MON + 6 * 24 * H + 23 * H; // Sunday night
-    expect(weeklyInput(read(), accountId, MON, later)!.learners[0].idleDays).toBe(6);
-    expect(weeklyInput(read(), accountId, MON, NOW)!.learners[0].idleDays).toBeUndefined();
+    const [ada, bo] = weeklyInput(read(), accountId, MON, later)!.learners;
+    expect(ada.idleDays).toBe(6);
+    expect(bo.idleDays).toBe(10);
+    const [adaNow, boNow] = weeklyInput(read(), accountId, MON, NOW)!.learners;
+    expect(adaNow.idleDays).toBeUndefined();
+    expect(boNow.idleDays).toBe(7);
+    // Time with the tutor counts as activity.
+    update((s) => void s.threads.push({ id: "t", profileId: kids[1].id, startedAt: MON + 3 * H, surface: "talk", title: "x", lines: [{ role: "learner", text: "hi", at: MON + 3 * H }] }));
+    expect(weeklyInput(read(), accountId, MON, NOW)!.learners[1].idleDays).toBeUndefined();
   });
 });
 
