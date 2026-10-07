@@ -256,7 +256,8 @@ function Receipt({ receipt: r, name }: { receipt: ConsentReceipt; name: string }
         <Badge tone={r.verified ? "good" : "warn"}>{t(r.verified ? "acct.consent.verifiedBadge" : "acct.consent.notVerified")}</Badge>
         {r.revokedAt && <Badge>{t("acct.consent.revokedBadge")}</Badge>}
       </p>
-      <dl className="mt-3 grid gap-x-4 gap-y-1 sm:grid-cols-[auto_1fr]">
+      {/* A long email must wrap rather than push a phone's page sideways. */}
+      <dl className="mt-3 grid min-w-0 gap-x-4 gap-y-1 [overflow-wrap:anywhere] sm:grid-cols-[auto_minmax(0,1fr)]">
         <dt className="text-muted">{t("acct.consent.covers")}</dt>
         <dd className="text-ink">{scope}</dd>
         <dt className="text-muted">{t("acct.consent.method")}</dt>
