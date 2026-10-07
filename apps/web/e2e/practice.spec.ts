@@ -31,6 +31,39 @@ async function seedSet(page: Page, set: { id: string; skillId: string; seed: num
 
 const setCount = (page: Page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).sets.length as number, STORE);
 
+for (const firstAction of ["hint", "miss"] as const) {
+  test(`${firstAction} survives reload before the final answer`, async ({ page }) => {
+    const errors = collectErrors(page);
+    await family(page, `pr-resume-${firstAction}`, [["Ada", "3"]]);
+    await page.getByRole("button", { name: /Ada/ }).click();
+    await expect(page).toHaveURL(/\/home$/);
+    await seedSet(page, { id: "resume-fraction", skillId: "m.frac.unit", seed: 11, level: 1 });
+    await page.goto("/practice/resume-fraction");
+    if (firstAction === "hint") await page.getByRole("button", { name: /^Hint/ }).click();
+    else {
+      await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+      await page.keyboard.type("2/4");
+      await page.keyboard.press("Enter");
+      await expect(page.getByText("Not yet. Try again, or take a hint.")).toBeVisible();
+    }
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+    await page.keyboard.type("1/4");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Right, with help.")).toBeVisible();
+    const ledger = await page.evaluate((key) => {
+      const s = JSON.parse(localStorage.getItem(key)!);
+      return { attempts: s.attempts, responses: s.responseEvents, help: s.helpExposures, contexts: s.attemptContexts };
+    }, STORE);
+    expect(ledger.attempts).toEqual([expect.objectContaining({ correct: true, assisted: true, response: "1/4", provenance: "local-recorded" })]);
+    expect(ledger.contexts).toHaveLength(1);
+    expect(ledger.responses).toEqual([expect.objectContaining({ correct: firstAction === "hint", response: firstAction === "hint" ? "1/4" : "2/4" })]);
+    expect(ledger.help).toHaveLength(firstAction === "hint" ? 1 : 0);
+    await noOverflow(page);
+    expect(errors, errors.join("\n")).toEqual([]);
+  });
+}
+
 for (const input of ["keyboard", "touch"] as const) {
   test(`hint_then_${input}_fraction_submits_once`, async ({ page }) => {
     await family(page, `pr-frac-${input}`, [["Ada", "3"]]);

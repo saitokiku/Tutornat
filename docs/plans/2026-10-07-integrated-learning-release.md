@@ -247,18 +247,18 @@ new `src/learning/evidence.ts`, `src/lib/evidence.ts`; extend corresponding test
 Use §2 records, with pure reducers in `learning/evidence.ts` and storage in `lib/evidence.ts`.
 Also produces `openOrResumeAttempt` and `AttemptSource` from §2; T05 subsequently links sessions.
 
-- [ ] Add failing `help_survives_reload_and_abandon`: hint → reload → right answer remains assisted;
+- [x] Add failing `help_survives_reload_and_abandon`: hint → reload → right answer remains assisted;
   hint → abandon → another check sees the help clock. Add `miss_survives_reload`, scene resume,
   two-tab ordering and repeat-record ID idempotency cases. Assert the evidence, not just a badge.
-- [ ] Add `second_refresh_failure_requires_new_restoration` in `engine.test.ts`: restore once, fail
+- [x] Add `second_refresh_failure_requires_new_restoration` in `engine.test.ts`: restore once, fail
   a later review, expect refresh again. Freeze time; preserve existing numerical constants.
-- [ ] Open/persist attempt identity when the question appears. Persist help before revealing it and
+- [x] Open/persist attempt identity when the question appears. Persist help before revealing it and
   first responses before feedback. Hydrate state instead
   of resetting mount-local hints/tries. Opening a tutor is neutral; released content help latches.
   Reading/navigation accommodations stay practice-only where the assessment policy is unresolved.
-- [ ] Derive quiet-period eligibility from recorded exposure, including abandoned work. Do not let
+- [x] Derive quiet-period eligibility from recorded exposure, including abandoned work. Do not let
   a local “unassisted” flag undo a prior event. Repair refresh episode matching by chronology.
-- [ ] Run `npx vitest run src/learning src/lib/evidence.test.ts src/lib/practice.test.ts src/components/practice/Runner.test.tsx src/components/stage`.
+- [x] Run `npx vitest run src/learning src/lib/evidence.test.ts src/lib/practice.test.ts src/components/practice/Runner.test.tsx src/components/stage`.
   Expect all regressions and existing law tests to pass. Browser-test reload/resume, then §4;
   commit/push `fix: preserve assistance and first-response evidence across resume`.
 

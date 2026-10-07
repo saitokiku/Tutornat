@@ -1,11 +1,19 @@
-import { newId, update } from "./store";
+import { appendEvidence, newId, update } from "./store";
 import type { ActivityEvent, Course, Lesson } from "./types";
+import type { AttemptSource } from "@/learning/types";
 
 // Activity is a record of what happened. Nothing here computes mastery: completion and correct answers
 // stay separate from "with a hint", and none of it is turned into a score.
 
-export function record(e: Omit<ActivityEvent, "id" | "at">) {
-  update((s) => void s.activity.push({ ...e, id: newId(), at: Date.now() }));
+/** Legacy lesson checks are practice, with a scoped identifier until reviewed skill mapping lands. */
+export function sceneAttemptSource(profileId: string, courseId: string, lessonId: string, sceneId: string, questionId: string): AttemptSource {
+  return { kind: "scene-question", profileId, courseId, sceneId: `${lessonId}/${sceneId}`, questionId, skillId: `scene:${courseId}:${lessonId}:${sceneId}`, itemFingerprint: `${lessonId}/${questionId}`, contentVersion: "legacy" };
+}
+
+export function record(e: Omit<ActivityEvent, "id" | "at">, id?: string) {
+  const row = { ...e, id: id ?? newId(), at: Date.now() };
+  if (id) appendEvidence("activity", row);
+  else update((s) => void s.activity.push(row));
 }
 
 export function lessonState(events: ActivityEvent[], courseId: string, lessonId: string): "done" | "started" | "new" {
@@ -87,9 +95,15 @@ export function continueTarget(courses: Course[], events: ActivityEvent[]) {
  * to a scene: the first answer counts as on-own or not-yet; a later correct answer after a miss, a hint
  * or an explanation counts as helped; nothing is recorded twice.
  */
-export function checkMemory() {
+export function checkMemory(history: readonly ActivityEvent[] = []) {
   const state = new Map<string, "missed" | "done">();
   const helped = new Set<string>();
+  for (const e of history) {
+    if (e.type !== "quiz_answered" || !e.sceneId) continue;
+    if (e.correct) state.set(e.sceneId, "done");
+    else if (!state.has(e.sceneId)) state.set(e.sceneId, "missed");
+    if (e.assisted) helped.add(e.sceneId);
+  }
   return {
     help(id: string) {
       helped.add(id);

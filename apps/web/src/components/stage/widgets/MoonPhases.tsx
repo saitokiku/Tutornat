@@ -9,7 +9,7 @@ import { MoonVisual } from "../visuals";
 import { CheckRow } from "./CheckRow";
 import { StepButtons } from "./Slider";
 
-type Props = { widget: Extract<Widget, { kind: "moon-phases" }>; onCheck?: (correct: boolean) => void };
+type Props = { widget: Extract<Widget, { kind: "moon-phases" }>; onCheck?: (correct: boolean) => boolean | void };
 
 const CYCLE = 29.5;
 
@@ -92,8 +92,8 @@ export function MoonPhases({ widget, onCheck }: Props) {
           result={result}
           onCheck={() => {
             const ok = phaseKey(day) === phaseKey(widget.target!);
+            if (onCheck?.(ok) === false) return;
             setResult(ok);
-            onCheck?.(ok);
           }}
         />
       )}

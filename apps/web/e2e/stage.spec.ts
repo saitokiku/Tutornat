@@ -80,6 +80,30 @@ async function learnerWithLesson(page: Page, tag: string, grade: string, scenes:
   await expect(page.getByRole("heading", { level: 1, name: "Half is lit" })).toBeVisible();
 }
 
+test("lesson help survives reload and a completed question resumes without duplicate activity", async ({ page }) => {
+  const errors = collectErrors(page);
+  await learnerWithLesson(page, "stg-evidence", "5", [quiz]);
+  await page.getByRole("button", { name: "Show a hint" }).click();
+  await expect(page.getByText("Think of daytime.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Think of daytime.")).toBeVisible();
+  await page.getByRole("radio", { name: "The Sun", exact: true }).check();
+  await page.getByRole("button", { name: "Check", exact: true }).click();
+  await expect(page.getByText("That's right, with help.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("That's right, with help.")).toBeVisible();
+  await expect(page.getByRole("radio", { name: "The Sun", exact: true })).toBeDisabled();
+  const ledger = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("kaizenedu.v1")!);
+    return { answers: s.activity.filter((e: { type: string }) => e.type === "quiz_answered"), first: s.responseEvents, help: s.helpExposures };
+  });
+  expect(ledger.answers).toEqual([expect.objectContaining({ correct: true, assisted: true, response: "The Sun" })]);
+  expect(ledger.first).toHaveLength(1);
+  expect(ledger.help).toHaveLength(1);
+  await noOverflow(page);
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
 /** A browser voice that reads one word every 300 ms and reports each word, like Chrome does. */
 function fakeVoice(page: Page) {
   return page.addInitScript(() => {

@@ -8,7 +8,7 @@ import { CheckRow } from "./CheckRow";
 import { Act } from "./Stepper";
 
 type BalanceWidget = Extract<Widget, { kind: "balance" }>;
-type Props = { widget: BalanceWidget; onCheck?: (correct: boolean) => void; tint?: string };
+type Props = { widget: BalanceWidget; onCheck?: (correct: boolean) => boolean | void; tint?: string };
 
 /** What is on the pans: `a` x-boxes and `l` unit cubes on the left, `r` unit cubes on the right. */
 export type Pans = { a: number; l: number; r: number };
@@ -183,8 +183,8 @@ export function Balance({ widget, onCheck, tint = "var(--color-math)" }: Props) 
         disabled={!history.length}
         result={result}
         onCheck={() => {
+          if (onCheck?.(solved) === false) return;
           setResult(solved);
-          onCheck?.(solved);
         }}
       />
     </div>

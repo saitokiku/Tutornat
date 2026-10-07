@@ -7,10 +7,12 @@ import { Button, EmptyState, Notice, SubjectDot, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { Related } from "@/components/courses/Related";
 import { logAct } from "@/lib/acts";
-import { checkMemory, lessonState, record } from "@/lib/activity";
-import { read } from "@/lib/store";
+import { checkMemory, lessonState, record, sceneAttemptSource } from "@/lib/activity";
+import { assistanceFrom, attemptIdentity, firstResponseOf } from "@/learning/evidence";
+import { openOrResumeAttempt, recordFirstResponse, recordHelpExposure } from "@/lib/evidence";
+import { read, useStore } from "@/lib/store";
 import type { Course, Lesson, Profile, Scene } from "@/lib/types";
-import { InteractiveView, ProjectView, QuizView, SlideView, type OnAnswer } from "./scenes";
+import { InteractiveView, ProjectView, QuizView, SlideView, type OnAnswer, type QuizProgress } from "./scenes";
 import { useTitle } from "@/components/LangSync";
 import { Finish } from "./Finish";
 import { Hear, HearContext, bigButton } from "./hear";
@@ -34,6 +36,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
   const [showScenes, setShowScenes] = useState(false);
   const [showTutor, setShowTutor] = useState(false);
   const [boardNote, setBoardNote] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   // What the scene body says about itself for narration (the quiz question on screen, a manipulative's
   // steps or word tiles in their current order), tagged with the scene it came from.
   const [live, setLive] = useState<{ sceneId: string; segs: Segment[] } | null>(null);
@@ -64,28 +67,82 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     cancelAnimationFrame(raf.current);
     raf.current = requestAnimationFrame(() => document.getElementById("scene-title")?.focus());
   };
-  const memory = useRef(checkMemory());
-  // The tutor beside a scene is help, the same rule as Practice: every check on a scene the tutor was
-  // open for counts as helped when it is answered.
-  const tutorHelps = (s: Scene | undefined) => s && checkIds(s).forEach((id) => memory.current.help(id));
+  const history = useStore((s) => s.activity.filter((e) => e.courseId === course.id && e.lessonId === lesson.id && e.profileId === learner.id));
+  const remembered: Record<string, CheckResult> = {};
+  for (const e of history) if (e.type === "quiz_answered" && e.sceneId) remembered[e.sceneId] = settle(remembered[e.sceneId], !!e.correct, !!e.assisted);
+  const memory = useRef(checkMemory(history));
+  const sourceFor = useCallback((id: string) => {
+    const s = lesson.scenes.find((s) => checkIds(s).includes(id));
+    if (!s) throw new Error("Unknown scene question");
+    return sceneAttemptSource(learner.id, course.id, lesson.id, s.id, id);
+  }, [learner.id, course.id, lesson]);
+  const onPresent = useCallback((id: string) => {
+    try { openOrResumeAttempt(sourceFor(id)); }
+    catch { setSaveFailed(true); }
+  }, [sourceFor]);
+  useEffect(() => {
+    if (scene?.kind === "interactive") checkIds(scene).forEach(onPresent);
+  }, [scene, onPresent]);
+  const saved = useStore((s) => {
+    const progress: QuizProgress = {};
+    if (scene?.kind !== "quiz") return progress;
+    for (const q of scene.questions) {
+      const id = `${scene.id}:${q.id}`;
+      const attemptId = attemptIdentity(sourceFor(id));
+      const help = s.helpExposures.filter((h) => h.attemptId === attemptId);
+      const first = firstResponseOf(attemptId, s.responseEvents);
+      const final = s.activity.find((e) => e.attemptId === attemptId && e.type === "quiz_answered" && e.correct);
+      // A saved first response is not a completed check if its final activity failed to save.
+      const answered = final ?? (first?.correct ? undefined : first);
+      progress[id] = { hint: help.some((h) => h.kind === "hint"), why: help.some((h) => h.kind === "explanation"), result: answered?.correct ?? null, choice: answered?.response ? q.choices.indexOf(answered.response) : null, assisted: assistanceFrom(attemptId, help, s.responseEvents).assisted };
+    }
+    return progress;
+  });
   const go = (i: number) => {
     focusTitle();
     setIndex(i);
     setVisited((v) => new Set(v).add(i));
     setShowScenes(false);
     setBoardNote(false);
-    if (showTutor) tutorHelps(lesson.scenes[i]);
   };
   const toggleTutor = () => {
-    if (!showTutor) tutorHelps(scene);
     setShowTutor(!showTutor);
   };
-  const onAnswer: OnAnswer = ({ sceneId, correct, assisted: shown }) => {
-    const { record: fresh, assisted } = memory.current.judge(sceneId, correct, shown);
-    if (fresh) record({ ...base, type: "quiz_answered", sceneId, correct, assisted });
-    setResults((r) => ({ ...r, [sceneId]: settle(r[sceneId], correct, assisted) }));
+  const onAnswer: OnAnswer = ({ sceneId, correct, assisted: shown, response }) => {
+    try {
+      const a = openOrResumeAttempt(sourceFor(sceneId));
+      const helped = shown || a.assistance.assisted;
+      recordFirstResponse({ attemptId: a.id, response: response ?? "", correct });
+      const { record: fresh, assisted } = memory.current.judge(sceneId, correct, helped);
+      if (fresh) record({ ...base, type: "quiz_answered", sceneId, correct, assisted, attemptId: a.id, response }, `${a.id}:${correct ? "right" : "miss"}`);
+      setResults((r) => ({ ...r, [sceneId]: settle(r[sceneId], correct, assisted) }));
+      setSaveFailed(false);
+      return true;
+    } catch {
+      memory.current = checkMemory(read().activity.filter((e) => e.courseId === course.id && e.lessonId === lesson.id && e.profileId === learner.id));
+      setSaveFailed(true);
+      return false;
+    }
   };
-  const onHelp = useCallback((id: string) => memory.current.help(id), []);
+  const onHelp = useCallback((id: string, kind: "hint" | "explanation" = "hint") => {
+    try {
+      const a = openOrResumeAttempt(sourceFor(id));
+      recordHelpExposure({ attemptId: a.id, id: `${a.id}:${kind}`, kind });
+      memory.current.help(id);
+      setSaveFailed(false);
+      return true;
+    } catch { setSaveFailed(true); return false; }
+  }, [sourceFor]);
+  const beforeTutorHelp = (deliveryId: string) => {
+    try {
+      for (const id of checkIds(scene)) {
+        const a = openOrResumeAttempt(sourceFor(id));
+        recordHelpExposure({ attemptId: a.id, id: `${deliveryId}:${id}`, kind: "tutor", delivery: "latched" });
+        memory.current.help(id);
+      }
+      return true;
+    } catch { setSaveFailed(true); return false; }
+  };
   const onSay = useCallback((segs: Segment[]) => setLive({ sceneId, segs }), [sceneId]);
   // Finishing records the lesson and shows the finish. It never opens the next lesson.
   const finish = () => {
@@ -211,9 +268,10 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
         </nav>
 
         <main className="min-w-0">
+          {saveFailed && <Notice tone="warn">{t("practice.evidenceSaveFailed")}</Notice>}
           <section aria-labelledby="scene-title" className="rounded-lg border border-border bg-panel shadow-soft">
             {finished !== null ? (
-              <Finish course={course} lesson={lesson} learner={learner} tally={tallyOf(lesson, results)} seconds={finished} next={nextLesson} />
+              <Finish course={course} lesson={lesson} learner={learner} tally={tallyOf(lesson, { ...remembered, ...results })} seconds={finished} next={nextLesson} />
             ) : (
               <NarrationContext.Provider value={speech.pos}>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-8">
@@ -236,7 +294,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                   {boardNote && <Notice>{t("stage.whiteboardOff")}</Notice>}
                   {scene.kind === "slide" && <SlideView scene={scene} subject={course.subject} />}
                   {scene.kind === "interactive" && <InteractiveView scene={scene} subject={course.subject} onAnswer={onAnswer} onSay={onSay} lang={course.locale} />}
-                  {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSay={onSay} onHelp={onHelp} helped={showTutor} />}
+                  {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSay={onSay} onHelp={onHelp} onPresent={onPresent} saved={saved} />}
                   {scene.kind === "project" && <ProjectView scene={scene} />}
                 </div>
                 {/* Labels never break inside a button; on a narrow phone the primary moves to its own line. K–2 phones show Previous as its arrow. */}
@@ -261,7 +319,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
 
         {showTutor && (
           <div className="lg:col-start-2 xl:sticky xl:top-4 xl:col-start-auto xl:self-start">
-            <TutorPanel learner={learner} lessonTitle={lesson.title} scene={scene ?? lesson.scenes[0]} />
+            <TutorPanel learner={learner} lessonTitle={lesson.title} scene={scene ?? lesson.scenes[0]} beforeHelp={beforeTutorHelp} />
           </div>
         )}
       </div>

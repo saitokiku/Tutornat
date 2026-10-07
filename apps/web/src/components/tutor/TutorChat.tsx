@@ -5,7 +5,7 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useRef, useState } from "react";
 import { IconArrowRight, IconSpeaker, IconStop, IconX } from "@/components/icons";
 import { speakText } from "@/components/stage/hear";
-import { SubjectDot } from "@/components/ui";
+import { Button, Notice, SubjectDot } from "@/components/ui";
 import { useT, type Key } from "@/i18n";
 import type { TutorContext } from "@/lib/ai/context";
 import { useAiMode } from "@/lib/ai/client";
@@ -35,7 +35,7 @@ export { Worked } from "./Board";
 // on the board. Without AI it is the demo tutor: real sources, vetted hints, worked examples and
 // practice that fits — and it says so once.
 
-export type Entry = { id: string; role: "learner" | "tutor"; text: string; cards: BoardCard[]; streaming?: boolean; flag?: string; photo?: string };
+export type Entry = { id: string; role: "learner" | "tutor"; text: string; cards: BoardCard[]; replies?: string[]; streaming?: boolean; flag?: string; photo?: string };
 
 export type ChatSetup = {
   learner: Profile;
@@ -50,6 +50,8 @@ export type ChatSetup = {
   lesson?: { title: string; scene: string };
   homework?: { title: string; notes?: string };
   title: string;
+  /** Commit the assistance latch before any instructional text, card or audio can be released. */
+  beforeHelp?: (deliveryId: string) => boolean;
 };
 
 function opening(setup: ChatSetup, t: ReturnType<typeof useT>, choices: string[]): string {
@@ -132,12 +134,12 @@ function AiChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; to
     // Text before and after a tool call are separate sentences ("Let me look that up." / "A fallacy is…").
     text: m.parts.filter((p) => p.type === "text").map((p) => (p as { text: string }).text).join("\n"),
     cards: m.role === "user" ? [] : cardsOf(m, learner.locale, today),
+    replies: m.role === "assistant" && status === "ready" && i === messages.length - 1 ? repliesIn(m) : [],
     streaming: i === messages.length - 1 && m.role === "assistant" && (status === "streaming" || status === "submitted"),
     flag: (m.metadata as { flag?: string } | undefined)?.flag,
     photo: m.role === "user" ? photoOf(m) : undefined,
   }));
   const skillIds = [...new Set([...(setup.item ? [setup.item.skillId] : []), ...messages.flatMap(skillsIn)])];
-  const last = messages.at(-1);
 
   return (
     <ChatView
@@ -152,7 +154,6 @@ function AiChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; to
       readsPhotos
       skillIds={skillIds}
       topics={topics}
-      replies={status === "ready" && last?.role === "assistant" ? repliesIn(last) : []}
     />
   );
 }
@@ -231,7 +232,7 @@ type Quick = { label: string; fill?: [string, string]; subject?: Subject };
 function ChatView({
   setup,
   board,
-  entries,
+  entries: incoming,
   busy,
   error,
   onSend,
@@ -241,7 +242,6 @@ function ChatView({
   readsPhotos,
   skillIds,
   topics,
-  replies = [],
 }: {
   setup: ChatSetup;
   board: boolean;
@@ -259,8 +259,6 @@ function ChatView({
   skillIds: string[];
   /** Skills to tap at the start of an open conversation. */
   topics: string[];
-  /** Answers the tutor offered to tap (AI, young learners). */
-  replies?: string[];
 }) {
   const t = useT();
   const { learner } = setup;
@@ -284,6 +282,32 @@ function ChatView({
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<"tut.photo.tooBig" | "tut.photo.unreadable" | null>(null);
   const skillId = skillIds.at(-1);
+  const [admitted, setAdmitted] = useState<ReadonlySet<string>>(() => new Set());
+  const [admissionFailed, setAdmissionFailed] = useState(false);
+  const [admissionRetry, setAdmissionRetry] = useState(0);
+  const beforeHelp = setup.beforeHelp;
+  const entries = incoming.filter((e) => e.role === "learner" || e.id === "open" || e.flag || !beforeHelp || admitted.has(e.id));
+  useEffect(() => {
+    if (!beforeHelp) return;
+    let live = true;
+    const ready: string[] = [];
+    let failed = false;
+    for (const e of incoming) {
+      if (e.role !== "tutor" || e.id === "open" || e.flag || admitted.has(e.id) || (!e.text && !e.cards.length && !e.replies?.length)) continue;
+      if (beforeHelp(e.id)) ready.push(e.id);
+      else failed = true;
+    }
+    // Storage admission is synchronous; publish its acknowledgement on the next microtask.
+    // The current render still withholds text/cards/audio until that acknowledgement arrives.
+    queueMicrotask(() => {
+      if (!live) return;
+      if (ready.length) setAdmitted((ids) => new Set([...ids, ...ready]));
+      setAdmissionFailed(failed);
+    });
+    if (failed) onStop?.();
+    return () => { live = false; };
+  }, [incoming, beforeHelp, admitted, admissionRetry, onStop]);
+  const replies = entries.at(-1)?.role === "tutor" ? entries.at(-1)?.replies ?? [] : [];
   // Whether the learner is moving by keyboard (not tapping), so a chip reached by Tab can say its name.
   const byKeyboard = useRef(false);
   useEffect(() => {
@@ -326,9 +350,8 @@ function ChatView({
         }
       });
     }
-    // Beside a problem the conversation is about its skill from the start (opening the drawer is help);
-    // elsewhere, once the learner has asked something and the talk has turned to a skill.
-    const talked = !!setup.item || entries.some((e) => e.role === "learner");
+    // Only released instructional replies log a teaching act; opening and failed delivery are neutral.
+    const talked = entries.some((e) => e.role === "tutor" && e.id !== "open" && !e.flag && (e.text || e.cards.length));
     for (const id of talked ? skillIds : []) {
       if (handled.current.has(`act:${id}`)) continue;
       handled.current.add(`act:${id}`);
@@ -432,6 +455,7 @@ function ChatView({
 
   const conversation = (
     <div className={`flex min-h-0 flex-1 flex-col ${board ? "lg:pr-6" : ""}`}>
+      {admissionFailed && <Notice tone="warn">{t("practice.evidenceSaveFailed")} <Button variant="ghost" onClick={() => setAdmissionRetry((n) => n + 1)}>{t("common.retry")}</Button></Notice>}
       <div className={`flex-1 space-y-3 overflow-y-auto ${board ? "py-4" : "px-4 py-4"}`} role="log" aria-live="polite" aria-relevant="additions">
         <p className="text-xs text-muted">
           {t("tutor.disclosure")}

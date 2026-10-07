@@ -1,19 +1,23 @@
 # Status
 
-> **2026-10-07 T01 verified; T02 next.** Start with
+> **2026-10-07 T01 and T02 verified; T03 next.** Start with
 > [HANDOFF.md](HANDOFF.md) and [the integrated release plan](plans/2026-10-07-integrated-learning-release.md).
 
-Current review base: `d8d8166`. T01 verify: **PASS, 2,385 tests**. Full browser suite:
+Current application base: `d8d8166`. T01 verify: **PASS, 2,385 tests**. T01 full browser suite:
 **174 passed / 0 failed / 16 skipped**; see [release evidence](reviews/integrated-release-evidence.md).
 The original [baseline](reviews/2026-10-07-baseline.json) records the repaired failures.
 The [audit](reviews/2026-10-07-system-audit.md) separates working pieces from integration gaps.
 
 - **Done:** system/predecessor review, hands-on synthetic journey, product spec, current model/voice/Jev
-  research, task contracts and dependency order; T01 current journey/input repairs.
-- **Next:** T02 durable help and first-response evidence in the isolated implementation worktree. See
+  research, task contracts and dependency order; T01 current journey/input repairs; T02 durable local
+  help/first-response evidence, with **2,420 tests** and **180 passed / 0 failed / 16 skipped** browsers.
+- **Next:** T03 authenticated account authority for remote capabilities. See
   [release evidence](reviews/integrated-release-evidence.md).
-- **Not started:** T02–T13. Earlier Queue 4 ordering below is superseded by the new plan.
-- **External gates:** deployment credentials/provider access, child-data and content/Spanish review,
+- **Not started:** T03–T13. Earlier Queue 4 ordering below is superseded by the new plan.
+- **Preview:** [Tutornat](https://tutornat-preview.vercel.app), Vercel login protection; see
+  [deployment instructions](tutornat-preview.md). The isolated project's alias currently serves T01;
+  section previews use their exact deployment URLs. Live domains retain the existing project.
+- **External gates:** fresh provider access, hosted persistence configuration, child-data and content/Spanish review,
   real-device audio and pilot participants. No owner decision blocks local implementation planning.
 - **Owner direction:** fused child/adult capability, multimodal teaching, optional future face/gaze,
   maximum quality before cost, ornamentation later. The historical review itself changed no product code.

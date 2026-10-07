@@ -64,7 +64,7 @@ export function removeLearner(id: string) {
     s.courses = s.courses.filter((c) => c.profileId !== id);
     s.activity = s.activity.filter((e) => e.profileId !== id);
     s.notes = s.notes.filter((n) => n.profileId !== id);
-    for (const k of ["attempts", "sets", "events", "classes", "feedback", "results", "planDone", "reading", "threads", "acts"] as const)
+    for (const k of ["attempts", "attemptContexts", "helpExposures", "responseEvents", "sets", "events", "classes", "feedback", "results", "planDone", "reading", "threads", "acts"] as const)
       (s[k] as { profileId: string }[]) = s[k].filter((x) => x.profileId !== id);
     if (s.session.profileId === id) s.session.profileId = null;
   });

@@ -400,10 +400,9 @@ export function demoOpening(ctx: DemoContext): DemoTurn {
   const intro = t(l, young(ctx.grade) ? "tut.demo.introYoung" : "tut.demo.intro");
   const state: DemoState = { hintsGiven: 0, tries: 0, shown: [] };
   if (ctx.item) {
-    // The next vetted hint they haven't seen; with every hint seen, ask what they tried.
+    // Presence is neutral. The first requested hint continues from the pad's saved ladder.
     const seen = Math.min(Math.max(0, ctx.hintsSeen ?? 0), ctx.item.hints.length);
-    const opening = seen < ctx.item.hints.length ? `${t(l, "tutor.demo.open")} ${ctx.item.hints[seen]}` : t(l, "tutor.open.problem");
-    return { text: `${intro}\n${opening}`, cards: [], state: { ...state, hintsGiven: Math.min(seen + 1, ctx.item.hints.length), skillId: ctx.item.skillId } };
+    return { text: `${intro}\n${t(l, "tutor.open.problem")}`, cards: [], state: { ...state, hintsGiven: seen, skillId: ctx.item.skillId } };
   }
   if (ctx.homework) return { text: `${intro}\n${t(l, "tutor.open.homework", { title: ctx.homework.title })}`, cards: [], state };
   if (ctx.lesson) return { text: `${intro}\n${t(l, "tutor.open.lesson")}`, cards: [], state: { ...state, topic: ctx.lesson.title } };

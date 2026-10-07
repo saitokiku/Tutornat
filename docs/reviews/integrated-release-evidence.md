@@ -51,6 +51,55 @@ with the observed failing regression. One Minor is deferred: a browser variant t
 from Hint without clicking the numerator. The unit regression covers that focus recovery; current
 desktop/phone browser cases cover hinted keyboard Tab entry and touch entry.
 
+## T02 — Durable assistance and first responses
+
+Complete, including the independent review fix pass and final browser gate.
+
+Practice and lesson checks now open a stable local attempt identity when shown. Help commits before
+its content is released, and the first response commits before feedback. Reloads preserve hints,
+misses and helped corrections; repeated final submissions produce one answer row. An abandoned
+hint restarts the skill's quiet period. Opening the tutor is neutral; released text, cards and
+model-provided reply buttons pass the same assistance gate. Failed storage admission keeps their
+content, audio and transcript entries withheld. Widgets also honor a failed-save veto before feedback.
+
+The refresh law now replays restoration episodes chronologically: an old restoration cannot mask a
+later refresh failure. Numerical `RULES` are unchanged. Legacy rows retain `legacy-local` provenance;
+new browser records are `local-recorded`, not verified server checks.
+
+Observed RED→GREEN regressions cover help/miss reload, abandoned help, stale tab document writes,
+concurrent first-response reducer candidates, immutable event IDs, cross-question ID collision,
+duplicate final submission, presented-difficulty mismatch, save failure/retry, partial quiz result
+failure, scene resume, export/deletion and repeated refresh episodes. Final practice IDs retain the
+existing server's 100-character compatibility. A real in-process Postgres route test also confirms
+server answer corrections survive reload and reach the second device.
+
+Independent review reproduced three Important issues, all repaired in one author fix pass:
+
+- Model reply buttons bypassed admission, including reply-only output. They now belong to the
+  originating admitted entry; refused-help tests cover text, reply-only output and speech withholding.
+- Synced learner tombstones left the new evidence arrays in the local document. An actual
+  `mergeRemote` regression now verifies all collections disappear before saving and remain gone.
+- A failed journal reconciliation could undo a saved server correction. Main rows outrank provisional
+  journal copies, and successfully reconciled canonical journal copies recover against stale tab
+  saves. Failure during journal reconciliation and stale-save regressions both pass. “Canonical” is
+  recovery priority, not assessment provenance.
+
+The review reported no security concerns. Its Minor suggestion for a genuinely interleaved two-tab
+admission test is deferred to the atomic assessment work in T04; current tests cover stale whole-store
+overwrites and pure concurrent-candidate replay. The reviewer did not rerun the final full browser
+suite or native-device audio; those are separate gates.
+
+Reviewed-source `npm run verify`: **PASS** (135 files, **2,420 tests**, lint, route type generation,
+TypeScript and production build). The exact T02 regression command passed **226 tests in 11 files**.
+Final reviewed-source production browser run: **180 passed / 0 failed / 16 skipped / 0 flaky**
+(196 cases, 107 seconds; started `2026-10-07T23:40:45.197Z`). All 16 skips remain enumerated below.
+
+Limits carried forward: this journal is browser-local. T04 supplies server grants and trusted
+provenance; T12 transports the new collections and completes account lifecycle. Legacy scene checks
+use scoped scene IDs until reviewed curriculum mapping in T11. Widget first-response text is empty
+because the existing widgets report correctness only; T06 supplies their actual shared values and
+resume state. None of these records establishes academic benefit or real-family launch readiness.
+
 ## All 16 baseline skips
 
 Each row below runs in **both desktop and phone**, so eight scenarios account for all 16 skips.
@@ -75,6 +124,8 @@ Live-provider spending is authorized by the owner, but credentials and measured 
 
 - Done: review, product specifications, model evidence shortlist, implementation plan.
 - Done: T01 current journeys and reliable input, including independent review and its Important fix.
-- Next: T02 durable help/response evidence. T02–T13 implementation has not landed yet.
-- External gates: deployment/provider access, real-device voice audition, reviewed EN/ES content,
-  child-data review and observed human pilot. None blocks T02 local work.
+- Done: T02 durable help/response evidence and independent review fixes.
+- Next: T03 account authority; T03–T13 implementation has not landed yet.
+- Done: isolated [Tutornat Vercel project](../tutornat-preview.md), protected demo deployment of T01.
+- External gates: fresh provider access, hosted persistence configuration, real-device voice audition,
+  reviewed EN/ES content, child-data review and observed human pilot. None blocks T03 local work.

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { signUp } from "./auth";
-import { paceOf, recordAnswer, startSet, wholeMinutes } from "./practice";
+import { openPracticeAttempt, paceOf, recordAnswer, startSet, wholeMinutes } from "./practice";
 import { createLearner } from "./profiles";
 import { read, resetMemory, update } from "./store";
 import type { Grade, Profile } from "./types";
@@ -57,11 +57,29 @@ describe("recordAnswer", () => {
     expect(right.why).toBeUndefined();
   });
 
-  it("a check answer is never stored as helped", async () => {
+  it("a check asking for content help becomes assisted practice", async () => {
     const p = await learner();
     const id = startSet(read(), { profile: p, kind: "check", skillIds: ["m.round"], now: NOW })!;
     recordAnswer(id, { slot: 0, level: 2, correct: true, assisted: true, seconds: 5 });
-    expect(read().attempts[0]).toMatchObject({ mode: "check", assisted: false });
+    expect(read().attempts[0]).toMatchObject({ mode: "practice", assisted: true });
+  });
+
+  it("records one final answer for repeated submission of a slot", async () => {
+    const p = await learner();
+    const id = startSet(read(), { profile: p, kind: "pick", skillIds: ["m.round"], now: NOW })!;
+    const answer = { slot: 0, level: 1, correct: true, assisted: false, seconds: 5, response: "10" };
+    recordAnswer(id, answer);
+    recordAnswer(id, answer);
+    expect(read().attempts).toHaveLength(1);
+    expect(read().attempts[0].id.length).toBeLessThanOrEqual(100);
+  });
+
+  it("refuses an answer at a difficulty different from the presented question", async () => {
+    const p = await learner();
+    const id = startSet(read(), { profile: p, kind: "pick", skillIds: ["m.round"], now: NOW })!;
+    const a = openPracticeAttempt(id, 0, 1);
+    expect(() => recordAnswer(id, { slot: 0, level: 2, attemptId: a.id, correct: true, assisted: false, seconds: 5 })).toThrow(/stale/i);
+    expect(read().attempts).toEqual([]);
   });
 
   it("ignores answers to a finished set", async () => {

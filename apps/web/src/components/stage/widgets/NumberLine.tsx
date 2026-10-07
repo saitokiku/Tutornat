@@ -8,7 +8,7 @@ import { fractionLabel } from "../visuals";
 import { CheckRow } from "./CheckRow";
 import { StepButtons } from "./Slider";
 
-type Props = { widget: Extract<Widget, { kind: "number-line" }>; onCheck?: (correct: boolean) => void; tint?: string };
+type Props = { widget: Extract<Widget, { kind: "number-line" }>; onCheck?: (correct: boolean) => boolean | void; tint?: string };
 
 /** Move a marker along a number line by fixed jumps. Positions are integers so decimals never drift. */
 export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }: Props) {
@@ -93,8 +93,8 @@ export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }
           result={result}
           onCheck={() => {
             const ok = Math.abs(value - widget.target!) < 1e-9;
+            if (onCheck?.(ok) === false) return;
             setResult(ok);
-            onCheck?.(ok);
           }}
         />
       )}

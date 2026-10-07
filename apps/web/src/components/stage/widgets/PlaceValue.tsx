@@ -9,7 +9,7 @@ import { BaseTenVisual } from "../visuals-practice";
 import { CheckRow } from "./CheckRow";
 import { Stepper } from "./Stepper";
 
-type Props = { widget: Extract<Widget, { kind: "place-value" }>; onCheck?: (correct: boolean) => void; tint?: string };
+type Props = { widget: Extract<Widget, { kind: "place-value" }>; onCheck?: (correct: boolean) => boolean | void; tint?: string };
 type Place = "h" | "t" | "o";
 
 const VALUE: Record<Place, number> = { h: 100, t: 10, o: 1 };
@@ -126,8 +126,8 @@ export function PlaceValue({ widget, onCheck, tint = "var(--color-math)" }: Prop
         result={result}
         onCheck={() => {
           const ok = value === widget.target;
+          if (onCheck?.(ok) === false) return;
           setResult(ok);
-          onCheck?.(ok);
         }}
       />
     </div>

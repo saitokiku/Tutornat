@@ -8,13 +8,15 @@ import { useTitle } from "@/components/LangSync";
 import { SkillResources } from "@/components/resources/ResourceList";
 import { HearContext, Hear, speakText } from "@/components/stage/hear";
 import { VisualView } from "@/components/stage/visuals";
-import { Badge, Button, SUBJECT_TINT, btn } from "@/components/ui";
+import { Badge, Button, Notice, SUBJECT_TINT, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
 import { levelInSet, placementNext, RULES } from "@/learning/engine";
+import { assistanceFrom, attemptIdentity, firstResponseOf } from "@/learning/evidence";
 import type { PracticeSet } from "@/learning/types";
 import { logAct } from "@/lib/acts";
-import { answersIn, finishSet, paceOf, recordAnswer, setStart, settingsOf, statusesOf, wholeMinutes } from "@/lib/practice";
+import { answersIn, finishSet, openPracticeAttempt, paceOf, practiceSource, recordAnswer, setStart, settingsOf, statusesOf, wholeMinutes } from "@/lib/practice";
+import { recordFirstResponse, recordHelpExposure } from "@/lib/evidence";
 import { isReviewed } from "@/lib/review";
 import { read, update, useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -89,15 +91,16 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   // Per-problem state. The help a problem had (misses, hints, the steps, the tutor) belongs to that
   // problem for the whole set: a problem skipped and fixed at the end is still "with help", the hints
   // already shown come back with it, and leaving it keeps the last thing tried.
-  const [tries, setTries] = useState(0);
-  const [hints, setHints] = useState(0);
-  const [steps, setSteps] = useState(false);
+  const [localTries, setTries] = useState(0);
+  const [localHints, setHints] = useState(0);
+  const [localSteps, setSteps] = useState(false);
   const [tutored, setTutored] = useState(false);
   const [lastMiss, setLastMiss] = useState<string | number | undefined>();
   const [kept, setKept] = useState<ReadonlyMap<number, KeptHelp>>(() => new Map());
   const [value, setValue] = useState("");
   const [picked, setPicked] = useState<number | undefined>();
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
   const shownAt = useRef(0);
   const [current, setCurrent] = useState(index);
   if (current !== index) {
@@ -129,6 +132,23 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     if (slot && aiQ) return fromAi(aiQ, slot.skillId, slot.seed);
     return slot && slotSkill ? makeItem(slot.skillId, level, slot.seed, learner.locale) : undefined;
   }, [slot, slotSkill, aiQ, level, learner.locale]);
+  const attemptId = slot ? attemptIdentity(practiceSource(liveSet, index!, level)) : undefined;
+  const persisted = useStore((s) => {
+    const help = s.helpExposures.filter((h) => h.attemptId === attemptId);
+    return { help, first: firstResponseOf(attemptId ?? "", s.responseEvents), assistance: assistanceFrom(attemptId ?? "", help, s.responseEvents) };
+  });
+  const tries = Math.max(localTries, persisted.first?.correct === false ? 1 : 0);
+  const hints = Math.max(localHints, ...persisted.help.filter((h) => h.kind === "hint").map((h) => Number(h.detail) || 1));
+  const steps = localSteps || persisted.help.some((h) => h.kind === "steps");
+  useEffect(() => {
+    if (index === undefined || !item) return;
+    let live = true;
+    try { openPracticeAttempt(set.id, index, item.level); }
+    catch { queueMicrotask(() => live && setSaveFailed(true)); }
+    return () => { live = false; };
+    // Identity is fixed by the question; unrelated store writes must not repeat admission.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attemptId]);
 
   // A new problem: start its clock, read it aloud for young learners, move focus to it. Keyed by the
   // problem's id, so recording an answer (which rewrites the store) does not repeat any of this.
@@ -147,14 +167,14 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   }, [unresolved.length, set.id, set.kind]);
 
   const dock = useTutorDock();
-  const helped = hints > 0 || steps || tries > 0 || tutored || dock.usedOn === item?.id;
+  const helped = persisted.assistance.assisted || hints > 0 || steps || tries > 0 || tutored || dock.usedOn === item?.id;
   const say = (key: Key) => young && speakText(t(key), learner.locale);
   const labelOf = (response: string | number) => (typeof response === "number" ? (item?.choices?.[response]?.label ?? String(response)) : response);
 
   /** Records the problem's one answer. A wrong one carries the misconception it shows, when tagged. */
   const resolve = (correct: boolean, assisted: boolean, response?: string | number) => {
-    if (index === undefined || !item) return;
-    recordAnswer(set.id, {
+    if (index === undefined || !item) return false;
+    try { recordAnswer(set.id, {
       slot: index,
       level: item.level,
       correct,
@@ -162,7 +182,10 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
       seconds: (Date.now() - shownAt.current) / 1000,
       response: response === undefined ? undefined : labelOf(response),
       why: correct || response === undefined ? undefined : misconceptionOf(item, response),
-    });
+      attemptId,
+    }); }
+    catch { setSaveFailed(true); return false; }
+    return true;
   };
 
   /** Help is a teaching act: its intent is that the next try on this problem is right. */
@@ -171,10 +194,18 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     logAct({ profileId: learner.id, kind, intent: "next-try-right", skillId: item.skillId, setId: set.id, ref: String(index), detail });
   };
   const takeHint = () => {
+    if (!attemptId) return;
+    try { recordHelpExposure({ attemptId, id: `${attemptId}:hint:${hints + 1}`, kind: "hint", detail: String(hints + 1) }); }
+    catch { setSaveFailed(true); return; }
+    setSaveFailed(false);
     setHints(hints + 1);
     helpAct("hint", String(hints + 1));
   };
   const showSteps = () => {
+    if (!attemptId) return;
+    try { recordHelpExposure({ attemptId, id: `${attemptId}:steps`, kind: "steps" }); }
+    catch { setSaveFailed(true); return; }
+    setSaveFailed(false);
     setSteps(true);
     helpAct("steps");
   };
@@ -183,8 +214,13 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     if (!item || feedback?.kind === "right") return;
     if (typeof response === "string" && !response.trim()) return;
     const verdict = check(item.answer, response);
+    try {
+      const attempt = openPracticeAttempt(set.id, index!, item.level);
+      recordFirstResponse({ attemptId: attempt.id, response: labelOf(response), correct: verdict.correct });
+    } catch { setSaveFailed(true); return; }
+    setSaveFailed(false);
     if (set.kind === "placement") {
-      resolve(verdict.correct, false, response);
+      if (!resolve(verdict.correct, false, response)) return;
       const history = [...answers.filter((a) => a.mode === "placement"), { skillId: item.skillId, correct: verdict.correct }];
       const next = placementNext(set.subject, learner.grade, history);
       update((s) => {
@@ -200,8 +236,8 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     }
     if (silent) return resolve(verdict.correct, false, response);
     if (verdict.correct) {
+      if (!resolve(true, helped, response)) return;
       setHold(index ?? null);
-      resolve(true, helped, response);
       setFeedback({ kind: "right" });
       say(helped ? "practice.rightHelped" : "practice.right");
       return;
@@ -224,8 +260,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
 
   const askTutor = () => {
     if (!item) return;
-    setTutored(true);
-    dock.open({ item, setId: set.id, tries, lastAnswer: value || (lastMiss !== undefined ? labelOf(lastMiss) : undefined) });
+    dock.open({ item, setId: set.id, attemptId, hints, tries, lastAnswer: value || (lastMiss !== undefined ? labelOf(lastMiss) : undefined) });
   };
 
   const tally = {
@@ -273,6 +308,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
         </header>
 
         <main className="mx-auto max-w-3xl px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
+          {saveFailed && <Notice tone="warn">{t("practice.evidenceSaveFailed")}</Notice>}
           {silent && index === 0 && answers.length === 0 && (
             <p className="mb-5 rounded-md border border-border bg-panel2 px-4 py-3 text-sm text-ink">
               {set.kind === "check" ? t("practice.checkIntro", { n: RULES.checkSize }) : t("practice.placementIntro")}
