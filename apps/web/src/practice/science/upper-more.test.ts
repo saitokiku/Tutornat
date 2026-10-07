@@ -38,7 +38,13 @@ describe("science 6–9 second strand", () => {
       ["s.population.growth", "7", 2, "computed"],
       ["s.energy.ke.pe", "7", 2, "computed"],
       ["s.sci.notation", "8", 2, "computed"],
+      ["s.natural.selection", "8", 1, "draft"],
+      ["s.fossil.evidence", "8", 1, "draft"],
+      ["s.geologic.time", "8", 1, "draft"],
+      ["s.gravity.orbits", "8", 1, "draft"],
+      ["s.climate.impact", "8", 1, "draft"],
       ["s.wave.speed", "8", 2, "computed"],
+      ["s.waves.info", "8", 1, "draft"],
       ["s.balance.equations", "9", 2, "computed"],
       ["s.percent.composition", "9", 2, "computed"],
       ["s.momentum", "9", 2, "computed"],
@@ -51,54 +57,64 @@ describe("science 6–9 second strand", () => {
       expect(s.standard, s.id).toMatch(/^(MS|HS)-(LS|PS|ESS|ETS)\d-\d$|^\d\.[A-Z]+\.[A-Z]\.\d$|^HS[A-Z]-[A-Z]+\.[A-Z]\.\d$|^RST\.9-10\.\d$/);
     }
   });
+});
 
-  it("gives every item 3 hints, 1–4 steps, plain copy, tagged mistakes, and the same answer in both languages", () => {
-    for (const s of SCIENCE_6_9_MORE) {
-      for (let level = 1; level <= s.levels; level++) {
-        const en = make(s.id, level, "en"), es = make(s.id, level, "es");
-        en.forEach((a, i) => {
-          const b = es[i];
-          const where = `${s.id} L${level} seed ${a.seed}`;
-          for (const it of [a, b]) {
-            expect(it.hints.length, where).toBe(3);
-            expect(it.steps.length, where).toBeGreaterThanOrEqual(1);
-            expect(it.steps.length, where).toBeLessThanOrEqual(4);
-            const copy = [text(it.prompt), it.say, ...it.hints, ...it.steps, ...(it.choices ?? []).flatMap((c) => [c.label, c.say ?? ""])];
-            for (const c of copy) {
-              expect(c, `${where} "1" with a plural`).not.toMatch(
-                /(?<![\d.,])1 (kilograms|meters|seconds|grams|joules|ohms|amps|volts|hours|days|years|minutes|kilogramos|metros|segundos|gramos|julios|ohmios|amperios|voltios|horas|días|años|minutos)\b/,
-              );
-              expect(c, `${where} exclamation`).not.toMatch(/!/);
-              expect(c, `${where} emoji`).not.toMatch(/\p{Extended_Pictographic}/u);
-              expect(c, `${where} undefined`).not.toMatch(/undefined|NaN/);
-            }
-            for (const h of it.hints) expect(h.trim(), where).not.toBe("");
-            if (it.input === "choices") {
-              const keyed = it.answer.kind === "choice" ? it.answer.index : -1;
-              it.choices!.forEach((c, j) => {
-                if (j === keyed) expect(c.why, `${where} key has a why`).toBeUndefined();
-                else expect(c.why ?? "", `${where} untagged wrong choice "${c.label}"`).toMatch(KEBAB);
-              });
-            } else {
-              expect(it.wrong?.length ?? 0, `${where} typed answer lists no likely mistakes`).toBeGreaterThan(0);
-              for (const w of it.wrong!) {
-                expect(w.why, where).toMatch(KEBAB);
-                expect(parseNumber(w.value), `${where} wrong value ${w.value} cannot be typed`).not.toBeNull();
-                expect(check(it.answer, w.value).correct, `${where} wrong value ${w.value} checks as right`).toBe(false);
-              }
-              if (it.answer.kind === "number" && !Number.isInteger(it.answer.value)) expect(it.keys, where).toContain(".");
-              if (it.answer.kind === "number" && it.answer.value < 0) expect(it.keys, where).toContain("-");
-            }
+/** Every item of a skill, both languages, every level: the problems found, as readable lines (empty when all is well). */
+function problems(id: string, levels: number) {
+  const out: string[] = [];
+  const bad = (ok: boolean, msg: string) => {
+    if (!ok && out.length < 20) out.push(msg);
+  };
+  const PLURAL_AFTER_1 =
+    /(?<![\d.,])1 (kilograms|meters|seconds|grams|joules|ohms|amps|volts|hours|days|years|minutes|kilogramos|metros|segundos|gramos|julios|ohmios|amperios|voltios|horas|días|años|minutos)\b/;
+  for (let level = 1; level <= levels; level++) {
+    const en = make(id, level, "en"), es = make(id, level, "es");
+    en.forEach((a, i) => {
+      const b = es[i];
+      const where = `${id} L${level} seed ${a.seed}`;
+      for (const it of [a, b]) {
+        bad(it.hints.length === 3, `${where}: ${it.hints.length} hints`);
+        bad(it.steps.length >= 1 && it.steps.length <= 4, `${where}: ${it.steps.length} steps`);
+        const copy = [text(it.prompt), it.say, ...it.hints, ...it.steps, ...(it.choices ?? []).flatMap((c) => [c.label, c.say ?? ""])];
+        for (const c of copy) {
+          bad(!PLURAL_AFTER_1.test(c), `${where}: "1" with a plural in "${c}"`);
+          bad(!/!/.test(c), `${where}: exclamation in "${c}"`);
+          bad(!/\p{Extended_Pictographic}/u.test(c), `${where}: emoji in "${c}"`);
+          bad(!/undefined|NaN/.test(c), `${where}: undefined in "${c}"`);
+        }
+        for (const h of it.hints) bad(h.trim() !== "", `${where}: empty hint`);
+        if (it.input === "choices") {
+          const keyed = it.answer.kind === "choice" ? it.answer.index : -1;
+          it.choices!.forEach((c, j) => {
+            if (j === keyed) bad(c.why === undefined, `${where}: the key has a why`);
+            else bad(KEBAB.test(c.why ?? ""), `${where}: untagged wrong choice "${c.label}"`);
+          });
+        } else {
+          bad((it.wrong?.length ?? 0) > 0, `${where}: typed answer lists no likely mistakes`);
+          for (const w of it.wrong ?? []) {
+            bad(KEBAB.test(w.why), `${where}: tag "${w.why}"`);
+            bad(parseNumber(w.value) !== null, `${where}: wrong value ${w.value} cannot be typed`);
+            bad(!check(it.answer, w.value).correct, `${where}: wrong value ${w.value} checks as right`);
           }
-          expect(b.answer, where).toEqual(a.answer);
-          expect(b.choices?.length, where).toBe(a.choices?.length);
-          expect(b.wrong, where).toEqual(a.wrong);
-          (a.choices ?? []).forEach((c, j) => expect(b.choices![j].why, where).toBe(c.why));
-          expect(text(b.prompt), `${where} untranslated`).not.toBe(text(a.prompt));
-          if (COMPUTED.includes(s.id)) expect(nums(text(b.prompt)), `${where} numbers differ between languages`).toEqual(nums(text(a.prompt)));
-        });
+          if (it.answer.kind === "number") {
+            bad(Number.isInteger(it.answer.value) || !!it.keys?.includes("."), `${where}: decimal key without "."`);
+            bad(it.answer.value >= 0 || !!it.keys?.includes("-"), `${where}: negative key without "-"`);
+          }
+        }
       }
-    }
+      bad(JSON.stringify(b.answer) === JSON.stringify(a.answer), `${where}: answers differ between languages`);
+      bad(JSON.stringify(b.wrong) === JSON.stringify(a.wrong), `${where}: wrong values differ between languages`);
+      bad(JSON.stringify(b.choices?.map((c) => c.why)) === JSON.stringify(a.choices?.map((c) => c.why)), `${where}: choice tags differ between languages`);
+      bad(text(b.prompt) !== text(a.prompt), `${where}: untranslated prompt`);
+      if (COMPUTED.includes(id)) bad(JSON.stringify(nums(text(b.prompt))) === JSON.stringify(nums(text(a.prompt))), `${where}: numbers differ between languages`);
+    });
+  }
+  return out;
+}
+
+describe.each(SCIENCE_6_9_MORE.map((s) => [s.id, s.levels] as const))("%s", (id, levels) => {
+  it("gives every item 3 hints, 1–4 steps, plain copy, tagged mistakes, and the same answer in both languages", () => {
+    expect(problems(id, levels)).toEqual([]);
   });
 });
 

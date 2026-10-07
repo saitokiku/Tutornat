@@ -4,6 +4,8 @@ import type { Skill } from "../types";
 import { AIR_MASSES, DESIGN, HEAT_TRANSFER, ROCK_CYCLE } from "./upper-more/g6-earth";
 import { BODY_JOBS, BODY_TOGETHER, ORG_PARTS, ORG_THEORY } from "./upper-more/g6-life";
 import { MATTER_ENERGY, MIXTURES, PHOTO_IO, REACTION_SIGNS, RESOURCES } from "./upper-more/g7-banks";
+import { FOSSIL_EVIDENCE, GEOLOGIC_TIME, NATURAL_SELECTION } from "./upper-more/g8-life";
+import { CLIMATE_IMPACT, GRAVITY_ORBITS, WAVES_INFO } from "./upper-more/g8-physical";
 import { balanceItem, halfLifeItem, percentItem } from "./upper-more/chem";
 import { populationItem, rateItem } from "./upper-more/data";
 import { moonItem } from "./upper-more/moon";
@@ -33,6 +35,12 @@ export const SCIENCE_6_9_MORE_BANKS: Record<string, Bank[]> = {
   "s.mixtures": [MIXTURES],
   "s.reaction.signs": [REACTION_SIGNS],
   "s.resources": [RESOURCES],
+  "s.natural.selection": [NATURAL_SELECTION],
+  "s.fossil.evidence": [FOSSIL_EVIDENCE],
+  "s.geologic.time": [GEOLOGIC_TIME],
+  "s.gravity.orbits": [GRAVITY_ORBITS],
+  "s.climate.impact": [CLIMATE_IMPACT],
+  "s.waves.info": [WAVES_INFO],
 };
 
 const fromBank = (id: string) => (r: Rng, level: number, locale: Locale) => bankItem(r, SCIENCE_6_9_MORE_BANKS[id][level - 1], locale);
@@ -208,7 +216,61 @@ export const SCIENCE_6_9_MORE: Skill[] = [
     levels: 2,
     generate: notationItem,
   },
-  // @@GRADE8A
+  {
+    id: "s.natural.selection",
+    subject: "science",
+    grade: "8",
+    title: { en: "Natural selection and adaptation", es: "Selección natural y adaptación" },
+    standard: "MS-LS4-4",
+    prereqs: ["s.genetics"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.natural.selection"),
+  },
+  {
+    id: "s.fossil.evidence",
+    subject: "science",
+    grade: "8",
+    title: { en: "Fossils and evidence of evolution", es: "Fósiles y evidencias de la evolución" },
+    standard: "MS-LS4-1",
+    prereqs: ["s.natural.selection", "s.rock.cycle"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.fossil.evidence"),
+  },
+  {
+    id: "s.geologic.time",
+    subject: "science",
+    grade: "8",
+    title: { en: "Earth's history and geologic time", es: "La historia de la Tierra y el tiempo geológico" },
+    standard: "MS-ESS1-4",
+    prereqs: ["s.fossil.evidence"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.geologic.time"),
+  },
+  {
+    id: "s.gravity.orbits",
+    subject: "science",
+    grade: "8",
+    title: { en: "Gravity and orbits", es: "Gravedad y órbitas" },
+    standard: "MS-ESS1-2",
+    prereqs: ["s.forces", "s.earth.sun.moon"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.gravity.orbits"),
+  },
+  {
+    id: "s.climate.impact",
+    subject: "science",
+    grade: "8",
+    title: { en: "Human impact on climate", es: "El impacto humano en el clima" },
+    standard: "MS-ESS3-5",
+    prereqs: ["s.photo.resp"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.climate.impact"),
+  },
   {
     id: "s.wave.speed",
     subject: "science",
@@ -220,7 +282,17 @@ export const SCIENCE_6_9_MORE: Skill[] = [
     levels: 2,
     generate: waveItem,
   },
-  // @@GRADE8B
+  {
+    id: "s.waves.info",
+    subject: "science",
+    grade: "8",
+    title: { en: "Waves that carry information", es: "Ondas que transmiten información" },
+    standard: "MS-PS4-3",
+    prereqs: ["s.wave.speed"],
+    content: "draft",
+    levels: 1,
+    generate: fromBank("s.waves.info"),
+  },
   // Grade 9
   // @@GRADE9A
   {
