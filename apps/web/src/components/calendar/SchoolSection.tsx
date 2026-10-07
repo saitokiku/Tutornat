@@ -1,36 +1,151 @@
 "use client";
 
 import { useState } from "react";
-import { IconTrash } from "@/components/icons";
+import { IconPen, IconRefresh, IconTrash } from "@/components/icons";
 import { Button, Field, SubjectDot } from "@/components/ui";
 import { useT } from "@/i18n";
 import { shortDate } from "@/lib/format";
-import { addClass, addFeedback, addResult, feedbackOf, removeClass, removeFeedback, removeResult, resultsOf, suggestSkills } from "@/lib/school";
+import { addClass, addFeedback, addResult, feedbackOf, removeClass, removeFeedback, removeResult, resultsOf, suggestSkills, updateClass } from "@/lib/school";
 import { read, useStore } from "@/lib/store";
-import type { Profile, Subject } from "@/lib/types";
+import { SUBJECTS, type Profile, type Subject } from "@/lib/types";
+import { refreshClass, unlinkCalendar, type RefreshResult } from "@/lib/week";
 import { fromLocalDate, localDate } from "@/planner/dates";
 import type { SchoolClass } from "@/planner/types";
 import { getSkill } from "@/practice/skills";
+import { refreshText } from "./feed";
 import { SkillPicker } from "./SkillPicker";
 
-const SUBJECTS: Subject[] = ["math", "english", "science", "other"];
-
 /** Classes, what teachers said, and scores from school — the school side of one learner. */
-export function SchoolSection({ profile, classes, now }: { profile: Profile; classes: SchoolClass[]; now: number }) {
+export function SchoolSection({ profile, classes, now, onLinkCalendar }: { profile: Profile; classes: SchoolClass[]; now: number; onLinkCalendar: (classId: string) => void }) {
   const t = useT();
   return (
-    <section aria-labelledby="school" className="space-y-8 border-t border-border pt-8">
+    <section aria-labelledby="school" className="space-y-10 border-t border-border pt-8">
       <h2 id="school" className="font-brand text-t1 font-semibold text-ink">
         {t("school.title")}
       </h2>
-      <Classes profile={profile} classes={classes} />
+      <Classes profile={profile} classes={classes} now={now} onLinkCalendar={onLinkCalendar} />
       <Notes profile={profile} classes={classes} />
       <Scores profile={profile} classes={classes} now={now} />
     </section>
   );
 }
 
-function Classes({ profile, classes }: { profile: Profile; classes: SchoolClass[] }) {
+/** "Delete X?" with a confirm step, the way every destructive action here works. */
+function ConfirmDelete({ label, what, onDelete }: { label: string; what: string; onDelete: () => void }) {
+  const t = useT();
+  const [asking, setAsking] = useState(false);
+  if (!asking)
+    return (
+      <button type="button" onClick={() => setAsking(true)} aria-label={`${t("common.delete")}: ${label}`} className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-bad">
+        <IconTrash size={16} />
+      </button>
+    );
+  return (
+    <span role="group" aria-label={what} className="flex basis-full flex-wrap items-center justify-end gap-2 sm:basis-auto">
+      <span className="text-sm text-ink">{what}</span>
+      <Button variant="secondary" className="text-bad" onClick={onDelete}>
+        {t("common.confirmDelete")}
+      </Button>
+      <Button variant="ghost" onClick={() => setAsking(false)}>
+        {t("common.cancel")}
+      </Button>
+    </span>
+  );
+}
+
+function ClassRow({ c, profile, now, onLinkCalendar }: { c: SchoolClass; profile: Profile; now: number; onLinkCalendar: (classId: string) => void }) {
+  const t = useT();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name: c.name, subject: c.subject, teacher: c.teacher ?? "" });
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<RefreshResult | null>(null);
+  const refresh = async () => {
+    setBusy(true);
+    setResult(await refreshClass(profile.id, c.id, localDate(now)));
+    setBusy(false);
+  };
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    updateClass(c.id, { name: form.name, subject: form.subject, teacher: form.teacher.trim() || undefined });
+    setEditing(false);
+  };
+
+  if (editing)
+    return (
+      <li className="px-4 py-4 sm:px-5">
+        <form onSubmit={save} aria-label={t("cal.editClass", { name: c.name })} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr_9rem_1fr]">
+            <Field label={t("school.className")}>{(a) => <input {...a} className="k-input" value={form.name} maxLength={60} onChange={(e) => setForm({ ...form, name: e.target.value })} />}</Field>
+            <Field label={t("school.subject")}>
+              {(a) => (
+                <select {...a} className="k-input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value as Subject })}>
+                  {SUBJECTS.map((s) => (
+                    <option key={s} value={s}>
+                      {t(`subject.${s}`)}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+            <Field label={t("school.teacher")}>{(a) => <input {...a} className="k-input" value={form.teacher} maxLength={60} placeholder={t("calendar.optional")} onChange={(e) => setForm({ ...form, teacher: e.target.value })} />}</Field>
+          </div>
+          {c.feedUrl && (
+            <div className="flex flex-wrap items-center gap-3 rounded-sm border border-border bg-panel2/60 px-3 py-2">
+              <p className="min-w-0 flex-1 text-sm text-muted">{t("cal.linkedNote")}</p>
+              <Button variant="secondary" onClick={() => (unlinkCalendar(c.id), setResult(null))}>
+                {t("cal.unlinkCalendar")}
+              </Button>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <Button type="submit" disabled={!form.name.trim()}>
+              {t("common.save")}
+            </Button>
+            <Button variant="secondary" onClick={() => (setEditing(false), setForm({ name: c.name, subject: c.subject, teacher: c.teacher ?? "" }))}>
+              {t("common.cancel")}
+            </Button>
+          </div>
+        </form>
+      </li>
+    );
+
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
+      <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: c.color }} />
+      <span className="min-w-0 flex-1 basis-40">
+        <span className="block break-words text-sm font-medium text-ink">{c.name}</span>
+        <span className="block text-xs text-muted">
+          {t(`subject.${c.subject}`)}
+          {c.teacher ? ` · ${c.teacher}` : ""}
+          {c.feedUrl ? ` · ${t("school.feedLinked")}` : ""}
+        </span>
+        {result && (
+          <span role="status" className={`block text-xs ${result.ok ? "text-good" : "text-warn"}`}>
+            {refreshText(result, t)}
+          </span>
+        )}
+      </span>
+      <span className="ml-auto flex items-center gap-1">
+        {c.feedUrl ? (
+          <Button variant="secondary" loading={busy} onClick={refresh} aria-label={`${t("cal.refresh")}: ${c.name}`}>
+            <IconRefresh size={14} /> {t("cal.refresh")}
+          </Button>
+        ) : (
+          <Button variant="ghost" onClick={() => onLinkCalendar(c.id)} aria-label={`${t("cal.linkCalendar")}: ${c.name}`}>
+            {t("cal.linkCalendar")}
+          </Button>
+        )}
+        <button type="button" onClick={() => setEditing(true)} aria-label={`${t("common.edit")}: ${c.name}`} className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
+          <IconPen size={16} />
+        </button>
+        <ConfirmDelete label={c.name} what={t("cal.deleteClass", { name: c.name })} onDelete={() => removeClass(c.id)} />
+      </span>
+    </li>
+  );
+}
+
+function Classes({ profile, classes, now, onLinkCalendar }: { profile: Profile; classes: SchoolClass[]; now: number; onLinkCalendar: (classId: string) => void }) {
   const t = useT();
   const [name, setName] = useState("");
   const [subject, setSubject] = useState<Subject>("math");
@@ -44,27 +159,15 @@ function Classes({ profile, classes }: { profile: Profile; classes: SchoolClass[
   return (
     <div className="space-y-3">
       <h3 className="font-brand text-t2 font-semibold text-ink">{t("school.classes")}</h3>
+      <p className="text-sm text-muted">{t("cal.classesWhy")}</p>
       {classes.length > 0 && (
         <ul className="divide-y divide-border rounded-lg border border-border bg-panel">
           {classes.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-              <span aria-hidden="true" className="size-3 rounded-full" style={{ background: c.color }} />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-ink">{c.name}</span>
-                <span className="block text-xs text-muted">
-                  {t(`subject.${c.subject}`)}
-                  {c.teacher ? ` · ${c.teacher}` : ""}
-                  {c.feedUrl ? ` · ${t("school.feedLinked")}` : ""}
-                </span>
-              </span>
-              <button type="button" onClick={() => removeClass(c.id)} aria-label={`${t("common.delete")}: ${c.name}`} className="grid size-10 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-bad">
-                <IconTrash size={16} />
-              </button>
-            </li>
+            <ClassRow key={c.id} c={c} profile={profile} now={now} onLinkCalendar={onLinkCalendar} />
           ))}
         </ul>
       )}
-      <form onSubmit={add} className="grid gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-[1fr_9rem_1fr_auto] sm:items-end">
+      <form onSubmit={add} aria-label={t("school.addClass")} className="grid gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-[1fr_9rem_1fr_auto] sm:items-end">
         <Field label={t("school.className")}>{(a) => <input {...a} className="k-input" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} placeholder={t("school.classPlaceholder")} />}</Field>
         <Field label={t("school.subject")}>
           {(a) => (
@@ -104,14 +207,36 @@ function Notes({ profile, classes }: { profile: Profile; classes: SchoolClass[] 
     <div className="space-y-3">
       <h3 className="font-brand text-t2 font-semibold text-ink">{t("school.notes")}</h3>
       <p className="text-sm text-muted">{t("school.notesWhy")}</p>
-      <form onSubmit={save} className="space-y-4 rounded-lg border border-dashed border-border p-4">
+      {notes.length > 0 && (
+        <ul className="divide-y divide-border rounded-lg border border-border bg-panel">
+          {notes.map((n) => {
+            const cls = classes.find((c) => c.id === n.classId);
+            const skillNames = n.skillIds.map((id) => getSkill(id)?.title[profile.locale]).filter(Boolean).join(", ");
+            return (
+              <li key={n.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
+                <span className="min-w-0 flex-1 basis-40">
+                  <span className="block break-words text-sm text-ink">{n.text}</span>
+                  <span className="block text-xs text-muted">
+                    {shortDate(n.at, profile.locale)}
+                    {cls ? ` · ${cls.name}` : ""}
+                    {n.source === "ai" ? ` · ${t("cal.readByAi")}` : ""}
+                    {skillNames ? ` · ${t("school.practiceFor", { skills: skillNames })}` : ` · ${t("school.noSkill")}`}
+                  </span>
+                </span>
+                <ConfirmDelete label={n.text.slice(0, 40)} what={t("cal.deleteNote")} onDelete={() => removeFeedback(n.id)} />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <form onSubmit={save} aria-label={t("school.saveNote")} className="space-y-4 rounded-lg border border-dashed border-border p-4">
         <Field label={t("school.noteLabel")}>
           {(a) => <textarea {...a} rows={3} className="k-input min-h-24 py-2" value={text} maxLength={1000} onChange={(e) => setText(e.target.value)} placeholder={t("school.notePlaceholder")} />}
         </Field>
         {classes.length > 0 && (
           <Field label={t("calendar.class")}>
             {(a) => (
-              <select {...a} className="k-input max-w-xs" value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <select {...a} className="k-input sm:max-w-xs" value={classId} onChange={(e) => setClassId(e.target.value)}>
                 <option value="">{t("calendar.noClass")}</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -122,29 +247,14 @@ function Notes({ profile, classes }: { profile: Profile; classes: SchoolClass[] 
             )}
           </Field>
         )}
-        <SkillPicker value={skills} onChange={setSkills} suggestions={suggestions} locale={profile.locale} label={t("school.noteSkills")} />
+        <div className="space-y-1.5">
+          <SkillPicker value={skills} onChange={setSkills} suggestions={suggestions} locale={profile.locale} label={t("school.noteSkills")} />
+          {!skills.length && suggestions.length > 0 && <p className="text-xs text-muted">{t("cal.autoLink")}</p>}
+        </div>
         <Button type="submit" variant="secondary" disabled={!text.trim()}>
           {t("school.saveNote")}
         </Button>
       </form>
-      {notes.length > 0 && (
-        <ul className="divide-y divide-border rounded-lg border border-border bg-panel">
-          {notes.map((n) => (
-            <li key={n.id} className="flex items-start gap-3 px-4 py-3 sm:px-5">
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm text-ink">{n.text}</span>
-                <span className="block text-xs text-muted">
-                  {shortDate(n.at, profile.locale)}
-                  {n.skillIds.length ? ` · ${t("school.practiceFor", { skills: n.skillIds.map((id) => getSkill(id)?.title[profile.locale]).filter(Boolean).join(", ") })}` : ` · ${t("school.noSkill")}`}
-                </span>
-              </span>
-              <button type="button" onClick={() => removeFeedback(n.id)} aria-label={t("common.delete")} className="grid size-10 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-bad">
-                <IconTrash size={16} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
@@ -153,10 +263,14 @@ function Scores({ profile, classes, now }: { profile: Profile; classes: SchoolCl
   const t = useT();
   const results = useStore((s) => resultsOf(s, profile.id));
   const [form, setForm] = useState({ title: "", date: localDate(now), score: "", outOf: "", classId: "" });
+  const [error, setError] = useState(false);
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    if (addResult(profile.id, { title: form.title, date: form.date, score: Number(form.score), outOf: Number(form.outOf), classId: form.classId || undefined })) setForm({ ...form, title: "", score: "", outOf: "" });
+    const ok = addResult(profile.id, { title: form.title, date: form.date, score: Number(form.score), outOf: Number(form.outOf), classId: form.classId || undefined });
+    setError(!ok);
+    if (ok) setForm({ ...form, title: "", score: "", outOf: "" });
   };
+  const number = (v: string) => v.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
   return (
     <div className="space-y-3">
       <h3 className="font-brand text-t2 font-semibold text-ink">{t("school.scores")}</h3>
@@ -166,10 +280,10 @@ function Scores({ profile, classes, now }: { profile: Profile; classes: SchoolCl
           {results.map((r) => {
             const cls = classes.find((c) => c.id === r.classId);
             return (
-              <li key={r.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
-                {cls ? <span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: cls.color }} /> : <SubjectDot subject="other" />}
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-ink">{r.title}</span>
+              <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
+                {cls ? <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: cls.color }} /> : <SubjectDot subject="other" />}
+                <span className="min-w-0 flex-1 basis-40">
+                  <span className="block break-words text-sm font-medium text-ink">{r.title}</span>
                   <span className="block text-xs text-muted">
                     {shortDate(fromLocalDate(r.date).getTime(), profile.locale)}
                     {cls ? ` · ${cls.name}` : ""} · {t("school.fromSchool")}
@@ -178,22 +292,41 @@ function Scores({ profile, classes, now }: { profile: Profile; classes: SchoolCl
                 <span className="font-opmono text-sm tabular-nums text-ink">
                   {r.score} / {r.outOf}
                 </span>
-                <button type="button" onClick={() => removeResult(r.id)} aria-label={t("common.delete")} className="grid size-10 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-bad">
-                  <IconTrash size={16} />
-                </button>
+                <ConfirmDelete label={r.title} what={t("cal.deleteScore", { title: r.title })} onDelete={() => removeResult(r.id)} />
               </li>
             );
           })}
         </ul>
       )}
-      <form onSubmit={save} className="grid gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-[1fr_9rem_5rem_5rem_auto] sm:items-end">
+      <form onSubmit={save} aria-label={t("school.addScore")} className="grid gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-[1fr_9.5rem_5.5rem_5.5rem] sm:items-end">
         <Field label={t("school.scoreTitle")}>{(a) => <input {...a} className="k-input" value={form.title} maxLength={120} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("school.scorePlaceholder")} />}</Field>
         <Field label={t("calendar.date")}>{(a) => <input {...a} type="date" className="k-input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />}</Field>
-        <Field label={t("school.score")}>{(a) => <input {...a} inputMode="decimal" className="k-input" value={form.score} onChange={(e) => setForm({ ...form, score: e.target.value.replace(/[^0-9.]/g, "") })} />}</Field>
-        <Field label={t("school.outOf")}>{(a) => <input {...a} inputMode="decimal" className="k-input" value={form.outOf} onChange={(e) => setForm({ ...form, outOf: e.target.value.replace(/[^0-9.]/g, "") })} />}</Field>
-        <Button type="submit" variant="secondary" disabled={!form.title.trim() || !form.score || !form.outOf}>
-          {t("school.addScore")}
-        </Button>
+        <Field label={t("school.score")}>{(a) => <input {...a} inputMode="decimal" className="k-input" value={form.score} onChange={(e) => setForm({ ...form, score: number(e.target.value) })} />}</Field>
+        <Field label={t("school.outOf")}>{(a) => <input {...a} inputMode="decimal" className="k-input" value={form.outOf} onChange={(e) => setForm({ ...form, outOf: number(e.target.value) })} />}</Field>
+        {classes.length > 0 && (
+          <Field label={t("calendar.class")}>
+            {(a) => (
+              <select {...a} className="k-input" value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
+                <option value="">{t("calendar.noClass")}</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        )}
+        <div className="flex flex-wrap items-center gap-3 sm:col-span-full">
+          <Button type="submit" variant="secondary" disabled={!form.title.trim() || !form.score || !form.outOf}>
+            {t("school.addScore")}
+          </Button>
+          {error && (
+            <p role="alert" className="text-sm text-bad">
+              {t("cal.scoreError")}
+            </p>
+          )}
+        </div>
       </form>
     </div>
   );

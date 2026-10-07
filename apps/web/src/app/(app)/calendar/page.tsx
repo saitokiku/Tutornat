@@ -1,9 +1,10 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useRef, useState } from "react";
-import { EventForm } from "@/components/calendar/EventForm";
-import { ImportPanel } from "@/components/calendar/ImportPanel";
+import { useState } from "react";
+import { EventForm, type FormDone } from "@/components/calendar/EventForm";
+import { refreshText } from "@/components/calendar/feed";
+import { IMPORT_TABS, ImportPanel } from "@/components/calendar/ImportPanel";
 import { SchoolSection } from "@/components/calendar/SchoolSection";
 import { WeekView } from "@/components/calendar/WeekView";
 import { Guard } from "@/components/gate";
@@ -12,14 +13,12 @@ import { IconPlus, IconRefresh } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
 import { Button, Notice } from "@/components/ui";
 import { useT } from "@/i18n";
-import { statusesOf } from "@/lib/practice";
 import { currentLearner, learnersOf } from "@/lib/profiles";
-import { classesOf, eventsOf } from "@/lib/school";
-import { useStore } from "@/lib/store";
+import { classesOf } from "@/lib/school";
+import { read, useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
+import { addRequest, calendarFile, linkedClasses, refreshAll } from "@/lib/week";
 import { addDays, localDate, weekStart } from "@/planner/dates";
-import { toIcs } from "@/planner/ics";
-import type { SchoolEvent } from "@/planner/types";
 
 export default function CalendarPage() {
   return (
@@ -29,7 +28,15 @@ export default function CalendarPage() {
   );
 }
 
-type Panel = { mode: "add"; date?: string; kind?: "test" } | { mode: "edit"; event: SchoolEvent } | { mode: "import" } | null;
+type Message = { tone: "good" | "warn"; lines: string[] };
+
+// Which panel is open lives in the URL, so other screens can link straight to it and Back closes it:
+//   ?add=homework|test|quiz|project|other (&date=YYYY-MM-DD)   the add form, that kind (and day) chosen
+//   ?edit=<eventId>                                             the edit form for one item
+//   ?import=paste|file|link|photo (&class=<classId>)            the import panel on that tab
+// The browser's own history API keeps this on the page (Next keeps useSearchParams in step).
+const go = (query: string) => window.history.pushState(null, "", `/calendar${query ? `?${query}` : ""}`);
+const close = () => window.history.replaceState(null, "", "/calendar");
 
 function Calendar() {
   const t = useT();
@@ -41,13 +48,14 @@ function Calendar() {
   const [now] = useState(() => Date.now());
   const today = localDate(now);
   const [start, setStart] = useState(() => weekStart(today));
+  const [message, setMessage] = useState<Message | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const params = useSearchParams();
-  const [panel, setPanel] = useState<Panel>(() => (params.get("add") ? { mode: "add", kind: params.get("add") === "test" ? "test" : undefined } : null));
-  const [message, setMessage] = useState<string | null>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const events = useStore((s) => (profile ? eventsOf(s, profile.id) : []));
   const classes = useStore((s) => (profile ? classesOf(s, profile.id) : []));
-  const statuses = useStore((s) => (profile ? statusesOf(s, profile.id, now) : {}));
+  const linked = useStore((s) => (profile ? linkedClasses(s, profile.id).length : 0));
+  const exportable = useStore((s) => (profile ? s.events.filter((e) => e.profileId === profile.id && e.date >= addDays(today, -7)).length : 0));
+  const editId = params.get("edit");
+  const editing = useStore((s) => (editId && profile ? s.events.find((e) => e.id === editId && e.profileId === profile.id) : undefined));
 
   if (!profile)
     return (
@@ -57,74 +65,116 @@ function Calendar() {
       </div>
     );
 
-  const open = (p: Panel) => {
-    setPanel(p);
-    setMessage(null);
-    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }));
+  const add = addRequest(params.get("add"), params.get("date"));
+  const importTab = IMPORT_TABS.find((x) => x === params.get("import"));
+  const formDone = (done: FormDone) => {
+    close();
+    if (!done) return;
+    setMessage({ tone: "good", lines: [done.message] });
+    if (done.date) setStart(weekStart(done.date));
   };
-  const exportIcs = () => {
-    const upcoming = events.filter((e) => e.date >= addDays(today, -7));
-    const blob = new Blob([toIcs(upcoming, `KaizenEDU · ${profile.nickname}`)], { type: "text/calendar" });
+  const refresh = async () => {
+    setRefreshing(true);
+    setMessage(null);
+    const results = await refreshAll(profile.id, today);
+    setRefreshing(false);
+    setMessage({
+      tone: results.every((r) => r.ok) ? "good" : "warn",
+      lines: results.map((r) => `${r.name}: ${refreshText(r, t)}`),
+    });
+  };
+  const download = () => {
+    const file = calendarFile(read(), profile, today);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `kaizenedu-${profile.nickname.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.ics`;
+    a.href = URL.createObjectURL(new Blob([file.text], { type: "text/calendar" }));
+    a.download = file.name;
+    document.body.append(a);
     a.click();
-    URL.revokeObjectURL(a.href);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-end gap-3">
-        <div className="mr-auto">
+        <div className="mr-auto min-w-0">
           <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("calendar.title")}</h1>
           <p className="mt-1 max-w-xl text-sm text-muted">{t("calendar.intro")}</p>
         </div>
-        <Button onClick={() => open({ mode: "add" })}>
-          <IconPlus size={16} /> {t("calendar.add")}
-        </Button>
-        <Button variant="secondary" onClick={() => open({ mode: "import" })}>
-          <IconRefresh size={16} /> {t("calendar.import")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => (setMessage(null), go("add="))}>
+            <IconPlus size={16} /> {t("calendar.add")}
+          </Button>
+          <Button variant="secondary" onClick={() => (setMessage(null), go("import=paste"))}>
+            {t("calendar.import")}
+          </Button>
+          {linked > 0 && (
+            <Button variant="secondary" loading={refreshing} onClick={refresh}>
+              <IconRefresh size={16} /> {t("cal.refreshAll")}
+            </Button>
+          )}
+        </div>
       </header>
 
       {!learner && learners.length > 1 && (
-        <div role="tablist" aria-label={t("calendar.whose")} className="flex flex-wrap gap-2">
+        <div role="group" aria-label={t("calendar.whose")} className="flex flex-wrap gap-2">
           {learners.map((p: Profile) => (
-            <button key={p.id} role="tab" aria-selected={p.id === profile.id} onClick={() => (setChildId(p.id), setPanel(null))} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-panel py-1 pl-1 pr-4 text-sm font-medium text-muted aria-selected:border-ink aria-selected:text-ink">
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={p.id === profile.id}
+              onClick={() => (setChildId(p.id), setMessage(null), close())}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-panel py-1 pl-1 pr-4 text-sm font-medium text-muted hover:text-ink aria-pressed:border-ink aria-pressed:text-ink"
+            >
               <Avatar profile={p} size="sm" /> {p.nickname}
             </button>
           ))}
         </div>
       )}
 
-      {message && <Notice tone="good">{message}</Notice>}
-      <div ref={panelRef} className="scroll-mt-6">
-        {panel?.mode === "add" && <EventForm key={`add:${panel.date}`} profileId={profile.id} date={panel.date ?? today} kind={panel.kind} classes={classes} locale={profile.locale} onDone={() => setPanel(null)} />}
-        {panel?.mode === "edit" && <EventForm key={panel.event.id} profileId={profile.id} event={panel.event} classes={classes} locale={profile.locale} onDone={() => setPanel(null)} />}
-        {panel?.mode === "import" && (
-          <ImportPanel
-            profileId={profile.id}
-            classes={classes}
-            locale={profile.locale}
-            grade={profile.grade}
-            onDone={(msg) => {
-              setPanel(null);
-              setMessage(msg);
-            }}
-          />
-        )}
+      {message && (
+        <Notice tone={message.tone}>
+          {message.lines.length === 1 ? (
+            message.lines[0]
+          ) : (
+            <ul className="space-y-0.5">
+              {message.lines.map((l, i) => (
+                <li key={i}>{l}</li>
+              ))}
+            </ul>
+          )}
+        </Notice>
+      )}
+
+      {add ? (
+        <EventForm key={`add:${profile.id}:${add.kind}:${add.date}`} profileId={profile.id} date={add.date ?? today} kind={add.kind} classes={classes} locale={profile.locale} onDone={formDone} />
+      ) : editing ? (
+        <EventForm key={`edit:${editing.id}`} profileId={profile.id} event={editing} classes={classes} locale={profile.locale} onDone={formDone} />
+      ) : importTab ? (
+        <ImportPanel
+          key={`import:${profile.id}:${importTab}:${params.get("class")}`}
+          profile={profile}
+          classes={classes}
+          initialTab={importTab}
+          initialClassId={params.get("class") ?? undefined}
+          onDone={(msg, first) => {
+            close();
+            if (msg) setMessage({ tone: "good", lines: [msg] });
+            if (first) setStart(weekStart(first));
+          }}
+        />
+      ) : null}
+
+      <WeekView profile={profile} now={now} start={start} onWeek={setStart} onAdd={(date) => (setMessage(null), go(new URLSearchParams({ add: "", date }).toString()))} />
+
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-panel px-4 py-3 sm:px-5">
+        <p className="min-w-0 flex-1 text-sm text-muted">{t("calendar.exportWhy")}</p>
+        <Button variant="secondary" onClick={download} disabled={!exportable}>
+          {t("cal.download")}
+        </Button>
       </div>
 
-      <WeekView start={start} onWeek={setStart} events={events} classes={classes} statuses={statuses} locale={profile.locale} today={today} onOpen={(e) => open({ mode: "edit", event: e })} onAdd={(d) => open({ mode: "add", date: d })} />
-
-      <p className="text-sm text-muted">
-        {t("calendar.exportWhy")}{" "}
-        <button type="button" onClick={exportIcs} disabled={!events.length} className="font-medium text-ink underline underline-offset-4 hover:text-accent disabled:text-muted disabled:no-underline">
-          {t("calendar.export")}
-        </button>
-      </p>
-
-      <SchoolSection profile={profile} classes={classes} now={now} />
+      <SchoolSection profile={profile} classes={classes} now={now} onLinkCalendar={(id) => (setMessage(null), go(`import=link&class=${encodeURIComponent(id)}`))} />
     </div>
   );
 }
