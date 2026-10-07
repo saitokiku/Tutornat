@@ -146,16 +146,19 @@ export function startSet(state: StoreState, opts: StartOpts): string | null {
   return set.id;
 }
 
-/** How a set's time compares with the standard time, in words: never a timer, never a score. */
+/** Whole minutes for a pace sentence; anything under a minute reads as 1. */
+export const wholeMinutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
+
+/**
+ * How a set's time compares with the standard time, in words: never a timer, never a score. Times
+ * that show as the same whole minutes are "usual", so the sentence never contradicts its numbers.
+ */
 export type Pace = "quicker" | "usual" | "slower";
 export function paceOf(seconds: number, standard: number): Pace {
-  if (standard <= 0 || seconds <= 0) return "usual";
+  if (standard <= 0 || seconds <= 0 || wholeMinutes(seconds) === wholeMinutes(standard)) return "usual";
   const ratio = seconds / standard;
   return ratio < 0.75 ? "quicker" : ratio <= 1.35 ? "usual" : "slower";
 }
-
-/** Whole minutes for a pace sentence; anything under a minute reads as 1. */
-export const wholeMinutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
 
 export type AnswerRecord = { slot: number; level: number; correct: boolean; assisted: boolean; seconds: number; response?: string; why?: string };
 

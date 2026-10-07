@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useRef, type KeyboardEvent, type PointerEvent } from "react";
+import { useId, useMemo, useRef, type KeyboardEvent, type MouseEvent } from "react";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 import { useT } from "@/i18n";
 import { DEFAULT_PADS, linePoints, nearestPoint, pointOf, startPoint, type LinePad } from "./pad-math";
@@ -42,9 +42,10 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
     if (disabled) return;
     onChange(points[Math.max(0, Math.min(count - 1, i))].response);
   };
-  const fromPointer = (e: PointerEvent<HTMLDivElement>) => {
+  // A tap (click) places the point; a swipe that scrolls the page does not.
+  const tap = (e: MouseEvent<HTMLDivElement>) => {
     const box = track.current?.getBoundingClientRect();
-    if (!box?.width) return;
+    if (disabled || !box?.width) return;
     const x = ((e.clientX - box.left) / box.width) * W;
     place(nearestPoint((x - INSET) / (W - 2 * INSET), count));
   };
@@ -91,15 +92,8 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
         aria-valuetext={placed ? label : t("pr.line.none")}
         aria-disabled={disabled || undefined}
         onKeyDown={onKey}
-        onPointerDown={(e) => {
-          if (disabled) return;
-          e.currentTarget.setPointerCapture?.(e.pointerId);
-          fromPointer(e);
-        }}
-        onPointerMove={(e) => {
-          if (e.buttons && e.currentTarget.hasPointerCapture?.(e.pointerId)) fromPointer(e);
-        }}
-        className={`relative cursor-pointer touch-none select-none rounded-md ${young ? "h-32" : "h-28"}`}
+        onClick={tap}
+        className={`relative cursor-pointer select-none rounded-md ${young ? "h-32" : "h-28"}`}
       >
         <svg viewBox={`0 0 ${W} 40`} preserveAspectRatio="none" aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 h-10 w-full -translate-y-1/2">
           <line x1={INSET - 14} x2={W - INSET + 14} y1={20} y2={20} stroke="var(--color-ink)" strokeWidth={2.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />

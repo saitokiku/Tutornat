@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { IconMinus, IconPlus } from "@/components/icons";
 import { Hear } from "@/components/stage/hear";
 import { useT } from "@/i18n";
@@ -51,7 +51,7 @@ export function ClockPad({ pad = DEFAULT_PADS.clock, value, onChange, onSubmit, 
     if (which === "hour") set(stepHour(h, by), m);
     else set(h, stepMinute(m, by, step));
   };
-  const tap = (e: PointerEvent<SVGSVGElement>) => {
+  const tap = (e: MouseEvent<SVGSVGElement>) => {
     const box = face.current?.getBoundingClientRect();
     if (disabled || !box?.width) return;
     const x = ((e.clientX - box.left) / box.width) * 200, y = ((e.clientY - box.top) / box.height) * 200;
@@ -139,8 +139,8 @@ export function ClockPad({ pad = DEFAULT_PADS.clock, value, onChange, onSubmit, 
         viewBox="0 0 200 200"
         role="img"
         aria-label={t("pr.clock.face", { time })}
-        onPointerDown={tap}
-        className={`${size} max-w-full cursor-pointer touch-none select-none`}
+        onClick={tap}
+        className={`${size} max-w-full cursor-pointer select-none`}
       >
         <circle cx={C} cy={C} r={R} fill="var(--color-panel)" stroke="var(--color-ink)" strokeWidth={3} />
         {Array.from({ length: 60 }, (_, i) => {

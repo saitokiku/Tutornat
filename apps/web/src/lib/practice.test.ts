@@ -75,13 +75,19 @@ describe("recordAnswer", () => {
 
 describe("pace in words", () => {
   it("compares time with the standard time, with room either side", () => {
-    expect(paceOf(100, 100)).toBe("usual");
-    expect(paceOf(130, 100)).toBe("usual");
-    expect(paceOf(80, 100)).toBe("usual");
-    expect(paceOf(70, 100)).toBe("quicker");
-    expect(paceOf(140, 100)).toBe("slower");
-    expect(paceOf(0, 100)).toBe("usual");
+    expect(paceOf(600, 600)).toBe("usual");
+    expect(paceOf(780, 600)).toBe("usual");
+    expect(paceOf(480, 600)).toBe("usual");
+    expect(paceOf(420, 600)).toBe("quicker");
+    expect(paceOf(840, 600)).toBe("slower");
+    expect(paceOf(0, 600)).toBe("usual");
     expect(paceOf(50, 0)).toBe("usual");
+  });
+
+  it("never says slower or quicker when the minutes shown are the same", () => {
+    expect(paceOf(84, 60)).toBe("usual");
+    expect(paceOf(20, 60)).toBe("usual");
+    expect(paceOf(150, 60)).toBe("slower");
   });
 
   it("rounds to whole minutes, never below one", () => {

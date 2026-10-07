@@ -63,7 +63,7 @@ describe("NumberLinePad", () => {
     const line = screen.getByRole("slider");
     box(line, 640, 112);
     // The line runs from 28 to 612 in a 640-wide box: 7 sits at 28 + 0.7 × 584 ≈ 437.
-    fireEvent.pointerDown(line, { clientX: 440, clientY: 50, pointerId: 1 });
+    fireEvent.click(line, { clientX: 440, clientY: 50 });
     expect(response()).toBe("7");
     await userEvent.click(screen.getByRole("button", { name: "Move the point right" }));
     expect(response()).toBe("8");
@@ -147,12 +147,12 @@ describe("ClockPad", () => {
     render(<Harness input="clock" pad={{ kind: "clock", stepMinutes: 15 }} />);
     const face = screen.getByRole("img", { name: /Clock face/ });
     box(face, 200, 200);
-    fireEvent.pointerDown(face, { clientX: 190, clientY: 100 }); // the 3
+    fireEvent.click(face, { clientX: 190, clientY: 100 }); // the 3
     expect(response()).toBe("3:00");
     await userEvent.click(screen.getByRole("button", { name: "Long hand" }));
-    fireEvent.pointerDown(face, { clientX: 100, clientY: 190 }); // the 6
+    fireEvent.click(face, { clientX: 100, clientY: 190 }); // the 6
     expect(response()).toBe("3:30");
-    fireEvent.pointerDown(face, { clientX: 20, clientY: 112 }); // just below the 9
+    fireEvent.click(face, { clientX: 20, clientY: 112 }); // just below the 9
     expect(response()).toBe("3:45");
     await userEvent.click(screen.getByRole("button", { name: "Move the short hand forward one hour" }));
     expect(response()).toBe("4:45");
