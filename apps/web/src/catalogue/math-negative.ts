@@ -50,7 +50,7 @@ const negative: CatalogueEntry = {
             },
             {
               type: "text",
-              text: "In each case, 0 is the reference point: the temperature where water freezes (in °C), sea level, or owing nothing and having nothing.",
+              text: "In each case, 0 is the reference point you measure from: the freezing point of water on the Celsius scale, sea level, or a balance of $0.",
             },
           ],
         },
@@ -145,7 +145,7 @@ const negative: CatalogueEntry = {
           blocks: [
             {
               type: "text",
-              text: "Integers are the whole numbers and their opposites: …, −3, −2, −1, 0, 1, 2, 3, …. On a number line, they increase from left to right.",
+              text: "Integers are the whole numbers and their opposites, such as −3, −2, −1, 0, 1, 2 and 3. On a number line, they increase from left to right.",
             },
             {
               type: "visual",

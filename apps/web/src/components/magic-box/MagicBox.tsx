@@ -46,7 +46,7 @@ export function MagicBox({ learner, variant = "compact", initialGoal = "" }: { l
   const submit = () => {
     if (!ready) return;
     const draft = createDraft({ goal: goal.trim(), grade: learner.grade, subject: effectiveSubject, length, locale, sources: files }, learner.id);
-    router.push(`/courses/new/${draft.id}`);
+    router.push(`/courses/new/${draft.id}?fresh=1`);
   };
 
   return (

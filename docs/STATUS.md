@@ -12,7 +12,7 @@ Rule: a box is ticked only after its check actually ran. Note blockers under the
 - [x] 4. UI primitives, icons, brand
 - [x] 5. Landing, auth, profiles, guards
 - [x] 6. Student shell, Home, magic box
-- [ ] 7. Generation flow
+- [x] 7. Generation flow
 - [ ] 8. Courses + course page
 - [ ] 9. Lesson stage
 - [ ] 10. Growth, Family, Settings

@@ -44,7 +44,7 @@ describe("MagicBox", () => {
     await userEvent.click(submit());
     const draft = read().courses[0];
     expect(draft).toMatchObject({ status: "outlining", subject: "science", grade: "4", profileId: "p1" });
-    expect(push).toHaveBeenCalledWith(`/courses/new/${draft.id}`);
+    expect(push).toHaveBeenCalledWith(`/courses/new/${draft.id}?fresh=1`);
   });
 });
 
