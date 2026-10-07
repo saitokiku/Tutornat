@@ -1,14 +1,22 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { RULES } from "@/learning/engine";
 import type { Attempt, PracticeSet } from "@/learning/types";
 import { addDays, fromLocalDate, localDate } from "@/planner/dates";
 import type { SchoolEvent } from "@/planner/types";
 import { lastActive } from "./family";
 import { logNudges, nudgesFor, NUDGE_RULES, type Nudge } from "./nudges";
-import { emptyState, read, resetMemory, update, type StoreState } from "./store";
+import { emptyState, read, resetMemory, subscribe, update, type StoreState } from "./store";
 import type { ActivityEvent, Profile } from "./types";
 
 afterEach(() => resetMemory());
+
+// Pinned to a zone with clock changes, so the calendar-day maths is tested the same on every machine.
+const zone = process.env.TZ;
+process.env.TZ = "America/Chicago";
+afterAll(() => {
+  if (zone === undefined) delete process.env.TZ;
+  else process.env.TZ = zone;
+});
 
 const H = 3600_000, D = 24 * H;
 // Wednesday 7 October 2026, 3 pm local.
@@ -64,7 +72,8 @@ describe("nudge: a check waiting", () => {
   it("fires when the check has been open for the full wait, and not a millisecond before", () => {
     const due = nudgesFor(s, "ada", opens + NUDGE_RULES.checkWaitMs);
     expect(due.filter((x) => x.kind === "check")).toEqual([
-      { key: "check:m.add.5", kind: "check", days: 14, skillId: "m.add.5", action: { href: "/home", handover: true } },
+      // Practice lists every open check; Today's plan holds at most two.
+      { key: "check:m.add.5", kind: "check", days: 14, skillId: "m.add.5", action: { href: "/practice?subject=math", handover: true } },
     ]);
     expect(kinds(nudgesFor(s, "ada", opens + NUDGE_RULES.checkWaitMs - 1))).not.toContain("check");
   });
@@ -90,9 +99,28 @@ describe("nudge: a check waiting", () => {
 describe("nudge: a stuck skill", () => {
   const t = (k: number) => NOW - (5 - k) * D;
 
-  it("fires after three practice sets in a row under the engine's share right on their own", () => {
+  it("fires after three practice sets in a row under the engine's share right on their own, and opens that skill on Practice", () => {
     const s = state({ attempts: [...set(t(0), 2), ...set(t(1), 1), ...set(t(2), 2)], activity: [busyToday()] });
-    expect(nudgesFor(s, "ada", NOW)).toEqual([{ key: "stuck:m.add.10", kind: "stuck", days: 0, skillId: "m.add.10", action: { href: "/home", handover: true } }]);
+    expect(nudgesFor(s, "ada", NOW)).toEqual([
+      { key: "stuck:m.add.10", kind: "stuck", days: 0, skillId: "m.add.10", action: { href: "/practice?subject=math&again=m.add.10", handover: true } },
+    ]);
+  });
+
+  it("counts prep sets too: a skill can go stuck off the plan, so the action does not rely on Today", () => {
+    const prep = (k: number, right: number) => set(t(k), right).map((a) => ({ ...a, mode: "prep" as const, skillId: "m.frac.equiv" }));
+    const s = state({ attempts: [...prep(0, 1), ...prep(1, 2), ...prep(2, 1)], activity: [busyToday()] });
+    expect(nudgesFor(s, "ada", NOW)).toMatchObject([{ key: "stuck:m.frac.equiv", action: { href: "/practice?subject=math&again=m.frac.equiv" } }]);
+  });
+
+  it("fires while the skill was practiced within the last two weeks, and not after", () => {
+    const hard = [...set(t(0), 2), ...set(t(1), 1), ...set(t(2), 2)];
+    const last = hard.at(-1)!.at;
+    const end = last + NUDGE_RULES.stuckRecentMs;
+    // Something else done the day before, so the idle nudge stays out of the way.
+    const s = state({ attempts: hard, activity: [{ ...busyToday(), at: end - D }] });
+    expect(NUDGE_RULES.stuckRecentMs).toBe(14 * D);
+    expect(kinds(nudgesFor(s, "ada", end))).toEqual(["stuck"]);
+    expect(kinds(nudgesFor(s, "ada", end + 1))).toEqual([]);
   });
 
   it("does not fire after only two hard sets", () => {
@@ -117,14 +145,26 @@ describe("nudge: a test or quiz with no prep", () => {
   const events = days.map((d) => test(addDays(TODAY, d)));
   const prepNudges = (s: StoreState) => nudgesFor(s, "ada", NOW).filter((x) => x.kind === "prep");
 
-  it("fires from tomorrow to three days out, soonest first, and links to the item page", () => {
+  it("fires from tomorrow to three days out, soonest first; its action hands over to Today, which has the prep line", () => {
     const list = prepNudges(state({ events, activity: [busyToday()] }));
     expect(list.map((x) => x.days)).toEqual([1, 2, 3]);
-    expect(list[0]).toMatchObject({ key: `prep:e-${addDays(TODAY, 1)}`, action: { href: `/calendar/e-${addDays(TODAY, 1)}`, handover: false } });
+    expect(list[0]).toMatchObject({ key: `prep:e-${addDays(TODAY, 1)}`, action: { href: "/home", handover: true } });
   });
 
-  it("uses the planner's prep window", () => {
+  it("uses the planner's prep window: not on the day of the test, when Today lists it as today's work instead", () => {
     expect(NUDGE_RULES.prepDays).toBe(3);
+    expect(prepNudges(state({ events: [test(TODAY)], activity: [busyToday()] }))).toEqual([]);
+  });
+
+  it("with no skill on the map linked, says there is nothing to prep and opens the item page to link some", () => {
+    const d = addDays(TODAY, 2);
+    const s = state({ events: [test(d, { id: "hist", title: "History test", skillIds: [] }), test(d, { id: "odd", skillIds: ["not.a.skill"] })], activity: [busyToday()] });
+    expect(nudgesFor(s, "ada", NOW).map((x) => [x.key, x.kind, x.days, x.action])).toEqual([
+      ["unlinked:hist", "unlinked", 2, { href: "/calendar/hist", handover: false }],
+      ["unlinked:odd", "unlinked", 2, { href: "/calendar/odd", handover: false }],
+    ]);
+    // Outside the window, nothing either way.
+    expect(nudgesFor(state({ events: [test(addDays(TODAY, 4), { skillIds: [] })], activity: [busyToday()] }), "ada", NOW)).toEqual([]);
   });
 
   it("counts quizzes, but not homework, projects, done items or another learner's test", () => {
@@ -200,21 +240,21 @@ describe("nudge: nothing done in five days", () => {
 });
 
 describe("nudges together", () => {
-  it("come prep first, then checks, stuck skills, then nothing done; another learner's record never leaks in", () => {
+  it("come tests first, then checks, stuck skills, then nothing done; another learner's record never leaks in", () => {
     const T = NOW - 40 * D;
     const s = state({
       profiles: [ada, bo],
-      events: [test(addDays(TODAY, 2)), test(addDays(TODAY, 1), { id: "bo-test", profileId: "bo" })],
-      attempts: [...ready(T), ...set(T + 2 * D, 1), ...set(T + 3 * D, 1), ...set(T + 4 * D, 1)],
+      events: [test(addDays(TODAY, 3), { id: "hist", skillIds: [] }), test(addDays(TODAY, 2)), test(addDays(TODAY, 1), { id: "bo-test", profileId: "bo" })],
+      attempts: [...ready(T), ...set(NOW - 8 * D, 1), ...set(NOW - 7 * D, 1), ...set(NOW - 6 * D, 1)],
     });
-    expect(kinds(nudgesFor(s, "ada", NOW))).toEqual(["prep", "check", "stuck", "idle"]);
+    expect(kinds(nudgesFor(s, "ada", NOW))).toEqual(["prep", "unlinked", "check", "stuck", "idle"]);
     expect(nudgesFor(s, "bo", NOW).map((x) => x.key)).toEqual(["prep:bo-test", `idle:${localDate(bo.createdAt)}`]);
     expect(nudgesFor(s, "nobody", NOW)).toEqual([]);
   });
 });
 
 describe("logNudges", () => {
-  const nudge: Nudge = { key: "stuck:m.add.10", kind: "stuck", days: 0, skillId: "m.add.10", action: { href: "/home", handover: true } };
+  const nudge: Nudge = { key: "stuck:m.add.10", kind: "stuck", days: 0, skillId: "m.add.10", action: { href: "/practice?subject=math&again=m.add.10", handover: true } };
   const asParent = () =>
     update((s) => {
       s.profiles = [ada];
@@ -228,6 +268,19 @@ describe("logNudges", () => {
     expect(read().acts).toEqual([{ id: expect.any(String), at: NOW, profileId: "ada", kind: "nudge", intent: "parent-acts", ref: "stuck:m.add.10", detail: "stuck", skillId: "m.add.10" }]);
     logNudges("ada", [nudge], NOW + D);
     expect(read().acts).toHaveLength(2);
+  });
+
+  it("writes nothing at all when every nudge shown was already recorded today", () => {
+    asParent();
+    logNudges("ada", [nudge], NOW);
+    let writes = 0;
+    const stop = subscribe(() => void writes++);
+    logNudges("ada", [nudge], NOW + H);
+    expect(writes).toBe(0);
+    logNudges("ada", [nudge, { key: "idle:2026-10-01", kind: "idle", days: 6, action: { href: "/home", handover: true } }], NOW + 2 * H);
+    expect(writes).toBe(1);
+    stop();
+    expect(read().acts.map((a) => a.ref)).toEqual(["stuck:m.add.10", "idle:2026-10-01"]);
   });
 
   it("never records anything while a child is using the app", () => {

@@ -10,17 +10,15 @@ import type { Goal, Subject } from "./types";
 // What a grown-up sees about one learner, computed from the record. Numbers only; nothing here is
 // written by a model. "Proved" means the mastery law was met; everything else is activity.
 
-const WEEK = 7 * 864e5;
-
 export type WeekFacts = {
   minutes: number;
   sets: number;
   lessons: number;
-  /** Practice answers (not lesson checks). */
+  /** Practice answers (not lesson questions). */
   own: number;
   helped: number;
   missed: number;
-  /** Checks answered inside lessons this week, kept apart from practice answers. */
+  /** Lesson questions answered this week (every answer, as with practice), kept apart from practice answers. */
   lessonChecks: { own: number; helped: number; missed: number };
   proved: string[];
   helpOn: string[];
@@ -31,13 +29,16 @@ export type WeekFacts = {
 };
 
 export function weekFacts(s: StoreState, profileId: string, now: number): WeekFacts {
-  const from = startOfWeek(now), to = from + WEEK;
+  // Monday to Monday by the calendar, so a clock change never moves the week's edge.
+  const from = startOfWeek(now), d = new Date(from), to = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7).getTime();
   const inWeek = (t: number) => t >= from && t < to;
   const attempts = s.attempts.filter((a) => a.profileId === profileId && a.mode !== "tutor" && inWeek(a.at));
   const statuses: Statuses = statusesOf(s, profileId, now);
   const lessons = s.activity.filter((e) => e.profileId === profileId && e.type === "lesson_completed" && inWeek(e.at));
   const quiz = s.activity.filter((e) => e.profileId === profileId && e.type === "quiz_answered" && inWeek(e.at));
-  const reading = s.reading.filter((r) => r.profileId === profileId && inWeek(new Date(`${r.date}T12:00`).getTime()));
+  // Reading counts by its calendar day; a day logged ahead waits for its date.
+  const today = localDate(now);
+  const reading = s.reading.filter((r) => r.profileId === profileId && r.date <= today && inWeek(fromLocalDate(r.date).getTime()));
   const helpCount = new Map<string, number>();
   for (const a of attempts) if (a.assisted || !a.correct) helpCount.set(a.skillId, (helpCount.get(a.skillId) ?? 0) + 1);
   const seconds = attempts.reduce((n, a) => n + a.seconds, 0) + lessons.reduce((n, e) => n + (e.seconds ?? 0), 0);

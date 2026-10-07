@@ -14,11 +14,12 @@ import { lastActive, weekFacts } from "@/lib/family";
 import { relativeDay, shortDate } from "@/lib/format";
 import { nudgesFor } from "@/lib/nudges";
 import { todayPlan } from "@/lib/plan";
-import { addNote, removeNote, selectLearner } from "@/lib/profiles";
+import { addNote, removeNote } from "@/lib/profiles";
 import { isReviewed } from "@/lib/review";
 import { useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
+import { useHandover } from "./Handover";
 import { NudgeList } from "./NudgeList";
 
 // One child at a glance, for the grown-up: anything that needs them, today's status and next step,
@@ -41,7 +42,7 @@ export function FamilyCard({ child, now }: { child: Profile; now: number }) {
   const safety = s.notes.filter((n) => n.profileId === child.id && n.from === "safety").sort((a, b) => b.at - a.at);
   const items = [...plan.lead, ...plan.more];
   const next = items.find((i) => !i.done);
-  const handover = () => selectLearner(child.id);
+  const handover = useHandover(child.id);
   const skill = (id: string) => getSkill(id)?.title[locale] ?? id;
   const courses = s.courses.filter((c) => c.profileId === child.id);
 
@@ -107,7 +108,7 @@ export function FamilyCard({ child, now }: { child: Profile; now: number }) {
               )}
             </p>
             <Link href="/home" onNavigate={handover} className={btn("secondary", "sm", "min-h-11")}>
-              {t("fam.act.today", { name: child.nickname })}
+              {t("fam.act.handover", { name: child.nickname })}
             </Link>
           </div>
         </section>

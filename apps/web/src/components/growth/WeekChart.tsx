@@ -1,15 +1,25 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useLocale } from "@/i18n";
 import type { Key } from "@/i18n/en";
 import { shortDate } from "@/lib/format";
 import type { GrowthWeek } from "@/lib/growth";
 
-/** The three places a skill can stand, bottom to top. Same marks as the skill map's status dots. */
-export const SERIES: { key: "proved" | "ready" | "practicing"; label: Key; fill: string }[] = [
+/**
+ * The three places a skill can stand, bottom to top, in the skill map's status colours. Each fill is
+ * at least 3:1 against the panel, and practicing is striped so it never depends on telling rose from
+ * brown.
+ */
+export const SERIES: { key: "proved" | "ready" | "practicing"; label: Key; fill: string; style?: CSSProperties }[] = [
   { key: "proved", label: "fam.proved", fill: "bg-good" },
-  { key: "ready", label: "fam.ready", fill: "bg-accent/70" },
-  { key: "practicing", label: "fam.practicing", fill: "bg-warn/45" },
+  { key: "ready", label: "fam.ready", fill: "bg-accent/75" },
+  {
+    key: "practicing",
+    label: "fam.practicing",
+    fill: "bg-panel",
+    style: { backgroundImage: "repeating-linear-gradient(135deg, var(--color-warn) 0 2.5px, transparent 2.5px 5px)" },
+  },
 ];
 
 /**
@@ -25,11 +35,12 @@ export function WeekChart({ weeks, label }: { weeks: GrowthWeek[]; label: string
       <div className="flex h-28 items-end gap-1 border-b border-border sm:gap-2">
         {weeks.map((w, i) => (
           <div key={w.start} className="flex h-full min-w-0 flex-1 flex-col-reverse items-center">
-            {SERIES.filter((x) => w[x.key] > 0).map((x) => (
+            {/* A panel-coloured hairline between stacked segments keeps each one's edge visible. */}
+            {SERIES.filter((x) => w[x.key] > 0).map((x, k) => (
               <span
                 key={x.key}
-                className={`block w-full max-w-10 shrink-0 origin-bottom motion-safe:animate-split ${x.fill}`}
-                style={{ height: `${(w[x.key] / max) * 100}%`, animationDelay: `${i * 40}ms` }}
+                className={`block w-full max-w-10 shrink-0 origin-bottom motion-safe:animate-split ${x.fill} ${k > 0 ? "border-b-2 border-panel" : ""}`}
+                style={{ ...x.style, height: `${(w[x.key] / max) * 100}%`, animationDelay: `${i * 40}ms` }}
               />
             ))}
           </div>
@@ -50,4 +61,9 @@ export function WeekChart({ weeks, label }: { weeks: GrowthWeek[]; label: string
       </div>
     </div>
   );
+}
+
+/** The legend swatch for one series, drawn the same way as its column segment. */
+export function Swatch({ series }: { series: (typeof SERIES)[number] }) {
+  return <span aria-hidden="true" className={`size-3 shrink-0 ring-1 ring-border ${series.fill}`} style={series.style} />;
 }

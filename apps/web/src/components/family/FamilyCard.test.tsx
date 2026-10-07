@@ -46,6 +46,22 @@ function seed() {
   });
 }
 
+/** A lesson this week: two questions right on her own, one right with help, one not yet, and last week's answer that must not count. */
+function lessonThisWeek() {
+  const quiz = (i: number, correct: boolean, assisted = false, at = NOW - 5 * H + i * 60_000) =>
+    ({ id: `q${i}`, profileId: "ada", at, type: "quiz_answered", courseId: "c1", lessonId: "l1", sceneId: `s${i}`, correct, assisted }) as const;
+  update((s) => {
+    s.activity = [
+      quiz(0, true),
+      quiz(1, true),
+      quiz(2, true, true),
+      quiz(3, false),
+      quiz(4, true, false, NOW - 9 * 24 * H),
+      { id: "done", profileId: "ada", at: NOW - 4 * H, type: "lesson_completed", courseId: "c1", lessonId: "l1", seconds: 120 },
+    ];
+  });
+}
+
 describe("FamilyCard", () => {
   it("shows what needs the grown-up first, then today, then the week in counted numbers", () => {
     seed();
@@ -54,7 +70,7 @@ describe("FamilyCard", () => {
     // A safety note stays in sight, outside the folded notes.
     expect(within(card).getAllByText("Ada wrote something worrying in Talk.")[0].closest("details")).toBeNull();
     expect(within(card).getByText("Ada has a test in 2 days, “Fractions test”, and no prep set is finished yet.")).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: "Open the test" })).toHaveAttribute("href", "/calendar/t1");
+    expect(within(card).getByRole("link", { name: "Hand over to Ada to prep: Fractions test" })).toHaveAttribute("href", "/home");
     expect(within(card).getByRole("link", { name: "Open Ada's page" })).toHaveAttribute("href", "/family/ada");
     expect(within(card).getByText("Last active today", { exact: false })).toBeInTheDocument();
     // Today: the prep set for the test leads the plan.
@@ -68,10 +84,25 @@ describe("FamilyCard", () => {
     expect(within(card).getByText("Add within 10", { exact: false })).toBeInTheDocument();
   });
 
+  it("adds this week's lesson questions to the practice answers, each counted once", () => {
+    seed();
+    lessonThisWeek();
+    render(<FamilyCard child={ada} now={NOW} />);
+    const card = screen.getByRole("article", { name: "Ada" });
+    const figure = (label: string) => within(card).getByText(label).parentElement!.querySelector("dd")!.textContent;
+    // Practice: 2 own, 1 helped, 1 not yet. Lesson: 2 own, 1 helped, 1 not yet (last week's answer left out).
+    expect(figure("Right on own")).toBe("4");
+    expect(figure("Right with help")).toBe("2");
+    expect(figure("Not yet")).toBe("2");
+    expect(figure("Lessons finished")).toBe("1");
+    // 4 answers × 30 s and a 120 s lesson.
+    expect(figure("Minutes learning")).toBe("4");
+  });
+
   it("hands the device to the child from the keyboard", async () => {
     seed();
     render(<FamilyCard child={ada} now={NOW} />);
-    const open = screen.getAllByRole("link", { name: "Open Ada's Today" }).at(-1)!;
+    const open = screen.getByRole("link", { name: "Hand over to Ada" });
     open.focus();
     await userEvent.keyboard("{Enter}");
     expect(read().session.profileId).toBe("ada");

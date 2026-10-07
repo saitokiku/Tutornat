@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { FamilyCard } from "@/components/family/FamilyCard";
+import { HandoverScope } from "@/components/family/Handover";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { EmptyState, btn } from "@/components/ui";
@@ -11,10 +12,14 @@ import { learnersOf } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
 
 export default function FamilyPage() {
+  // The cards hand the device to a child; the scope keeps the grown-ups-only Guard from redirecting
+  // that hand-over to Today before it reaches the page the link points at.
   return (
-    <Guard need="parent">
-      <Family />
-    </Guard>
+    <HandoverScope>
+      <Guard need="parent">
+        <Family />
+      </Guard>
+    </HandoverScope>
   );
 }
 
