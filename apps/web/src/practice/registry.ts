@@ -15,6 +15,7 @@ import { MATH_6_7_MORE } from "./math/g6to7-more";
 import { MATH_8_9_MORE } from "./math/g8to9-more";
 import { ENGLISH_GRAMMAR_3_5 } from "./english/grammar-35";
 import { ENGLISH_READING_3_5 } from "./english/reading-35";
+import { ENGLISH_GRAMMAR_6_9 } from "./english/grammar-69";
 
 export const STRANDS: Skill[][] = [
   ENGLISH_K_4,
@@ -31,4 +32,5 @@ export const STRANDS: Skill[][] = [
   MATH_8_9_MORE,
   ENGLISH_GRAMMAR_3_5,
   ENGLISH_READING_3_5,
+  ENGLISH_GRAMMAR_6_9,
 ];
