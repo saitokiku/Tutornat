@@ -83,8 +83,9 @@ caption and the edge button take pointer events.
   hint appearing above the target), CSS transitions (the tutor drawer's padding sliding away) start
   them, and a 300ms look at the target's box catches anything else (an image loading above it).
 - **Caption:** panel, ink text, hairline, soft shadow, 14px radius, a pointer toward the target. It goes
-  on a side where it fits and covers least of what matters — the question and headings, answer fields,
-  whatever has focus; on a tie below, then above, then beside. For a part of a drawing it sits outside
+  on a side where it fits and covers least of what matters — the question and headings, pictures
+  (`role="img"`: the problem's visual), answer fields, whatever has focus; on a tie below, then above,
+  then beside. For a part of a drawing it sits outside
   the whole drawing, pointing in. It never covers the target unless no side can hold it. Short captions
   sit on one line with "Got it"; walkthroughs show `2 of 4`, Back and Next / Done. For keyboard users
   (last input was a key) a small "`F6` brings you here" line shows until focus is inside.

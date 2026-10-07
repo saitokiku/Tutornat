@@ -68,8 +68,8 @@ const union = (a: Box, b: Box): Box => {
   return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
 };
 
-/** What the floating caption should not cover: the question and headings, answer fields, whatever has focus. */
-const KEEP = 'h1, h2, h3, [role="heading"], input:not([type="hidden"]), textarea, select';
+/** What the floating caption should not cover: the question and headings, its picture, answer fields, whatever has focus. */
+const KEEP = 'h1, h2, h3, [role="heading"], [role="img"], input:not([type="hidden"]), textarea, select';
 /** What the phone bar should not cover: fields (the chat box, the answer) and whatever has focus. */
 const KEEP_PHONE = 'input:not([type="hidden"]), textarea, select, [contenteditable="true"], [role="textbox"]';
 
