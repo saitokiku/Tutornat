@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import type { Skill } from "../types";
 import { fromBank, type BankLevel } from "./k5-more/bank";
 import { daylight, habitatSurvey, weatherChart } from "./k5-more/computed-early";
+import { BANKS_1 } from "./k5-more/grade-1";
 import { BANKS_K } from "./k5-more/grade-k";
 
 // K–5 science, second strand: the NGSS performance expectations the first strand (early.ts) does not
@@ -13,78 +14,31 @@ import { BANKS_K } from "./k5-more/grade-k";
 
 export type { BankLevel, Entry, Option, Pair } from "./k5-more/bank";
 
-export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K };
+export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1 };
 
 const fromBanks = (id: string) => (r: Rng, level: number, locale: Locale) => fromBank(r, BANKS[id][level - 1], locale);
 
+type Meta = Pick<Skill, "id" | "grade" | "standard" | "prereqs" | "levels"> & { en: string; es: string };
+/** A hand-written bank skill ("draft" until a teacher reviews it). */
+const draft = ({ en, es, ...m }: Meta): Skill => ({ ...m, subject: "science", title: { en, es }, content: "draft", generate: fromBanks(m.id) });
+/** A skill whose answers are worked out from the numbers the generator picks. */
+const computed = ({ en, es, ...m }: Meta, generate: Skill["generate"]): Skill => ({ ...m, subject: "science", title: { en, es }, content: "computed", generate });
+
 export const SCIENCE_K_5_MORE: Skill[] = [
   // ── Kindergarten ──
-  {
-    id: "s.weather.chart",
-    subject: "science",
-    grade: "K",
-    title: { en: "Weather tallies", es: "Contar el tiempo" },
-    standard: "K-ESS2-1",
-    prereqs: ["s.weather"],
-    content: "computed",
-    levels: 2,
-    generate: weatherChart,
-  },
-  {
-    id: "s.sun.warms",
-    subject: "science",
-    grade: "K",
-    title: { en: "Sunlight warms; shade cools", es: "El sol calienta; la sombra refresca" },
-    standard: "K-PS3-1",
-    prereqs: ["s.weather"],
-    content: "draft",
-    levels: 2,
-    generate: fromBanks("s.sun.warms"),
-  },
-  {
-    id: "s.living.change",
-    subject: "science",
-    grade: "K",
-    title: { en: "Living things change their home", es: "Los seres vivos cambian su entorno" },
-    standard: "K-ESS2-2",
-    prereqs: ["s.needs"],
-    content: "draft",
-    levels: 2,
-    generate: fromBanks("s.living.change"),
-  },
-  {
-    id: "s.weather.ready",
-    subject: "science",
-    grade: "K",
-    title: { en: "Getting ready for storms", es: "Prepararse para las tormentas" },
-    standard: "K-ESS3-2",
-    prereqs: ["s.weather"],
-    content: "draft",
-    levels: 1,
-    generate: fromBanks("s.weather.ready"),
-  },
+  computed({ id: "s.weather.chart", grade: "K", en: "Weather tallies", es: "Contar el tiempo", standard: "K-ESS2-1", prereqs: ["s.weather"], levels: 2 }, weatherChart),
+  draft({ id: "s.sun.warms", grade: "K", en: "Sunlight warms; shade cools", es: "El sol calienta; la sombra refresca", standard: "K-PS3-1", prereqs: ["s.weather"], levels: 2 }),
+  draft({ id: "s.living.change", grade: "K", en: "Living things change their home", es: "Los seres vivos cambian su entorno", standard: "K-ESS2-2", prereqs: ["s.needs"], levels: 2 }),
+  draft({ id: "s.weather.ready", grade: "K", en: "Getting ready for storms", es: "Prepararse para las tormentas", standard: "K-ESS3-2", prereqs: ["s.weather"], levels: 1 }),
   // ── Grade 1 ──
-  {
-    id: "s.daylight.hours",
-    subject: "science",
-    grade: "1",
-    title: { en: "Daylight through the year", es: "La luz del día durante el año" },
-    standard: "1-ESS1-2",
-    prereqs: ["s.weather.chart"],
-    content: "computed",
-    levels: 3,
-    generate: daylight,
-  },
+  draft({ id: "s.sound.vibrate", grade: "1", en: "Sound and vibration", es: "El sonido y las vibraciones", standard: "1-PS4-1", prereqs: [], levels: 1 }),
+  draft({ id: "s.light.see", grade: "1", en: "Light lets us see", es: "La luz nos deja ver", standard: "1-PS4-2", prereqs: [], levels: 1 }),
+  draft({ id: "s.light.through", grade: "1", en: "Light and materials", es: "La luz y los materiales", standard: "1-PS4-3", prereqs: ["s.light.see"], levels: 1 }),
+  draft({ id: "s.signals", grade: "1", en: "Signals with light and sound", es: "Señales con luz y sonido", standard: "1-PS4-4", prereqs: ["s.sound.vibrate", "s.light.see"], levels: 1 }),
+  draft({ id: "s.parts.jobs", grade: "1", en: "Plant and animal parts", es: "Partes de plantas y animales", standard: "1-LS1-1", prereqs: ["s.needs"], levels: 2 }),
+  draft({ id: "s.parents.young", grade: "1", en: "Parents and their young", es: "Los padres y sus crías", standard: "1-LS1-2", prereqs: ["s.living"], levels: 2 }),
+  draft({ id: "s.sky.patterns", grade: "1", en: "Patterns in the sky", es: "Patrones en el cielo", standard: "1-ESS1-1", prereqs: [], levels: 1 }),
+  computed({ id: "s.daylight.hours", grade: "1", en: "Daylight through the year", es: "La luz del día durante el año", standard: "1-ESS1-2", prereqs: ["s.sky.patterns", "s.weather.chart"], levels: 3 }, daylight),
   // ── Grade 2 ──
-  {
-    id: "s.habitat.survey",
-    subject: "science",
-    grade: "2",
-    title: { en: "Counting living things in habitats", es: "Contar seres vivos en los hábitats" },
-    standard: "2-LS4-1",
-    prereqs: ["s.habitats"],
-    content: "computed",
-    levels: 3,
-    generate: habitatSurvey,
-  },
+  computed({ id: "s.habitat.survey", grade: "2", en: "Counting living things in habitats", es: "Contar seres vivos en los hábitats", standard: "2-LS4-1", prereqs: ["s.habitats"], levels: 3 }, habitatSurvey),
 ];

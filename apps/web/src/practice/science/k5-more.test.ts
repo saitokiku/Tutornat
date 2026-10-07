@@ -17,7 +17,14 @@ const PLAN = [
   ["s.sun.warms", "K", "K-PS3-1", ["s.weather"], 2, "draft"],
   ["s.living.change", "K", "K-ESS2-2", ["s.needs"], 2, "draft"],
   ["s.weather.ready", "K", "K-ESS3-2", ["s.weather"], 1, "draft"],
-  ["s.daylight.hours", "1", "1-ESS1-2", ["s.weather.chart"], 3, "computed"],
+  ["s.sound.vibrate", "1", "1-PS4-1", [], 1, "draft"],
+  ["s.light.see", "1", "1-PS4-2", [], 1, "draft"],
+  ["s.light.through", "1", "1-PS4-3", ["s.light.see"], 1, "draft"],
+  ["s.signals", "1", "1-PS4-4", ["s.sound.vibrate", "s.light.see"], 1, "draft"],
+  ["s.parts.jobs", "1", "1-LS1-1", ["s.needs"], 2, "draft"],
+  ["s.parents.young", "1", "1-LS1-2", ["s.living"], 2, "draft"],
+  ["s.sky.patterns", "1", "1-ESS1-1", [], 1, "draft"],
+  ["s.daylight.hours", "1", "1-ESS1-2", ["s.sky.patterns", "s.weather.chart"], 3, "computed"],
   ["s.habitat.survey", "2", "2-LS4-1", ["s.habitats"], 3, "computed"],
 ] as const;
 
