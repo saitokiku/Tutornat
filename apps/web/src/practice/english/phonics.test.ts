@@ -1,0 +1,322 @@
+import { describe, expect, it } from "vitest";
+import { check } from "../answer";
+import { makeItem } from "../skills";
+import { ENGLISH_PHONICS, PHONICS_BANKS, type Q } from "./phonics";
+
+// The phonics banks are hand-written, so these tests check them two ways: the shape every item must
+// have (audio script, pictures, tags), and each answer key and misconception tag re-derived here by a
+// separate rule (first letter, last sound, vowel pattern, sound count from spelling rules…).
+
+const TABLE: [id: string, grade: string, standard: string, prereqs: string[], levels: number][] = [
+  ["e.letter.names", "K", "RF.K.1d", [], 2],
+  ["e.first.sound", "K", "RF.K.2d", [], 1],
+  ["e.final.sound", "K", "RF.K.2d", ["e.first.sound"], 1],
+  ["e.middle.vowel", "K", "RF.K.2d", ["e.final.sound"], 2],
+  ["e.word.families", "K", "RF.K.2a", ["e.rhyme"], 2],
+  ["e.blend.onset", "K", "RF.K.2c", ["e.word.families"], 2],
+  ["e.sound.swap", "K", "RF.K.2e", ["e.blend.onset"], 2],
+  ["e.segment.sounds", "1", "RF.1.2d", ["e.sound.swap"], 1],
+];
+
+/** Levels a pre-reader answers by listening: every choice is a spoken picture. */
+const LISTENING: [string, number][] = [
+  ["e.first.sound", 1], ["e.final.sound", 1], ["e.middle.vowel", 1], ["e.word.families", 1], ["e.blend.onset", 1], ["e.sound.swap", 1],
+];
+/** Levels where reading the choices (or finding a letter shape) is the skill: choices are not read aloud. */
+const SILENT: [string, number][] = [
+  ["e.letter.names", 1], ["e.letter.names", 2], ["e.word.families", 2], ["e.blend.onset", 2], ["e.sound.swap", 2],
+];
+
+const LOCALES = ["en", "es"] as const;
+type L = (typeof LOCALES)[number];
+const SEEDS = Array.from({ length: 240 }, (_, i) => i * 104729 + 7);
+/** Lower case without accents; ñ stays ñ, since it is its own letter and sound. */
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/n\u0303/g, "ñ").replace(/\p{Diacritic}/gu, "");
+const key = (q: Q) => q.choices[0].label;
+const lv = (id: string, level: number, locale: L) => PHONICS_BANKS[id][level - 1].map((e) => e[locale]);
+const qs = (id: string, locale: L) => PHONICS_BANKS[id].flat().map((e) => e[locale]);
+const strings = (q: Q) => [q.prompt, q.say, q.alt ?? "", ...q.hints, ...q.steps, ...q.choices.flatMap((c) => [c.label, c.say ?? ""])];
+const label = (q: Q, why: string) => q.choices.find((c) => c.why === why)?.label ?? "";
+const vowels = (w: string) => norm(w).replace(/[^aeiou]/g, "");
+const frame = (w: string) => norm(w).replace(/[aeiou]/g, "");
+
+describe("ENGLISH_PHONICS skill list", () => {
+  it("matches the skill table: ids, order, grades, standards, prereqs, levels", () => {
+    expect(ENGLISH_PHONICS.map((s) => s.id)).toEqual(TABLE.map((t) => t[0]));
+    for (const [id, grade, standard, prereqs, levels] of TABLE) {
+      const s = ENGLISH_PHONICS.find((k) => k.id === id)!;
+      expect([s.grade, s.standard, s.prereqs, s.levels, s.subject, s.content], id).toEqual([grade, standard, prereqs, levels, "english", "draft"]);
+      expect(s.title.en && s.title.es, id).toBeTruthy();
+    }
+  });
+});
+
+describe.each(TABLE.map((t) => [t[0]] as const))("%s bank", (id) => {
+  const bank = PHONICS_BANKS[id];
+
+  it("has at least 12 distinct items per level in each language", () => {
+    for (const level of bank)
+      for (const locale of LOCALES) expect(new Set(level.map((e) => JSON.stringify(e[locale]))).size, `${id} ${locale}`).toBeGreaterThanOrEqual(12);
+  });
+
+  it("has complete, well-formed items in English and Spanish", () => {
+    for (const locale of LOCALES)
+      for (const q of qs(id, locale)) {
+        const where = `${id} ${locale} "${q.prompt}" / ${key(q)}`;
+        expect(q.prompt.trim() && q.say.trim(), where).toBeTruthy();
+        expect(q.say, `${where} notation in say`).not.toMatch(/\^|\d\/\d|\{|\}|___|\/[a-z]+\//);
+        expect(q.choices.length, where).toBeGreaterThanOrEqual(3);
+        expect(q.choices.length, where).toBeLessThanOrEqual(4);
+        const labels = q.choices.map((c) => c.label);
+        expect(labels.every((l) => l.trim()), where).toBe(true);
+        expect(new Set(labels).size, `${where} duplicate choices`).toBe(labels.length);
+        expect(q.hints.length, where).toBe(3);
+        expect(q.hints.every((h) => h.trim()), where).toBe(true);
+        expect(q.steps.length, where).toBeGreaterThanOrEqual(1);
+        expect(q.steps.length, where).toBeLessThanOrEqual(4);
+        expect(norm(q.steps.at(-1)!), `${where} last step names the answer`).toContain(norm(key(q)));
+        if (q.picture) expect(q.alt?.trim(), `${where} alt`).toBeTruthy();
+        for (const s of strings(q)) expect(s, `${where} filler`).not.toMatch(/great job|good job|awesome|well done|amazing|let's dive|excelente|genial|buen trabajo|muy bien/i);
+        if (locale === "en") for (const s of strings(q)) expect(s, `${where} exclamation`).not.toContain("!");
+      }
+  });
+
+  it("tags every wrong choice with a kebab-case misconception, never the key", () => {
+    for (const locale of LOCALES)
+      for (const q of qs(id, locale)) {
+        expect(q.choices[0].why, `${id} ${q.say} key has a tag`).toBeUndefined();
+        for (const c of q.choices.slice(1)) expect(c.why, `${id} ${locale} ${q.say} ${c.label}`).toMatch(/^[a-z]+(-[a-z]+)+$|^[a-z]+$/);
+      }
+  });
+
+  it("keeps K–2 English sentences to 10 words or fewer", () => {
+    for (const q of qs(id, "en"))
+      for (const text of [q.prompt, q.say, ...q.hints, ...q.steps])
+        for (const sentence of text.split(/(?<=[.?:]”?)\s+/)) {
+          const words = sentence.split(/\s+/).filter((w) => /[\p{L}\d]/u.test(w));
+          expect(words.length, `${id}: "${sentence}"`).toBeLessThanOrEqual(10);
+        }
+  });
+});
+
+describe.each(ENGLISH_PHONICS.map((s) => [s.id, s] as const))("%s generator", (id, skill) => {
+  it("picks one slot for both languages and keys it correctly (240 seeds a level)", () => {
+    for (let level = 1; level <= skill.levels; level++) {
+      const bank = PHONICS_BANKS[id][level - 1];
+      const positions = new Set<number>();
+      for (const seed of SEEDS) {
+        const slots = LOCALES.map((locale) => {
+          const item = makeItem(id, level, seed, locale);
+          const slot = bank.findIndex((e) => e[locale].hints === item.hints);
+          const where = `${id} L${level} seed ${seed} ${locale}`;
+          expect(slot, where).toBeGreaterThanOrEqual(0);
+          const q = bank[slot][locale];
+          expect(item.answer.kind, where).toBe("choice");
+          if (item.answer.kind !== "choice") return slot;
+          const index = item.answer.index;
+          expect(item.choices![index].label, where).toBe(key(q));
+          expect(item.choices![index].why, where).toBeUndefined();
+          expect(item.choices!.filter((c) => c.why).length, where).toBe(q.choices.length - 1);
+          expect(item.choices!.map((c) => c.label).sort(), where).toEqual(q.choices.map((c) => c.label).sort());
+          item.choices!.forEach((_, i) => expect(check(item.answer, i).correct, `${where} choice ${i}`).toBe(i === index));
+          positions.add(index);
+          return slot;
+        });
+        expect(slots[0], `${id} L${level} seed ${seed}: same slot in en and es`).toBe(slots[1]);
+      }
+      expect(positions.size, `${id} L${level}: key always in the same place`).toBeGreaterThan(1);
+    }
+  });
+});
+
+describe("audio scripts", () => {
+  it("listening levels: a spoken line, and every choice is a spoken picture", () => {
+    for (const [id, level] of LISTENING)
+      for (const locale of LOCALES)
+        for (const q of lv(id, level, locale)) {
+          expect(q.say.trim(), `${id} ${q.prompt}`).toBeTruthy();
+          for (const c of q.choices) expect(c.say?.trim() && c.picture, `${id} L${level} ${locale} ${q.say} ${c.label}`).toBeTruthy();
+        }
+  });
+
+  it("reading levels never read the choices aloud, and the line never says the key", () => {
+    for (const [id, level] of SILENT)
+      for (const locale of LOCALES)
+        for (const q of lv(id, level, locale)) {
+          expect(q.choices.some((c) => c.say), `${id} L${level} ${q.say}`).toBe(false);
+          if (id !== "e.letter.names") expect(norm(q.say).split(/[^\p{L}]+/u), `${id} ${q.say}`).not.toContain(norm(key(q)));
+        }
+  });
+});
+
+// ---- Answer keys, checked another way ----
+
+/** The last sound of an English word from its spelling: drop a silent e, then read the final grapheme. */
+function lastSound(w: string) {
+  const s = /[aeiou][^aeiou]e$/.test(w) ? w.slice(0, -1) : w;
+  const m = /(tch|ck|ss|ll|sh|ch|ng|[a-z])$/.exec(s)!;
+  return ({ tch: "ch", ck: "k", ss: "s", ll: "l" } as Record<string, string>)[m[1]] ?? m[1];
+}
+/** Spelled the same from the last two letters on: the rhyme test used for these banks. */
+const rhymes = (a: string, b: string) => norm(a).slice(-2) === norm(b).slice(-2);
+const ES_NAMES: Record<string, string> = { eme: "M", eñe: "Ñ", e: "E", pe: "P", be: "B", o: "O", ele: "L", te: "T", hache: "H", ge: "G", ene: "N", u: "U", ese: "S", efe: "F", erre: "R", de: "D", cu: "Q", a: "A" };
+
+describe("answer keys, checked another way (kindergarten)", () => {
+  it("letter names: the key is the letter named; small letters pair with their capital", () => {
+    for (const locale of LOCALES) {
+      for (const q of lv("e.letter.names", 1, locale)) {
+        const named = locale === "en" ? /letter (\S)\.$/.exec(q.say)![1] : ES_NAMES[/mayúscula (\S+)\.$/.exec(q.say)![1]];
+        expect(key(q), q.say).toBe(named);
+        for (const c of q.choices) expect(c.label, q.say).toMatch(/^\p{Lu}$/u);
+      }
+      for (const q of lv("e.letter.names", 2, locale)) {
+        const capital = /(\p{Lu})\?$/u.exec(q.prompt)![1];
+        expect(key(q).toUpperCase(), q.prompt).toBe(capital);
+        for (const c of q.choices.slice(1)) expect(c.label.toUpperCase(), q.prompt).not.toBe(capital);
+        for (const c of q.choices) expect(c.label, q.prompt).toMatch(/^\p{Ll}$/u);
+        // A reversal tag only on letters that are reversals or flips of each other.
+        const mirror = ["bd", "bp", "bq", "dp", "dq", "pq", "nu", "mw"];
+        for (const c of q.choices.slice(1))
+          expect(c.why === "mirror-letter", `${q.prompt} ${c.label}`).toBe(mirror.includes([key(q), c.label].sort().join("")));
+      }
+    }
+  });
+
+  it("first sound: the key starts like the target and does not rhyme; the near miss rhymes", () => {
+    for (const locale of LOCALES)
+      for (const q of qs("e.first.sound", locale)) {
+        const t = norm(/(?:like|como) (\S+)\?$/.exec(q.prompt)![1]);
+        const [k, near, other] = q.choices.map((c) => norm(c.label));
+        expect(k[0], q.prompt).toBe(t[0]);
+        expect(/^(sh|ch|th|wh|ll)/.test(k) || /^(sh|ch|th|wh|ll)/.test(t), q.prompt).toBe(false);
+        expect(rhymes(k, t), `${q.prompt} key rhymes`).toBe(false);
+        expect(rhymes(near, t) && near[0] !== t[0], `${q.prompt} ${near}`).toBe(true);
+        expect(other[0] !== t[0] && !rhymes(other, t), `${q.prompt} ${other}`).toBe(true);
+      }
+  });
+
+  it("final sound: the key ends with the target's last sound; the near miss only starts like it", () => {
+    for (const locale of LOCALES)
+      for (const q of qs("e.final.sound", locale)) {
+        const t = norm(/(?:like|como) (\S+)\?$/.exec(q.prompt)![1]);
+        const last = (w: string) => (locale === "en" ? lastSound(w) : w.slice(-1));
+        const [k, near, other] = q.choices.map((c) => norm(c.label));
+        expect(last(k), q.prompt).toBe(last(t));
+        expect(rhymes(k, t), `${q.prompt} key rhymes`).toBe(false);
+        expect(near[0] === t[0] && last(near) !== last(t), `${q.prompt} ${near}`).toBe(true);
+        expect(last(other), `${q.prompt} ${other}`).not.toBe(last(t));
+      }
+  });
+
+  it("middle vowel: the key has the target's vowels; the consonant tag means only the vowel changed", () => {
+    for (const locale of LOCALES) {
+      for (const q of lv("e.middle.vowel", 1, locale)) {
+        const t = /(?:as|que) (\S+)\?$/.exec(q.prompt)![1];
+        expect(vowels(key(q)), q.prompt).toBe(vowels(t));
+        if (locale === "en") expect(vowels(t), t).toMatch(/^[aeiou]$/);
+        else expect(new Set(vowels(t)).size, t).toBe(1);
+        for (const c of q.choices.slice(1)) {
+          expect(vowels(c.label), `${t} ${c.label}`).not.toBe(vowels(t));
+          expect(c.why === "matched-consonants", `${t} ${c.label}`).toBe(frame(c.label) === frame(t));
+        }
+      }
+      for (const q of lv("e.middle.vowel", 2, locale)) {
+        const shown = q.prompt.split(" ").at(-1)!;
+        const said = norm(q.say.split(".")[0]);
+        expect(norm(shown.replace("___", key(q))), q.prompt).toBe(said);
+        expect(said.search(/[aeiou]/), q.prompt).toBe(shown.indexOf("___"));
+        for (const c of q.choices) expect("aeiou", q.prompt).toContain(c.label);
+      }
+    }
+  });
+
+  it("word families: members and key end with the family; tags match how each miss differs", () => {
+    for (const locale of LOCALES) {
+      for (const q of lv("e.word.families", 1, locale)) {
+        const fam = norm(/-(\S+?)(?: family)?\?$/.exec(q.prompt)![1]);
+        const members = q.say.split(".")[0].split(", ").map(norm);
+        expect(members.length, q.say).toBe(3);
+        for (const m of [...members, norm(key(q))]) expect(m.endsWith(fam), `${q.say} ${m}`).toBe(true);
+        for (const c of q.choices.slice(1)) expect(norm(c.label).endsWith(fam), `${q.say} ${c.label}`).toBe(false);
+        const near = norm(label(q, "same-vowel-only"));
+        expect(near, `${q.say} ${near}`).toContain(fam.match(/[aeiou]/)![0]);
+      }
+      for (const q of lv("e.word.families", 2, locale)) {
+        const fam = norm(/-(\S+?) /.exec(q.prompt)![1]);
+        const k = norm(key(q));
+        expect(k.endsWith(fam), q.prompt).toBe(true);
+        for (const c of q.choices.slice(1)) {
+          const w = norm(c.label);
+          const why = w.endsWith(fam) && w[0] !== k[0] ? "wrong-first-letter" : frame(w) === frame(k) ? "wrong-vowel" : w[0] === k[0] && !w.endsWith(fam) ? "wrong-ending" : "?";
+          expect(c.why, `${k} ${w}`).toBe(why);
+        }
+      }
+    }
+  });
+
+  it("blending: the key is the start plus the ending; each miss changes the part its tag names", () => {
+    for (const q of lv("e.blend.onset", 1, "en")) {
+      const [, anchor, rime] = /of (\S+)\. Then add (\S+)\.$/.exec(q.prompt)!;
+      expect(key(q), q.prompt).toBe(anchor[0] + rime);
+      const start = label(q, "wrong-start"), end = label(q, "wrong-end");
+      expect(start.endsWith(rime) && start[0] !== anchor[0], `${q.prompt} ${start}`).toBe(true);
+      expect(end[0] === anchor[0] && !end.endsWith(rime), `${q.prompt} ${end}`).toBe(true);
+    }
+    for (const q of lv("e.blend.onset", 1, "es")) {
+      const [a, b] = /sílabas: (\S+)… (\S+)\.$/.exec(q.prompt)!.slice(1).map(norm);
+      expect(norm(key(q)), q.prompt).toBe(a + b);
+      const start = norm(label(q, "wrong-start")), end = norm(label(q, "wrong-end"));
+      expect(start.endsWith(b) && !start.startsWith(a), `${q.prompt} ${start}`).toBe(true);
+      expect(end.startsWith(a) && end !== a + b, `${q.prompt} ${end}`).toBe(true);
+    }
+    for (const locale of LOCALES)
+      for (const q of lv("e.blend.onset", 2, locale)) {
+        const [a, b] = q.prompt.split(" + ");
+        expect(key(q), q.prompt).toBe(a + b);
+        expect(label(q, "dropped-start"), q.prompt).toBe(b);
+        const v = label(q, "wrong-vowel"), s = label(q, "wrong-start");
+        expect(frame(v) === frame(a + b) && vowels(v) !== vowels(a + b), `${q.prompt} ${v}`).toBe(true);
+        expect(s.endsWith(b) && !s.startsWith(a), `${q.prompt} ${s}`).toBe(true);
+      }
+  });
+
+  it("sound swap: the key keeps the word and changes exactly the part asked for", () => {
+    for (const q of lv("e.sound.swap", 1, "en")) {
+      const [, w, clue] = /^(\S+)\. Change its first sound to the start of (\S+)\.$/.exec(q.prompt)!;
+      expect(key(q), q.prompt).toBe(clue[0] + w.toLowerCase().slice(1));
+      expect(label(q, "kept-old-sound"), q.prompt).toBe(w.toLowerCase());
+      expect(label(q, "wrong-new-sound")[0], q.prompt).not.toBe(clue[0]);
+    }
+    for (const q of lv("e.sound.swap", 1, "es")) {
+      const [, w, old, neu] = /^(\S+)\. Cambia (\S+) por (\S+)\.$/.exec(q.prompt)!;
+      const rest = w.toLowerCase().slice(old.length);
+      expect(w.toLowerCase().startsWith(old), q.prompt).toBe(true);
+      expect(key(q), q.prompt).toBe(neu + rest);
+      const other = label(q, "wrong-new-sound");
+      expect(other.endsWith(rest) && !other.startsWith(neu), `${q.prompt} ${other}`).toBe(true);
+    }
+    for (const locale of LOCALES)
+      for (const q of lv("e.sound.swap", 2, locale)) {
+        const [, old, w, neu] = /(?:the|la) (\S) (?:in|de) (\S+) (?:to|por) (\S)\.$/.exec(q.prompt)!;
+        expect(w.split(old).length, `${q.prompt}: one ${old}`).toBe(2);
+        expect(key(q), q.prompt).toBe(w.replace(old, neu));
+        expect(label(q, "kept-old-letter"), q.prompt).toBe(w);
+        expect(label(q, "wrong-new-letter").includes(neu), q.prompt).toBe(false);
+      }
+  });
+});
+
+describe("answer keys, checked another way (grade 1)", () => {
+  it("segmenting: the key equals the sound count from spelling rules; letter counts are tagged", () => {
+    const enUnits = (w: string) => (/[aeiou][^aeiou]e$/.test(w) ? w.slice(0, -1) : w).match(/sh|ch|th|ck|ng|ee|oo|oa|ai|ay|ea|ow|ey|oe|ll|gg|ss|./g)!.length;
+    // Spanish: ch, ll, rr and qu are one sound each; h alone makes no sound.
+    const esUnits = (w: string) => norm(w).replace(/(?<!c)h/g, "").match(/ch|ll|rr|qu|./g)!.length;
+    for (const locale of LOCALES)
+      for (const q of qs("e.segment.sounds", locale)) {
+        const w = /(?:in|tiene) (\S+)\?$/.exec(q.prompt)![1];
+        const n = locale === "en" ? enUnits(w) : esUnits(w);
+        expect(Number(key(q)), q.prompt).toBe(n);
+        for (const c of q.choices.slice(1)) expect(c.why === "counted-letters", `${w} ${c.label}`).toBe(Number(c.label) === w.length);
+      }
+  });
+});
