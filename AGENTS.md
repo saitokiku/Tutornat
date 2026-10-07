@@ -18,6 +18,7 @@ npm install
 npm run dev        # http://localhost:3000
 npm run verify     # lint + typecheck + tests + production build — must pass before committing
 npm test           # vitest only
+npm run e2e        # Playwright journey (parent + K + ES learner) at 1440 and 390 px
 ```
 
 ## Rules
