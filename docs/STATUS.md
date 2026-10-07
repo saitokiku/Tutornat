@@ -6,7 +6,7 @@ Plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-pl
 quests. Each stage starts only when the stage before it is merged and `npm run verify` is green.
 
 1. [x] **Contracts** — shared types, append-only registries with union merge, `logAct`, review state (55cfb79).
-2. [ ] **Parallel build** (isolated worktrees from 55cfb79; each package: build → two adversarial reviews → fix)
+2. [x] **Parallel build** (features and design done; content still in audit/fix) (isolated worktrees from 55cfb79; each package: build → two adversarial reviews → fix)
    - Features (13): intake + item page · calendar week · Today · practice inputs + runner · courses path +
      source-built courses · growth + nudges · learner model + outcomes · lesson stage + 7 widgets + narration ·
      tutor knowledge + photo · evals + spend caps + AI course cache · backend (DB, auth, sync, re-check,
@@ -18,7 +18,10 @@ quests. Each stage starts only when the stage before it is merged and `npm run v
    - Spotlight engine (the tutor points at anything on screen).
 3. [ ] **Merge as each package finishes** (owner: "merge also as you go so nothing gets lost") — cherry-pick
    onto `foundation`, typecheck + unit tests per merge, full verify + e2e per batch, push.
-   Merged so far: calendar, today, learner, family, intake, stage, courses, practice.
+   Merged (2026-10-07): all 13 feature packages - calendar, today, learner, family, intake, stage, courses,
+   practice, voice layer, AI infrastructure, backend, tutor, trust - plus the design system (system, shell,
+   landing) and the spotlight engine. Each: build → two adversarial reviews → fix → merge → typecheck + unit
+   tests; full verify + e2e per batch. Integration repairs merged as their own commits.
    **Use it after every batch** (owner: "use what you make … as feedback"): a hands-on pass in the browser
    as a grown-up, a K learner and an older learner; findings in [dogfood/](dogfood/) and fixed before the
    next batch. Pass 1: [dogfood/2026-10-07.md](dogfood/2026-10-07.md) (13 findings, 1 blocker).
