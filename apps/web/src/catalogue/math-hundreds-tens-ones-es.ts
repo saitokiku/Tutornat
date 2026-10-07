@@ -123,6 +123,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
               alt: "2 placas de cien y 4 barras de diez. Hay 3 cubitos sueltos.",
             },
             { type: "text", text: "2 centenas, 4 decenas y 3 unidades son 243." },
+            { type: "text", text: "Se lee: doscientos cuarenta y tres." },
             { type: "points", items: ["El 2 vale 2 centenas, o sea 200.", "El 4 vale 4 decenas, o sea 40.", "El 3 vale 3 unidades, o sea 3."] },
           ],
         },

@@ -123,6 +123,7 @@ const hundredsTensOnes: CatalogueEntry = {
               alt: "2 hundred flats, 4 ten rods and 3 single cubes.",
             },
             { type: "text", text: "2 hundreds, 4 tens and 3 ones make 243." },
+            { type: "text", text: "We read it: two hundred forty-three." },
             { type: "points", items: ["The 2 means 2 hundreds, or 200.", "The 4 means 4 tens, or 40.", "The 3 means 3 ones, or 3."] },
           ],
         },
