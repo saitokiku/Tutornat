@@ -166,6 +166,16 @@ test("offline with nothing on the device says offline, and the template is still
   await page.getByRole("button", { name: "Use a template instead" }).click();
   await expect(page.getByRole("button", { name: /Create course/ })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Template outline")).toBeVisible();
+
+  // An outline-only course says so, and points to a ready-made course that can be started right now.
+  await page.getByRole("button", { name: /Create course/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Knitting" })).toBeVisible();
+  await expect(page.getByText("This course is an outline for now. Its lessons get written when the tutor connects.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start", exact: true })).toHaveCount(0);
+  const meanwhile = page.locator("section", { hasText: "Ready to learn right now" });
+  await meanwhile.getByRole("button", { name: "Start" }).click();
+  await expect(page).toHaveURL(/\/learn\/[^/]+\/[^/]+$/);
+  await expect(page.getByText("Written by people", { exact: true }).filter({ visible: true })).toBeVisible();
 });
 
 test("“Change my request” comes back to the box with the request in it, and the box builds again", async ({ page }) => {
