@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { eq, sql } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { APPLIED_MIGRATION_SQL, newestMigration, rowsOf, type Db } from "./client";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { APPLIED_MIGRATION_SQL, getDb, newestMigration, rowsOf, serverMode, setDbForTests, type Db } from "./client";
 import { accounts, attempts, consentReceipts, courses, profiles, RECORD_TABLES, sessions } from "./schema";
 import { testDb } from "./testing";
 import { SYNC_LISTS } from "./wire";
@@ -27,6 +27,24 @@ describe("schema", () => {
     const [row] = rowsOf<{ at: string }>(await db.execute(sql.raw(APPLIED_MIGRATION_SQL)));
     expect(Number(row.at)).toBe(newestMigration());
     expect(newestMigration()).toBeGreaterThan(0);
+  });
+
+  it("opens Postgres in-process from DATABASE_URL=pglite:memory, migrated, for local development", async () => {
+    setDbForTests(null);
+    vi.stubEnv("DATABASE_URL", "");
+    try {
+      expect(serverMode()).toBe(false);
+      await expect(getDb()).rejects.toThrow(/browser-only/);
+      vi.stubEnv("DATABASE_URL", "pglite:memory");
+      expect(serverMode()).toBe(true);
+      const local = await getDb();
+      expect(local).not.toBe(db);
+      expect(rowsOf<{ n: number }>(await local.execute(sql`select count(*)::int as n from accounts`))[0].n).toBe(0);
+      expect(await getDb()).toBe(local);
+    } finally {
+      vi.unstubAllEnvs();
+      setDbForTests(db);
+    }
   });
 
   it("keeps one account per email", async () => {
