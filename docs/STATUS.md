@@ -1,5 +1,29 @@
 # Status
 
+## Final product — queue 3 (2026-10-07, daytime)
+
+Owner: "build a final product. the dashboard. the ultimate tutor, the shadoworker, the visual
+dashboard that makes academic life easy or learning new custom topics creates a course for you …
+feel free to go gung ho on anything removing or adding." Plus: the magic box sorts homework, assignments
+and coursework; the chatbot talks about topics and tutors; calendar and course organization show the
+path; deterministic knowledge from real APIs (OpenStax, fmhy list).
+
+Work top to bottom. Tick only after `npm run verify` passed and the work is committed. Preview only.
+
+In progress: R1 · check-ins without a commit: 0
+
+- [ ] R1. Knowledge layer `src/knowledge/` + `/api/know/*`: Wikipedia summaries (en/es, cited), dictionary (Datamuse defs), rhymes/syllables, books (Open Library, Gutendex, LibriVox), poems (PoetryDB), standards text (Common Standards Project). Server-side, cached, rate-limited, no learner identifiers forwarded. Tests with mocked fetch.
+- [ ] R2. Magic box = universal intake: homework / test / practice / learn, visible choice with a smart default; homework and tests become calendar items with linked skills and prep; practice starts a set; learn builds a course.
+- [ ] R3. Courses from real sources in demo mode: a topic course assembled from Wikipedia + dictionary + matching catalogue lesson + practice + sources, labelled; AI mode unchanged.
+- [ ] R4. Tutor that knows things: demo Talk answers with cited knowledge (wiki, definitions, lesson key points, practice, sources); AI tutor gets `look_up` and `define_word` tools; topic → skill matching fixed (fallacy → e.fallacies).
+- [ ] R5. Learn = the path: per subject, your courses in order with progress and next lesson, the suggested next course, skills line, assigned-by-grown-up first; build at the top.
+- [ ] R6. Calendar = the week's path: each day shows its plan (done / projected), school items; event page for homework/tests (notes, attached text, linked skills, Get help, prep, done).
+- [ ] R7. Today dashboard: status strip (due today, test in N days, checks ready), plan, school, courses in progress, magic box; K–2 version stays picture-first.
+- [ ] R8. Growth on the evidence model (practice + lessons; proved/practicing per subject; week by week).
+- [ ] R9. Interactivity: tap-to-mark dots for counting items; number-line tap input for number-line items; family overview with nudges (overdue check, stuck, test with no prep).
+- [ ] R10. e2e + a11y updated, screenshots, README/STATUS, preview deploy, push, report.
+
+
 ## Learning fabric — overnight queue 2 (owner asleep 2026-10-07 → morning)
 
 Spec: [specs/2026-10-07-learning-fabric-design.md](specs/2026-10-07-learning-fabric-design.md).
