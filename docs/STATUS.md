@@ -1,26 +1,35 @@
 # Status
 
-## Queue 3 — Milestone 1 of the 1.0 plan (dashboard, shadow worker, learner model)
+## Queue 4 — the 1.0 build, in order (started 2026-10-07; owner: "build it all now", come back at the end)
 
-Plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md) §7 M1. Work top
-to bottom. Tick only after `npm run verify` passed and the work is committed. Preview only. Needs
-nothing from the owner.
+Plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md). One sequence, no side
+quests. Each stage starts only when the stage before it is merged and `npm run verify` is green.
 
-In progress: (none) — waiting on the owner's go · check-ins without a commit: 0
-
-- [x] R1. Knowledge layer `src/knowledge/` + `/api/know/*` (done 2026-10-07).
-- [ ] 1.1 Intake classifier + magic box as universal intake (homework / test / practice / learn, visible choice).
-- [ ] 1.2 School item page (notes, attached text/photo, linked skills + status, Get help, prep set, resources, done).
-- [ ] 1.3 Calendar week shows each day's plan (done / projected).
-- [ ] 1.4 Learn = path per subject + reorder.
-- [ ] 1.5 Today status strip + courses in progress; K–2 variant.
-- [ ] 1.6 Growth on the evidence model.
-- [ ] 1.7 Family nudges (overdue check, stuck, test with no prep, idle 5 days).
-- [ ] 1.8 Interactive inputs: tap-to-mark dots, number-line tap, fraction-bar tap, clock set.
-- [ ] 1.9 Sitting design: clean finishes offer and never auto-start; "I'm done for today"; K–2 10-minute default.
-- [ ] 1.10 Learner model v1 (`learning/profile.ts`) + "How we teach {name}" on the child page.
-- [ ] 1.11 Teaching acts (`learning/outcomes.ts`) + "Is it working?" on the child page.
-- [ ] 1.12 e2e + a11y updated, screenshots, README/STATUS, preview deploy, push, report. Then Milestone 2.
+1. [x] **Contracts** — shared types, append-only registries with union merge, `logAct`, review state (55cfb79).
+2. [ ] **Parallel build** (isolated worktrees from 55cfb79; each package: build → two adversarial reviews → fix)
+   - Features (13): intake + item page · calendar week · Today · practice inputs + runner · courses path +
+     source-built courses · growth + nudges · learner model + outcomes · lesson stage + 7 widgets + narration ·
+     tutor knowledge + photo · evals + spend caps + AI course cache · backend (DB, auth, sync, re-check,
+     consent) · trust (privacy, export/delete, weekly email, /review, scrubbed logs) · voice layer.
+   - Content (19): math K–9 to ~150 skills, phonics K–2, grammar 3–9, ~90 original reading passages,
+     science K–9 to ~86 skills, 48 catalogue courses (EN + ES), ~95 checked sources + link checker.
+   - Design system (same world, max craft — owner choice): tokens, motion, primitives, K–2 band,
+     shell, landing; critique + accessibility audit from real screenshots.
+   - Spotlight engine (the tutor points at anything on screen).
+3. [ ] **Merge** — cherry-pick every package onto `foundation` in dependency order (system → features →
+   content → spotlight); resolve conflicts; act on each package's `requests`; `npm run verify`.
+4. [ ] **Integration** (sequential, each one package with review):
+   a. Voice conversation — the M6 "natural conversation" table: loop, tap-to-talk + hands-free,
+      turn-taking, spoken math, answering by voice, K–2, fallbacks, privacy.
+   b. Spotlight wiring — `data-spot` ids on every screen, `point_at` in the AI tutor, demo-tutor hint pointing.
+   c. Content backfill — misconception tags on the 134 original skills; switch skills to the touch pads;
+      new widgets used in the catalogue; writing responses (practice-only).
+   d. Design polish per screen against the new system (Today, practice, stage, Talk, calendar, item page,
+      Learn, growth, family, child page, settings, auth).
+5. [ ] **Cross-cutting review** — bugs, accessibility, honesty, security, privacy, persona UX (a 6-year-old,
+   a 9th grader before a test, a Spanish-speaking parent on a phone); fix loop until dry.
+6. [ ] **Ship the preview** — e2e + axe at 1440/390, screenshots, README/STATUS, preview deploy, push, the
+   final report with the one list of human parts.
 
 ## Learning fabric — overnight queue 2 (owner asleep 2026-10-07 → morning)
 
