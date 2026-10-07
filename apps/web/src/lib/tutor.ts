@@ -26,11 +26,12 @@ export const threadsOf = (s: StoreState, profileId: string) =>
 
 /**
  * A conversation turned to a skill: the tutor's help is meant to make the next try on it right. One act
- * per conversation (thread) and day; the outcome is resolved later from the evidence, never here.
+ * per conversation (thread) and day, with the practice set when the tutor sat beside one; the outcome is
+ * resolved later from the evidence, never here.
  */
-export function logTutorAct(profileId: string, threadId: string, skillId: string) {
+export function logTutorAct(profileId: string, threadId: string, skillId: string, setId?: string) {
   if (!getSkill(skillId)) return;
-  logAct({ profileId, kind: "tutor", intent: "next-try-right", skillId, ref: threadId }, { once: true });
+  logAct({ profileId, kind: "tutor", intent: "next-try-right", skillId, ref: threadId, ...(setId ? { setId } : {}) }, { once: true });
 }
 
 /**

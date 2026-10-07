@@ -71,6 +71,7 @@ function Panel({ ctx, learner, surface, onClose }: { ctx: DockContext; learner: 
             learner,
             surface,
             item: ctx.item,
+            setId: ctx.setId,
             tries: ctx.tries,
             lastAnswer: ctx.lastAnswer,
             title: getSkill(ctx.item.skillId)?.title[learner.locale] ?? "",

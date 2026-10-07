@@ -18,7 +18,7 @@ const item = makeItem("m.frac.addlike", 1, 7, "en");
 function Problem() {
   const dock = useTutorDock();
   return (
-    <button type="button" onClick={() => dock.open({ item, tries: 0 })}>
+    <button type="button" onClick={() => dock.open({ item, setId: "set-1", tries: 0 })}>
       Ask the tutor
     </button>
   );
@@ -48,7 +48,7 @@ describe("TutorDrawer", () => {
     expect(screen.getByRole("button", { name: "Give me a hint" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close" }).className).toContain("size-11");
     // Opening it is help: the problem is marked, and the tutor's act is on the record.
-    await waitFor(() => expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ skillId: "m.frac.addlike" })]));
+    await waitFor(() => expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ skillId: "m.frac.addlike", setId: "set-1", intent: "next-try-right" })]));
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

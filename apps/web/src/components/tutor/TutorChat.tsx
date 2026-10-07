@@ -39,6 +39,8 @@ export type ChatSetup = {
   learner: Profile;
   surface: TutorThread["surface"];
   item?: Item;
+  /** The practice set the problem is in, when the tutor sits beside one. */
+  setId?: string;
   tries?: number;
   lastAnswer?: string;
   lesson?: { title: string; scene: string };
@@ -272,7 +274,7 @@ function ChatView({
     const talked = !!setup.item || entries.some((e) => e.role === "learner");
     if (talked && skillId && !handled.current.has(`act:${skillId}`)) {
       handled.current.add(`act:${skillId}`);
-      logTutorAct(learner.id, threadId, skillId);
+      logTutorAct(learner.id, threadId, skillId, setup.item?.skillId === skillId ? setup.setId : undefined);
     }
     if (entries.some((e) => e.streaming)) return; // the transcript is saved when the reply is complete
     const firstAsk = entries.find((e) => e.role === "learner");
