@@ -6,7 +6,7 @@ export const maxDuration = 300;
 
 // Streams one JSON event per line: steps, the outline, each lesson that passed the gates, skips, done.
 export async function POST(req: Request) {
-  const m = model("build");
+  const m = await model("build");
   if (!m) return Response.json({ error: "demo" }, { status: 503 });
   if (limited(req, "course", 6)) return Response.json({ error: "rate" }, { status: 429 });
   const parsed = CourseRequest.safeParse(await req.json().catch(() => null));

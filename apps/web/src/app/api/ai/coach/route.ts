@@ -3,7 +3,7 @@ import { CoachRequest, writeCoachNote } from "@/lib/ai/build";
 import { limited } from "@/lib/server/rate";
 
 export async function POST(req: Request) {
-  const m = model("quick");
+  const m = await model("quick");
   if (!m) return Response.json({ error: "demo" }, { status: 503 });
   if (limited(req, "coach", 10)) return Response.json({ error: "rate" }, { status: 429 });
   const parsed = CoachRequest.safeParse(await req.json().catch(() => null));

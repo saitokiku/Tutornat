@@ -5,7 +5,7 @@ import { limited } from "@/lib/server/rate";
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
-  const m = model("build");
+  const m = await model("build");
   if (!m) return Response.json({ error: "demo" }, { status: 503 });
   if (limited(req, "extract", 10)) return Response.json({ error: "rate" }, { status: 429 });
   const parsed = ExtractRequest.safeParse(await req.json().catch(() => null));

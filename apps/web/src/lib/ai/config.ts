@@ -1,5 +1,4 @@
 import "server-only";
-import { createAnthropic } from "@ai-sdk/anthropic";
 import { gateway, type LanguageModel } from "ai";
 
 // Which AI runs, decided once per deployment from its environment. No silent fallback: if the
@@ -37,11 +36,17 @@ const DEFAULTS: Record<Role, { anthropic: string; gateway: string }> = {
 
 const ENV: Record<Role, string> = { talk: "KAIZEN_MODEL_TALK", build: "KAIZEN_MODEL_BUILD", quick: "KAIZEN_MODEL_QUICK" };
 
-export function model(role: Role): LanguageModel | null {
+export async function model(role: Role): Promise<LanguageModel | null> {
   const mode = aiMode();
   if (mode === "demo") return null;
   const override = process.env[ENV[role]];
-  if (mode === "anthropic") return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY, baseURL: ANTHROPIC_API })(override ?? DEFAULTS[role].anthropic);
+  if (mode === "anthropic") {
+    // The SDK builds a default client from ANTHROPIC_BASE_URL when it loads; an inherited empty or
+    // foreign value must not reach it. Loaded only when Anthropic is actually the provider.
+    delete process.env.ANTHROPIC_BASE_URL;
+    const { createAnthropic } = await import("@ai-sdk/anthropic");
+    return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY, baseURL: ANTHROPIC_API })(override ?? DEFAULTS[role].anthropic);
+  }
   const id = override ?? DEFAULTS[role].gateway;
   // Gateway models are limited to Anthropic's, matching the product's model policy.
   return gateway(id.startsWith("anthropic/") ? id : DEFAULTS[role].gateway);

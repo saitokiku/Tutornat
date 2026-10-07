@@ -5,7 +5,7 @@ import { tutorTurn, type TutorRequest } from "@/lib/ai/tutor";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const m = model("talk");
+  const m = await model("talk");
   if (!m) return Response.json({ error: "demo", mode: aiMode() }, { status: 503 });
   if (limited(req, "tutor", 30)) return Response.json({ error: "rate" }, { status: 429 });
   const body = (await req.json().catch(() => null)) as TutorRequest | null;
