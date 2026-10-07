@@ -16,8 +16,12 @@ quests. Each stage starts only when the stage before it is merged and `npm run v
    - Design system (same world, max craft — owner choice): tokens, motion, primitives, K–2 band,
      shell, landing; critique + accessibility audit from real screenshots.
    - Spotlight engine (the tutor points at anything on screen).
-3. [ ] **Merge** — cherry-pick every package onto `foundation` in dependency order (system → features →
-   content → spotlight); resolve conflicts; act on each package's `requests`; `npm run verify`.
+3. [ ] **Merge as each package finishes** (owner: "merge also as you go so nothing gets lost") — cherry-pick
+   onto `foundation`, typecheck + unit tests per merge, full verify + e2e per batch, push.
+   Merged so far: calendar, today, learner, family, intake, stage, courses, practice.
+   **Use it after every batch** (owner: "use what you make … as feedback"): a hands-on pass in the browser
+   as a grown-up, a K learner and an older learner; findings in [dogfood/](dogfood/) and fixed before the
+   next batch. Pass 1: [dogfood/2026-10-07.md](dogfood/2026-10-07.md) (13 findings, 1 blocker).
 4. [ ] **Integration** (sequential, each one package with review):
    a. Voice conversation — the M6 "natural conversation" table: loop, tap-to-talk + hands-free,
       turn-taking, spoken math, answering by voice, K–2, fallbacks, privacy.
