@@ -21,7 +21,7 @@ const LEARNER_TABS: Tab[] = [
   { href: "/home", label: "nav.home", Icon: IconHome },
   { href: "/practice", label: "nav.practice", Icon: IconLayers },
   { href: "/talk", label: "nav.talk", Icon: IconChat },
-  { href: "/courses", label: "nav.courses", Icon: IconBook },
+  { href: "/courses", label: "nav.learn", Icon: IconBook },
   { href: "/calendar", label: "nav.calendar", Icon: IconClock },
   { href: "/growth", label: "nav.growth", Icon: IconSprout },
 ];
@@ -121,14 +121,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Same selection language as the rail, one rose rule per tab, so phone and laptop read as one product. */}
       <nav aria-label={t("nav.main")} className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-panel/90 backdrop-blur-xl lg:hidden">
-        <div className={`mx-auto grid max-w-lg ${learner ? "grid-cols-5" : "grid-cols-3"}`}>
+        <div className={`mx-auto grid max-w-lg ${learner ? "grid-cols-5" : "grid-cols-4"}`}>
           {(learner
-            ? [LEARNER_TABS[0], LEARNER_TABS[1], { href: "/courses/new", label: "nav.newShort" as Key, Icon: IconPlus }, LEARNER_TABS[2]]
+            ? [LEARNER_TABS[0], LEARNER_TABS[1], LEARNER_TABS[2], LEARNER_TABS[3]]
             : PARENT_TABS
           )
-            .concat({ href: "/settings", label: "nav.me", Icon: IconSettings })
+            .concat({ href: learner ? "/me" : "/settings", label: "nav.me", Icon: IconSettings })
             .map(({ href, label, Icon }) => {
-              const on = href === "/courses/new" ? path === href : active(href) && !(href === "/courses" && path === "/courses/new");
+              const meRoutes = ["/me", "/calendar", "/growth", "/settings", "/courses/new"];
+              const on = href === "/me" ? meRoutes.some((r) => path.startsWith(r)) : active(href) && !(href === "/courses" && path === "/courses/new");
               return (
                 <Link
                   key={href}

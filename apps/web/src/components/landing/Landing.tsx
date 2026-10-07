@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CATALOGUE } from "@/catalogue";
 import { KaizenLogo } from "@/components/brand";
 import { CourseArt } from "@/components/courses/CourseArt";
-import { IconArrowRight, IconPaperclip } from "@/components/icons";
+import { IconArrowRight, IconBook, IconChat, IconClock, IconLayers, IconPaperclip } from "@/components/icons";
 import { FractionBar } from "@/components/stage/widgets/FractionBar";
 import { LangToggle } from "@/components/LangToggle";
 import { MoonVisual } from "@/components/stage/visuals";
@@ -60,6 +60,8 @@ export function Landing() {
 
           <HeroStage />
         </section>
+
+        <Jobs />
 
         <section aria-labelledby="how" className="border-t border-border bg-panel">
           <div className="mx-auto max-w-wide px-5 py-20 sm:px-8">
@@ -230,6 +232,36 @@ function FamilyArt() {
         <p className="mt-1 text-sm italic text-ink">{t("landing.demo.note")}</p>
       </div>
     </div>
+  );
+}
+
+const JOBS = [
+  ["help", IconChat],
+  ["daily", IconLayers],
+  ["homeschool", IconBook],
+  ["organized", IconClock],
+] as const;
+
+/** Four ways families use it. Rows under a rule, not cards. */
+function Jobs() {
+  const t = useT();
+  return (
+    <section aria-labelledby="jobs" className="mx-auto max-w-wide px-5 pb-20 sm:px-8">
+      <h2 id="jobs" className="max-w-[26ch] font-brand text-t1 font-semibold text-ink sm:text-d3">
+        {t("landing.jobs.title")}
+      </h2>
+      <ul className="mt-10 grid gap-x-10 gap-y-10 md:grid-cols-2">
+        {JOBS.map(([key, Icon]) => (
+          <li key={key} className="border-t border-ink pt-4">
+            <p className="flex items-center gap-2.5 font-brand text-t2 font-semibold text-ink">
+              <Icon size={20} className="text-accent" />
+              {t(`landing.jobs.${key}.title`)}
+            </p>
+            <p className="mt-2 max-w-[46ch] text-sm text-muted">{t(`landing.jobs.${key}.body`)}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
