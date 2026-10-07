@@ -1,0 +1,384 @@
+{
+ "critique:director": {
+  "verdict": "\u26a0\ufe0f DEGRADED: single-context (no sub-agent tool exposed, so Assessment A and the detector/browser pass ran in sequence in one context). Detector: `impeccable detect --json` on apps/web/src/{app,components} found 0 issues. It cannot catch the token-level patterns below (mono meta lines, eyebrows, more than one ink primary), so those come from reading screenshots.\n\nSetup: reset to faef3c0, cloned node_modules, `next build` passed, `next start -p 4451`. Throwaway Playwright scripts signed up demo families through the real UI with Maya (grade 3) and Leo (K), plus one run through the \"Stuck on homew",
+  "findings": [
+   {
+    "severity": "blocker",
+    "where": "/ (all viewports): 'For parents' section links 'Privacy notice' / 'Terms of use' and footer 'Privacy' / 'Terms'. Source: apps/web/src/components/landing/Sections.tsx:184-188, Landing.tsx footer",
+    "problem": "/privacy and /terms do not exist in the build: no route in src/app, and both return 404 'This page isn't here'. A parent checking privacy before giving a child's details hits a dead end, right under a paragraph that promises 'Privacy, plainly'.",
+    "fix": "Ship app/(bare)/privacy/page.tsx and terms/page.tsx in the landing's reading column (even short, dated, plain-language versions), or remove both links until they exist. Add both routes to e2e/landing.spec link checks."
+   },
+   {
+    "severity": "blocker",
+    "where": "/ hero door 'Stuck on homework right now?' \u2192 /sign-up?goal=help \u2192 /profiles \u2192 /home \u2192 /talk (1440, 390, 320)",
+    "problem": "The door promises 'The tutor works through it with them, one question at a time'. After sign-up and adding a learner, goal=help lands on the same /home as every other goal: daily plan first, with 'Get help now' only as a secondary pill. On /talk, typing a homework question gets 'I'm the demo tutor, so I can't talk about it freely yet.' The first door breaks the product's own rule that the landing only promises what works that day.",
+    "fix": "Make the door tell the truth on a no-AI deployment: 'Type or photograph the problem; we match it to a checked practice set with hints and worked steps.' Route goal=help straight to a homework-first screen after the learner is picked (talk with a 'Paste the problem' composer, or the matched practice set), not /home. Swap the copy automatically when AI is on."
+   },
+   {
+    "severity": "blocker",
+    "where": "/learn/{course}/first-next-last as K learner Leo (1440, 390, 320): scenes 1 'Stories go in order', 2 'Ana's seed', 3 'Put Ana's story in order'",
+    "problem": "The kindergartner's first suggested lesson is all text: sentences with speaker buttons, and the sort task is text sentences with First/Next/Last text pills. There is no picture of the seed, the watering or the sprout. For a child who can't read this is audio-only, and it contradicts DESIGN K\u20132 'picture first' and the landing line 'In K\u20132, every problem starts with a picture'.",
+    "fix": "Draw three SVG story cards (seed in dirt, watering can, sprout) from the palette. Make the sort a tap-a-picture-then-tap-a-slot interaction into First/Next/Last wells, with the sentence as caption and read-aloud. Put a picture on every K\u20132 LOOK scene before text."
+   },
+   {
+    "severity": "major",
+    "where": "/practice, /growth, /home as K learner (1440, 390)",
+    "problem": "Outside the hero problem and the practice tiles, K\u20132 mode is 'bigger plus speaker buttons'. /practice shows the same grade-map rows as grade 3, with codes K.CC.B.5 and a 'Practice anything' box whose placeholder is 'Try fractions, telling time, nouns, density\u2026'. /growth is a six-cell stat ledger with timestamps and 'Minutes'. Home plan rows are text-only, with '5 min' and '10 min a day', although DESIGN says no clock or timer in K\u20132.",
+    "fix": "K\u20132 practice: picture tiles (one per skill, drawn from its first problem) with read-aloud, no codes, no search. K\u20132 growth: a short picture list of what they did today. Hide minutes and the 'min a day' meta when data-band=k2."
+   },
+   {
+    "severity": "major",
+    "where": "/home (K) 'Pick something to learn' tiles; /courses cards; /home 'Not sure what to learn?' card (all viewports)",
+    "problem": "Course thumbnails are placeholders standing in for content. 'First, next, last' and 'Finding the main idea' show grey-line skeleton cards that read as a loading state. 'Solid, liquid, gas' is a 4\u00d75 grid of green dots (DESIGN bans generic dots). 'Adding on the number line' carries ~4px unreadable 0/5/10 labels. A kindergartner can't tell what any tile is about.",
+    "fix": "Render each thumbnail from the course's own first teaching visual at thumbnail scale: seed-to-sprout strip, ice/water/steam, a number line with 2\u20133 large labels. Never use skeleton lines as art."
+   },
+   {
+    "severity": "major",
+    "where": "/practice rows and 'Up next' card, /home suggestions (grade 3 and K, all viewports)",
+    "problem": "Common Core codes ('2.NBT.B.5', '3.OA.C.7', 'K.CC.B.5') appear on every row a child sees. They are noise to a 3rd grader, gibberish to a 5-year-old, and add a second mono token to every line.",
+    "fix": "Hide codes in learner views. Show them only in parent records, print, or a 'Standards' disclosure."
+   },
+   {
+    "severity": "major",
+    "where": "System-wide: /home 'Today's plan' meta, /courses/[id] 'Not started \u00b7 12 min \u00b7 6 scenes' and '0 of 4 lessons finished', /family/[id] skill-map rows, landing 'Gr 3 \u00b7 4 lessons', lesson 'Scene 1 of 6', magic box '\u2318 Enter', calendar day names",
+    "problem": "Whole phrases are set in IBM Plex Mono: mono as a 'technical' costume, the most recognisable AI-dashboard tic. Usage is also inconsistent. The same '0 of 2 done \u00b7 15 min a day' is mono on /home and sans on /family/[id]. Lines mix faces ('Not started\u00b7Grade 2 \u00b7 2.NBT.B.5', with a sans word, then mono, and mismatched separators). At 390 the /family/[id] skill-map meta wraps into ragged two-line mono.",
+    "fix": "Set meta in Instrument Sans with font-variant-numeric: tabular-nums. Keep mono only for keypad digits, timestamps in tables, and printed records. Use one separator style (' \u00b7 ') everywhere."
+   },
+   {
+    "severity": "major",
+    "where": "/home 'Next', /practice 'Up next', lesson stage bar 'LOOK'/'TRY', /courses/[id] '\u25cf Math \u00b7 Grade 3 READY-MADE', /home 'Not sure what to learn? Start with this'",
+    "problem": "Eyebrow and kicker labels sit above headings on almost every screen. The craft floor makes this the one outright ban and DESIGN repeats it, yet it is the default pattern here.",
+    "fix": "Delete them. The lift shadow already marks the next card. The scene type lives in the scene list's icon. Subject and grade go after the title as plain meta. Badge 'Ready-made' only where it disambiguates."
+   },
+   {
+    "severity": "major",
+    "where": "/home (1440): rail 'New course' + 'Start' + 'Add and start'; lesson TRY scene: 'Check my answer' + 'Next'; landing: header 'Get started' + hero 'Another problem'",
+    "problem": "Two or three ink primaries per screen, breaking 'one ink primary per screen'. On the TRY scene, 'Next' is a full ink pill beside 'Check my answer', so a child is invited to skip the exercise.",
+    "fix": "Make rail 'New course' and the 'Add and start' card secondary. On TRY scenes, render 'Next' as ghost until the check has run, then promote it. After the hero answer, make header 'Get started' secondary or make 'Another problem' secondary."
+   },
+   {
+    "severity": "major",
+    "where": "/practice/[setId] column addition (1440, 390, 320)",
+    "problem": "Three answer targets for one answer: dashed digit slots under the column, a rose dashed '?' in the '71 + 26 =' line, and a large '?' input above the keypad. The stacked digits are thin mono while the equation line is bold sans, and the '+' floats far left of the digits. A child doesn't know where the answer goes.",
+    "fix": "One target. The keypad fills the column slots right-to-left, and the equation's '?' mirrors the value. Drop the separate input box (keep a visually hidden input for keyboard and screen readers). Set column digits in the same face and weight as the equation, with the '+' aligned to the tens column."
+   },
+   {
+    "severity": "major",
+    "where": "/practice/[setId] at 390x844 and 320x700",
+    "problem": "Actions sit under the keypad. Once 'Hint' expands, 'Check' is pushed below the fold and the child has to scroll to submit. A wrong answer is also wiped from the input, so the child can't see what was marked 'Not yet'.",
+    "fix": "Pin a bottom action bar (Check primary, Hint secondary) above the safe-area inset on phones. Keep the wrong answer visible, struck through with 'Not yet', until they type again."
+   },
+   {
+    "severity": "major",
+    "where": "/profiles \u2192 Parent tile (1440, 390)",
+    "problem": "The grown-up gate ('Ask a grown-up / What is 9 \u00d7 8?') fades in at the bottom of the page under 'Manage learners'. At 1440x900, Cancel/Continue are below the fold; at 390 the input sits on the fold line. Tapping Parent looks like nothing happened.",
+    "fix": "Show the gate in place of the tile grid (same panel position), or as a native Dialog, since this is protected focus. Scroll it into view and focus the input."
+   },
+   {
+    "severity": "major",
+    "where": "/calendar as learner Maya (1440, 390, 320)",
+    "problem": "The child's calendar holds parent admin: a Classes form (class name/subject/teacher), a 'What the teacher said' textarea with skill linking, and a 'Scores from school' form. That is four jobs on one page. The forms use dashed borders, which DESIGN reserves for empty states.",
+    "fix": "Move 'School' (classes, teacher notes, scores) to the parent view for each child. The learner calendar shows the week and one 'Add a test' action. Give forms solid hairline panels."
+   },
+   {
+    "severity": "major",
+    "where": "/calendar at 390x844 and 320x700",
+    "problem": "An empty week renders as seven stacked empty day cards (~1000px of blank boxes). At 320 the week nav breaks: the next-week '>' button wraps onto its own line under 'October 5 \u2013 11 < This week'.",
+    "fix": "With no events, collapse the week to one EmptyState row ('Nothing this week. Add a test') and list only days that have items. Keep prev / This week / next in one row (icon-only 'today' under 24rem), or put the nav on its own line under the title."
+   },
+   {
+    "severity": "major",
+    "where": "/family and /family/[id] (1440, 390)",
+    "problem": "Each child card offers three routes to the same child: 'Open Maya's dashboard \u2192', 'Open Maya's page' and 'See full record'. /family/[id] stacks ~9 sections (Today, This week, Skill maps, Coming up, Tutor conversations, Reading log form, Free places to find books, Settings for this learner, Where each subject starts): ~2500px on desktop, ~3500px at 390. Records contradict each other: Maya's card says 'No activity yet / No activity this week yet' while her page lists today's 3-message tutor conversation. Sibling cards differ in layout (Leo gets four cramped stat tiles with labels wrapping 'Right on / own'; Maya gets none).",
+    "fix": "One link per child ('Open Maya'). Split /family/[id] into Tabs: This week \u00b7 Records \u00b7 Settings. Count tutor conversations as activity. Use the same card layout for every child, with StatGroup in a hairline ledger."
+   },
+   {
+    "severity": "major",
+    "where": "/talk user message bubble (1440; 390)",
+    "problem": "The child's message renders as a near-full-width solid ink bar (x 404\u21921076 at 1440 for 'I don't get fractions'). It reads as a giant primary button, and ink is reserved for actions.",
+    "fix": "Bubble w-fit, max-w-[80%], self-end, white or panel2 fill with ink text and a hairline. Keep ink only for the 'Start' action inside replies."
+   },
+   {
+    "severity": "major",
+    "where": "/ landing composition (1440: 6462px; 390: ~9450px; 320: ~10585px)",
+    "problem": "Below the strong hero, 'How it works' repeats one template five times (text left, demo card right, then a hairline), followed by skill map, courses, parents, status and close: generic feature-page rhythm and far too long for a phone at 9pm. The hero card's 'Try a real problem' heading is sr-only, so sighted parents get no invitation to try. On phones the card starts below the fold, and its grey '?' tiles and grey Check pill read as a disabled screenshot.",
+    "fix": "Show a visible one-line prompt on the card ('Try it: this is the real checker'). Move the parent-view demo directly under the hero, since it reacts to the answer. Cut 'How it works' to the checker and the tutor, and fold calendar and sources into one line each. Vary the composition rather than five mirrored rows."
+   },
+   {
+    "severity": "major",
+    "where": "/ 'Where things stand' card and tutor demo note; /settings 'AI tutor' and 'About this demo'",
+    "problem": "Parent-facing copy exposes deployment plumbing: 'When AI is connected', 'AI isn't connected on this site, so the demo tutor answers\u2026', 'When this site is connected to an AI provider', 'This is exactly what works.' A parent doesn't know what 'connected' means. It reads like a staging banner and undercuts trust.",
+    "fix": "State the product, not the server: 'The tutor gives hints, first steps and worked examples on every problem. Open conversation about anything is coming.' Move live connection status to an admin/settings detail. Rewrite 'This is exactly what works' as 'Everything below works today.'"
+   },
+   {
+    "severity": "major",
+    "where": "/growth (1440, K learner) stat ledger vs /family stats",
+    "problem": "Growth puts the label over the figure; Family and the landing put the figure over the label. Labels wrap unevenly ('Lessons started' takes 2 lines), so the figures sit on different baselines (\u2248y287 vs y266). Six cells exceed a glanceable group.",
+    "fix": "One StatGroup order everywhere (figure over label per DESIGN), labels clamped to one line or fixed two-line height, at most 4 cells. Drop 'Minutes' for K\u20132."
+   },
+   {
+    "severity": "minor",
+    "where": "/ skill map table at 390 and 320",
+    "problem": "Dot rows wrap. At 390, grade 6 Math '10 \u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf' drops its 10th dot to a second line. At 320 every Math cell becomes a ragged two-row cluster. At 6px the dots are decoration on phones anyway.",
+    "fix": "Below sm, hide the dots and keep the numeral, or set nowrap with smaller gaps."
+   },
+   {
+    "severity": "minor",
+    "where": "/ end of 'How it works' (1440 y\u2248663\u2192776; same at 390/320)",
+    "problem": "Double divider: the last inner hairline is followed ~110px later by the next section's border-t, leaving a dead band between two rules.",
+    "fix": "Drop the trailing inner hr, or the section's top border, so one rule separates sections."
+   },
+   {
+    "severity": "minor",
+    "where": "/family/[id] Reading log form (1440)",
+    "problem": "Misaligned form row: the 'Author' label and input sit ~26px above Book/Minutes/Date because of its 'Optional' helper.",
+    "fix": "Use items-start with helpers below every field, or move '(optional)' into the label."
+   },
+   {
+    "severity": "minor",
+    "where": "/learn/* header at 390 and 320; desktop header",
+    "problem": "The lesson title truncates to 'First, n\u2026' (320) and 'Halves and quarte\u2026' (390) because three icon buttons crowd it. On desktop an unlabeled presentation icon sits between 'Read aloud' and 'Tutor'. The desktop scene list also truncates 'Put Ana's story in ord\u2026'.",
+    "fix": "On phones drop the header title (the scene bar repeats it) or move the slides and tutor icons into the scene bar. Label the slides icon. Let scene titles wrap to two lines."
+   },
+   {
+    "severity": "minor",
+    "where": "Learner rail footer (1440, all learner routes)",
+    "problem": "A child's rail shows '1 \u2013 6 switch tabs \u00b7 Turn off' and 'Demo \u00b7 tutor not connected': power-user and ops noise in front of a 3rd grader.",
+    "fix": "Move the shortcut hint behind '?' or into settings, and the tutor status to parent settings. Keep 'Saved on this device' only for grown-ups."
+   },
+   {
+    "severity": "minor",
+    "where": "/profiles avatars, rail and switcher (all viewports)",
+    "problem": "Avatars fill with brand rose (Maya) and the math subject blue (Leo). Rose is 'marks only, never a fill', and subject colours are 'never a full-bleed fill', so child identity collides with brand and subject.",
+    "fix": "Use a separate avatar hue set, or ink initials on panel2 with a 2px colour ring."
+   },
+   {
+    "severity": "minor",
+    "where": "/profiles after adding learners; /settings 'What we help with'",
+    "problem": "The goals picker says 'Pick any' but uses radio-circle indicators. It also sits on 'Who's learning?' and pushes the learner tiles down (two jobs on one page). Settings repeats it under a duplicate heading ('What we help with' / 'What should KaizenEDU help with?').",
+    "fix": "Use checkbox squares. Ask for goals at sign-up (the door already supplies one) and never on the picker. Use one heading in Settings."
+   },
+   {
+    "severity": "minor",
+    "where": "/courses (1440, 390); landing 'Ready-made courses'",
+    "problem": "An English grade-3 learner's 'Grades 3\u20135' grid includes the Spanish duplicate 'Fracciones: partes de un entero' with the same thumbnail. The 'No courses yet' empty state has no button. Card descriptions are cut off with an ellipsis. The landing course rows are inert text although the copy says 'Add one in a tap'.",
+    "fix": "Hide other-language duplicates unless the learner is bilingual. Give EmptyState its one action. Let descriptions wrap to two lines. Make landing rows open a preview, or remove 'in a tap'."
+   },
+   {
+    "severity": "minor",
+    "where": "/ header at 320x700; footer nav at 390 and 1440",
+    "problem": "At 320 both 'Get started' and 'Sign in' are hidden, leaving only 'Espa\u00f1ol' in the header. Ghost-button padding pushes footer links ~14px in from the 16px gutter on phones and ~14px short of the right edge on desktop.",
+    "fix": "Keep a compact 'Start' link at 320. Add -mx-3 to the footer nav so text aligns to the gutter."
+   },
+   {
+    "severity": "minor",
+    "where": "Document titles: /home (K learner), /this-page-does-not-exist",
+    "problem": "The K learner's /home title is 'KaizenEDU' while grade 3 gets 'Today \u00b7 KaizenEDU'. The 404 title is bare 'KaizenEDU'.",
+    "fix": "Set useTitle on the K home variant, and 'Page not found \u00b7 KaizenEDU' on not-found."
+   },
+   {
+    "severity": "minor",
+    "where": "K\u20132 answer tiles on / hero and /practice/[setId] (Leo)",
+    "problem": "Choices render in IBM Plex Mono (slab-footed 1, mono 10). These are not the print numerals kindergartners learn. Each choice tile also embeds a speaker button, so it is unclear whether tapping the tile answers or reads.",
+    "fix": "Use Instrument Sans lining figures in K\u20132 choice tiles. Put read-aloud on long-press or one shared 'Read the choices' button rather than one inside every tile."
+   }
+  ]
+ },
+ "critique:access": {
+  "verdict": "Not ready to ship. axe found 0 serious or critical violations on all 60 page-views (20 routes at 1440, 390 and 320; the only rule hit anywhere is a moderate landmark-unique on /family). No route scrolls sideways at 320 or at 200% zoom. Reduced motion and forced colours behave well. But keyboard and touch use fall well below the bar. Two blockers: (1) on keypad practice sets a window-level Enter handler takes over every control. \"Leave practice\", Hint, Ask the tutor, Skip and even the digit keys can't be activated with Enter; Enter submits whatever answer is typed instead. (2) The landing page'",
+  "findings": [
+   {
+    "severity": "blocker",
+    "where": "/practice/[setId] (keypad sets, e.g. Ada 'Add two-digit numbers') \u00b7 1440/390/320 \u00b7 apps/web/src/components/practice/AnswerPad.tsx useTyping (window keydown, ~L60-77)",
+    "problem": "A keydown listener on window catches Enter whenever focus is outside an input, calls preventDefault() and submits the typed answer. Checked: Enter on the 'Leave practice' link does not navigate. Enter on the keypad '7' button types nothing. Enter on Hint shows no hint and instead submits the typed answer (shown as 'Not yet. Try again, or take a hint.'). Enter on 'Ask the tutor' doesn't open the panel. A keyboard user who types 8, Tabs to Hint and presses Enter gets their answer graded instead of a hint. Backspace is caught the same way.",
+    "fix": "Only treat Enter/Backspace as pad input when the event target is not interactive: return early if target.closest('button, a[href], summary, select, [role=button], [role=link], [role=tab], [contenteditable]'). Better still, bind the handler to the pad/problem region instead of window. Add an e2e test that presses Enter on Hint and on Leave practice."
+   },
+   {
+    "severity": "blocker",
+    "where": "/ (landing) \u00b7 all viewports \u00b7 'Privacy notice' and 'Terms of use' (Privacy, plainly) and footer 'Privacy' / 'Terms' \u00b7 components/landing/Sections.tsx:184,187 and Landing.tsx:139,142",
+    "problem": "/privacy and /terms don't exist, so all four links give the 404 page (prefetch logs 'HTTP 404 /privacy?_rsc\u2026' and '/terms?_rsc\u2026' on every landing load). A broken privacy notice on a children's product, shown to every parent.",
+    "fix": "Ship app/privacy/page.tsx and app/terms/page.tsx (even a short honest demo notice), or remove the links until the pages exist."
+   },
+   {
+    "severity": "major",
+    "where": "Every signed-in shell route with scroll (/home, /practice, /courses, /calendar, /family, /family/[id], /settings) \u00b7 390 and 320 \u00b7 fixed bottom tab bar (AppShell nav.k-vt-tabbar)",
+    "problem": "Focus Not Obscured (WCAG 2.4.11 AA). Tabbing down the page scrolls each control just into view at the bottom edge, which is under the ~70px fixed bar. Elements caught under the bar while focused include: /home 'Fractions: parts of a whole' row, the textarea and the chips; /practice 'Practice: Subtract two-digit\u2026' and 'Long division'; /calendar 'Add on Saturday' and the class/teacher/score inputs; /family child 'Date' and course select; /settings goal checkboxes and Save; /courses 'Add'.",
+    "fix": "Below lg, set :root { scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom)) } (larger in the K\u20132 band, where the bar is 75px) and a matching scroll-padding-top for sticky headers."
+   },
+   {
+    "severity": "major",
+    "where": "All shell routes \u00b7 390/320 \u00b7 learner switcher sheet (#k-switcher, shell/Switcher.tsx, popover=auto)",
+    "problem": "On phones the switcher is a bottom sheet over a dimmed backdrop, but it is a non-modal popover. Tab after 'Sign out' moves focus to page content behind the backdrop ('Get help now', 'Open Ada's dashboard', 'Math'\u2026) while the sheet stays open (screenshot confirmed). Escape and focus return work.",
+    "fix": "On phones render it as a modal (native <dialog>.showModal(), like kit/overlay Sheet), or make the page inert while it is open, or hide the popover on focusout. On desktop, hiding it on focusout is enough."
+   },
+   {
+    "severity": "major",
+    "where": "/practice/[setId] \u00b7 1440/390/320 \u00b7 'Ask the tutor' panel (components/tutor/TutorDrawer.tsx Panel)",
+    "problem": "Opening the panel leaves focus on the problem h1: the Runner's heading focus overrides panel.focus(). The panel is the last thing in the DOM, so keyboard and screen-reader users must Tab through the read-aloud buttons and all 11 keypad keys to reach it. On phones it is a bottom sheet with a backdrop but aria-modal=false, so Tab moves through the hidden keypad behind it. Closing with the X sends focus to <body>, not back to 'Ask the tutor'. The X is 40\u00d740.",
+    "fix": "Use the kit Sheet/Dialog (showModal) on phones. After mount, focus the panel's input or title and stop the Runner's heading-focus effect from running while the panel is open. Store the opener and restore focus to it on close (Escape and X). Make the X an IconButton md / size-target."
+   },
+   {
+    "severity": "major",
+    "where": "/ (landing) 'Real sources' cards (Fractions: Intro, Grade 3 math) \u00b7 all viewports \u00b7 components/landing/Faces.tsx:162; /home both learners 'What do you want to learn?' textarea \u00b7 all viewports \u00b7 components/magic-box/MagicBox.tsx:80",
+    "problem": "No visible focus indicator (WCAG 2.4.7), confirmed in screenshots. The source cards use `outline-none focus-visible:outline-2` without outline-solid. In Tailwind v4, outline-none sets --tw-outline-style:none, so the focus outline renders with style none. The magic-box textarea has focus:outline-none and its form has no focus-within style.",
+    "fix": "Faces.tsx: add focus-visible:outline-solid, as kit/display.tsx already does. MagicBox: add focus-within:border-accent focus-within:outline-2 focus-within:outline-solid focus-within:outline-accent to the <form>, or drop focus:outline-none."
+   },
+   {
+    "severity": "major",
+    "where": "Touch at 390/320 (pointer: coarse), grade-3 learner and parent: /practice/[setId] 'Leave practice' + read-aloud 40\u00d740; /learn 'Back to course' 40\u00d740; /talk 'Back' + read-aloud 40\u00d740, topic chips and 'Read aloud' toggle 36px tall; /calendar prev/next week 40\u00d740, 'This week' 40, day 'Add on \u2026' 32\u00d732, 'Download a calendar file (.ics)' 22px tall, 'Find a skill' input 40; /practice subject tabs 40, 'Find my level' 22; /family/[id] subject tabs 40, 'Family'/'Calendar' links 40; /settings English/Espa\u00f1ol 40, 'Settings and records' 20px; /family 'Open Ada's page'/'See full record' 40; /courses 'Open' 86\u00d736; landing 'See the problem above in Spanish', 'Privacy notice', 'Terms of use' 22px",
+    "problem": "Below the project's 44px touch rule (CLAUDE.md rule 5, DESIGN.md 'small controls \u226544px on touch'). These controls use size-10/size-8/min-h-10, or text-link styling, without the pointer-coarse:min-h-11 that btn('sm') and k-chip have.",
+    "fix": "Route them through the kit: IconButton md / size-target for icon buttons (week nav, day add, back, read-aloud, tutor close), btn('sm') for pills (gives 44 on coarse pointers), and min-h-11 plus padding for text-style buttons and links on coarse pointers. Day-add buttons need size-target, not size-8."
+   },
+   {
+    "severity": "major",
+    "where": "K\u20132 band (Leo) \u00b7 390 and 320 \u00b7 read-aloud buttons on /home, /practice/[setId], /learn, /talk; 'Leave practice', 'Back', 'Back to course'; /practice subject tabs; /talk chips and Send; /courses 'Open'; lesson header Read aloud/Whiteboard/Show tutor",
+    "problem": "The task's bar is 56px in K\u20132. Measured: read-aloud 44\u00d744 at 390 and 40\u00d740 at 320; Leave practice/Back 44 \u2192 40; subject tabs 44 \u2192 40; Talk chips 40 \u2192 37; 'Open' 40 \u2192 37; lesson header icons 48 \u2192 44; Send 48 \u2192 44; plan-row 'Start' 48. Below 24rem these shrink because --spacing drops to 0.25rem and they are sized with spacing utilities, contradicting DESIGN.md's 'below 24rem \u2026 type and targets stay'. The read-aloud speaker is a K child's main tool.",
+    "fix": "Size K\u20132 controls with --spacing-target (3.5rem) rather than the spacing scale. Make read-aloud an IconButton md at size-target in K\u20132, and set min-h-target on K\u20132 tabs, chips, Back and the lesson header buttons. Keep the 320 rule from touching targets."
+   },
+   {
+    "severity": "major",
+    "where": "/practice \u00b7 all viewports (tab semantics); K\u20132 at 320 (overflow) \u00b7 subject tablist Math/English/Science \u00b7 app/(app)/practice/page.tsx:86-98; also /calendar parent learner tabs (calendar/page.tsx:91) and ImportPanel tabs",
+    "problem": "A hand-rolled role=tablist/role=tab: every tab is a separate Tab stop, ArrowRight does nothing (checked), and there is no aria-controls or tabpanel. At 320 in the K\u20132 band the pill row measures 16\u2192323px, so 'Science' is cut off by the screen edge.",
+    "fix": "Use the kit <Segmented> (radio semantics, arrow keys, measured thumb), or <Tabs> with a real tabpanel, and let the row wrap or go full width under 24rem."
+   },
+   {
+    "severity": "major",
+    "where": "/courses and /home course rows \u00b7 390/320 ('Fractions: parts of \u2026' at 390, 'Fractio\u2026' at 320); /learn header title \u00b7 390 ('First, next, l\u2026', 'Halves and quart\u2026') and 320 ('First, n\u2026'); K /courses 'First, next, last' at 320",
+    "problem": "Single-line truncation cuts the only label of a course or lesson down to a few letters, because the READY-MADE badge and three header icon buttons take the space. A K learner, or anyone at 200% text size, can't recover the title (the header h1 is the page title).",
+    "fix": "Use line-clamp-2 / wrapping instead of truncate for titles. Move the badge under the title below sm. In the lesson header let the title take its own row on narrow screens, or fold Whiteboard/Tutor into one menu."
+   },
+   {
+    "severity": "major",
+    "where": "All form fields (k-input: /sign-up, /family notes, /family/[id] reading log, /calendar class/note/score forms, /settings) and goal checkboxes (/profiles, /settings) \u00b7 all viewports \u00b7 globals.css .k-input border-border",
+    "problem": "Non-text contrast (WCAG 1.4.11). Field boundaries are #e4e3df on #fff (1.28:1) or on paper (1.23:1), so on the white sign-up card the three inputs are white boxes with an almost invisible edge. The unchecked goal checkbox circles are similarly faint (border-strong #cfccc5 is 1.6:1).",
+    "fix": "Give fields and checkbox rings a \u22653:1 boundary, e.g. a border colour around #8c887f on panel. At minimum add a 3:1 bottom border; keep the soft border for cards only."
+   },
+   {
+    "severity": "major",
+    "where": "/talk \u00b7 all viewports (both learners) \u00b7 message textarea (components/tutor/TutorChat.tsx:344); K at 320",
+    "problem": "There's no visible label, only an sr-only label and a placeholder at 3.63:1 (text-muted/80). The accessible name is 'Ask about this problem' on the free-talk page, where there is no problem. At 320 in K\u20132 the one-line field cuts the placeholder off mid-word.",
+    "fix": "Show a visible label, or a placeholder at full muted (#6b6862, 5.5:1). Name it 'Ask the tutor' on /talk and keep 'Ask about this problem' only in the practice drawer. Let the textarea auto-grow to two lines on narrow screens."
+   },
+   {
+    "severity": "major",
+    "where": "/practice/[setId] keypad \u00b7 all viewports \u00b7 Delete key (AnswerPad.tsx:34 uses <IconX>)",
+    "problem": "The delete key is drawn as an '\u00d7'. On an arithmetic keypad, next to a '+' problem, children and parents read it as the multiplication sign. Its accessible name, 'Delete', is fine.",
+    "fix": "Use a backspace glyph (left-pointing tag with an x, \u232b) for the key and keep aria-label 'Delete'."
+   },
+   {
+    "severity": "major",
+    "where": "/sign-up (and /sign-in, auth layout) \u00b7 all viewports \u00b7 EN/ES toggle (components/LangToggle.tsx)",
+    "problem": "The targets are 38\u00d732 and 36\u00d732 on touch (min-h-8), and the buttons' names are the lowercase codes 'en'/'es' (uppercase comes only from CSS), so screen readers say 'en' or spell out 'e s'. There is no group label.",
+    "fix": "Wrap them in role=group aria-label 'Language', set aria-label 'English' / 'Espa\u00f1ol' (keep lang=), and make them min-h-11 on coarse pointers (or size-target)."
+   },
+   {
+    "severity": "minor",
+    "where": "/home textarea (MagicBox placeholder text-muted/70, 2.99:1), /talk and tutor drawer input placeholder (text-muted/80, 3.63:1), practice answer box '?' (text-muted/50, 2.09:1) \u00b7 all viewports",
+    "problem": "Placeholder and example text is below 4.5:1 (3:1 for the large '?'). The magic-box example is the only hint of what to type.",
+    "fix": "Use full --color-muted for placeholders (5.5:1 on panel); for the '?' use muted at full opacity or a well outline."
+   },
+   {
+    "severity": "minor",
+    "where": "/ (landing) Try-a-real-problem \u00b7 all viewports \u00b7 Sheet.tsx feedback region + announce()",
+    "problem": "A right answer is announced twice: the inline aria-live div and the global k-live-polite region both say 'Right, with help.'",
+    "fix": "Keep one: drop the announce() call, or remove aria-live from the inline region."
+   },
+   {
+    "severity": "minor",
+    "where": "/home (both learners) \u00b7 magic box",
+    "problem": "The accessibility tree has two 'Add files' controls: the visible button and the sr-only file input with aria-label 'Add files' (tabIndex -1).",
+    "fix": "Give the hidden file input aria-hidden=true (it is only clicked programmatically), or remove its aria-label."
+   },
+   {
+    "severity": "minor",
+    "where": "/home Today's plan ('Start' \u00d72), /courses ('Add' \u00d73, 'Open') \u00b7 all viewports",
+    "problem": "Several buttons have identical names; screen-reader users browsing a list of buttons can't tell which plan item or course each one starts. /practice already does this right with 'Practice: <skill>'.",
+    "fix": "aria-label 'Start English: Letter sounds', 'Add Finding the main idea', 'Open Fractions: parts of a whole'."
+   },
+   {
+    "severity": "minor",
+    "where": "/learn/[courseId]/[lessonId] \u00b7 all viewports \u00b7 header back link",
+    "problem": "The visible text is the course title ('Fractions: parts of a whole') but the accessible name is 'Back to course' (WCAG 2.5.3 Label in Name), so a voice-control user saying the visible text gets no match.",
+    "fix": "Drop aria-label and add a visually hidden 'Back to ' before the title, or use aria-label 'Back to Fractions: parts of a whole'."
+   },
+   {
+    "severity": "minor",
+    "where": "/practice/[setId] K 'Count up to 10' \u00b7 all viewports \u00b7 dot visual alt",
+    "problem": "With one dot the alt text reads '1 dots in rows of five', which a K learner hears through read-aloud and screen readers.",
+    "fix": "Pluralise through t() with a _one key, as courses.progress_one already does."
+   },
+   {
+    "severity": "minor",
+    "where": "/family \u00b7 all viewports (axe landmark-unique, moderate)",
+    "problem": "Each child's card has a region with the same accessible name, so the landmark list shows duplicates.",
+    "fix": "Name the regions per child, e.g. 'Ada's notes' and 'Leo's notes'."
+   },
+   {
+    "severity": "minor",
+    "where": "/calendar (WeekView/panel scrollIntoView, calendar/page.tsx:63) and tutor chat (TutorChat.tsx:224) \u00b7 reduced motion",
+    "problem": "JS scrollIntoView({behavior:'smooth'}) bypasses the CSS scroll-behavior override, so these still smooth-scroll under prefers-reduced-motion. Every CSS animation and transition was confirmed suppressed.",
+    "fix": "Pass behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'."
+   },
+   {
+    "severity": "minor",
+    "where": "Desktop 1440 \u00b7 rail switcher popover (#k-switcher)",
+    "problem": "The popover has role=dialog but stays open when Tab moves past 'Sign out' to Settings, leaving an orphaned open dialog.",
+    "fix": "Hide the popover on focusout when focus leaves #k-switcher and its opener."
+   },
+   {
+    "severity": "minor",
+    "where": "/talk K learner \u00b7 all viewports \u00b7 topic chips",
+    "problem": "A kindergartner is offered 'Fractions', 'Finding the main idea' and 'How the Moon changes': the same grade-3 topics Ada sees.",
+    "fix": "Pick the chips by grade band (e.g. counting, letter sounds, seasons for K\u20132)."
+   },
+   {
+    "severity": "minor",
+    "where": "/404 \u00b7 all viewports; / at 320; /learn K desktop scene list; landing skills table at 390",
+    "problem": "The 404 document title is just 'KaizenEDU'. At 320 the landing header drops 'Get started'. The K lesson scene list truncates 'Put Ana's story in ord\u2026' at 1440. In the landing skills table, grade 6's ten math dots wrap one dot onto a second line at 390.",
+    "fix": "Title 'Page not found \u00b7 KaizenEDU'; keep a compact 'Start' CTA at 320; let scene names wrap to 2 lines in K\u20132; allow the dot strip to shrink its gap or show the count only below sm."
+   },
+   {
+    "severity": "minor",
+    "where": "Desktop 1440 (pointer: fine) \u00b7 rail 'Turn off' 48\u00d724; landing 'See the problem above in Spanish' 22px; calendar '.ics' link 22px",
+    "problem": "These pass WCAG 2.5.8 through spacing, but are the smallest hit areas in the app on a mouse.",
+    "fix": "Give text-style buttons min-h-8 or larger padding (py-1.5) on fine pointers too."
+   }
+  ]
+ },
+ "fix": {
+  "followups": [
+   "BLOCKER /learn/{course}/first-next-last as K learner (stage/catalogue owners): the kindergartner's first lesson is all text (speaker buttons and text First/Next/Last pills), which contradicts DESIGN K\u20132 'picture first'. Fix: draw three SVG story cards from the palette (seed in dirt, watering can, sprout). Make the sort tap-a-picture-then-tap-a-slot into First/Next/Last wells, with the sentence as caption and read-aloud. Put a picture on every K\u20132 LOOK scene before text.",
+   "BLOCKER /practice/[setId] keypad sets (practice owner, components/practice/AnswerPad.tsx useTyping, window keydown ~L60-77): Enter and Backspace are caught on buttons and links. Enter on Hint grades the typed answer, Enter on 'Leave practice' doesn't navigate, Enter on keypad '7' types nothing. Fix: return early when e.target.closest('button, a[href], summary, select, [role=button], [role=link], [role=tab], [contenteditable]'), or bind the handler to the pad/problem region instead of window. Add an e2e test pressing Enter on Hint and on Leave practice.",
+   "BLOCKER (part outside landing), sign-up and profiles flow (auth/profiles owner): sign-up?goal=help lands on /home after the learner is picked. Route goal=help straight to the homework-first screen (/talk with a 'Paste the problem' composer, or the matched practice set). The landing door copy is already fixed: it now promises only checked practice with hints and worked steps unless AI is on.",
+   "MAJOR K\u20132 /practice, /growth, /home as K learner (practice/growth/home owners): practice \u2192 picture tiles drawn from each skill's first problem, with read-aloud, no codes, no 'Practice anything' search. Growth \u2192 a short picture list of what they did today. Hide minutes and the 'min a day' meta when data-band=k2. Call useTitle on the K /home variant: its tab title is 'KaizenEDU' while grade 3 gets 'Today \u00b7 KaizenEDU'.",
+   "MAJOR /home 'Pick something to learn' tiles, /courses cards, /home 'Not sure what to learn?' (courses owner, components/courses/CourseArt.tsx): thumbnails are grey skeleton lines, a 4\u00d75 dot grid, or a number line with ~4px labels. Render each from the course's own first teaching visual at thumbnail scale (seed-to-sprout strip, ice/water/steam, a number line with 2\u20133 large labels). DESIGN.md \u2192 Teaching visuals now says this.",
+   "MAJOR /practice rows and 'Up next', /home suggestions (practice/home owners): Common Core codes ('2.NBT.B.5', 'K.CC.B.5') show on every row a learner sees. Hide them in learner views; show them only in parent records, print, or a 'Standards' disclosure.",
+   "MAJOR system-wide mono meta (owners of TodayPlan, practice/page, courses pages incl. '/courses/[id] Not started \u00b7 12 min \u00b7 6 scenes', CourseRow, family pages and skill-map rows, Stage 'Scene 1 of 6', MagicBox '\u2318 Enter', calendar WeekView day names): replace `font-opmono text-xs text-muted` meta with the new `k-meta` class (Instrument Sans, tabular figures) and use one separator ' \u00b7 '. Keep mono only for keypad digits, timestamps in tables and printed records.",
+   "MAJOR eyebrow/kicker labels (home, practice, stage, courses owners): /home 'Next', /practice 'Up next', lesson stage bar 'LOOK'/'TRY', /courses/[id] '\u25cf Math \u00b7 Grade 3 READY-MADE', /home 'Not sure what to learn? Start with this'. Delete them: the lift shadow marks the next card, the scene type lives in the scene list's icon, subject and grade go after the title as plain meta. Badge 'Ready-made' only where it disambiguates.",
+   "MAJOR two ink primaries: on /home make the 'Add and start' card secondary (home owner; the rail's New course is already secondary). On the lesson TRY scene, render 'Next' as ghost until 'Check my answer' has run, then promote it (stage owner).",
+   "MAJOR /practice/[setId] column addition (practice owner): one answer target. The keypad fills the column slots right-to-left; the equation's '?' mirrors the value; drop the separate input box but keep a visually hidden input. Set column digits in the same face and weight as the equation, with '+' aligned to the tens column. Use the new IconBackspace for the delete key instead of IconX (it reads as 'times').",
+   "MAJOR /practice/[setId] at 390 and 320 (practice owner): pin a bottom action bar (Check primary, Hint secondary) above the safe-area inset. Keep a wrong answer visible, struck through with 'Not yet', until the child types again.",
+   "MAJOR /profiles \u2192 Parent tile (profiles owner): the grown-up gate fades in below 'Manage learners', below the fold at 1440. Show it in place of the tile grid, or in the kit Dialog. Scroll it into view and focus the input.",
+   "MAJOR /calendar as learner (calendar owner): move School (classes, teacher notes, scores) to the parent's per-child view. The learner calendar shows the week and one 'Add a test' action. Forms on solid hairline panels; dashed borders mean empty only. With no events, collapse to one EmptyState row ('Nothing this week. Add a test') and list only days with items. Keep prev / This week / next on one row at 320 (icon-only 'today' under 24rem). Give the '.ics' download link `k-tap`. Day-add buttons need size-target, not size-8.",
+   "MAJOR /family and /family/[id] (family owner): one link per child ('Open Maya'). Split /family/[id] into Tabs: This week \u00b7 Records \u00b7 Settings. Count tutor conversations as activity (the card says 'No activity' while the child's page lists a conversation). Same card layout for every child, with StatGroup in a hairline ledger. Name each child card's region uniquely ('Ada's notes'), and fix the Reading log row ('Author' sits 26px high because of its 'Optional' helper: put '(optional)' in the label or align with items-start).",
+   "MAJOR /talk (tutor owner, components/tutor/TutorChat.tsx): the child's bubble is a near-full-width solid ink bar \u2192 w-fit max-w-[80%] self-end, panel or panel2 fill, ink text, hairline border. Give the textarea a visible label (or a placeholder at full muted) and name it 'Ask the tutor' on /talk; keep 'Ask about this problem' only in the drawer; auto-grow to two lines on narrow screens. Choose topic chips by grade band (counting, letter sounds, seasons for K\u20132). Pass behavior 'auto' to scrollIntoView under prefers-reduced-motion (TutorChat.tsx:224; also calendar/page.tsx:63). Replace demo copy such as 'I'm the demo tutor, so I can't talk about it freely yet' with product wording.",
+   "MAJOR /practice/[setId] 'Ask the tutor' panel (tutor owner, components/tutor/TutorDrawer.tsx): use the kit Sheet (showModal) on phones. After mount, focus the panel's input or title, and don't let the Runner's heading-focus run while it's open. Return focus to the opener on Escape and on X. Make X an IconButton md.",
+   "MAJOR /settings 'AI tutor' and 'About this demo' (settings owner): replace plumbing copy ('When this site is connected to an AI provider'\u2026) with product statements; keep the live connection status as a grown-up detail. Use one heading for goals ('What we help with' duplicates 'What should KaizenEDU help with?'). Give English/Espa\u00f1ol toggles and the 'Settings and records' link real hit areas: btn('sm') or `k-tap`.",
+   "MAJOR /growth (growth owner): use the kit Stat/StatGroup (figure over label, labels clamped, at most 4 cells), not the six-cell label-over-figure ledger, so figures share a baseline. Drop Minutes for K\u20132.",
+   "MAJOR /home magic box (magic-box owner, components/magic-box/MagicBox.tsx:80): the textarea has focus:outline-none and its form has no focus-within, so there is no visible focus. Add focus-within:border-accent focus-within:outline-2 focus-within:outline-solid focus-within:outline-accent to the form. Mark the hidden file input aria-hidden=true (there are two 'Add files' controls in the accessibility tree). The placeholder contrast is already lifted by a system rule.",
+   "MAJOR touch targets under 44px (practice, stage, talk, calendar, family, settings, courses owners). Grade-3 learner and parent at 390/320 on touch: 'Leave practice', 'Back', 'Back to course' and read-aloud at 40\u00d740; talk chips and 'Read aloud' at 36; week nav 40; 'Add on \u2026' 32; subject tabs 40; 'Find my level' 22; family 'Open \u2026 page'/'See full record' 40; courses 'Open' 36. Fix: route icon buttons through IconButton md (size-target), pills through btn('sm'), text links through `k-tap`. K\u20132 (Leo): read-aloud, Back and lesson-header buttons must be size-target (56px). Kit chips and sm buttons are already 56 in K\u20132 and no longer shrink at 320.",
+   "MAJOR hand-rolled tabs (practice owner app/(app)/practice/page.tsx:86-98, calendar/page.tsx:91, ImportPanel): role=tab without arrow keys or a tabpanel, and in K\u20132 at 320 'Science' is cut off. Use the kit Segmented (radio, arrows) or Tabs (real tabpanel), and wrap the row or go full width under 24rem.",
+   "MAJOR title truncation (courses/home/stage owners): 'Fractions: parts of \u2026' at 390, 'Fractio\u2026' at 320; lesson header 'First, n\u2026' at 320; desktop scene list 'Put Ana's story in ord\u2026'. Use line-clamp-2 instead of truncate, move the READY-MADE badge under the title below sm, give the lesson title its own row on phones (or drop it, since the scene bar repeats it), fold Whiteboard and Tutor into one control, and label the slides icon.",
+   "MAJOR goal checkboxes (profiles/settings owners, components/profiles/GoalsPicker.tsx): 'Pick any' uses radio circles with a 1.6:1 border. Use checkbox squares with border-field (3:1). Ask for goals at sign-up (the door already supplies one), never on the 'Who's learning?' picker.",
+   "MINOR avatars (profiles owner, components/profiles/Avatar.tsx and lib/profiles palette): Maya fills with brand rose and Leo with the math blue. Use an ink initial on panel2 with a 2px ring in a separate avatar hue set (not rose, not subject colours), as the shell's Me mark now does.",
+   "MINOR /courses (courses owner): hide other-language duplicates ('Fracciones: partes de un entero') unless the learner is bilingual. Give the 'No courses yet' EmptyState its one action. Let descriptions wrap to two lines.",
+   "MINOR repeated button names (home/courses owners): aria-label 'Start English: Letter sounds', 'Add Finding the main idea', 'Open Fractions: parts of a whole'.",
+   "MINOR /learn header back link (stage owner): the visible text is the course title but the accessible name is 'Back to course' (WCAG 2.5.3). Drop the aria-label and add a visually hidden 'Back to ' before the title.",
+   "MINOR /practice/[setId] K 'Count up to 10' (practice generator owner): alt text reads '1 dots in rows of five'. Pluralise through t() with a _one key.",
+   "MINOR K\u20132 /practice/[setId] choice tiles (practice owner): use Instrument Sans figures instead of mono (the landing hero does this now). Put read-aloud on one shared 'Read the choices' button instead of a speaker inside every tile.",
+   "TEST e2e/journey.spec.ts (journey owner, failing before this change, at faef3c0): page.getByLabel('Grade').selectOption('K') matches 3 elements because the landing stays mounted after client navigation (its 'Grade' radiogroup and the 'Kindergarten to grade 9' section). Use getByRole('combobox', { name: 'Grade', exact: true }). The other 28 e2e tests pass on the new build."
+  ],
+  "checks": "All run in apps/web against the final source.\n- `npx next typegen && npx tsc --noEmit -p .`: passes.\n- `npx eslint src e2e`: clean.\n- `npx vitest run`: 29 files, 753 tests passed (ui.test updated for `k-meta`).\n- `npx next build`: passes; /privacy and /terms are prerendered static.\n- Playwright with `E2E_PORT=4471` (reusing my `next start`):\n  - landing.spec, shell.spec, a11y.spec and fabric.spec all pass at desktop and phone (28 passed). This includes the new tests: early Check prompt; privacy and terms links from the page and the footer, with titles; the 404 title; the switcher holding focus on phones and closing on focus-out on desktop.\n  - journey.spec fails at desktop and phone. It failed before this change too (strict-mode getByLabel('Grade')); see followups.\n- impeccable detect --json on all changed UI files: [] (no findings).\n- Tab sweep for focus under the tab bar (scratchpad script): 0 hits at 390. At 320, only the /home textarea is partly under the bar, never fully hidden.\n- Note: I had overwritten another session's scratchpad/shots.cjs by accident; my scripts now live in scratchpad/dfix/.\n- Commits: 72c01f4 and ce6e2d8, explicit paths, `design(fix): \u2026` with the Co-Authored-By line. Not pushed.",
+  "summary": "Finished design-fix (two commits on faef3c0: 72c01f4, ce6e2d8). Every blocker and major in my files is fixed and checked on screenshots. Findings for other owners' screens are listed in followups.\n\nWhat a user sees now:\n\nFront page and legal pages\n- Privacy and terms are real pages at /privacy and /terms. They are short, dated, plain-language, in EN and ES, and set in the landing's reading column. All four landing links now work. The 404 tab title now reads \"Page not found \u00b7 KaizenEDU\".\n- The help door says only what works on this deployment. Without AI it says: \"Type the problem or the topic: they get practice like it, checked by code, with hints and worked steps.\" When the AI tutor is on, it switches to the tutor copy.\n- The problem card has a visible \"Try a real problem\" heading. Its answer slots are white with a visible edge, and Check is always ink. Pressing Check too early points at the empty slot (\"Type both numbers first.\") instead of looking disabled. The header \"Get started\" is now secondary (one ink action per screen) and shows a compact \"Start\" at 320px.\n- The parent record sits right under the hero and fills in from the visitor's answer. On phones it comes straight after the section's first paragraph.\n- \"How it works\" is now two side-by-side panels (the checker and the tutor), plus one ruled line each for calendar and sources. There is a single rule between sections.\n- \"Where things stand\" talks about the product, not the server (\"Here is what works today, and wh"
+ }
+}

@@ -1,0 +1,29 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/e2e/journey.spec.ts",
+   "change": "Line 63 asserts the old finish sentence \"1 right on your own \u00b7 0 with a hint \u00b7 0 not yet\" (stage.checksSummary). The Finish no longer renders it: the tally is rows, and \"with a hint\" was wrong because Why and a retry after a miss also count as help. Replace that line with: `await expect(page.locator(\"dl > div\").filter({ has: page.getByText(\"Right on your own\", { exact: true }) }).locator(\"dd\")).toHaveText(\"1\");`. A \"Not tried\" row will also show for the quiz the journey skips, which is expected. Without this change the journey spec fails at that line on both projects."
+  },
+  {
+   "file": "apps/web/src/lib/ai/build.ts",
+   "change": "In WRITER, replace the line `- Interactives use only: fraction-bar, number-line, states-of-matter, moon-phases, sorter. A sorter has 2 or 3 categories and 3 to 6 items; each item's answer is the index of its category.` with `- ${WIDGET_GUIDE}`, and add `WIDGET_GUIDE` to the existing import from \"./schemas\". WRITER is already a template literal. Until this lands, the prompt tells the model to use only the old five widgets. The schema descriptions and gateLesson already accept and check all twelve, including the rule that a manipulative with a target never starts on it."
+  },
+  {
+   "file": "apps/web/src/components/icons.tsx",
+   "change": "Optional tidy-up: add IconPlay (path `M8 5.5v13l10-6.5-10-6.5Z`), IconPause (path `M9 5.5v13M15 5.5v13`), IconRepeat (path `M5 11.5V10a3.5 3.5 0 0 1 3.5-3.5H18m-3-3 3 3-3 3M19 12.5V14a3.5 3.5 0 0 1-3.5 3.5H6m3 3-3-3 3-3`) and IconSay (paths `M3 12C6 8 9 7.5 12 9.5 15 7.5 18 8 21 12 18 16.5 15 18 12 18S6 16.5 3 12Z` and `M6 12.3c3 1.2 9 1.2 12 0`) in the existing `I` wrapper. Then components/stage/narration.tsx can import them instead of its local copies."
+  }
+ ],
+ "followups": [
+  "Playwright was not run, as instructed. e2e/stage.spec.ts is written against the existing helpers and runs after merge. journey.spec.ts will fail at line 63 until the request above lands, so merge them together.",
+  "Plan 3.5 screenshot review: I rendered the real Stage components to static HTML with the production CSS and looked at them at 320, 390 and 1280 px, and fixed what I saw. This was not the running app, because next dev and next start were off limits. A quick look in the running app after merge is still worth doing.",
+  "The seven scenes appended to the catalogue (AWAITING_REVIEW in components/stage/lesson.ts) need a teacher's review. Until then each one says it was written by AI. Remove an entry from the list once it has been reviewed.",
+  "Hear (tap-to-hear) buttons still show when the browser has no speechSynthesis. Narration hides correctly in that case. I didn't change Hear: it is shared with Today, Talk, Practice and the tutor, and hiding it when speechSynthesis is missing would remove those buttons in other packages' jsdom tests. Worth a small follow-up after merge: hide it with useSyncExternalStore, keeping the server snapshot true.",
+  "Chant: \"Say it with me\" now says a spoken turn cue and shows a visual mark, then leaves a timed gap. It never listens (no microphone). A real chant or call-and-response scene would need a new scene or block type in lib/types.ts, which I don't own.",
+  "The balance only models x on the left (xCount, leftUnits, rightUnits in lib/types.ts). Equations with x on both sides would need a type change.",
+  "Some voices (for example Chrome's network voices) send no word-boundary events. In that case the whole piece being read is underlined instead of single words.",
+  "The lesson teaching act is logged only for lessons that have something to check. Its intent, lesson-checks-pass, can't resolve otherwise.",
+  "A widget's own result line says \"That's right.\" even when a tutor that was open earlier made the check count as helped. The finish tally counts it as helped, and the quiz verdict now says \"with help\".",
+  "The keys stage.checksSummary and stage.correctHelped are now unused. I left them in place because en.ts and es.ts are append-only.",
+  "One earlier full vitest run, at machine load average about 50, timed out in three practice-bank tests that are not mine (math g3to5, g6to7 and science upper). The rerun at normal load passed all 828 tests."
+ ]
+}

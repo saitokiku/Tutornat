@@ -1,0 +1,65 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/app/api/tutor/route.ts (and apps/web/src/app/api/ai/practice/route.ts, apps/web/src/app/api/ai/course/route.ts, apps/web/src/app/api/ai/extract/route.ts)",
+   "change": "Server-side consent gate; AI is not consented to until this lands. Add `import { consentGate } from \"@/lib/server/db/consent\";`. In POST, right after the `if (!m) return \u2026demo\u2026` line and before reading the body, add `const refused = await consentGate(req, \"ai\"); if (refused) return refused;`. It does nothing without DATABASE_URL. The grown-up's own use passes: the device reports \"parent\" when the grown-up is using it. Leave /api/ai/coach out; it is the grown-up's tool. In the SAME change, set `export const CONSENT_ENFORCED = true;` in apps/web/src/lib/server/db/policy.ts. Production keeps families browser-only until then, and src/lib/server/db/consent-wiring.test.ts fails until the flag and the routes agree."
+  },
+  {
+   "file": "apps/web/src/lib/voice/server.ts (voice package)",
+   "change": "In `voiceAllowed(req, body)`, replace the body with `return body.consent && !(await consentGate(req, \"voice\"));` and add `import { consentGate } from \"@/lib/server/db/consent\";`. This is the 'lookup of the stored consent for the session' its own comment asks for. consent-wiring.test.ts counts this file as one of the gated places."
+  },
+  {
+   "file": "apps/web/src/components/tutor/TutorChat.tsx",
+   "change": "1. Transport: `new DefaultChatTransport({ api: \"/api/tutor\", headers: learnerHeaders(learner.id) })`. The header carries an id, never a name.\n2. Add `const consent = useConsent(learner.id);`. Import `learnerHeaders` and `useConsent` from \"@/lib/auth\", and `ConsentNeeded` from \"@/components/profiles/ConsentNeeded\".\n3. When `!consent.ai`, render `<ConsentNeeded profileId={learner.id} scope=\"ai\" />` instead of sending turns to the model. The demo tutor can stay.\n4. Show the mic only when `settings.voiceInput && consent.voice && listen.supported`.\n5. When `settings.voiceInput && !consent.voice`, render `<ConsentNeeded profileId={learner.id} scope=\"voice\" />` beside the composer.\n6. Treat a 403 `{ error: \"consent\" }` from /api/tutor like `!consent.ai`."
+  },
+  {
+   "file": "apps/web/src/lib/practice.ts (also apps/web/src/lib/generate.ts and apps/web/src/components/calendar/ImportPanel.tsx)",
+   "change": "Add `...learnerHeaders(profile.id)` (from \"./auth\" or \"@/lib/auth\") to the headers of the fetch to /api/ai/practice in aiQuestions. Do the same for the /api/ai/course fetch in generate.ts and the /api/ai/extract fetch in ImportPanel when a learner sends it. The server already checks the learner the session reports; the header makes the check exact even right after a profile switch. Show `<ConsentNeeded profileId={\u2026} scope=\"ai\" />` where AI-written questions would appear when `useConsent(id).ai` is false."
+  },
+  {
+   "file": "apps/web/src/components/family/ChildSettings.tsx",
+   "change": "Voice toggle: with `const consent = useConsent(child.id)` (from \"@/lib/auth\"), disable the Toggle when `!consent.voice` and render `<ConsentNeeded profileId={child.id} scope=\"voice\" audience=\"parent\" />` under it. That shows 'Voice is off for {name} until you record consent.' with a 'Review consent' link. In browser-only mode useConsent always allows, so nothing changes there."
+  },
+  {
+   "file": "apps/web/src/app/(app)/settings/page.tsx",
+   "change": "In the 'Data on this device' section, replace `<p className=\"text-sm text-muted\">{t(\"settings.dataBody\")}</p>` with `<DataNote />` from \"@/components/auth/DataNote\". Browser-only shows the same line as before. With a server account it says the account keeps everything, warns '{n} changes on this device haven't reached your account yet. Deleting now loses them.' when there is unsent work, and shows the sync line. Optional: give the Sign out button a loading state while `await signOut()` runs (it can take up to about 8 s while it sends what's waiting)."
+  },
+  {
+   "file": "apps/web/src/components/shell/AppShell.tsx",
+   "change": "In the rail footer (next to the DEMO status line) add `<SyncStatus className=\"px-2\" />` from \"@/components/auth/SyncStatus\", and the same in the phone menu if there is one. It renders nothing in browser-only mode. With an account it shows saved, saving, offline with N waiting, N not saved, or out of space, and announces only problems and recovery."
+  },
+  {
+   "file": "apps/web/next.config.ts",
+   "change": "Add `outputFileTracingIncludes: { \"/api/**\": [\"./drizzle/**/*\"] }` so the migrations folder ships with the server functions and pending migrations apply on first use. Otherwise the deploy must run `npx drizzle-kit migrate --config drizzle/drizzle.config.ts` first. Verify on a Neon preview branch that process.cwd() resolves to apps/web in the function bundle."
+  },
+  {
+   "file": "apps/web/.env.example",
+   "change": "(Owner or infra; I don't touch env files.) Document these variables:\n- DATABASE_URL: Postgres URL, or pglite:./.pglite or pglite:memory for local development. Unset means browser-only. Production also needs CONSENT_ENFORCED.\n- DATABASE_URL_UNPOOLED: direct connection for migrations. Neon's Vercel integration sets it.\n- RESEND_API_KEY and EMAIL_FROM: the reset email. EMAIL_FROM must be a sender on a domain verified in Resend.\n- APP_URL: origin for links in email. Required in production off Vercel, or reset email reports 'not set up' to everyone.\n- KAIZEN_DB_POOL: pool size, default 5."
+  },
+  {
+   "file": "apps/web/src/lib/acts.ts",
+   "change": "In logAct, when opts.once, use a deterministic id instead of newId(): `${input.profileId}|${input.kind}|${input.ref ?? \"\"}|${localDate(at)}` (local YYYY-MM-DD). Two devices that record the same once-act then merge into one record on sync, because records merge by id; today they become two and double the counts behind the outcome numbers. Ids up to 300 characters sync."
+  },
+  {
+   "file": "apps/web/src/app/(legal)/policies.tsx (trust package, /privacy)",
+   "change": "Show the notice version on the privacy page: `Notice version {CONSENT_NOTICE_VERSION}`, imported from \"@/lib/server/db/policy\". Every consent receipt cites that version, so it then names what the parent actually read. When the notice changes in a way consent depends on, bump CONSENT_NOTICE_VERSION. Older receipts keep their version, and new consent against an outdated tab is refused with 'The privacy notice changed\u2026'."
+  },
+  {
+   "file": "apps/web/src/components/tutor/TutorChat.tsx, apps/web/src/lib/profiles.ts (addNote), apps/web/src/lib/school.ts, apps/web/src/planner/intake.ts",
+   "change": "Display polish only, since sync now cleans these on the server. Where user text is cut with `.slice(0, n)` (TutorChat text 1000, addNote 1000, school notes and text 1000, intake titles 160 and lines 200), append `.toWellFormed()` so a cut emoji doesn't leave a half character (shown as U+FFFD) on the page."
+  }
+ ],
+ "followups": [
+  "**Blocker (consent enforcement): partly done, partly blocked on other owners.** In my files: production server mode stays off until CONSENT_ENFORCED, the gate fails closed, and the copy is honest. Not done: wiring consentGate into /api/tutor, /api/ai/{practice,course,extract} and lib/voice/server.ts, because I don't own those files (see requests). Until they are wired and the flag is flipped, production deployments stay browser-only even with DATABASE_URL set. That is deliberate: consent records must not promise what nothing enforces.",
+  "**DataNote in Settings: not done, blocked on the Settings owner.** My side is done: DataNote now warns about unsent or refused work before deleting. Settings still shows 'saved in this browser only' until settings/page.tsx renders <DataNote /> (request).",
+  "**Migration tracing: not done, blocked on infra.** The outputFileTracingIncludes entry needs next.config.ts (request). Without it, or a drizzle-kit migrate deploy step, a Vercel cold start against an empty Neon database won't find the migrations folder.",
+  "**Real Postgres/Neon: never tested.** The pg Pool path, migrations over DATABASE_URL_UNPOOLED, and the advisory lock have not run against real Postgres or Neon. No Postgres binary on this machine, and Docker (colima) is broken. All SQL coverage is pglite, the same engine compiled to WASM, so SQL semantics are covered; the node-postgres driver path is not. Suggest one CI job against a Neon branch.",
+  "**/privacy: comes from the trust package.** It is built there at (legal)/privacy, not in my base, so links resolve only after merge. Tying the receipt's notice version to that page is a request to the trust package.",
+  "**Playwright: written, not run** (per instructions). e2e/accounts.spec.ts needs `DATABASE_URL=pglite:memory next dev` to exercise the server journeys. Under `next start` they skip until CONSENT_ENFORCED is true.",
+  "**Spec deviation: e2e path.** The general instructions say e2e/backend.spec.ts, but the ownership list says e2e/accounts.spec.ts. I followed the ownership list, as both reviewers asked.",
+  "**Edge case: device storage that can't save sync state.** If only the sync state (outbox) can't be saved while the store still can, changes made after that live in an in-memory outbox. If that tab closes while offline, they stay in the store on the device but never go up. SyncStatus shows the out-of-space warning whenever storage fails.",
+  "**Residual risk: a child in 'parent' mode.** A child who passes the times-table grown-up gate can switch the device to 'parent' and use AI as the grown-up. Consent itself now requires the account password, but the gate trusts the device's 'parent' report the same way the rest of the parent area does. A stronger fix would require the password, not just the gate, to enter parent mode in server mode.",
+  "**Known, harmless: retries can re-send records.** Because of the clock-skew correction, a retried push of an identical record can get a slightly newer stamp and be re-delivered to other devices. The data is the same, so the only cost is bandwidth.",
+  "**Old i18n keys left in place.** acct.consent.title, intro, cardBody, noVerified, ai, ask, revokeConfirm, acct.err.adult, acct.signup.adult and acct.reset.failed are now unused. They stay because the shared-file rule forbids deleting lines; their replacements are new keys in the backend block."
+ ]
+}

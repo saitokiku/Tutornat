@@ -1,0 +1,41 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/knowledge/standards.ts",
+   "change": "Make the Common Core lookup resolve high-school math and ELA 9\u201310 codes. The live notation for high-school math is 'CCSS.Math.Content.HSA-REI.B.3', so compare `s.statementNotation?.replace(/^CCSS\\.(Math|ELA-Literacy)\\.(Content\\.)?/, '')` against both `code` and `'HS' + code`. For grade '09', search every matching standard set, not `sets.slice(0, 3)`; the algebra set is 5th. Add gradeOf support for 'W.9-10.1a' / 'RL.9-10.4' (grade '09'). Also keep the builder's earlier request: return null for NGSS-style codes first, `if (/^(K|\\d|MS|HS)-[A-Z]{2,4}\\d/.test(code)) return null;`. Once high-school codes resolve, widen isCommonCore in components/practice/StandardText.tsx (practice package) back to include `[A-Z]-[A-Z]+\\.` and `[A-Z]{1,2}\\.9-10\\.`."
+  },
+  {
+   "file": "apps/web/src/lib/knowledge.ts",
+   "change": "Make `know.standard` tell 'not in the data' (200 with {standard:null}) apart from 'did not load' (network error or non-ok response), e.g. `Promise<Standard | 'missing' | null>`. lib/practice.ts `standardWording` does exactly this today; once know.standard does, StandardText can call it and standardWording can be removed."
+  },
+  {
+   "file": "apps/web/src/learning/types.ts",
+   "change": "Additive contract field so practice misses keep their diagnosis. Add `missWhy?: string` to `Attempt`: the misconception shown by a wrong try on this problem before the recorded answer, for example a distractor picked, then a right answer with help. Practice stores one attempt per problem, so today a miss followed by a right answer loses its `why`. After this lands, the practice package adds `missWhy` to AnswerRecord, records `recordAnswer(... missWhy: a.missWhy?.slice(0, 40))` in lib/practice.ts, and passes the first tagged miss from Runner (misconceptionOf on each miss, kept per slot like the other help). learning/outcomes.ts and the learner profile can then count practice distractor picks."
+  },
+  {
+   "file": "apps/web/e2e/fabric.spec.ts",
+   "change": "Line 47: click `page.getByRole(\"link\", { name: \"I'm done for today\" })` instead of `\"Back to Today\"`. Both go to /home. With this change the practice finish can drop its duplicate ghost 'Back to Today' link when the set came from Today (review finding F24). Runner.tsx then renders the ghost back link only when `!fromToday`."
+  },
+  {
+   "file": "apps/web/src/components/stage/hear.tsx",
+   "change": "Give the shared Hear button a 44 px default (`size-11` instead of `size-10`) and 56 px (`size-14`) when `useHear().young` is true. Practice currently forces these sizes with `hearSize()` from components/practice/targets.ts, which can be removed once Hear does it itself. The lesson stage and tutor drawer also use Hear at 40 px today."
+  },
+  {
+   "file": "apps/web/src/components/stage/Stage.tsx",
+   "change": "(Builder's request, still needed) For plan 1.9, where every finish offers \"I'm done for today\", make the lesson finish screen match the practice finish: a primary link to /home labelled t(\"pr.finish.done\") (\"I'm done for today\", already in en/es), and the next lesson offered as a secondary button that starts only when pressed, never auto-advancing."
+  }
+ ],
+ "followups": [
+  "Skipped F24 (finish shows 'I'm done for today' and 'Back to Today', both to /home, when the set came from Today): e2e/fabric.spec.ts, which I don't own, clicks 'Back to Today', so removing it now would break that journey. It is listed in requests; after that change the Runner fix is one line (render the ghost link only when !fromToday).",
+  "F29, partly addressed: m.frac.unit and m.frac.numberline still have 3 levels, which is outside 'switch inputs only'. The pads could not share level 2, because g3to5.test.ts (not mine) asserts level 1\u20132 item shapes. Level 3 now mixes reading and building half and half, so checks ask for both directions, which is what 3.NF.A.1\u20132 ask for. The extra level of practice before 'ready' still needs the owner's sign-off.",
+  "Spec gap, needs a contract change: practice misses that are later answered right still keep no misconception tag. Attempt.why is wrong-answers-only, and there is one attempt per problem. Requested Attempt.missWhy; give-ups, checks and placement keep their tags today, and give-ups after a skip now do too.",
+  "Spec gap, content work outside 'switch inputs': grade 1\u20132 keypad skills (m.add.20, m.sub.20, m.missing.addend, m.place.tens L2, m.add.10/m.sub.10 L2, m.skip.count) have no picture. They are answered on the 64 px on-screen keypad. English K\u20132 banks without pictures (e.sight.words, e.capitals, e.nouns.verbs, e.past.tense, e.contractions) belong to the English strand. All K math is now choices or taps.",
+  "Not fully met, 'everything spoken': the Check button's label and the clock's hand toggles are not read aloud. Pads have a spoken 'how' line, feedback and the finish are spoken, and the finish has Hear on its choices. The '4 marked' count is announced through aria-live and shown on screen, not spoken. Speaking it would count for the child.",
+  "Optional and skipped: m.frac.equiv on the fraction bar (shade a fixed 8-part bar to equal 3/4). It would add an item shape that g3to5.test.ts, which I don't own, does not expect.",
+  "NGSS science codes still show as plain codes; the knowledge layer has no source for their wording. High-school math and ELA 9\u201310 codes are plain until standards.ts can match them (requested).",
+  "The clock face's numbers are about 36\u201341 px tap spots at K\u20132 size. The \u00b1/\u2212 steppers (56 px for K\u20132) and the arrow keys are the full-size alternatives.",
+  "Playwright was not run, as instructed. Four journeys are written, including the new 320 px one; they run after merge.",
+  "No visual pass was possible: next dev and next start are off-limits. The layout changes (counters using the card padding at <640 px, counters below the question, clock rows stacked on phones) are covered by unit layout tests and the new 320 px e2e assertions only.",
+  "The new and edited Spanish strings in the pr.* block need a native-speaker review, like the rest of es.ts."
+ ]
+}

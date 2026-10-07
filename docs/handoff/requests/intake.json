@@ -1,0 +1,58 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/lib/store.ts",
+   "change": "In clearAll() (\"Delete everything on this device\"), also delete the kept photos and PDFs. Add `try { indexedDB.deleteDatabase(\"kaizenedu.files\"); } catch {}` next to localStorage.removeItem. No import is needed, so there is no cycle: blobs.ts imports store.ts. My open connection closes itself on versionchange, so the delete is not blocked. Until this lands, lib/blobs.ts deletes the files only where it is loaded, or on the next app page load after the accounts are gone."
+  },
+  {
+   "file": "apps/web/src/lib/profiles.ts",
+   "change": "In removeLearner(id), delete that learner's files right away. Before filtering events, collect `s.events.filter((e) => e.profileId === id).flatMap((e) => e.attachment?.blobId ? [e.attachment.blobId] : [])`, then after update() call `void deleteBlob(f)` for each (import { deleteBlob } from \"./blobs\"). Until then, lib/blobs.ts deletes them only on pages where it is loaded, or at the next prune (1-hour grace)."
+  },
+  {
+   "file": "apps/web/src/components/calendar/EventForm.tsx",
+   "change": "Add an `allowDelete?: boolean` prop (default true) that hides the Delete / \"Yes, delete\" control. Once it exists, change components/school/SchoolItem.tsx (intake package) in two places: pass `allowDelete={unlocked}` to <EventForm>, and have the Edit button call openEditor() directly instead of `setGate(\"edit\")`. Learners could then edit an item without the grown-up gate, and deleting would stay gated. Also consider gating the calendar page's own Delete the same way: today a child can delete an item there without the gate."
+  },
+  {
+   "file": "apps/web/src/app/(focus)/talk/page.tsx",
+   "change": "Give the tutor an item's pasted text as well as its notes, capped to the context schema's 1000 characters: `const homework = event ? { title: event.title, notes: [event.notes, event.attachment?.text].filter(Boolean).join(\"\\n\\n\").slice(0, 1000) || undefined } : ...`. If the tutor route doesn't already strip learner names from notes, run them through lib/intake.ts redactNames first, as the box does."
+  },
+  {
+   "file": "apps/web/src/app/(focus)/practice/[setId]/page.tsx (+ components/practice/Runner.tsx)",
+   "change": "Sets started from the item page open with ?from=event:<eventId>. Map that back: `exitHref = from === \"today\" ? \"/home\" : from?.startsWith(\"event:\") ? `/calendar/${from.slice(6)}` : \"/practice\"`. Label the finish-screen link with t(\"intake.backToItem\") (\"Back to the school item\"; the key exists in en and es)."
+  },
+  {
+   "file": "apps/web/src/app/(app)/practice/page.tsx",
+   "change": "Pre-fill the search from the URL: `const [query, setQuery] = useState(() => params.get(\"q\")?.slice(0, 120) ?? \"\")`. The box sends /practice?q=<topic>&subject=<subject> (lib/intake.ts practiceSearchHref). Its copy currently promises only \"the practice list\", so it stays honest until this lands."
+  },
+  {
+   "file": "apps/web/src/components/calendar/WeekView.tsx, apps/web/src/components/today/ComingUp.tsx, apps/web/src/components/today/TodayPlan.tsx",
+   "change": "Link each school item (week rows, Coming up rows, the plan's due and prep lines) to its page: <Link href={`/calendar/${event.id}`}>. Today the item page can only be reached right after saving from the box."
+  },
+  {
+   "file": "apps/web/src/app/(app)/home/page.tsx",
+   "change": "The h2 above the non-K-2 box, t(\"today.learnNew\") (\"Learn something new\"), no longer describes it: the box takes homework, tests, practice and learning, and has its own label \"What's going on?\". Drop that heading, keep the section, and use aria-label={t(\"intake.label\")}, or add a home.* key that covers all four. Optional: pass mode=\"intake\" to both <MagicBox learner={learner} /> calls; it is already the default."
+  },
+  {
+   "file": "apps/web/src/lib/ai/safety.ts",
+   "change": "The box now runs the safety screen as you type, so its false positives show up. In CRISIS, `want(ed)? to die` has no closing word boundary, so it matches \"want to diet\". `end (my|it all)` matches \"how do I end my essay\". Both show the 988 reply and leave a crisis note for the parents. Suggested: `want(ed)? to die\\b` and `end (my life|it all)\\b`. Tutor behaviour is otherwise unchanged."
+  },
+  {
+   "file": "apps/web/src/app/(app)/courses/new/page.tsx",
+   "change": "Optional: pass mode=\"course\" explicitly to <MagicBox variant=\"page\" ... />. It is already the default for variant=\"page\", so nothing breaks without it."
+  }
+ ],
+ "followups": [
+  "Not run, as instructed: Playwright. Six intake journeys are written in e2e/intake.spec.ts, including the new PDF and photo reload journey that covers the real IndexedDB path and canvas shrinking. They have not run at 1440 or 390 px.",
+  "AI reading has only been tested against fake models. With a key, it still needs a live check of request size, of the quick model filling the structured-output schema reliably, and of photo and PDF reading quality.",
+  "Skipped, with reason: the K-2 child's picture-tile version of the box (plan section 2.2). It is not in this package's four spec items, the K-2 Today layout belongs to task 1.5 (today package), and the plan doesn't say what the tiles do. Today, K-2 Today shows the box under \"Grown-ups: ask for any topic here\".",
+  "#6/#25 interim: on the item page a learner on their own now passes the grown-up gate before Edit, because the calendar's EventForm has an ungated Delete. When EventForm gets allowDelete (see requests), Edit can open without the gate. The calendar page itself still lets a child delete without the gate.",
+  "#0/#26 partial: \"Delete everything\" and removing a learner delete kept files right away only on pages where lib/blobs.ts is loaded. Otherwise it happens on the next app page load: immediately when no account is left, or after the 1-hour grace for a removed learner. The store.ts and profiles.ts requests make it immediate everywhere.",
+  "#14/#34 blocked on the talk page request: Get help passes the item's title and notes but not its pasted text.",
+  "#15/#39 blocked on the practice page request: after a prep or practice set started from the item page, there is no link back to the item. ?from=event:<id> is sent, and intake.backToItem exists for it.",
+  "#19/#38 blocked on the home page request: the \"Learn something new\" heading above the box.",
+  "#30: the practice search ignores ?q= until the practice page request lands. The box's copy promises only the practice list, so it stays honest.",
+  "Minor, not fixed: when a weekday and a numeric date disagree (\"math test Thursday 10/16\"), the box leaves the day empty for the family to pick. The title still contains those date words, and the family can edit it.",
+  "Deliberate and visible in the guess row: in English, \"next Friday\" means Friday of next week; in Spanish, \"el pr\u00f3ximo viernes\" means the coming Friday. Practice and learn win over a date only when the text opens as a request or ends in a question mark.",
+  "Spanish: all new es.ts strings in the intake block need native-speaker review, like the rest of es.ts."
+ ]
+}
