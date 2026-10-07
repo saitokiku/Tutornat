@@ -202,7 +202,8 @@ describe("spot", () => {
     expect(currentSpot()).not.toBeNull();
   });
 
-  it("scrolls an off-screen target into view, unless the learner is typing", () => {
+  it("scrolls an off-screen target into view, unless the learner is typing right now", () => {
+    vi.useFakeTimers();
     page(`<input id="answer" /><button data-spot="far" data-rect="10 2400 100 40">Far</button><button data-spot="near">Near</button>`);
     const scroll = vi.fn();
     Element.prototype.scrollIntoView = scroll;
@@ -210,10 +211,33 @@ describe("spot", () => {
     expect(scroll).not.toHaveBeenCalled();
     spot("far");
     expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ block: "center" }));
+    // The cursor sitting in a box (after sending a chat message) is not typing: it still scrolls.
     scroll.mockClear();
-    (document.getElementById("answer") as HTMLInputElement).focus();
+    const answer = document.getElementById("answer") as HTMLInputElement;
+    answer.focus();
+    spot("far");
+    expect(scroll).toHaveBeenCalledTimes(1);
+    // A key just pressed in it is.
+    scroll.mockClear();
+    answer.dispatchEvent(new KeyboardEvent("keydown", { key: "4", bubbles: true }));
     spot("far");
     expect(scroll).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(2000);
+    spot("far");
+    expect(scroll).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts a target under a sticky header or the tab bar as out of view, and scrolls it out", () => {
+    page(`<header data-bar style="position: sticky" data-rect="0 0 1024 64">Header</header><button data-spot="under" data-rect="10 20 100 40">Under</button><nav data-bar style="position: fixed" data-rect="0 700 1024 68"><a href="/home" data-spot="nav.home" data-rect="10 710 80 48">Home</a></nav>`);
+    document.elementsFromPoint = (_x: number, y: number) => [y < 100 ? document.querySelector("header")! : document.querySelector("nav")!];
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    spot("under");
+    expect(scroll).toHaveBeenCalledTimes(1);
+    // A tab in the tab bar is not hidden by its own bar.
+    spot("nav.home");
+    expect(scroll).toHaveBeenCalledTimes(1);
+    delete (document as { elementsFromPoint?: unknown }).elementsFromPoint;
   });
 
   it("clears on Escape, on a new spot, and when the learner uses the target", () => {
@@ -227,6 +251,32 @@ describe("spot", () => {
     expect(currentSpot()).toMatchObject({ id: "b" });
     expect(currentSpot()!.session).toBeGreaterThan(first);
     (el("b") as HTMLButtonElement).click();
+    expect(currentSpot()).toBeNull();
+  });
+
+  it("one Escape closes only the spot: a drawer listening on window keeps its Escape for next time", () => {
+    page(`<button data-spot="a">A</button>`);
+    const drawer = vi.fn((e: KeyboardEvent) => e.key === "Escape");
+    window.addEventListener("keydown", drawer);
+    spot("a");
+    const first = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    document.body.dispatchEvent(first);
+    expect(currentSpot()).toBeNull();
+    expect(first.defaultPrevented).toBe(true);
+    expect(drawer).not.toHaveBeenCalled();
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(drawer).toHaveBeenCalledTimes(1);
+    window.removeEventListener("keydown", drawer);
+  });
+
+  it("keeps a caption until the learner is done with it; a bare glow clears after SPOT_MS", () => {
+    vi.useFakeTimers();
+    page(`<button data-spot="a">A</button>`);
+    spot("a", { say: "Tap Hint for a small nudge, then try the bottom number again." });
+    vi.advanceTimersByTime(10 * 60_000);
+    expect(currentSpot()).not.toBeNull();
+    spot("a", { say: "Gone in a moment.", ms: 3000 });
+    vi.advanceTimersByTime(3000);
     expect(currentSpot()).toBeNull();
   });
 
@@ -281,6 +331,28 @@ describe("walkthroughs", () => {
     (el("a") as HTMLButtonElement).click();
     vi.advanceTimersByTime(200);
     expect(currentSpot()).toMatchObject({ id: "b" });
+  });
+
+  it("moves on when using a step replaces its target (Add turns into the form)", async () => {
+    page(`<main><button data-spot="calendar.add">Add</button></main>`);
+    el("calendar.add").addEventListener("click", () => {
+      document.querySelector("main")!.innerHTML = `<form><label>Title <input data-spot="calendar.form.title" /></label></form>`;
+    });
+    spotSteps([{ id: "calendar.add", say: "Tap Add." }, { id: "calendar.form.title", say: "Name the test here." }]);
+    (el("calendar.add") as HTMLButtonElement).click();
+    await new Promise((r) => setTimeout(r, 300));
+    expect(currentSpot()).toMatchObject({ id: "calendar.form.title", index: 1 });
+  });
+
+  it("moves on (rather than ending) when a step's target goes away on its own", async () => {
+    page(`<main><button data-spot="a">A</button><button data-spot="b">B</button></main>`);
+    spotSteps([{ id: "a", say: "One" }, { id: "b", say: "Two" }]);
+    el("a").remove();
+    await settle();
+    expect(currentSpot()).toMatchObject({ id: "b", index: 1 });
+    el("b").remove();
+    await settle();
+    expect(currentSpot()).toBeNull();
   });
 });
 

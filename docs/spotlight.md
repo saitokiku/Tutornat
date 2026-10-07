@@ -55,8 +55,12 @@ validated before it touches the DOM; nothing from outside (the model, a URL) eve
 
 `cue: "glow"` (default) rings the element. `cue: "point"` puts a rose arrow beside it instead — for
 small things a ring would crowd (a tick, one digit). `say` is the caption (trimmed, at most 160
-characters here; the AI tool allows 90). `ms` defaults to `SPOT_MS` (8 s); `0` keeps it until dismissed.
-`dim` defaults to on for walkthroughs and off for a single spot.
+characters here; the AI tool allows 90). A caption stays until the learner is done with it (Got it,
+using the target, Escape, a new spot, a new page or problem): reading time is theirs (WCAG 2.2.1), and a
+K–1 reader may need a long while or the speaker. A bare glow or arrow (no caption) clears after
+`SPOT_MS` (8 s). `ms` overrides either; `0` keeps it until dismissed. `dim` defaults to on for
+walkthroughs and off for a single spot. `setSpotBand(band)` tells the layer the learner's age band
+(K–2 gets 56px buttons and a speaker in the caption).
 
 ### The layer — `components/spotlight/SpotlightLayer.tsx`
 

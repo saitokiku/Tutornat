@@ -8,8 +8,8 @@
 //
 // The engine is a tiny client store (like lib/store.ts; components read it with useSpotlight from
 // components/spotlight/hooks.ts). SpotlightLayer draws whatever is lit. No React and no "use client"
-// here: lib/ai/spot-tool.ts imports this into the server route for the id rule, and nothing touches the
-// DOM until a function is called in the browser.
+// here: lib/ai/spot-tool.ts imports this into the server route for the id rule. On the server nothing
+// runs; in a browser the only thing done on load is noting keystrokes in text fields (see typing()).
 
 /* ------------------------------------------------------------------ ids */
 
@@ -300,9 +300,9 @@ function guardedBy(el: Element): boolean {
 }
 
 /**
- * Makes these targets (and anything inside them) unpointable until released: the correct choice, the
- * answer tick on a pad. Spot requests for them quietly fail. Never remove them from the visible list —
- * a missing choice would tell the model which one is right.
+ * Makes these targets (and anything inside them) unpointable until released: the place an answer is
+ * given (see answerSpots in lib/spot-hints.ts). Spot requests for them quietly fail. Never remove them
+ * from the visible list — a missing choice would tell the model which one is right.
  */
 export function guardSpots(ids: readonly string[]): () => void {
   const list = ids.filter(isSpotId);
@@ -311,6 +311,64 @@ export function guardSpots(ids: readonly string[]): () => void {
   return () => {
     guards.delete(list);
   };
+}
+
+/* ------------------------------------------------------------------ what can be seen */
+
+export type View = { left: number; top: number; right: number; bottom: number };
+type Bar = { el: Element; edge: number } | null;
+export type Bars = { top: Bar; bottom: Bar };
+
+/**
+ * A fixed or sticky bar across the top or bottom of the screen: the phone tab bar, the sticky practice
+ * header, or a sheet anchored to the bottom (the tutor drawer on phones), whatever its height.
+ */
+function barAt(y: number): Bar {
+  if (typeof document.elementsFromPoint !== "function") return null;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const hit = document.elementsFromPoint(vw / 2, y).find((e) => !e.closest("[data-spot-layer]"));
+  for (let n: Element | null = hit ?? null; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+    const pos = getComputedStyle(n).position;
+    if (pos !== "fixed" && pos !== "sticky") continue;
+    const r = n.getBoundingClientRect();
+    const sheet = y > vh / 2 && r.bottom >= vh - 2 && r.top > vh * 0.1;
+    if (r.width < vw * 0.6 || (r.height > vh * 0.3 && !sheet)) return null;
+    return { el: n, edge: y < vh / 2 ? r.bottom : r.top };
+  }
+  return null;
+}
+
+/** What covers the top and bottom edges of the screen right now (two hit tests; cheap enough per frame). */
+export const edgeBars = (): Bars => ({ top: barAt(1), bottom: barAt(window.innerHeight - 1) });
+
+/** The part of the viewport where el can be seen: cut down by every clipping or scrolling ancestor. */
+export function clipBox(el: Element): View {
+  const box = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+  for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    if (cs.overflowX !== "visible" || cs.overflowY !== "visible") {
+      const r = p.getBoundingClientRect();
+      box.left = Math.max(box.left, r.left);
+      box.top = Math.max(box.top, r.top);
+      box.right = Math.min(box.right, r.right);
+      box.bottom = Math.min(box.bottom, r.bottom);
+    }
+    if (cs.position === "fixed") break;
+  }
+  return box;
+}
+
+/** The screen less the bars el is not part of (a tab in the tab bar is not hidden by it). */
+export function barView(el: Element, bars: Bars = edgeBars()): View {
+  const top = bars.top && !bars.top.el.contains(el) ? bars.top.edge : 0;
+  const bottom = bars.bottom && !bars.bottom.el.contains(el) ? bars.bottom.edge : window.innerHeight;
+  return { left: 0, top, right: window.innerWidth, bottom };
+}
+
+/** Where el can be seen: its clip box, less the bars. What both scrolling and drawing go by. */
+export function seenView(el: Element, bars: Bars = edgeBars()): View {
+  const c = clipBox(el), b = barView(el, bars);
+  return { left: c.left, right: c.right, top: Math.max(c.top, b.top), bottom: Math.min(c.bottom, b.bottom) };
 }
 
 /* ------------------------------------------------------------------ engine */
@@ -324,7 +382,11 @@ export type SpotOptions = {
   cue?: SpotCue;
   /** Move keyboard focus to the target. Off by default: pointing never steals focus. */
   focus?: boolean;
-  /** Clears itself after this long (default SPOT_MS). 0 or Infinity keeps it until dismissed. Steps never time out. */
+  /**
+   * Clears itself after this long. Default: a caption stays until the learner closes it, uses the
+   * target, or something new is lit (reading time is theirs); a bare glow or arrow clears after SPOT_MS.
+   * 0 or Infinity keeps it until dismissed. Steps never time out.
+   */
   ms?: number;
   /** More places to visit after this one, as a walkthrough with Back / Next. */
   steps?: SpotStep[];
@@ -345,13 +407,19 @@ export type Spotlight = {
   /** The whole walkthrough, or null for a single spot. */
   steps: SpotStep[] | null;
   index: number;
+  /** The learner's age band (setSpotBand), when the app has set one. */
+  band?: string;
 };
 
+/** How long a bare glow or arrow (no caption) stays. */
 export const SPOT_MS = 8000;
 const SAY_MAX = 160;
+/** A key pressed in a text field this recently means the learner is typing: don't scroll under them. */
+const TYPING_MS = 1500;
 
 let live: Spotlight | null = null;
 let sessions = 0;
+let band: string | undefined;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((fn) => fn());
 
@@ -362,6 +430,9 @@ let startedAt = 0;
 let held = false;
 let focusing = false;
 let observer: MutationObserver | null = null;
+/** A walkthrough step the learner just used; the move to the next step is on its way. */
+let advancing: { session: number; index: number } | null = null;
+let keyAt = -Infinity;
 
 export const currentSpot = () => live;
 export function subscribeSpot(fn: () => void) {
@@ -369,6 +440,11 @@ export function subscribeSpot(fn: () => void) {
   return () => {
     listeners.delete(fn);
   };
+}
+
+/** The learner's age band (catalogue Band: "k2", "35", …), set once by the app shell; null for a grown-up. K–2 gets 56px buttons and a speaker. */
+export function setSpotBand(b: string | null) {
+  band = b ?? undefined;
 }
 
 const cleanSay = (s: string | undefined) => {
@@ -395,7 +471,8 @@ export function spot(id: string, opts: SpotOptions = {}): boolean {
   if (opts.steps?.length) return spotSteps([{ id, say: opts.say ?? "" }, ...opts.steps], opts);
   const target = pick(id);
   if (!target) return false;
-  begin({ id, target, say: cleanSay(opts.say), cue: opts.cue ?? "glow", dim: opts.dim ?? false, steps: null, index: 0 }, opts.ms ?? SPOT_MS, opts.focus);
+  const say = cleanSay(opts.say);
+  begin({ id, target, say, cue: opts.cue ?? "glow", dim: opts.dim ?? false, steps: null, index: 0 }, opts.ms ?? (say ? null : SPOT_MS), opts.focus);
   return true;
 }
 
@@ -414,6 +491,7 @@ export function spotSteps(steps: SpotStep[], opts: Omit<SpotOptions, "say" | "st
 /** Next (1) or Back (-1) in a walkthrough, skipping steps that are gone. Next past the end, or on a single spot, finishes. */
 export function stepSpot(delta: 1 | -1 = 1): boolean {
   if (!live) return false;
+  advancing = null;
   const steps = live.steps;
   if (steps)
     for (let i = live.index + delta; i >= 0 && i < steps.length; i += delta) {
@@ -431,6 +509,7 @@ export function stepSpot(delta: 1 | -1 = 1): boolean {
 export function clearSpot() {
   if (!live) return;
   live = null;
+  advancing = null;
   clearTimeout(timer);
   detach();
   emit();
@@ -455,26 +534,38 @@ export function revealSpot() {
   emit();
 }
 
-/** Re-checks the lit element after the page changed: same id re-found (a re-render), else cleared. */
+/**
+ * Re-checks the lit element after the page changed: the same id re-found (a re-render) is followed;
+ * otherwise a single spot clears, and a walkthrough moves on — a step's target going away is often the
+ * step working ("Tap Add" turns the button into a form), and a step just used is already moving on.
+ */
 export function checkSpot() {
   if (!live || (live.target.isConnected && isShown(live.target))) return;
   const again = pick(live.id);
-  if (!again) return clearSpot();
-  live = { ...live, target: again, nonce: live.nonce + 1 };
-  emit();
+  if (again) {
+    live = { ...live, target: again, nonce: live.nonce + 1 };
+    emit();
+    return;
+  }
+  if (!live.steps) return clearSpot();
+  if (advancing?.session === live.session && advancing.index === live.index) return;
+  stepSpot(1);
 }
 
-/** Test hook: clears the spot, guards and scrub. */
+/** Test hook: clears the spot, guards, scrub and band. */
 export function resetSpotlight() {
   clearSpot();
   guards.clear();
   defaultScrub = null;
+  band = undefined;
   held = false;
+  keyAt = -Infinity;
 }
 
-function begin(s: Omit<Spotlight, "session" | "nonce">, ms: number | null, focus?: boolean) {
+function begin(s: Omit<Spotlight, "session" | "nonce" | "band">, ms: number | null, focus?: boolean) {
   const fresh = !live;
-  live = { ...s, session: ++sessions, nonce: 0 };
+  live = { ...s, session: ++sessions, nonce: 0, band };
+  advancing = null;
   clearTimeout(timer);
   duration = ms && ms > 0 && Number.isFinite(ms) ? ms : null;
   if (duration !== null) {
@@ -484,6 +575,8 @@ function begin(s: Omit<Spotlight, "session" | "nonce">, ms: number | null, focus
   if (fresh) attach();
   reveal(s.target, false);
   if (focus) focusTarget(s.target);
+  if (process.env.NODE_ENV !== "production" && !s.id.startsWith("auto.") && !spotName(s.target))
+    console.error(`spot: "${s.id}" has no name to announce; give it data-spot-label (spotAttr(id, label)).`);
   emit();
 }
 
@@ -495,35 +588,30 @@ function run(ms: number) {
 }
 
 const TYPING = 'textarea, select, input:not([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="image"])';
-const isEntry = (el: Element) => el.matches(TYPING) || (el as HTMLElement).isContentEditable || ENTRY_ROLE.test(el.getAttribute("role") ?? "");
+const isEntry = (el: Element) => el.matches(TYPING) || isEditable(el) || ENTRY_ROLE.test(el.getAttribute("role") ?? "");
+
+// The one thing this module does on load (in a browser): note when a key lands in a text field, so a
+// spot never scrolls the page out from under someone mid-word. Focus alone is not typing: after sending
+// a chat message the cursor stays in the box, and the tutor's pointing should still scroll.
+const noteKey = (e: Event) => {
+  if (e.target instanceof Element && isEntry(e.target)) keyAt = Date.now();
+};
+if (typeof document !== "undefined") {
+  document.addEventListener("keydown", noteKey, true);
+  document.addEventListener("input", noteKey, true);
+}
 
 function typing(): boolean {
   const a = document.activeElement;
-  return !!a && a !== document.body && isEntry(a);
+  return !!a && a !== document.body && isEntry(a) && Date.now() - keyAt < TYPING_MS;
 }
 
-/** The part of the viewport where el can be seen: cut down by every clipping or scrolling ancestor. */
-export function clipBox(el: Element): { left: number; top: number; right: number; bottom: number } {
-  const box = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
-  for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
-    const cs = getComputedStyle(p);
-    if (cs.overflowX !== "visible" || cs.overflowY !== "visible") {
-      const r = p.getBoundingClientRect();
-      box.left = Math.max(box.left, r.left);
-      box.top = Math.max(box.top, r.top);
-      box.right = Math.min(box.right, r.right);
-      box.bottom = Math.min(box.bottom, r.bottom);
-    }
-    if (cs.position === "fixed") break;
-  }
-  return box;
-}
-
+/** Mostly in view, where it can be seen: inside its panel and not under a sticky header or the tab bar. */
 function inView(el: Element): boolean {
   const b = el.getBoundingClientRect();
   // A line in a drawing can be 0 wide: give it a pixel each way so it can count as seen.
   const r = { left: Math.min(b.left, b.right - 1), right: Math.max(b.right, b.left + 1), top: Math.min(b.top, b.bottom - 1), bottom: Math.max(b.bottom, b.top + 1) };
-  const c = clipBox(el);
+  const c = seenView(el);
   const w = Math.min(r.right, c.right) - Math.max(r.left, c.left);
   const h = Math.min(r.bottom, c.bottom) - Math.max(r.top, c.top);
   if (w <= 0 || h <= 0) return false;
@@ -550,13 +638,21 @@ function focusTarget(el: Element) {
 function activated() {
   if (!live) return;
   if (!live.steps) return clearSpot();
-  const { session, index } = live;
+  const at = { session: live.session, index: live.index };
+  advancing = at;
   // Let the click land (a menu opens, a panel appears) before looking for the next step.
-  setTimeout(() => live?.session === session && live.index === index && stepSpot(1), 120);
+  setTimeout(() => {
+    if (advancing === at) advancing = null;
+    if (live?.session === at.session && live.index === at.index) stepSpot(1);
+  }, 120);
 }
 
+/** Escape closes what is lit, and only that: the drawer or dialog behind it stays open for the next Escape. */
 function onKey(e: KeyboardEvent) {
-  if (e.key === "Escape" && !e.defaultPrevented) clearSpot();
+  if (e.key !== "Escape" || e.defaultPrevented || e.isComposing || !live) return;
+  e.preventDefault();
+  e.stopPropagation();
+  clearSpot();
 }
 function onClick(e: Event) {
   if (live && e.target instanceof Node && live.target.contains(e.target)) activated();
