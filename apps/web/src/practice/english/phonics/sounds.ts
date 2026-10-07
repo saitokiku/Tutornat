@@ -46,7 +46,7 @@ function midQ(locale: Locale, [t, tp, k, kp, near, np, other, op, kind]: Mid): Q
       tr(locale, `Say ${t} slowly. Stretch the middle part.`, `Di ${t} despacio y escucha sus vocales.`),
       kind === "c"
         ? tr(locale, `${cap(near)} has ${t}'s outside sounds, but a new middle.`, `${cap(near)} tiene las consonantes de ${t}, pero otras vocales.`)
-        : tr(locale, `${cap(near)} has a different middle sound.`, `${cap(near)} no tiene la misma vocal que ${t}.`),
+        : tr(locale, `${cap(near)} has a different middle sound.`, `${cap(near)} no tiene las mismas vocales que ${t}.`),
     ],
     steps: [tr(locale, `${T} and ${k} have the same middle sound.`, `${T} y ${k} tienen las mismas vocales.`)],
   };

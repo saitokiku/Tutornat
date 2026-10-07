@@ -43,7 +43,7 @@ export const wrongs = (spec: string) =>
 
 /** What hint 3 says about the first wrong choice, by its tag. */
 const MISS: Record<string, [string, string]> = {
-  "dropped-letter": ["is missing a sound.", "le falta un sonido."],
+  "dropped-letter": ["is missing a sound.", "A {w} le falta un sonido."],
   "single-letter": ["uses one letter where two belong.", "usa una letra donde van dos."],
   "wrong-digraph": ["uses a different letter pair.", "usa otro par de letras."],
   "wrong-blend": ["has a different blend of letters.", "tiene otra mezcla de consonantes."],
@@ -51,7 +51,7 @@ const MISS: Record<string, [string, string]> = {
   "wrong-vowel": ["has a different vowel.", "tiene otra vocal."],
   "wrong-consonant": ["has a different consonant.", "tiene otra consonante."],
   "sound-alike-spelling": ["sounds right, but is not spelled that way.", "suena igual, pero no se escribe así."],
-  "dropped-silent-letter": ["is missing a letter you do not hear.", "le falta una letra que no suena."],
+  "dropped-silent-letter": ["is missing a letter you do not hear.", "A {w} le falta una letra que no suena."],
   "added-silent-letter": ["has an extra silent letter.", "lleva una letra muda de más."],
   "h-as-j": ["uses j where the silent h belongs.", "usa j, pero la h no suena."],
   "wrong-team": ["uses a different vowel team.", "usa otro par de vocales."],
@@ -69,9 +69,10 @@ const MISS: Record<string, [string, string]> = {
   "missing-accent": ["is missing its accent mark.", "no lleva la tilde que necesita."],
   "split-wrong": ["is split in the wrong place.", "está separada en un lugar equivocado."],
 };
+/** Hint 3 about a wrong choice. A Spanish text with {w} places the word itself ("A pato le falta…"). */
 export const missHint = (locale: Locale, label: string, why: string) => {
   const [en, es] = MISS[why];
-  return tr(locale, `${cap(label)} ${en}`, `${cap(label)} ${es}`);
+  return tr(locale, `${cap(label)} ${en}`, es.includes("{w}") ? es.replace("{w}", label) : `${cap(label)} ${es}`);
 };
 
 /** Asks for the correct spelling of the pictured word, when a misspelling would sound the same. */
