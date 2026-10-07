@@ -10,9 +10,9 @@ path; deterministic knowledge from real APIs (OpenStax, fmhy list).
 
 Work top to bottom. Tick only after `npm run verify` passed and the work is committed. Preview only.
 
-In progress: R1 · check-ins without a commit: 0
+Paused 2026-10-07 by the owner: write the final-product plan first (docs/plans/2026-10-07-kaizenedu-1.0-plan.md). Resume here after the owner's go.
 
-- [ ] R1. Knowledge layer `src/knowledge/` + `/api/know/*`: Wikipedia summaries (en/es, cited), dictionary (Datamuse defs), rhymes/syllables, books (Open Library, Gutendex, LibriVox), poems (PoetryDB), standards text (Common Standards Project). Server-side, cached, rate-limited, no learner identifiers forwarded. Tests with mocked fetch.
+- [x] R1. Knowledge layer `src/knowledge/` + `/api/know/*`: Wikipedia summaries (en/es, cited), dictionary (Datamuse defs), rhymes/syllables, books (Open Library, Gutendex, LibriVox), poems (PoetryDB), standards text (Common Standards Project). Server-side, cached, rate-limited, no learner identifiers forwarded. Tests with mocked fetch.
 - [ ] R2. Magic box = universal intake: homework / test / practice / learn, visible choice with a smart default; homework and tests become calendar items with linked skills and prep; practice starts a set; learn builds a course.
 - [ ] R3. Courses from real sources in demo mode: a topic course assembled from Wikipedia + dictionary + matching catalogue lesson + practice + sources, labelled; AI mode unchanged.
 - [ ] R4. Tutor that knows things: demo Talk answers with cited knowledge (wiki, definitions, lesson key points, practice, sources); AI tutor gets `look_up` and `define_word` tools; topic → skill matching fixed (fallacy → e.fallacies).
