@@ -208,6 +208,20 @@ describe("file store on the device (IndexedDB)", () => {
     expect(await b.pruneBlobs([])).toBe(1);
   });
 
+  it("a page load with no account left on the device clears its files, however new ('delete everything' ran elsewhere)", async () => {
+    const first = await load();
+    const id = (await first.putBlob(pdf(), "a.pdf"))!;
+    vi.useFakeTimers();
+    try {
+      const again = await load(); // a reload: the check runs once, a few seconds in
+      await vi.advanceTimersByTimeAsync(6000);
+      vi.useRealTimers();
+      expect(await again.getBlob(id)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("files follow the store: a removed item's file goes, and 'delete everything' takes every file", async () => {
     const b = await load();
     const store = await import("./store");

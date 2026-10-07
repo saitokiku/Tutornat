@@ -128,13 +128,16 @@ export async function deleteBlob(id: string) {
   });
 }
 
-/** Deletes every kept file (with "delete everything on this device"). */
-export async function clearBlobs() {
-  memory.clear();
-  await run("readwrite", (s) => {
+const clearDevice = () =>
+  run("readwrite", (s) => {
     s.clear();
     return () => true;
   });
+
+/** Deletes every kept file (with "delete everything on this device"). */
+export async function clearBlobs() {
+  memory.clear();
+  await clearDevice();
 }
 
 /**
@@ -188,8 +191,13 @@ export function followStore() {
 
 if (typeof window !== "undefined") {
   followStore();
-  // Once per page load, off the critical path: files left behind by deletes made where this module wasn't loaded.
-  setTimeout(() => void pruneBlobs(fileIds(read())), 5000);
+  // Once per page load, off the critical path: files left behind by deletes made where this module wasn't
+  // loaded. With no account left on this device ("delete everything" ran on a page without this module),
+  // no file on it belongs to anyone, however new.
+  setTimeout(() => {
+    const s = read();
+    void (s.accounts.length ? pruneBlobs(fileIds(s)) : clearDevice());
+  }, 5000);
 }
 
 /** Width and height that fit inside `max` on the longest side, keeping the shape. Never enlarges. */
