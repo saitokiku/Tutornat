@@ -122,7 +122,8 @@ export function weeklyInput(s: StoreState, accountId: string, weekStart: number,
   const kids = s.profiles.filter((p) => p.accountId === accountId).sort((a, b) => a.createdAt - b.createdAt);
   if (!account || !kids.length) return null;
   const locale = s.prefs.locale;
-  const names = [...kids.map((k) => k.nickname), account.displayName];
+  // Whole names, and each word of a longer one ("Maria Lopez" also hides "Maria").
+  const names = [...kids.map((k) => k.nickname), account.displayName].flatMap((n) => [n, ...n.split(/\s+/).filter((w) => w.length >= 3)]);
   const scrub = (text: string) => withoutNames(text, names, tr(locale, "trust.email.child"), tr(locale, "trust.email.childs"));
   const learners = kids.map((p) => {
     const twins = kids.filter((k) => k.grade === p.grade);

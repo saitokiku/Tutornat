@@ -173,6 +173,19 @@ describe("renderWeekly", () => {
     expect(email.text).toContain("Quiz for your child and your child, from your child");
   });
 
+  it("hides each word of a full name too", async () => {
+    const { accountId, kids } = await family(["4"]);
+    adaWeek(kids[0]);
+    update((s) => {
+      s.accounts[0].displayName = "Maria Lopez";
+      s.profiles[0].nickname = "Ada Rose";
+      s.events.push({ id: "e1", profileId: kids[0].id, title: "Rose's quiz, signed Lopez", kind: "quiz", date: "2026-10-09", skillIds: [], source: "typed", createdAt: NOW });
+    });
+    const { text } = previewWeekly(read(), accountId, NOW, ORIGIN)!;
+    expect(text).not.toMatch(/Rose|Lopez/);
+    expect(text).toContain("your child's quiz, signed your child");
+  });
+
   it("says what happened in plain words, with links to Family and Settings", async () => {
     const { accountId, kids } = await family();
     adaWeek(kids[0]);
