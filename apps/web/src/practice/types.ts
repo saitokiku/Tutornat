@@ -18,10 +18,24 @@ export type Answer =
   | { kind: "pair"; x: number; y: number }
   | { kind: "remainder"; q: number; r: number };
 
-/** How the learner answers. keypad = digits (and − . when `keys` allows), fraction = numerator/denominator. */
-export type Input = "keypad" | "fraction" | "choices" | "text" | "expr" | "remainder";
+/**
+ * How the learner answers. keypad = digits (and − . when `keys` allows), fraction = numerator/denominator.
+ * Touch pads answer by doing: number-line = tap a point (response "3/4" or "-2"), fraction-bar = choose
+ * parts and shade (response "3/4"), clock = set the hands (response "h:mm"). Each needs `pad`.
+ */
+export type Input = "keypad" | "fraction" | "choices" | "text" | "expr" | "remainder" | "number-line" | "fraction-bar" | "clock";
 
-export type Choice = { label: string; say?: string; picture?: string };
+/** Settings for the touch pads. */
+export type Pad =
+  | { kind: "number-line"; min: number; max: number; step: number; denominator?: number }
+  | { kind: "fraction-bar"; parts?: number; maxParts: number }
+  | { kind: "clock"; stepMinutes: 1 | 5 | 15 | 30 | 60 };
+
+/**
+ * A choice. `why` names the misconception a wrong choice represents (kebab-case, reused across a
+ * skill, e.g. "added-denominators"), so a miss becomes a diagnosis in the learner model.
+ */
+export type Choice = { label: string; say?: string; picture?: string; why?: string };
 
 export type ItemBody = {
   prompt: MathPart[];
@@ -36,6 +50,12 @@ export type ItemBody = {
   input: Input;
   /** Extra keys on the keypad: "-" for negatives, "." for decimals. */
   keys?: ("-" | ".")[];
+  /** Settings for touch pads (number-line, fraction-bar, clock inputs). */
+  pad?: Pad;
+  /** Counters in the visual (dots, ten-frame, array) can be tapped to mark them while counting. */
+  markable?: boolean;
+  /** Likely wrong typed answers and the misconception each shows, e.g. [{ value: "5/12", why: "added-denominators" }]. */
+  wrong?: { value: string; why: string }[];
   answer: Answer;
   /** The hint ladder, smallest first: a nudge, a strategy, then the first step done. */
   hints: string[];

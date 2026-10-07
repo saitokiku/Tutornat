@@ -19,6 +19,8 @@ export type Attempt = {
   seconds: number;
   /** What the learner answered, for the grown-up's view and the tutor. */
   response?: string;
+  /** The misconception the answer shows, when a wrong answer matches a tagged choice or wrong value. */
+  why?: string;
 };
 
 export type SetKind = "daily" | "pick" | "review" | "check" | "placement" | "prep" | "feedback";
@@ -53,3 +55,39 @@ export type PracticeSet = {
   topic?: string;
   ai?: AiQuestion[];
 };
+
+/**
+ * A teaching act: something we did to help, what it intended, and whether that happened.
+ * The improvement loop (learning/outcomes.ts) resolves outcomes from later evidence.
+ *
+ * intents:
+ *  next-try-right     hint, steps, similar problem, tutor turn → the next answer on that skill is right
+ *  skill-moves        practice set → the skill's level rises or it becomes ready within the next sets
+ *  check-decides      check → passed or failed (always resolves)
+ *  test-goes-well     prep before a school test → linked skills secure by the test date
+ *  lesson-checks-pass lesson → its checks right on the learner's own
+ *  plan-line-done     plan line → done that day
+ *  parent-acts        nudge to a grown-up → the suggested action happens within 7 days
+ *  course-finished    course built or added → all lessons done
+ */
+export type ActKind = "hint" | "steps" | "similar" | "tutor" | "set" | "check" | "prep" | "lesson" | "plan" | "nudge" | "course";
+export type Intent = "next-try-right" | "skill-moves" | "check-decides" | "test-goes-well" | "lesson-checks-pass" | "plan-line-done" | "parent-acts" | "course-finished";
+
+export type TeachingAct = {
+  id: string;
+  profileId: string;
+  at: number;
+  kind: ActKind;
+  intent: Intent;
+  skillId?: string;
+  setId?: string;
+  /** Lesson id, plan key, nudge key, course id, event id — whatever the act was about. */
+  ref?: string;
+  /** Extra facts about the act, e.g. hint rung "2" or representation "number-line". */
+  detail?: string;
+  outcome?: "met" | "missed";
+  resolvedAt?: number;
+};
+
+/** A reviewer's decision on a skill's questions (both languages, all levels). Approved = no longer "draft". */
+export type SkillReview = { id: string; skillId: string; status: "approved" | "flagged"; note?: string; by: string; at: number };

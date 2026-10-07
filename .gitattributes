@@ -1,0 +1,6 @@
+# Append-only registries: parallel branches add lines at the same place; keep both sides.
+apps/web/src/i18n/en.ts merge=union
+apps/web/src/i18n/es.ts merge=union
+apps/web/src/catalogue/registry.ts merge=union
+apps/web/src/practice/registry.ts merge=union
+apps/web/src/resources/list.ts merge=union

@@ -47,6 +47,18 @@ export type Profile = {
   start?: Partial<Record<Subject, string>>;
   /** Things the learner likes, used to theme generated lessons and word problems. Never sent with the name. */
   interests?: string[];
+  /** A grown-up's corrections to the derived teaching profile ("How we teach {name}"). */
+  teaching?: TeachingPrefs;
+};
+
+/** What a grown-up knows about how this learner learns. Overrides what the evidence suggests. */
+export type TeachingPrefs = {
+  /** The kind of picture that helps most. */
+  representation?: "pictures" | "number-line" | "blocks" | "words";
+  /** Lead with a hint or with a worked example when they're stuck. */
+  leadWith?: "hint" | "example";
+  /** Free-text note for the tutor ("loves drawing; gets anxious with timers"). Never sent with the name. */
+  note?: string;
 };
 
 export type SourceItem = { id: string; name: string; kind: "pdf" | "image" | "doc" | "text"; size: number };
@@ -84,7 +96,21 @@ export type Widget =
   | { kind: "number-line"; min: number; max: number; step: number; start: number; target?: number; denominator?: number }
   | { kind: "states-of-matter"; startC: number; target?: "solid" | "liquid" | "gas" }
   | { kind: "moon-phases"; target?: number } // target = day 0..29
-  | { kind: "sorter"; categories: string[]; items: { id: string; text: string; answer: number }[] };
+  | { kind: "sorter"; categories: string[]; items: { id: string; text: string; answer: number }[] }
+  /** Multiplication as area: drag/tap the sides to rows × cols; target = the product or the exact shape. */
+  | { kind: "area-model"; rows: number; cols: number; target?: { rows: number; cols: number } }
+  /** Build a number from hundreds, tens and ones blocks. */
+  | { kind: "place-value"; target: number; max?: number }
+  /** Set the hands to a time. */
+  | { kind: "clock"; h: number; m: number; target?: { h: number; m: number } }
+  /** A balance for ax + b = c: take the same from both sides until x stands alone. */
+  | { kind: "balance"; xCount: number; leftUnits: number; rightUnits: number }
+  /** Plot points on a grid. */
+  | { kind: "coordinate"; min: number; max: number; targets: [number, number][] }
+  /** Put steps in order (life cycles, story events, how-to steps). `items` are given in the right order. */
+  | { kind: "sequence"; items: { id: string; text: string }[] }
+  /** Tap words to build a sentence; any of `answers` (word orders) is right. */
+  | { kind: "sentence-builder"; words: string[]; answers: string[][] };
 
 export type QuizQuestion = {
   id: string;
@@ -123,6 +149,10 @@ export type Course = {
   template: boolean;
   /** Written by a model (and passed the quality gates). Shown as "Written by AI" everywhere. */
   ai?: boolean;
+  /** Built from real sources (Wikipedia, dictionary, catalogue lessons) without AI; shown with citations. */
+  citations?: { title: string; url: string; source: string }[];
+  /** Position in the learner's path for its subject (lower first). Unset = by date added. */
+  order?: number;
   createdAt: number;
   updatedAt: number;
 };

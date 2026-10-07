@@ -1,28 +1,18 @@
 import type { Grade, Locale, Subject } from "@/lib/types";
-import { ENGLISH_K_4 } from "./english/early";
-import { ENGLISH_5_9 } from "./english/upper";
-import { EARLY_MATH } from "./math/early";
-import { MATH_3_5 } from "./math/g3to5";
-import { MATH_6_7 } from "./math/g6to7";
-import { MATH_8_9 } from "./math/g8to9";
+import { STRANDS } from "./registry";
 import { rng } from "./rng";
-import { SCIENCE_K_5 } from "./science/early";
-import { SCIENCE_6_9 } from "./science/upper";
 import type { Item, Skill } from "./types";
 
 // The skill map: every practicable skill, its prerequisites (the lattice) and its generator.
 // Order inside a subject is teaching order; the planner walks it to find what comes next.
 
-export const SKILLS: Skill[] = [
-  ...EARLY_MATH,
-  ...MATH_3_5,
-  ...MATH_6_7,
-  ...MATH_8_9,
-  ...ENGLISH_K_4,
-  ...ENGLISH_5_9,
-  ...SCIENCE_K_5,
-  ...SCIENCE_6_9,
-];
+/** Every skill: math, then English, then science, each in teaching order (grade, then strand order). */
+const SUBJECT_ORDER = ["math", "english", "science", "other"];
+const GRADES: Grade[] = ["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "adult"];
+export const SKILLS: Skill[] = STRANDS.flat()
+  .map((s, i) => [s, i] as const)
+  .sort(([a, i], [b, j]) => SUBJECT_ORDER.indexOf(a.subject) - SUBJECT_ORDER.indexOf(b.subject) || GRADES.indexOf(a.grade) - GRADES.indexOf(b.grade) || i - j)
+  .map(([s]) => s);
 
 const BY_ID = new Map(SKILLS.map((s) => [s.id, s]));
 

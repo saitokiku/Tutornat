@@ -22,6 +22,8 @@ export type SchoolEvent = {
   /** Calendar feed UID, so a re-import updates instead of duplicating. */
   uid?: string;
   done?: boolean;
+  /** What came with it: pasted text, and a photo or PDF kept in the browser's file store (lib/blobs.ts). */
+  attachment?: { text?: string; blobId?: string; name?: string; mediaType?: string };
   createdAt: number;
 };
 
