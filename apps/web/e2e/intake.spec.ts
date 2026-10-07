@@ -118,6 +118,50 @@ test("practice and learn go where they should without making a school item", asy
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
+/** A real 1×1 PNG: the box redraws it as a JPEG on the device before keeping it. */
+const PIXEL = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+
+/** YYYY-MM-DD, `n` days from today, local. */
+function inDays(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+test("a PDF and a photo stay with their items on this device after a reload", async ({ page }) => {
+  const errors = collectErrors(page);
+  await asAda(page, "intake-files");
+  const fileInput = page.locator('input[type="file"][accept="image/*,application/pdf"]');
+
+  // A PDF with words: the words name it, the file stays with it.
+  await page.getByLabel("What's going on?").fill("reading worksheet due Friday");
+  await fileInput.setInputFiles({ name: "worksheet.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF") });
+  await expect(page.getByText("worksheet.pdf")).toBeVisible();
+  await expect(page.getByText(/Reading photos and PDFs needs the AI tutor/)).toBeVisible();
+  await page.getByRole("button", { name: /Add homework/ }).click();
+  await expect(page).toHaveURL(/\/calendar\/[\w-]+$/);
+  await expect(page.getByRole("link", { name: /Open the PDF/ })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("link", { name: /Open the PDF/ })).toBeVisible();
+  await expect(page.getByText("The file isn't saved on this device.")).toHaveCount(0);
+
+  // A photo alone: the family names and dates it.
+  await page.goto("/home");
+  await fileInput.setInputFiles({ name: "IMG_2041.png", mimeType: "image/png", buffer: PIXEL });
+  await expect(page.getByText("IMG_2041.jpg")).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Homework" })).toBeChecked();
+  await page.getByLabel("Name", { exact: true }).fill("Spelling sheet");
+  await page.getByLabel("Due", { exact: true }).fill(inDays(3));
+  await page.getByRole("button", { name: /Add homework/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Spelling sheet" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Photo added to “Spelling sheet”" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("img", { name: "Photo added to “Spelling sheet”" })).toBeVisible();
+  await noOverflow(page);
+  await audit(page, "school-item-photo");
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
 test("a wrong item id shows a way back, not an error", async ({ page }) => {
   const errors = collectErrors(page);
   await asAda(page, "intake-missing");

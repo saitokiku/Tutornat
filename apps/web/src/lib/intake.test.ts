@@ -398,6 +398,11 @@ describe("readIntake (server)", () => {
       expect(res.status).toBe(200);
       expect(await res.json()).toMatchObject({ kind: "homework", skillIds: ["m.frac.unit"] });
       expect((await post({ ...intake, text: undefined })).status).toBe(400);
+      expect((await post({ ...intake, text: "   " })).status).toBe(400);
+      // Only a photo or a PDF as a base64 data URL ever reaches the model.
+      expect((await post({ ...intake, text: undefined, file: "not a file" })).status).toBe(400);
+      expect((await post({ ...intake, file: "data:text/html;base64,PGI+" })).status).toBe(400);
+      expect((await post({ ...intake, file: "data:application/pdf;base64,JVBERg==" })).status).toBe(200);
     });
 
     it("still reads school documents for the calendar import", async () => {
