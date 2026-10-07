@@ -47,7 +47,7 @@ In progress: (none) — overnight queue finished · check-ins without a commit: 
 **Try it — 2 minutes**
 1. `cd ~/Documents/GitHub/Tutornat && npm install && npm run dev` → open http://localhost:3000
 2. Get started → create a family account (stays in this browser) → add a kindergartner and a grade 4 learner.
-3. Tap the kindergartner → picture tiles → "First, next, last" → tap any 🔊 to hear a line, sort the story, check it.
+3. Tap the kindergartner → picture tiles → "First, next, last" → tap a speaker button to hear any line, sort the story, check it.
 4. Switch → Parent → answer the times-table question → Family shows exactly what happened.
 
 **What works now**
