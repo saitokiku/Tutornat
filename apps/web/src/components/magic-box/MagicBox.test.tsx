@@ -202,8 +202,8 @@ describe("MagicBox as the universal intake", () => {
     render(<MagicBox learner={learner} />);
     await user.type(box(), "Ada's sheet");
     await user.upload(screen.getByLabelText("Add photo or PDF", { selector: "input" }), new File(["%PDF-1.4"], "sheet.pdf", { type: "application/pdf" }));
-    expect(await screen.findByText("Our guess: Test, read by the AI tutor. Check it before you go on.", { selector: "p" })).toBeInTheDocument();
-    expect(screen.getByText("Our guess: Test, read by the AI tutor. Check it before you go on.", { selector: "[role=status] span" })).toBeInTheDocument();
+    expect(await screen.findByText("Our guess: Test, read by the AI tutor. Check it before you go on.", { selector: "p:not([role])" })).toBeInTheDocument();
+    expect(document.querySelector("p[role=status]")).toHaveTextContent("Our guess: Test, read by the AI tutor. Check it before you go on.");
     expect(radio("Test")).toBeChecked();
     expect(screen.getByLabelText("Name")).toHaveValue("Ada's fractions test");
     expect(screen.getByText("The day isn't on the page.")).toBeInTheDocument();
@@ -213,13 +213,13 @@ describe("MagicBox as the universal intake", () => {
     expect(body).toMatchObject({ kind: "intake", text: "[name1]'s sheet", grade: "4", locale: "en" });
     expect(body.file).toMatch(/^data:application\/pdf;base64,/);
     expect(String(init!.body)).not.toContain("Ada");
-    // The day still has to come from the family.
+    // The day still has to come from the family, so the item isn't labelled as read by the AI tutor.
     await user.click(screen.getByRole("button", { name: /Add test/ }));
     expect(screen.getByText("Pick a date.")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Day"), { target: { value: "2026-10-16" } });
     await user.click(screen.getByRole("button", { name: /Add test/ }));
     await waitFor(() => expect(push).toHaveBeenCalled());
-    expect(read().events[0]).toMatchObject({ kind: "test", title: "Ada's fractions test", source: "ai", skillIds: ["m.frac.equiv"] });
+    expect(read().events[0]).toMatchObject({ kind: "test", title: "Ada's fractions test", source: "typed", skillIds: ["m.frac.equiv"] });
   });
 
   it("with AI, a longer typed request is read once typing pauses", async () => {
@@ -240,15 +240,18 @@ describe("MagicBox as the universal intake", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 3000 });
   });
 
-  it("a crisis gets the fixed reply and a note for the grown-ups, and nothing is made", async () => {
+  it("a crisis gets the fixed reply instead of a guess, one note for the grown-ups, and nothing can be made", async () => {
     render(<MagicBox learner={learner} />);
     await userEvent.type(box(), "i want to die");
-    await userEvent.click(screen.getByRole("button", { name: /Build a course/ }));
     expect(screen.getByRole("alert")).toHaveTextContent("988");
-    await userEvent.click(screen.getByRole("button", { name: /Build a course/ }));
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Build a course/ })).not.toBeInTheDocument();
+    await userEvent.type(box(), "{Control>}{Enter}{/Control}");
+    await userEvent.type(box(), " please");
     expect(read().notes).toMatchObject([{ profileId: "p1", from: "safety" }]);
     expect(push).not.toHaveBeenCalled();
     expect(read().events).toHaveLength(0);
+    expect(read().courses).toHaveLength(0);
   });
 });
 

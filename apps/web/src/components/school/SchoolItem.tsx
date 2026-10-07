@@ -171,7 +171,7 @@ function Item({ event, profile, asLearner }: { event: SchoolEvent; profile: Prof
           <p className="text-sm text-muted">
             {t("intake.item.parentNote", { name: profile.nickname })}{" "}
             <Link href="/profiles" className="font-medium text-ink underline underline-offset-4 hover:text-accent">
-              {t("intake.item.switch")}
+              {t("nav.switch")}
             </Link>
           </p>
         )}
