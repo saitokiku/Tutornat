@@ -88,6 +88,7 @@ export function MoonPhases({ widget, onCheck }: Props) {
       </div>
       {widget.target !== undefined && (
         <CheckRow
+          disabled={day === 0}
           result={result}
           onCheck={() => {
             const ok = phaseKey(day) === phaseKey(widget.target!);

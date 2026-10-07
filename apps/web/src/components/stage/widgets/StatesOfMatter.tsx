@@ -30,7 +30,8 @@ const JIGGLE: Record<State, string> = { solid: "1px", liquid: "3px", gas: "6px" 
 /** Change water's temperature and watch the same particles change arrangement and motion. */
 export function StatesOfMatter({ widget, onCheck }: Props) {
   const t = useT();
-  const [index, setIndex] = useState(Math.round((widget.startC - MIN) / STEP));
+  const startIndex = Math.round((widget.startC - MIN) / STEP);
+  const [index, setIndex] = useState(startIndex);
   const [result, setResult] = useState<boolean | null>(null);
   const set = (i: number) => (setIndex(Math.max(0, Math.min(COUNT - 1, i))), setResult(null));
   const temp = MIN + index * STEP;
@@ -102,6 +103,7 @@ export function StatesOfMatter({ widget, onCheck }: Props) {
       </div>
       {widget.target && (
         <CheckRow
+          disabled={index === startIndex}
           result={result}
           onCheck={() => {
             const ok = state === widget.target;

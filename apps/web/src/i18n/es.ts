@@ -1367,6 +1367,7 @@ const es: Record<Key, string> = {
   "stg.finish.untried": "Sin intentar",
   "stg.finish.untriedSaid": "{n} sin intentar.",
   "stg.finish.noChecks": "Esta lección no tiene nada que comprobar.",
+  "stg.rightHelped": "Correcto, con ayuda.",
 };
 
 export default es;

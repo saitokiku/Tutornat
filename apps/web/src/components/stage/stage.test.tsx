@@ -20,9 +20,15 @@ describe("FractionBar", () => {
   it("checks against the target", async () => {
     const onCheck = vi.fn();
     render(<FractionBar widget={{ kind: "fraction-bar", parts: 4, shaded: 2, target: { parts: 4, shaded: 3 } }} onCheck={onCheck} />);
+    // Nothing to check until the learner changes something: a stray tap is never a "not yet".
+    const check = screen.getByRole("button", { name: "Check my answer" });
+    expect(check).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(check);
+    expect(onCheck).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Part 4, not shaded" }));
     await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
     expect(onCheck).toHaveBeenLastCalledWith(false);
-    await userEvent.click(screen.getByRole("button", { name: "Part 3, not shaded" }));
+    await userEvent.click(screen.getByRole("button", { name: "Part 4, shaded" }));
     await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
     expect(onCheck).toHaveBeenLastCalledWith(true);
   });
@@ -41,7 +47,7 @@ describe("QuizView", () => {
     await userEvent.click(screen.getByLabelText("1/2"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
     expect(onAnswer).toHaveBeenCalledWith({ sceneId: "s5:q1", correct: true, assisted: true });
-    expect(screen.getByText("That's right — with a hint.")).toBeInTheDocument();
+    expect(screen.getByText("That's right, with help.")).toBeInTheDocument();
   });
 
   it("a correct answer without help is recorded as on your own", async () => {

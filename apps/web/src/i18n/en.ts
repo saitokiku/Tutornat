@@ -1365,6 +1365,7 @@ const en = {
   "stg.finish.untried": "Not tried",
   "stg.finish.untriedSaid": "{n} not tried.",
   "stg.finish.noChecks": "This lesson has nothing to check.",
+  "stg.rightHelped": "That's right, with help.",
 } as const;
 
 export default en;

@@ -421,6 +421,38 @@ describe("Sorter as a word sort", () => {
   });
 });
 
+describe("the older manipulatives", () => {
+  it("Check waits for a change, and a step button at its end keeps focus", async () => {
+    const user = userEvent.setup();
+    const onCheck = vi.fn();
+    render(<NumberLineWidget widget={{ kind: "number-line", min: 0, max: 3, step: 1, start: 1, target: 3 }} onCheck={onCheck} />);
+    const check = screen.getByRole("button", { name: "Check my answer" });
+    expect(check).toHaveAttribute("aria-disabled", "true");
+    await user.click(check);
+    expect(onCheck).not.toHaveBeenCalled();
+    const right = await tabTo(user, "Move right");
+    await user.keyboard("{Enter}{Enter}{Enter}");
+    readout("The marker is at 3");
+    expect(right).toHaveAttribute("aria-disabled", "true");
+    expect(document.activeElement).toBe(right);
+    await press(user, "Check my answer");
+    expect(onCheck).toHaveBeenLastCalledWith(true);
+  });
+
+  it("states of matter and moon phases also wait for a change before Check", async () => {
+    const onCheck = vi.fn();
+    const { unmount } = render(<StatesOfMatter widget={{ kind: "states-of-matter", startC: 20, target: "gas" }} onCheck={onCheck} />);
+    expect(screen.getByRole("button", { name: "Check my answer" })).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Warmer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
+    expect(onCheck).toHaveBeenLastCalledWith(false);
+    unmount();
+    render(<MoonPhases widget={{ kind: "moon-phases", target: 7 }} onCheck={onCheck} />);
+    expect(screen.getByRole("button", { name: "Check my answer" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Earlier day" })).toHaveAttribute("aria-disabled", "true");
+  });
+});
+
 describe("K–2 sizing and read-aloud", () => {
   const young = (ui: ReactElement) => render(<HearContext.Provider value={{ hear: true, young: true, big: true, locale: "en" }}>{ui}</HearContext.Provider>);
 

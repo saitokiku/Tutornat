@@ -68,7 +68,10 @@ export function PlaceValue({ widget, onCheck, tint = "var(--color-math)" }: Prop
       <div className="flex flex-wrap items-center gap-5 sm:gap-8">
         <figure className="flex min-h-28 w-full min-w-0 items-center rounded-md bg-panel2 px-4 py-4 sm:w-auto sm:flex-1">
           {value === 0 ? (
-            <p className="text-sm text-muted">{t("stg.pv.empty")}</p>
+            <div className="flex flex-1 items-center gap-3">
+              <p className="flex-1 text-sm text-muted">{t("stg.pv.empty")}</p>
+              <Hear text={t("stg.pv.empty")} />
+            </div>
           ) : (
             <BaseTenVisual hundreds={n.h} tens={n.t} ones={n.o} alt={parts} tint={tint} />
           )}

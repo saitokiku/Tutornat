@@ -51,8 +51,9 @@ type WidgetOut = z.infer<typeof WidgetSchema>;
 export const WIDGET_GUIDE = [
   "Interactives use only: fraction-bar, number-line, states-of-matter, moon-phases, sorter, area-model, place-value, clock, balance, coordinate, sequence, sentence-builder.",
   "A sorter has 2 or 3 categories and 3 to 6 items; each item's answer is the index of its category (a word sort is a sorter of single words).",
-  "area-model: the target is the exact rows and columns asked for, and the start is different. place-value: target from 1 to 999.",
-  "clock: 12-hour times; the start differs from the target. balance: xCount·x + leftUnits = rightUnits with x a whole number of at least 1.",
+  "Every manipulative with a target starts somewhere other than its target (moon-phases always starts at day 0, a new moon).",
+  "area-model: the target is the exact rows and columns asked for. place-value: target from 1 to 999.",
+  "clock: 12-hour times. balance: xCount·x + leftUnits = rightUnits with x a whole number of at least 1.",
   "coordinate: every target point inside min..max on both axes, no repeats. sequence: items in the right order with unique ids.",
   "sentence-builder: answers use only the given words; list every word order that is right.",
 ].join(" ");
@@ -69,13 +70,23 @@ export function widgetProblems(w: WidgetOut): string[] {
   switch (w.kind) {
     case "fraction-bar":
       if (w.shaded > w.parts || (w.target && w.target.shaded > w.target.parts)) out.push("fraction bar out of range");
+      else if (w.target && w.target.parts === w.parts && w.target.shaded === w.shaded) out.push("fraction bar starts on its target");
       break;
     case "number-line":
       if (w.min >= w.max || w.start < w.min || w.start > w.max || (w.target !== undefined && (w.target < w.min || w.target > w.max))) out.push("number line out of range");
       else if (!onStep(w.start, w.min, w.step) || (w.target !== undefined && !onStep(w.target, w.min, w.step))) out.push("number line target between steps");
+      else if (w.target !== undefined && Math.abs(w.target - w.start) < 1e-9) out.push("number line starts on its target");
       break;
-    case "states-of-matter":
+    case "states-of-matter": {
+      // The widget shows −30 … 130 °C in steps of 10 and opens on the step nearest startC.
+      const shown = -30 + 10 * Math.round((w.startC + 30) / 10);
       if (w.startC < -30 || w.startC > 130) out.push("states of matter start out of range");
+      else if (w.target === (shown <= 0 ? "solid" : shown < 100 ? "liquid" : "gas")) out.push("states of matter starts on its target");
+      break;
+    }
+    case "moon-phases":
+      // The widget always opens on day 0, a new moon.
+      if (w.target === 0 || w.target === 29) out.push("moon phases starts on its target");
       break;
     case "sorter":
       if (w.items.some((i) => i.answer >= w.categories.length)) out.push("sorter key out of range");

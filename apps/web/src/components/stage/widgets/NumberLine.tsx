@@ -16,7 +16,8 @@ export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }
   const { min, max, step, denominator } = widget;
   const count = Math.round((max - min) / step) + 1;
   const valueAt = (i: number) => min + i * step;
-  const [index, setIndex] = useState(Math.round((widget.start - min) / step));
+  const startIndex = Math.round((widget.start - min) / step);
+  const [index, setIndex] = useState(startIndex);
   const [result, setResult] = useState<boolean | null>(null);
   const set = (i: number) => (setIndex(Math.max(0, Math.min(count - 1, i))), setResult(null));
   const label = (v: number) => fractionLabel(v, denominator);
@@ -88,6 +89,7 @@ export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }
       </div>
       {widget.target !== undefined && (
         <CheckRow
+          disabled={index === startIndex}
           result={result}
           onCheck={() => {
             const ok = Math.abs(value - widget.target!) < 1e-9;

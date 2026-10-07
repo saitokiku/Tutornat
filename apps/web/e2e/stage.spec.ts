@@ -267,7 +267,10 @@ test("finishing a lesson never opens the next one", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Lesson finished" })).toBeVisible();
   await expect(page.getByText("Written by people")).toBeVisible();
-  await expect(page.locator("dt", { hasText: "Right on your own" }).locator("+ dd")).toHaveText("1");
+  const row = (label: string) => page.locator("dl > div").filter({ has: page.getByText(label, { exact: true }) }).locator("dd");
+  await expect(row("Right on your own")).toHaveText("1");
+  await expect(row("Right with help")).toHaveText("0");
+  await expect(row("Not yet")).toHaveText("0");
   await expect(page.getByText("Not tried")).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Start the next lesson/ })).toHaveAttribute("href", `/learn/${COURSE}/l2`);
   await noOverflow(page);

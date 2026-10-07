@@ -6,7 +6,7 @@ import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
 import { Hear, useHear } from "../hear";
 import { CheckRow } from "./CheckRow";
-import { roundButton } from "./Stepper";
+import { Act, roundButton } from "./Stepper";
 
 type Props = {
   widget: Extract<Widget, { kind: "fraction-bar" }>;
@@ -74,7 +74,7 @@ export function FractionBar({ widget, onCheck, tint = "var(--color-math)" }: Pro
 
   const target = widget.target;
   const readout = t("w.fraction.readout", { shaded, parts });
-  const step = `${roundButton(young)} text-ink hover:bg-panel2 disabled:opacity-30`;
+  const step = `${roundButton(young)} text-ink hover:bg-panel2`;
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-5 sm:gap-7">
@@ -102,13 +102,13 @@ export function FractionBar({ widget, onCheck, tint = "var(--color-math)" }: Pro
         <span className={`font-medium ${young ? "text-body text-ink" : "text-xs text-muted"}`}>{t("w.fraction.parts")}</span>
         <Hear text={t("w.fraction.parts")} />
         <div className="inline-flex items-center rounded-full border border-border bg-panel">
-          <button type="button" onClick={() => changeParts(parts - 1)} disabled={parts <= MIN} aria-label={t("w.fraction.fewer")} className={step}>
+          <Act onClick={() => changeParts(parts - 1)} off={parts <= MIN} aria-label={t("w.fraction.fewer")} className={step}>
             <IconMinus size={young ? 22 : 18} />
-          </button>
+          </Act>
           <span className="min-w-16 text-center font-opmono text-sm tabular-nums text-ink">{parts}</span>
-          <button type="button" onClick={() => changeParts(parts + 1)} disabled={parts >= MAX} aria-label={t("w.fraction.more")} className={step}>
+          <Act onClick={() => changeParts(parts + 1)} off={parts >= MAX} aria-label={t("w.fraction.more")} className={step}>
             <IconPlus size={young ? 22 : 18} />
-          </button>
+          </Act>
         </div>
         <p aria-live="polite" className="text-sm text-muted">
           {readout}
@@ -118,6 +118,7 @@ export function FractionBar({ widget, onCheck, tint = "var(--color-math)" }: Pro
 
       {target && (
         <CheckRow
+          disabled={parts === widget.parts && shaded === Math.min(widget.shaded, widget.parts)}
           result={result}
           onCheck={() => {
             const ok = parts === target.parts && shaded === target.shaded;

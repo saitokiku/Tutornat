@@ -87,7 +87,10 @@ export function SentenceBuilder({ widget, onCheck, onSay, lang }: Props) {
               </button>
             ))
           ) : (
-            <p className="px-1 text-sm text-muted">{t("stg.sb.empty")}</p>
+            <>
+              <p className={`flex-1 px-1 text-muted ${young ? "text-body" : "text-sm"}`}>{t("stg.sb.empty")}</p>
+              <Hear text={t("stg.sb.empty")} />
+            </>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">

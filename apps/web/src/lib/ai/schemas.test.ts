@@ -84,6 +84,19 @@ describe("lesson writer schema: new widgets", () => {
     expect(gate({ kind: "area-model", rows: 3, cols: 4, target: { rows: 3, cols: 4 } }).join()).toMatch(/starts on its target/);
     expect(gate({ kind: "number-line", min: 0, max: 1, step: 0.25, start: 0, target: 0.3 }).join()).toMatch(/between steps/);
     expect(gate({ kind: "states-of-matter", startC: -40 }).join()).toMatch(/out of range/);
+    // The older manipulatives too: a check of the untouched start must never be the answer.
+    expect(gate({ kind: "fraction-bar", parts: 4, shaded: 3, target: { parts: 4, shaded: 3 } }).join()).toMatch(/starts on its target/);
+    expect(gate({ kind: "number-line", min: 0, max: 10, step: 1, start: 7, target: 7 }).join()).toMatch(/starts on its target/);
+    expect(gate({ kind: "states-of-matter", startC: 20, target: "liquid" }).join()).toMatch(/starts on its target/);
+    expect(gate({ kind: "states-of-matter", startC: 96, target: "gas" }).join()).toMatch(/starts on its target/); // opens on the 100 °C step
+    expect(gate({ kind: "moon-phases", target: 29 }).join()).toMatch(/starts on its target/);
+    for (const ok of [
+      { kind: "fraction-bar", parts: 2, shaded: 1, target: { parts: 4, shaded: 3 } },
+      { kind: "number-line", min: 0, max: 10, step: 1, start: 3, target: 7 },
+      { kind: "states-of-matter", startC: 20, target: "gas" },
+      { kind: "moon-phases", target: 14 },
+    ])
+      expect(gate(ok), JSON.stringify(ok)).toEqual([]);
   });
 });
 

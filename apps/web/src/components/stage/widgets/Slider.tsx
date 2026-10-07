@@ -2,8 +2,9 @@
 
 import type { ReactNode } from "react";
 import { useHear } from "../hear";
-import { roundButton } from "./Stepper";
+import { Act, roundButton } from "./Stepper";
 
+/** Back / forward round buttons around a value. At either end the button stays focusable (aria-disabled). */
 export function StepButtons({
   onPrev,
   onNext,
@@ -22,20 +23,20 @@ export function StepButtons({
   children?: ReactNode;
 }) {
   const { young } = useHear();
-  const cls = `${roundButton(young)} text-ink hover:bg-panel2 disabled:opacity-30`;
+  const cls = `${roundButton(young)} text-ink hover:bg-panel2`;
   return (
     <div className="inline-flex items-center rounded-full border border-border bg-panel">
-      <button type="button" onClick={onPrev} disabled={prevDisabled} aria-label={prevLabel} className={cls}>
+      <Act onClick={onPrev} off={prevDisabled} aria-label={prevLabel} className={cls}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <path d="M14.5 5.5L8 12l6.5 6.5" />
         </svg>
-      </button>
+      </Act>
       {children}
-      <button type="button" onClick={onNext} disabled={nextDisabled} aria-label={nextLabel} className={cls}>
+      <Act onClick={onNext} off={nextDisabled} aria-label={nextLabel} className={cls}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <path d="M9.5 5.5L16 12l-6.5 6.5" />
         </svg>
-      </button>
+      </Act>
     </div>
   );
 }

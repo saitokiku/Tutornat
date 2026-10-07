@@ -180,7 +180,7 @@ export function QuizView({ scene, onAnswer, onSay, onHelp }: { scene: QuizScene;
     setWhy(false);
     setResult(null);
   };
-  const verdict = result === null ? "" : result ? (assisted ? t("stage.correctHelped") : t("stage.correct")) : t("stage.incorrect");
+  const verdict = result === null ? "" : result ? (assisted ? t("stg.rightHelped") : t("stage.correct")) : t("stage.incorrect");
 
   return (
     <div className="space-y-5">
