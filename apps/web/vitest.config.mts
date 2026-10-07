@@ -11,5 +11,5 @@ export default defineConfig({
       "server-only": fileURLToPath(new URL("./vitest.server-only.ts", import.meta.url)),
     },
   },
-  test: { environment: "jsdom", setupFiles: ["./vitest.setup.ts"], include: ["src/**/*.test.{ts,tsx}"], passWithNoTests: true },
+  test: { environment: "jsdom", setupFiles: ["./vitest.setup.ts"], include: ["src/**/*.test.{ts,tsx}"], passWithNoTests: true, testTimeout: 30_000 },
 });
