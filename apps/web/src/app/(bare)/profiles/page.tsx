@@ -13,7 +13,7 @@ import { LearnerForm } from "@/components/profiles/LearnerForm";
 import { ParentGate } from "@/components/profiles/ParentGate";
 import { Button, btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
-import { accountsOnServer, signOut } from "@/lib/auth";
+import { signOut, useSyncState } from "@/lib/auth";
 import { goalsOf } from "@/lib/family";
 import { createLearner, learnersOf, removeLearner, selectLearner, updateLearner } from "@/lib/profiles";
 import { needsConsent } from "@/lib/server/db/policy";
@@ -30,6 +30,8 @@ export default function ProfilesPage() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const unlocked = useStore((s) => Boolean(s.session.unlocked));
   const goals = useStore(goalsOf);
+  // Signed in to an account on a server (null in the browser-only version).
+  const server = useSyncState() !== null;
   // Parent-only actions wait behind the grown-up gate when a child was the last one using the app.
   const [gate, setGate] = useState<"parent" | "manage" | "add" | null>(null);
   // Forms and manage mode are grown-up only; a kept-alive page must not reopen them for a child.
@@ -89,7 +91,7 @@ export default function ProfilesPage() {
                   <div className="absolute inset-x-3 bottom-3 flex justify-center gap-2">
                     {confirm === p.id ? (
                       <div className="w-full rounded-sm border border-bad/30 bg-panel p-2 text-center shadow-soft">
-                        <p className="text-xs text-ink">{t("profiles.removeConfirm", { name: p.nickname })}</p>
+                        <p className="text-xs text-ink">{t(server ? "acct.profiles.removeConfirm" : "profiles.removeConfirm", { name: p.nickname })}</p>
                         <div className="mt-2 flex justify-center gap-2">
                           <Button size="sm" variant="ghost" onClick={() => setConfirm(null)}>
                             {t("common.cancel")}
@@ -140,7 +142,7 @@ export default function ProfilesPage() {
           </div>
         )}
 
-        {unlocked && !managing && !showForm && accountsOnServer() && learners.some((l) => needsConsent(l.grade)) && (
+        {unlocked && !managing && !showForm && server && learners.some((l) => needsConsent(l.grade)) && (
           // Parent-first: the AI tutor and voice stay off for children until a grown-up consents.
           <section aria-labelledby="consent-card" className="mx-auto mt-10 flex max-w-xl flex-wrap items-center gap-4 rounded-lg border border-border bg-panel p-5 shadow-soft">
             <div className="min-w-0 flex-1 basis-60">

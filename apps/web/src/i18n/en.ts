@@ -1882,6 +1882,8 @@ const en = {
   "acct.method.parentBody": "For learners 13 or older.",
   "acct.method.verified": "Verified by a consent provider",
   "acct.settings.dataServer": "Your family's work is saved to your account. Deleting here removes this device's copy and signs this device out; your account keeps everything.",
+  "acct.profiles.nicknameHint": "Saved to your account so it shows on your devices. Never sent to the AI tutor.",
+  "acct.profiles.removeConfirm": "Remove {name} and everything they did, on every device signed in to this account?",
 } as const;
 
 export default en;

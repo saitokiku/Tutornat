@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, Field } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
+import { useSyncState } from "@/lib/auth";
 import { GRADES, type Grade, type Locale } from "@/lib/types";
 
 export type LearnerInput = { nickname: string; grade: Grade; locale: Locale };
@@ -22,6 +23,8 @@ export function LearnerForm({
   const locale = useLocale();
   const [v, setV] = useState<LearnerInput>(initial ?? { nickname: "", grade: "3", locale });
   const [error, setError] = useState<string | null>(null);
+  // With an account on a server the nickname is part of the family's record, not just this device's.
+  const server = useSyncState() !== null;
 
   return (
     <form
@@ -32,7 +35,7 @@ export function LearnerForm({
       }}
       className="space-y-5"
     >
-      <Field label={t("profiles.nickname")} hint={t("profiles.nicknameHint")} error={error ?? undefined}>
+      <Field label={t("profiles.nickname")} hint={t(server ? "acct.profiles.nicknameHint" : "profiles.nicknameHint")} error={error ?? undefined}>
         {(a) => (
           <input
             {...a}

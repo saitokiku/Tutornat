@@ -1884,6 +1884,8 @@ const es: Record<Key, string> = {
   "acct.method.parentBody": "Para estudiantes de 13 años o más.",
   "acct.method.verified": "Verificado por un proveedor de consentimiento",
   "acct.settings.dataServer": "El trabajo de tu familia se guarda en tu cuenta. Borrar aquí quita la copia de este dispositivo y cierra la sesión en él; tu cuenta conserva todo.",
+  "acct.profiles.nicknameHint": "Se guarda en tu cuenta para que aparezca en tus dispositivos. Nunca se envía al tutor con IA.",
+  "acct.profiles.removeConfirm": "¿Quitar a {name} y todo lo que hizo, en todos los dispositivos con esta cuenta?",
 };
 
 export default es;
