@@ -8,6 +8,7 @@ import { IconArrowRight, IconCheckCircle, IconLayers } from "@/components/icons"
 import { SkillMap, SkillRow } from "@/components/practice/SkillMap";
 import { checkOpen, STATUS_DOT, statusLine } from "@/components/practice/status";
 import { StandardCode } from "@/components/practice/StandardText";
+import { hearSize } from "@/components/practice/targets";
 import { SkillResources } from "@/components/resources/ResourceList";
 import { Hear, HearContext } from "@/components/stage/hear";
 import { Badge, Button, SubjectDot } from "@/components/ui";
@@ -73,7 +74,9 @@ function Practice() {
   };
 
   const open = skills.filter((s) => checkOpen(statuses[s.id], now));
-  const upNext = skills.find((s) => s.id === (again ?? next));
+  // "Practice this again" names a skill of one subject; on the other tabs, Up next is that tab's own.
+  const againSkill = skills.find((s) => s.id === again);
+  const upNext = againSkill ?? skills.find((s) => s.id === next);
   const upNextReviewed = useStore((s) => (upNext ? isReviewed(s, upNext) : true));
   // Skills first: this subject, then the others. Open topics come after, from AI when it is on.
   const matches = useMemo(() => {
@@ -122,11 +125,11 @@ function Practice() {
           {upNext && (
             <section aria-labelledby="up-next" className="rounded-lg border border-border bg-panel p-5 shadow-lift sm:p-7">
               <h2 id="up-next" className="text-sm font-medium text-muted">
-                {again ? t("practice.again") : t("practice.upNext")}
+                {againSkill ? t("practice.again") : t("practice.upNext")}
               </h2>
               <div className="mt-1 flex items-start gap-3">
                 <p className="min-w-0 flex-1 font-brand text-t1 font-semibold text-ink">{upNext.title[locale]}</p>
-                <Hear text={upNext.title[locale]} />
+                <Hear text={upNext.title[locale]} className={hearSize(small)} />
               </div>
               <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-sm text-muted">
                 <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${STATUS_DOT[statuses[upNext.id]?.state ?? "new"]}`} />

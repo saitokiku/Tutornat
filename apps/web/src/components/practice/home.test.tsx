@@ -10,23 +10,25 @@ import { SKILLS } from "@/practice/skills";
 import { SkillMap } from "./SkillMap";
 import { isCommonCore, StandardCode } from "./StandardText";
 
-const nav = vi.hoisted(() => ({ push: vi.fn() }));
+const nav = vi.hoisted(() => ({ push: vi.fn(), params: "" }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: nav.push, replace: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => "/practice",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(nav.params),
 }));
 
 const TEXT = "Explain why a fraction a/b is equivalent to a fraction (n × a)/(n × b) by using visual fraction models.";
-let standardOk = true;
+let standardOk: boolean | "missing" = true;
 beforeEach(() => {
   standardOk = true;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
       if (url.startsWith("/api/ai/status")) return Response.json({ mode: "anthropic" });
-      if (url.startsWith("/api/know/standard"))
+      if (url.startsWith("/api/know/standard")) {
+        if (standardOk === "missing") return Response.json({ standard: null });
         return standardOk ? Response.json({ standard: { code: "4.NF.A.1", text: TEXT, subject: "Mathematics", grade: "4", source: "Common Core State Standards" } }) : new Response("{}", { status: 502 });
+      }
       return new Response("{}", { status: 404 });
     }),
   );
@@ -34,6 +36,7 @@ beforeEach(() => {
 afterEach(() => {
   resetMemory();
   nav.push.mockReset();
+  nav.params = "";
   vi.unstubAllGlobals();
 });
 
@@ -69,12 +72,24 @@ describe("the standard behind a skill", () => {
     expect(screen.getByText("El estándar está publicado en inglés.")).toBeInTheDocument();
   });
 
-  it("only Common Core codes are looked up; science codes stay plain", () => {
-    expect(["K.CC.B.5", "4.NF.A.1", "RF.K.3a", "L.4.2", "W.6.1", "A-REI.B.3", "F-IF.A.2"].every(isCommonCore)).toBe(true);
-    expect(["K-PS2-1", "2-LS4-1", "MS-ESS2-3", "HS-PS1-7", "L.9-10.3", "RL.9-10.4"].some(isCommonCore)).toBe(false);
-    render(<StandardCode code="MS-PS1-1" locale="en" />);
-    expect(screen.getByText("MS-PS1-1")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).toBeNull();
+  it("says plainly when the Common Core data has no wording for a code, with nothing to retry", async () => {
+    standardOk = "missing";
+    render(<StandardCode code="6.RP.A.3c" locale="en" />);
+    await userEvent.click(screen.getByRole("button", { name: "6.RP.A.3c: show what this standard says" }));
+    expect(await screen.findByText("We couldn't find the wording of 6.RP.A.3c in the Common Core text.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Standard 6.RP.A.3c" })).toHaveAttribute("aria-busy", "false");
+  });
+
+  it("only codes the lookup can resolve are buttons; science and high-school codes stay plain", () => {
+    expect(["K.CC.B.5", "4.NF.A.1", "8.EE.A.1", "RF.K.3a", "L.4.2", "W.6.1", "RL.8.2"].every(isCommonCore)).toBe(true);
+    expect(["K-PS2-1", "2-LS4-1", "MS-ESS2-3", "HS-PS1-7", "L.9-10.3", "RL.9-10.4", "A-REI.B.3", "F-IF.A.2"].some(isCommonCore)).toBe(false);
+    for (const code of ["MS-PS1-1", "A-REI.B.3"]) {
+      const { unmount } = render(<StandardCode code={code} locale="en" />);
+      expect(screen.getByText(code)).toBeInTheDocument();
+      expect(screen.queryByRole("button")).toBeNull();
+      unmount();
+    }
   });
 });
 
@@ -142,5 +157,18 @@ describe("Practice home", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Start/ }));
     expect(read().sets[1]).toMatchObject({ kind: "pick", skillId: "m.count.10" });
     expect(read().sets[1].slots).toHaveLength(6);
+  });
+
+  it("Practice this again shows that skill on its own subject; the other tabs keep their own Up next", async () => {
+    nav.params = "again=m.frac.unit";
+    await learner("4");
+    render(<PracticePage />);
+    const card = () => within(screen.getByRole("region", { name: /Practice this again|Up next/ }));
+    expect(screen.getByRole("tab", { name: /Math/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Practice this again" })).toBeInTheDocument();
+    expect(card().getByText("Name the fraction")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /English/ }));
+    expect(screen.getByRole("heading", { name: "Up next" })).toBeInTheDocument();
+    expect(card().getByRole("button", { name: /^Start/ })).toBeInTheDocument();
   });
 });

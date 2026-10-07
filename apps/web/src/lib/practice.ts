@@ -9,6 +9,7 @@ import {
   placementNext,
   type Statuses,
 } from "@/learning/engine";
+import type { Standard } from "@/knowledge";
 import type { AiQuestion, Attempt, Mode, PracticeSet, SetKind, Slot } from "@/learning/types";
 import { logAct, type ActInput } from "./acts";
 import { guessSubject } from "./generate";
@@ -222,6 +223,19 @@ export function startAiSet(profile: Profile, topic: string, questions: AiQuestio
   };
   update((s) => void s.sets.push(set));
   return set.id;
+}
+
+/**
+ * What a standard says, through /api/know (nothing about the learner is sent): its text, "missing"
+ * when the Common Core data has no entry for the code (retrying cannot help), or null when the
+ * lookup did not load (it may next time).
+ */
+export async function standardWording(code: string): Promise<Standard | "missing" | null> {
+  const res = await fetch(`/api/know/standard?q=${encodeURIComponent(code)}`).catch(() => null);
+  if (!res?.ok) return null;
+  const body = (await res.json().catch(() => null)) as { standard?: Standard | null } | null;
+  if (!body) return null;
+  return body.standard ?? "missing";
 }
 
 /** Fetches AI-written questions; null when AI is not connected or the request failed. */

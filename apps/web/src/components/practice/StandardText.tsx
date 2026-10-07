@@ -4,15 +4,16 @@ import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui";
 import { useT } from "@/i18n";
 import type { Standard } from "@/knowledge";
-import { know } from "@/lib/knowledge";
+import { standardWording } from "@/lib/practice";
 import type { Locale } from "@/lib/types";
 
 // The standard behind a skill, in its own words: tap the code and the Common Core text is fetched
-// through /api/know (cached a day there; nothing about the learner is sent). Science codes (NGSS) are
-// shown as codes only, because the knowledge layer has no source for their wording.
+// through /api/know (cached a day there; nothing about the learner is sent). Codes the lookup cannot
+// resolve are shown as codes only: science (NGSS), whose wording the knowledge layer has no source
+// for, and high-school codes (A-REI.B.3, W.9-10.1a), which the lookup does not match yet.
 
-/** Codes the Common Core lookup can resolve: K–8 math and ELA, and high-school math (A-REI.B.3). */
-export const isCommonCore = (code: string) => /^([K1-8]\.[A-Z]|[A-Z]{1,2}\.[K1-9]\.|[A-Z]-[A-Z]+\.)/.test(code);
+/** Codes the Common Core lookup resolves: K–8 math (4.NF.A.1) and K–8 ELA (RF.K.3a, L.4.2). */
+export const isCommonCore = (code: string) => /^([K1-8]\.[A-Z]|[A-Z]{1,2}\.[K1-8]\.)/.test(code);
 
 const found = new Map<string, Standard>();
 
@@ -38,18 +39,19 @@ export function StandardButton({ code, open, onToggle, panelId }: { code: string
 export function StandardPanel({ code, locale, id }: { code: string; locale: Locale; id: string }) {
   const t = useT();
   const [standard, setStandard] = useState<Standard | undefined>(() => found.get(code));
-  const [failed, setFailed] = useState(false);
+  // "failed": the lookup did not load (worth a retry); "missing": the data has no such code.
+  const [problem, setProblem] = useState<"failed" | "missing" | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (found.has(code)) return;
     let live = true;
-    know.standard(code).then((s) => {
+    standardWording(code).then((s) => {
       if (!live) return;
-      if (s) {
+      if (s && s !== "missing") {
         found.set(code, s);
         setStandard(s);
-      } else setFailed(true);
+      } else setProblem(s === "missing" ? "missing" : "failed");
     });
     return () => {
       live = false;
@@ -57,7 +59,7 @@ export function StandardPanel({ code, locale, id }: { code: string; locale: Loca
   }, [code, attempt]);
 
   return (
-    <div id={id} role="region" aria-label={t("pr.std.region", { code })} aria-busy={!standard && !failed} className="basis-full rounded-md border border-border bg-panel2 px-4 py-3">
+    <div id={id} role="region" aria-label={t("pr.std.region", { code })} aria-busy={!standard && !problem} className="basis-full rounded-md border border-border bg-panel2 px-4 py-3">
       {standard ? (
         <figure>
           <blockquote lang="en" className="text-sm text-ink">
@@ -68,13 +70,15 @@ export function StandardPanel({ code, locale, id }: { code: string; locale: Loca
             {locale === "es" && <span className="block">{t("pr.std.english")}</span>}
           </figcaption>
         </figure>
-      ) : failed ? (
+      ) : problem === "missing" ? (
+        <p className="text-sm text-ink">{t("pr.std.missing", { code })}</p>
+      ) : problem === "failed" ? (
         <div className="flex flex-wrap items-center gap-3">
           <p className="flex-1 text-sm text-ink">{t("pr.std.failed")}</p>
           <Button
             variant="secondary"
             onClick={() => {
-              setFailed(false);
+              setProblem(null);
               setAttempt((n) => n + 1);
             }}
           >
