@@ -1,6 +1,6 @@
 # KaizenEDU foundation — design spec
 
-Date: 2026-10-07 · Status: building · Owner decisions: [DECISIONS.md](../DECISIONS.md) · Product: [PRODUCT.md](../PRODUCT.md)
+Date: 2026-10-07 · Status: building · Owner decisions: [DECISIONS.md](../DECISIONS.md) · Product: [PRODUCT.md](../../PRODUCT.md)
 
 ## 1. What this phase delivers
 
@@ -41,7 +41,7 @@ Tutornat/
     lesson-engine/       vanilla lesson engine (local grading, archive, animated scenes)
     prototypes/          earlier vanilla dashboards, reference only
   docs/
-    PRODUCT.md  DECISIONS.md  ROADMAP.md  STATUS.md
+    DECISIONS.md  ROADMAP.md  STATUS.md   (PRODUCT.md, DESIGN.md, AGENTS.md at the repo root)
     specs/  plans/  history/
 ```
 
