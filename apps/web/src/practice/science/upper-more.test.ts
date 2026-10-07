@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { check } from "../answer";
+import { check, parseNumber } from "../answer";
 import { makeItem } from "../skills";
 import type { Item, MathPart } from "../types";
 import { SCIENCE_6_9_MORE, SCIENCE_6_9_MORE_BANKS } from "./upper-more";
@@ -30,10 +30,17 @@ describe("science 6–9 second strand", () => {
       ["s.heat.transfer", "6", 1, "draft"],
       ["s.design.criteria", "6", 1, "draft"],
       ["s.moon.phase", "6", 2, "computed"],
+      ["s.graph.rates", "7", 2, "computed"],
       ["s.photo.resp", "7", 2, "draft"],
       ["s.mixtures", "7", 1, "draft"],
       ["s.reaction.signs", "7", 1, "draft"],
       ["s.resources", "7", 1, "draft"],
+      ["s.population.growth", "7", 2, "computed"],
+      ["s.energy.ke.pe", "7", 2, "computed"],
+      ["s.sci.notation", "8", 2, "computed"],
+      ["s.wave.speed", "8", 2, "computed"],
+      ["s.momentum", "9", 2, "computed"],
+      ["s.ohms.law", "9", 2, "computed"],
     ]);
     for (const s of SCIENCE_6_9_MORE) {
       expect(s.subject).toBe("science");
@@ -73,6 +80,7 @@ describe("science 6–9 second strand", () => {
               expect(it.wrong?.length ?? 0, `${where} typed answer lists no likely mistakes`).toBeGreaterThan(0);
               for (const w of it.wrong!) {
                 expect(w.why, where).toMatch(KEBAB);
+                expect(parseNumber(w.value), `${where} wrong value ${w.value} cannot be typed`).not.toBeNull();
                 expect(check(it.answer, w.value).correct, `${where} wrong value ${w.value} checks as right`).toBe(false);
               }
               if (it.answer.kind === "number" && !Number.isInteger(it.answer.value)) expect(it.keys, where).toContain(".");
@@ -242,6 +250,226 @@ describe("s.moon.phase", () => {
       });
       expect(seen.size, `L${level} variety`).toBe(level === 1 ? 7 : 8);
     }
+  });
+});
+
+// ── Rates, populations, notation ────────────────────────────────────────────────────────────────
+
+/** Every number in the prompt after a label such as "Count:" up to the end of that line. */
+const row = (p: string, labelRe: RegExp) => nums(p.split("\n").find((l) => labelRe.test(l))!.replace(/^[^:]*:/, ""));
+
+describe("s.graph.rates", () => {
+  it("level 1: every step of the table changes by the keyed rate times the time step", () => {
+    for (const it of make("s.graph.rates", 1)) {
+      const p = text(it.prompt);
+      const xs = row(p, /^(Time|Tiempo) \(/), ys = row(p, /^(?!Time|Tiempo).*\(.*\): /);
+      expect(xs.length, p).toBe(4);
+      expect(ys.length, p).toBe(4);
+      for (let i = 1; i < 4; i++) expect(near(Math.abs(ys[i] - ys[i - 1]), num(it) * (xs[i] - xs[i - 1])), `${p} → ${num(it)}`).toBe(true);
+      expect(num(it)).toBeGreaterThan(0);
+    }
+  });
+
+  it("level 2: the graph's points sit on gridlines and every segment has the keyed slope", () => {
+    for (const it of make("s.graph.rates", 2)) {
+      const v = it.visual!;
+      expect(v.kind).toBe("line-graph");
+      if (v.kind !== "line-graph") continue;
+      const maxY = Math.max(...v.points.map(([, y]) => y)), maxX = Math.max(...v.points.map(([x]) => x));
+      const grid = Math.ceil(maxY / 6); // the renderer's y gridline spacing
+      expect(maxX).toBeLessThanOrEqual(10);
+      for (const [x, y] of v.points) {
+        expect(Number.isInteger(x) && y % grid === 0, `${JSON.stringify(v.points)}`).toBe(true);
+        expect(it.alt, "alt lists the points").toContain(`(${x}, ${y})`);
+      }
+      for (let i = 1; i < v.points.length; i++) {
+        const [[x0, y0], [x1, y1]] = [v.points[i - 1], v.points[i]];
+        expect(near(Math.abs(y1 - y0), num(it) * (x1 - x0)), JSON.stringify(v.points)).toBe(true);
+      }
+    }
+  });
+});
+
+describe("s.population.growth", () => {
+  it("level 1: the table doubles each period, and doubling on from the first count reaches the key", () => {
+    for (const it of make("s.population.growth", 1)) {
+      const p = text(it.prompt);
+      const times = row(p, /^Time/), counts = row(p, /^Count/);
+      expect(counts[1]).toBe(2 * counts[0]);
+      expect(counts[2]).toBe(2 * counts[1]);
+      const target = Number(/after (\d+)/.exec(p)![1]);
+      let n = counts[0];
+      for (let t = 0; t < target; t += times[1]) n *= 2;
+      expect(num(it), p).toBe(n);
+    }
+  });
+
+  it("level 2: the end count minus the start equals births − deaths + in − out; percents multiply back", () => {
+    const kinds = new Set<string>();
+    for (const it of make("s.population.growth", 2)) {
+      const p = text(it.prompt);
+      if (/at the end of the year/.test(p)) {
+        const [start, born, died, ...moved] = nums(p);
+        const [moveIn, moveOut] = moved.length ? moved : [0, 0];
+        expect(num(it) - start, p).toBe(born - died + moveIn - moveOut);
+        kinds.add("count");
+      } else {
+        const [start, born, died] = nums(p);
+        expect(near((num(it) * start) / 100, born - died), p).toBe(true);
+        kinds.add(num(it) < 0 ? "decline" : "growth");
+      }
+    }
+    expect([...kinds].sort()).toEqual(["count", "decline", "growth"]);
+  });
+});
+
+// Meters (or grams, or seconds) in one of each unit, typed independently.
+const UNIT: Record<string, number> = { km: 1e3, m: 1, mm: 1e-3, "µm": 1e-6, nm: 1e-9, kg: 1e3, g: 1, mg: 1e-3, s: 1, ms: 1e-3 };
+
+describe("s.sci.notation", () => {
+  const sups = (it: Item) => it.prompt.filter((x): x is { sup: [string, string] } => typeof x === "object" && "sup" in x).map((x) => x.sup[1]);
+  it("level 1: the mantissa times ten to the key is the ordinary number, and written-out keys match", () => {
+    const kinds = new Set<string>();
+    for (const it of make("s.sci.notation", 1)) {
+      const p = text(it.prompt);
+      if (/What is n\?/.test(p)) {
+        const plain = /about (?:every )?([\d,.]+) /.exec(p)![1].replace(/,/g, "");
+        const mantissa = Number(/that is ([\d.]+) ×/.exec(p)![1]);
+        expect(mantissa >= 1 && mantissa < 10, p).toBe(true);
+        expect(Math.abs(mantissa * 10 ** num(it) - Number(plain)) / Number(plain), p).toBeLessThan(1e-12);
+        kinds.add(num(it) > 0 ? "big" : "small");
+      } else {
+        const mantissa = Number(/about (?:every )?([\d.]+) ×/.exec(p)![1]);
+        const e = Number(sups(it)[0].replace("−", "-"));
+        expect(Math.abs(num(it) / 10 ** e - mantissa), p).toBeLessThan(1e-9);
+        // The typed form has the mantissa's digits after the right number of leading or trailing zeros.
+        expect(String(num(it)).replace(/[.]/g, "").replace(/^0+/, "").replace(/0+$/, ""), p).toBe(String(mantissa).replace(".", ""));
+        kinds.add("write");
+      }
+    }
+    expect([...kinds].sort()).toEqual(["big", "small", "write"]);
+  });
+
+  it("level 2: a unit change moves the exponent by the ratio of the units", () => {
+    for (const it of make("s.sci.notation", 2)) {
+      const p = text(it.prompt);
+      const [e] = sups(it).map((s) => Number(s.replace("−", "-")));
+      const from = /10\^[−\d]+ ([^\s.]+)/.exec(p)![1], to = /10\^n ([^\s.]+)/.exec(p)![1];
+      expect(UNIT[from] && UNIT[to], p).toBeTruthy();
+      expect(num(it), p).toBe(e + Math.round(Math.log10(UNIT[from] / UNIT[to])));
+    }
+  });
+});
+
+// ── Energy, waves, circuits, momentum ───────────────────────────────────────────────────────────
+
+describe("s.energy.ke.pe", () => {
+  it("level 1: twice the kinetic energy divided by the speed squared gives back the mass", () => {
+    for (const it of make("s.energy.ke.pe", 1)) {
+      const p = text(it.prompt);
+      const [m, v] = nums(p);
+      expect(near((2 * num(it)) / (v * v), m), `${p} → ${num(it)}`).toBe(true);
+    }
+  });
+
+  it("level 2: the energy divided by mass and height is g = 9.8, or the height times m g gives the energy", () => {
+    const kinds = new Set<string>();
+    for (const it of make("s.energy.ke.pe", 2)) {
+      const p = text(it.prompt);
+      expect(p).toMatch(/Use g = 9\.8 N\/kg\./);
+      if (/How high/.test(p)) {
+        const [m, pe] = nums(p);
+        expect(near(9.8 * m * num(it), pe), p).toBe(true);
+        kinds.add("height");
+      } else {
+        const [m, h] = nums(p);
+        expect(near(num(it) / (m * h), 9.8), `${p} → ${num(it)}`).toBe(true);
+        kinds.add(/kinetic/.test(p) ? "fall" : "pe");
+      }
+    }
+    expect([...kinds].sort()).toEqual(["fall", "height", "pe"]);
+  });
+});
+
+describe("s.wave.speed", () => {
+  it("level 1: the speed divided by the frequency gives back the wavelength", () => {
+    for (const it of make("s.wave.speed", 1)) {
+      const p = text(it.prompt);
+      const [f, l] = nums(p);
+      expect(near(num(it) / f, l), `${p} → ${num(it)}`).toBe(true);
+    }
+  });
+
+  it("level 2: frequency times wavelength gives back the stated speed of the medium", () => {
+    const kinds = new Set<string>();
+    for (const it of make("s.wave.speed", 2)) {
+      const p = text(it.prompt);
+      const [v, given] = nums(p);
+      expect([340, 1500, 300_000_000], p).toContain(v);
+      expect(near(num(it) * given, v), `${p} → ${num(it)}`).toBe(true);
+      kinds.add(/wavelength, in/.test(p) ? "wavelength" : "frequency");
+    }
+    expect(kinds.size).toBe(2);
+  });
+});
+
+describe("s.ohms.law", () => {
+  it("level 1: V = I × R holds when the key is put back", () => {
+    const kinds = new Set<string>();
+    for (const it of make("s.ohms.law", 1)) {
+      const p = text(it.prompt);
+      const [a, b] = nums(p);
+      if (/What current/.test(p)) expect(near(num(it) * b, a), p).toBe(true);
+      else if (/resistance, in/.test(p)) expect(near(num(it) * b, a), p).toBe(true);
+      else expect(near(num(it), a * b), p).toBe(true);
+      kinds.add(/What current/.test(p) ? "I" : /resistance, in/.test(p) ? "R" : "V");
+    }
+    expect([...kinds].sort()).toEqual(["I", "R", "V"]);
+  });
+
+  it("level 2: series resistances add, one current flows, and each resistor gets its share of the voltage", () => {
+    const kinds = new Set<string>();
+    for (const it of make("s.ohms.law", 2)) {
+      const p = text(it.prompt);
+      const rs = [...p.matchAll(/(\d+) Ω/g)].map((m) => Number(m[1]));
+      const v = Number(/supply of ([\d.]+) V/.exec(p)![1]);
+      const resistors = /across the resistor/.test(p) ? rs.slice(0, -1) : rs;
+      const total = resistors.reduce((s, x) => s + x, 0);
+      if (/total resistance/.test(p)) expect(num(it), p).toBe(total);
+      else if (/What current/.test(p)) expect(near(num(it) * total, v), p).toBe(true);
+      else expect(near(num(it), (v * resistors[0]) / total), p).toBe(true); // voltage divider
+      kinds.add(/total resistance/.test(p) ? "total" : /What current/.test(p) ? "current" : "drop");
+    }
+    expect([...kinds].sort()).toEqual(["current", "drop", "total"]);
+  });
+});
+
+describe("s.momentum", () => {
+  it("level 1: momentum divided by mass gives the speed", () => {
+    for (const it of make("s.momentum", 1)) {
+      const p = text(it.prompt);
+      const [m, other] = nums(p);
+      if (/How fast/.test(p)) expect(near(num(it) * m, other), p).toBe(true);
+      else expect(near(num(it) / m, other), p).toBe(true);
+    }
+  });
+
+  it("level 2: total momentum is the same before and after", () => {
+    const kinds = new Set<string>();
+    for (const it of make("s.momentum", 2)) {
+      const p = text(it.prompt);
+      if (/push off/.test(p)) {
+        const [ma, mb, vb] = nums(p);
+        expect(near(ma * num(it), mb * vb), p).toBe(true);
+        kinds.add("push");
+      } else {
+        const [m1, v1, m2] = nums(p);
+        expect(near((m1 + m2) * num(it), m1 * v1), p).toBe(true);
+        expect(num(it)).toBeLessThan(v1);
+        kinds.add("stick");
+      }
+    }
+    expect([...kinds].sort()).toEqual(["push", "stick"]);
   });
 });
 

@@ -4,7 +4,10 @@ import type { Skill } from "../types";
 import { AIR_MASSES, DESIGN, HEAT_TRANSFER, ROCK_CYCLE } from "./upper-more/g6-earth";
 import { BODY_JOBS, BODY_TOGETHER, ORG_PARTS, ORG_THEORY } from "./upper-more/g6-life";
 import { MATTER_ENERGY, MIXTURES, PHOTO_IO, REACTION_SIGNS, RESOURCES } from "./upper-more/g7-banks";
+import { populationItem, rateItem } from "./upper-more/data";
 import { moonItem } from "./upper-more/moon";
+import { notationItem } from "./upper-more/notation";
+import { energyItem, momentumItem, ohmsItem, waveItem } from "./upper-more/physics";
 import { bankItem, type Bank } from "./upper-more/shared";
 
 // Grades 6–9 science, second strand (NGSS middle school and early high school), split into files under
@@ -116,6 +119,17 @@ export const SCIENCE_6_9_MORE: Skill[] = [
   },
   // Grade 7
   {
+    id: "s.graph.rates",
+    subject: "science",
+    grade: "7",
+    title: { en: "Rates from tables and graphs", es: "Tasas en tablas y gráficas" },
+    standard: "7.RP.A.2",
+    prereqs: ["s.speed"],
+    content: "computed",
+    levels: 2,
+    generate: rateItem,
+  },
+  {
     id: "s.photo.resp",
     subject: "science",
     grade: "7",
@@ -159,5 +173,76 @@ export const SCIENCE_6_9_MORE: Skill[] = [
     levels: 1,
     generate: fromBank("s.resources"),
   },
-  // @@GRADE7
+  {
+    id: "s.population.growth",
+    subject: "science",
+    grade: "7",
+    title: { en: "Population growth tables", es: "Tablas de crecimiento de poblaciones" },
+    standard: "MS-LS2-1",
+    prereqs: ["s.ecosystems"],
+    content: "computed",
+    levels: 2,
+    generate: populationItem,
+  },
+  {
+    id: "s.energy.ke.pe",
+    subject: "science",
+    grade: "7",
+    title: { en: "Kinetic and potential energy", es: "Energía cinética y potencial" },
+    standard: "MS-PS3-1",
+    prereqs: ["s.speed"],
+    content: "computed",
+    levels: 2,
+    generate: energyItem,
+  },
+  // Grade 8
+  {
+    id: "s.sci.notation",
+    subject: "science",
+    grade: "8",
+    title: { en: "Scientific notation and unit changes", es: "Notación científica y cambios de unidad" },
+    standard: "8.EE.A.4",
+    prereqs: ["s.units"],
+    content: "computed",
+    levels: 2,
+    generate: notationItem,
+  },
+  // @@GRADE8A
+  {
+    id: "s.wave.speed",
+    subject: "science",
+    grade: "8",
+    title: { en: "Wave speed, frequency and wavelength", es: "Rapidez, frecuencia y longitud de onda" },
+    standard: "HS-PS4-1",
+    prereqs: ["s.speed"],
+    content: "computed",
+    levels: 2,
+    generate: waveItem,
+  },
+  // @@GRADE8B
+  // Grade 9
+  // @@GRADE9A
+  {
+    id: "s.momentum",
+    subject: "science",
+    grade: "9",
+    title: { en: "Momentum and collisions", es: "Cantidad de movimiento y choques" },
+    standard: "HS-PS2-2",
+    prereqs: ["s.newton"],
+    content: "computed",
+    levels: 2,
+    generate: momentumItem,
+  },
+  {
+    id: "s.ohms.law",
+    subject: "science",
+    grade: "9",
+    title: { en: "Ohm's law and series circuits", es: "Ley de Ohm y circuitos en serie" },
+    standard: "HSA-CED.A.4",
+    prereqs: ["s.energy.forms"],
+    content: "computed",
+    levels: 2,
+    generate: ohmsItem,
+  },
+  // @@GRADE9B
 ];

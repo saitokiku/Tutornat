@@ -55,12 +55,15 @@ export function dec(n: number, k = 1): string {
 export function misses(right: number, list: [number, string][]): { value: string; why: string }[] {
   const out: { value: string; why: string }[] = [];
   for (const [v, why] of list) {
-    if (!Number.isFinite(v) || Math.abs(v - right) < 1e-9) continue;
-    const value = String(Math.round(v * 1e6) / 1e6);
+    if (!Number.isFinite(v) || Math.abs(v - right) <= 1e-9 * Math.max(1, Math.abs(right))) continue;
+    const value = String(Number(v.toPrecision(10))); // drops floating-point dust such as 0.30000000000000004
     if (!out.some((o) => o.value === value)) out.push({ value, why });
   }
   return out;
 }
+
+/** A wrong answer from a division, as a learner would type it: rounded to hundredths (NaN when that rounds to 0). */
+export const r2 = (x: number) => (Math.round(x * 100) === 0 ? NaN : Math.round(x * 100) / 100);
 
 /** Up to three wrong choices in priority order (repeats and copies of the key dropped), the key shuffled in. */
 export function withChoices(r: Rng, right: Choice, wrong: Choice[]): Pick<ItemBody, "choices" | "input" | "answer"> {
