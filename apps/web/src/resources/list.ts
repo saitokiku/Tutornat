@@ -946,6 +946,7 @@ export const RESOURCES: Resource[] = [
     languages: ["en"],
     fits: ["m.ineq.onestep", "m.ineq.multistep"],
     about: { en: "A free textbook section on solving inequalities and graphing the answers on a number line, with practice.", es: "Una sección de libro de texto gratis sobre resolver desigualdades y graficar las soluciones en la recta numérica, con práctica (en inglés)." },
+  },
   // English and reading, added 2026-10-07: every url and urlEs below was fetched that day and loaded (final 200).
   // Read-alouds and picture books
   {
