@@ -358,6 +358,7 @@ describe("SpotlightLayer", () => {
     render(
       <>
         <nav>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a plain fixture link; no router in this test */}
           <a href="/calendar" data-spot="nav.calendar">
             Calendar
           </a>
