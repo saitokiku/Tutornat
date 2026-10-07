@@ -1963,7 +1963,7 @@ const es: Record<Key, string> = {
   "tut.photo.sent": "Envió una foto del problema.",
   "tut.photo.tooBig": "Esa foto es demasiado grande para enviarla. Prueba con una tomada más cerca del problema.",
   "tut.photo.unreadable": "Ese archivo no se pudo abrir como imagen. Prueba con otra foto.",
-  "tut.photo.privacy": "El tutor con IA lee la foto para ayudarte. No se guarda.",
+  "tut.photo.privacy": "Que tu nombre no salga en la foto. El tutor con IA la lee para ayudarte; KaizenEDU no la guarda.",
   "tut.photo.demoNote": "El tutor de demostración no puede leer fotos. Nada sale de este dispositivo.",
   "tut.quick.define": "¿Qué significa …?",
   "tut.quick.defineStart": "¿Qué significa ",

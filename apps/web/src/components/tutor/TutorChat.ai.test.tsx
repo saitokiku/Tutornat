@@ -54,7 +54,7 @@ describe("the AI tutor", () => {
 
     await user.upload(screen.getByTestId("tutor-photo"), new File(["x"], "worksheet.jpg", { type: "image/jpeg" }));
     expect(await screen.findByText("Photo ready to send")).toBeInTheDocument();
-    expect(screen.getByText("The AI tutor reads the photo to help. It isn't saved.")).toBeInTheDocument();
+    expect(screen.getByText("Keep your name out of the photo. The AI tutor reads it to help; KaizenEDU doesn't keep it.")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox"), "can you check my ratio work{Enter}");
 
     await screen.findByText("What have you tried on the first one?");

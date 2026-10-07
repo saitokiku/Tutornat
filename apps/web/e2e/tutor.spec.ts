@@ -142,7 +142,7 @@ test("with the AI tutor, a photo is shrunk in the browser and sent with the word
 
   await page.getByTestId("tutor-photo").setInputFiles({ name: "worksheet.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") });
   await expect(page.getByText("Photo ready to send")).toBeVisible();
-  await expect(page.getByText("The AI tutor reads the photo to help. It isn't saved.")).toBeVisible();
+  await expect(page.getByText("Keep your name out of the photo. The AI tutor reads it to help; KaizenEDU doesn't keep it.")).toBeVisible();
   await page.getByRole("textbox").fill("can you check my ratio work");
   await page.keyboard.press("Enter");
 

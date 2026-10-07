@@ -1961,7 +1961,7 @@ const en = {
   "tut.photo.sent": "Sent a photo of the problem.",
   "tut.photo.tooBig": "That photo is too large to send. Try one taken closer to the problem.",
   "tut.photo.unreadable": "That file couldn't be opened as a picture. Try another photo.",
-  "tut.photo.privacy": "The AI tutor reads the photo to help. It isn't saved.",
+  "tut.photo.privacy": "Keep your name out of the photo. The AI tutor reads it to help; KaizenEDU doesn't keep it.",
   "tut.photo.demoNote": "The demo tutor can't read photos. Nothing leaves this device.",
   "tut.quick.define": "What does … mean?",
   "tut.quick.defineStart": "What does ",
