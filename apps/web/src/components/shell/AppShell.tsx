@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { KaizenLogo } from "@/components/brand";
 import { StoreHealthNotice } from "@/components/gate";
-import { IconBook, IconFamily, IconHome, IconLayers, IconPlus, IconSettings, IconSprout } from "@/components/icons";
+import { IconBook, IconClock, IconFamily, IconHome, IconLayers, IconPlus, IconSettings, IconSprout } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
 import { btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
@@ -21,10 +21,12 @@ const LEARNER_TABS: Tab[] = [
   { href: "/home", label: "nav.home", Icon: IconHome },
   { href: "/practice", label: "nav.practice", Icon: IconLayers },
   { href: "/courses", label: "nav.courses", Icon: IconBook },
+  { href: "/calendar", label: "nav.calendar", Icon: IconClock },
   { href: "/growth", label: "nav.growth", Icon: IconSprout },
 ];
 const PARENT_TABS: Tab[] = [
   { href: "/family", label: "nav.family", Icon: IconFamily },
+  { href: "/calendar", label: "nav.calendar", Icon: IconClock },
   { href: "/growth", label: "nav.growth", Icon: IconSprout },
 ];
 

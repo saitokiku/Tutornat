@@ -46,7 +46,8 @@ const norm = (s: string) =>
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^\p{L}\p{N}' ]/gu, "")
+    .replace(/\s*\/\s*/g, "/")
+    .replace(/[^\p{L}\p{N}'/ ]/gu, "")
     .replace(/\s+/g, " ")
     .trim();
 
