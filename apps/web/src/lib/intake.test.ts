@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/ai/extract/route";
 import { readIntake } from "@/lib/ai/extract";
 import { getBlob, putBlob } from "./blobs";
-import { builderHref, classifyIntake, keepsText, mergeGuess, parseAiRead, practiceSearchHref, readDate, redactNames, saveSchoolItem, type IntakeGuess } from "./intake";
+import { builderHref, classifyIntake, keepsText, mergeGuess, parseAiRead, practiceSearchHref, readByAi, readDate, redactNames, saveSchoolItem, type IntakeGuess } from "./intake";
 import { addEvent, getEvent, removeEvent, updateEvent } from "./school";
 import { read, resetMemory } from "./store";
 
@@ -120,6 +120,122 @@ describe("classifyIntake: 40 ways families say it, in English and Spanish", () =
   });
 });
 
+describe("classifyIntake: fractions are numbers, not days", () => {
+  it.each(["simplify 6/12", "5/10 + 2/10", "convert 9/10 to a percent", "add 3/10 and 4/10", "What is 7/12 as a decimal?", "homework for 1/2 of the class", "Test me on 3/4", "practice 1/10 fractions"])(
+    "%s has no date",
+    (text) => expect(guess(text).date).toBeUndefined(),
+  );
+
+  it("still finds the real day beside them", () => {
+    expect(guess("Simplify 6/12 worksheet due Friday")).toMatchObject({ kind: "homework", date: "2026-10-09", title: "Simplify 6/12 worksheet" });
+    expect(guess("worksheet on 3/4 and 1/2 due Friday").date).toBe("2026-10-09");
+    expect(guess("Quiz on 3/4 and 1/2 Friday")).toMatchObject({ kind: "quiz", date: "2026-10-09" });
+    expect(guess("Equivalent fractions 2/10 and 1/5 worksheet due tomorrow").date).toBe("2026-10-08");
+    expect(guess("Test on 10/12").date).toBe("2026-10-12");
+    expect(guess("practice 3/10 + 4/10")).toMatchObject({ kind: "practice", title: "3/10 + 4/10", date: undefined });
+  });
+});
+
+describe("classifyIntake: a pasted note", () => {
+  it.each([
+    ["Hi families! Reading log is due Friday.\nNext week we will have a math test on Oct 20.", "test", "2026-10-20", "Math test"],
+    ["Picture day is Oct 9\nMath test Friday Oct 16", "test", "2026-10-16", "Math test"],
+    ["Hi families,\nReminder: picture day is Tuesday.\nOur unit 2 math test is on Friday Oct 16.", "test", "2026-10-16", "Unit 2 math test"],
+    ["Dear parents, today we started fractions.\nThe quiz is next Tuesday.", "quiz", "2026-10-13", "Quiz"],
+    ["Hola familias:\nEl lunes no hay clases.\nEl examen de matemáticas es el viernes 16 de octubre.", "test", "2026-10-16", "Examen de matemáticas"],
+  ] as const)("%s", (text, kind, date, title) => {
+    expect(guess(text, { today: TODAY, locale: text.startsWith("Hola") ? "es" : "en" })).toMatchObject({ kind, date, title });
+  });
+
+  it("names a day off or a school event as one, not as homework", () => {
+    expect(guess("No school Monday")).toMatchObject({ kind: "no-school", date: "2026-10-12", title: "No school" });
+    expect(guess("Field trip Friday")).toMatchObject({ kind: "event", date: "2026-10-09" });
+    expect(guess("Picture day Oct 9")).toMatchObject({ kind: "event", date: "2026-10-09" });
+    expect(guess("No hay clases el lunes", { today: TODAY, locale: "es" })).toMatchObject({ kind: "no-school", date: "2026-10-12" });
+  });
+});
+
+describe("classifyIntake: a day makes it school work, in the plan's order", () => {
+  it.each([
+    ["Write a paragraph about how plants grow for Monday", "2026-10-12"],
+    ["Read chapter 3 by Friday and explain why the war started", "2026-10-09"],
+    ["Explain photosynthesis in 5 sentences by Thursday", "2026-10-08"],
+    ["Book report Friday, explain the main character", "2026-10-09"],
+    ["How many pages is the reading for Friday", "2026-10-09"],
+  ])("%s", (text, date) => {
+    const g = guess(text);
+    expect(g.kind).toBe("homework");
+    expect(g.date).toBe(date);
+  });
+
+  it("unless the words open as a request to the app or a question", () => {
+    expect(guess("Lab report on how magnets work, Oct 14")).toMatchObject({ date: "2026-10-14" });
+    expect(["homework", "project"]).toContain(guess("Lab report on how magnets work, Oct 14").kind);
+    expect(guess("practice fractions tomorrow").kind).toBe("practice");
+    expect(guess("Why is Friday the 13th unlucky?").kind).toBe("learn");
+    expect(guess("teach me about volcanoes tomorrow").kind).toBe("learn");
+  });
+});
+
+describe("classifyIntake: subjects and classes from whole words", () => {
+  const classes = [
+    { id: "m", name: "Math", subject: "math" as const },
+    { id: "r", name: "Reading", subject: "english" as const },
+    { id: "s", name: "Science", subject: "science" as const },
+  ];
+  const es = (text: string) => guess(text, { today: TODAY, locale: "es", classes });
+  const en = (text: string) => guess(text, { today: TODAY, classes });
+  it("never finds a subject inside another word", () => {
+    expect(es("tarea de ciencias para el viernes")).toMatchObject({ subject: "science", classId: "s" });
+    expect(es("tarea de ortografía")).toMatchObject({ subject: "english", classId: "r" });
+    expect(es("tarea de inglés")).toMatchObject({ subject: "english", classId: "r" });
+    expect(en("history test Friday")).toMatchObject({ subject: undefined, classId: undefined });
+    expect(en("Write a paragraph about plants for Monday")).toMatchObject({ subject: "english", classId: "r" });
+  });
+
+  it("lets the AI reader's subject replace a class the rules only guessed, never one the family named", () => {
+    const ai = { kind: "homework" as const, title: "Plant growth paragraph", subject: "science" as const, skillIds: [], notes: [] };
+    expect(mergeGuess(en("Write a paragraph about plants for Monday"), ai, { today: TODAY, classes }).classId).toBe("s");
+    expect(mergeGuess(en("Reading: paragraph about plants for Monday"), ai, { today: TODAY, classes }).classId).toBe("r");
+  });
+});
+
+describe("classifyIntake: dates the way each language writes them", () => {
+  const es = (text: string) => guess(text, { today: TODAY, locale: "es" }).date;
+  it("reads day/month in Spanish and month/day in English", () => {
+    expect(es("examen de matemáticas el 12/10")).toBe("2026-10-12");
+    expect(es("tarea para el 5/11")).toBe("2026-11-05");
+    expect(es("examen final 15/10")).toBe("2026-10-15");
+    expect(es("examen viernes 16/10")).toBe("2026-10-16");
+    expect(guess("Unit 3 exam 10/12").date).toBe("2026-10-12");
+  });
+
+  it("leaves the day out when a weekday beside it disagrees", () => {
+    expect(guess("math test Thursday 10/16").date).toBeUndefined(); // Oct 16 is a Friday
+  });
+
+  it("reads a day of the month alone, and short weekday names", () => {
+    expect(es("tarea para el 15")).toBe("2026-10-15");
+    expect(es("examen el día 12")).toBe("2026-10-12");
+    expect(es("examen de mate el vie")).toBe("2026-10-09");
+    expect(es("prueba el mié")).toBe("2026-10-14");
+    expect(guess("test on the 12th").date).toBe("2026-10-12");
+    expect(guess("Spelling test Friday the 16th").date).toBe("2026-10-16");
+    expect(guess("do the 12 problems on page 4").date).toBeUndefined();
+  });
+});
+
+describe("classifyIntake: titles a parent doesn't have to retype", () => {
+  it.each([
+    ["mi hija tiene examen de matemáticas el viernes", "Examen de matemáticas"],
+    ["My son has a quiz on decimals Thursday", "Quiz on decimals"],
+    ["la tarea es para el viernes", "Tarea"],
+    ["Maria here: Ada's test is Friday", "Ada's test"],
+    ["Mrs. Lee says the fractions quiz is on Friday", "Fractions quiz"],
+    ["practice multiplication facts tonight please", "Multiplication facts"],
+  ])("%s", (text, title) => expect(guess(text, { today: TODAY, locale: /[ñí]|tarea|hija/.test(text) ? "es" : "en" }).title).toBe(title));
+});
+
 describe("readDate", () => {
   const day = (text: string) => readDate(text, TODAY)?.date;
   it("resolves relative words against today", () => {
@@ -211,6 +327,21 @@ describe("the AI reader's answer", () => {
     expect(merged.skillIds).toEqual(["m.frac.equiv", "m.frac.unit"]);
     const photo = mergeGuess(guess(""), { kind: "homework", title: "Worksheet", date: "2026-10-12", skillIds: [], notes: [] }, { today: TODAY });
     expect(photo.date).toBe("2026-10-12");
+  });
+
+  it("labels a saved item as read by the AI only when its kind, name and day are all the reader's", () => {
+    const read = { kind: "test" as const, title: "Unit 2  test", date: "2026-10-16", skillIds: [], notes: [] };
+    expect(readByAi(read, { kind: "test", title: "Unit 2 test", date: "2026-10-16" })).toBe(true);
+    expect(readByAi(read, { kind: "quiz", title: "Unit 2 test", date: "2026-10-16" })).toBe(false);
+    expect(readByAi(read, { kind: "test", title: "Math test", date: "2026-10-16" })).toBe(false);
+    expect(readByAi({ ...read, date: undefined }, { kind: "test", title: "Unit 2 test", date: "2026-10-16" })).toBe(false); // the family picked the day
+    expect(readByAi(null, { kind: "test", title: "Unit 2 test", date: "2026-10-16" })).toBe(false);
+  });
+
+  it("takes the grown-up's own name out too, word by word", () => {
+    const r = redactNames("Maria Lopez here: Ada's test, Lopez family", ["Ada", "Maria Lopez"]);
+    expect(r.text).toBe("[name1] here: [name3]'s test, [name2] family");
+    expect(r.restore(r.text)).toBe("Maria Lopez here: Ada's test, Lopez family");
   });
 });
 
@@ -307,6 +438,9 @@ describe("school items from the box", () => {
     const note = "Hi families,\nOur unit 2 math test is on Friday Oct 16.\nPlease review fractions.";
     expect(keepsText(note)).toBe(true);
     expect(keepsText("fractions worksheet due Friday")).toBe(false);
+    // Renamed by the family: the page and problem numbers would be lost, so the words are kept.
+    expect(keepsText("p. 45-46 #1-19 odd, show work, due Friday", "Math homework", "P. 45-46 #1-19 odd, show work")).toBe(true);
+    expect(keepsText("p. 45-46 #1-19 odd, show work, due Friday", "p. 45-46 #1-19 odd,  show work", "P. 45-46 #1-19 odd, show work")).toBe(false);
     const made = await saveSchoolItem("p1", { kind: "test", title: "Unit 2 math test", date: "2026-10-16", skillIds: [], text: note, source: "typed" });
     expect(typeof made !== "string" && made.attachment).toEqual({ text: note });
   });

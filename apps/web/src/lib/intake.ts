@@ -138,11 +138,15 @@ const ABSOLUTE = [
   NUMERIC,
 ];
 // "3/4" and "6/12" are fractions until something says they're a day: a year, a weekday, or a word like
-// "due", "on", "test", "el" right before them.
+// "due", "on", "test", "el" right before them — and never when sums or other fractions sit beside them
+// ("3/4 and 1/2", "1/2 of the class", "5/10 + 2/10").
 const NUMERIC_CUE = new RegExp(
   `${B}(?:due|on|by|for|before|until|(?:tests?|quiz|exams?|ex[aá]men|prueba)(?:\\s+(?:final|parcial|corta|de\\s+\\p{L}+))?|el|para|del|hasta|antes de)\\s*[:,]?\\s*$`,
   "iu",
 );
+const FRACTION_AFTER = /^\s*(?:[-+×÷*=<>]|x(?!\p{L})|(?:of|de)\s+(?!\d{4}(?!\p{N}))|(?:,|and|y|or|o)\s*\d+\s*\/\s*\d)/iu;
+const FRACTION_BEFORE = /(?:[-+×÷*=<>]|(?<!\p{L})x|\d\s*\/\s*\d+\s*(?:,|and|y|or|o)?)\s*$/iu;
+const inSums = (text: string, start: number, end: number) => FRACTION_AFTER.test(text.slice(end)) || FRACTION_BEFORE.test(text.slice(Math.max(0, start - 24), start));
 // A day of the month with no month: "el viernes 16", "Friday the 16th", "el día 12", "on the 12th".
 const NOT_MORE = `(?!\\s*(?:[\\/:.,-]\\s*\\d|%|(?:of\\s+|de\\s+)?${MONTH}${E}))`;
 const WD_DAY = new RegExp(`${B}(${WD})\\.?,?\\s+(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?${E}${NOT_MORE}`, "giu");
@@ -178,7 +182,7 @@ function weekdayBefore(text: string, at: number) {
 const conflict = Symbol("conflict");
 
 /** Absolute dates; `conflict` when a weekday beside one says it's a different day. */
-function absoluteDates(text: string, today: string, locale: Locale): FoundDate[] | typeof conflict {
+function absoluteDates(text: string, today: string, locale: Locale, fractions: boolean): FoundDate[] | typeof conflict {
   const out: FoundDate[] = [];
   for (const re of ABSOLUTE) {
     re.lastIndex = 0;
@@ -187,7 +191,7 @@ function absoluteDates(text: string, today: string, locale: Locale): FoundDate[]
       let options: (string | undefined)[];
       if (re === NUMERIC) {
         const [, a, b, y] = m;
-        if (!y && !wd && !NUMERIC_CUE.test(text.slice(Math.max(0, m.index - 32), m.index))) continue;
+        if (!y && (fractions || inSums(text, m.index, m.index + m[0].length) || (!wd && !NUMERIC_CUE.test(text.slice(Math.max(0, m.index - 32), m.index))))) continue;
         const read = (mo: string, d: string) => readSchoolText(`x ${mo}/${d}${y ? `/${y}` : ""}`, today).found[0]?.date;
         // Month first in English, day first in Spanish; the other order only when the first can't be a day.
         options = locale === "es" ? [read(b, a), read(a, b)] : [read(a, b), read(b, a)];
@@ -237,11 +241,12 @@ function monthDays(text: string, today: string): FoundDate[] {
  * The first day the words name, resolved against `today`: a full date first, then a day of the month,
  * then relative words. Numbers like 10/12 are month/day in English and day/month in Spanish. When a
  * weekday beside a date disagrees with it ("Friday 10/15" when the 15th is a Thursday), there is no
- * date: the family picks one rather than getting a wrong one.
+ * date: the family picks one rather than getting a wrong one. With `fractions`, numbers like 3/4 are
+ * read as numbers unless a year comes with them (for a request like "test me on 3/4").
  */
-export function readDate(text: string, today: string, locale: Locale = "en"): FoundDate | null {
+export function readDate(text: string, today: string, locale: Locale = "en", fractions = false): FoundDate | null {
   const byStart = (a: FoundDate, b: FoundDate) => a.start - b.start || b.end - a.end;
-  const absolute = absoluteDates(text, today, locale);
+  const absolute = absoluteDates(text, today, locale, fractions);
   if (absolute === conflict) return null;
   if (absolute.length) return absolute.sort(byStart)[0];
   const days = monthDays(text, today);
@@ -274,6 +279,7 @@ const CONNECTOR =
 const LEAD_INS = [
   /^(?:hi|hello|hey|dear|hola|querid[oa]s|estimad[oa]s)\s+(?:families|family|parents|guardians|all|everyone|class|familias|padres|todos)\s*[,!:.]?\s+/iu,
   /^(?:reminder|recordatorio|note|nota|fyi|update|aviso|heads up)\s*[:,!-]\s*/iu,
+  /^[\p{Lu}][\p{L}'’-]*\s+(?:here|aqu[ií])\s*[:,.!-]\s*/u, // "Maria here: …"
   /^(?:next week|this week|la pr[oó]xima semana|la semana que viene|esta semana)\s*,?\s+/iu,
   /^(?:(?:mr|mrs|ms|mx|dr|miss|prof|sr|sra|srta|maestr[oa]|profe(?:sor|sora)?|teacher|coach)\.?\s+[\p{L}'’-]+\s+|the teacher\s+|(?:la|el) (?:maestr[oa]|profe(?:sor|sora)?)\s+)(?:says|said|told us|wrote|dice|dijo|escribi[oó])\s+(?:that\s+|que\s+)?/iu,
   /^(?:please|pls|ok(?:ay)?|so|hey|hi|hola|oye|bueno)[,!]?\s+/iu,
@@ -304,6 +310,7 @@ function tidy(s: string) {
       .replace(/^[\s,;:.\-–—|/]+/u, "")
       .replace(/[\s,;:\-–—|/(]+$/u, "")
       .replace(new RegExp(`${B}(?:${CONNECTOR})\\.?$`, "iu"), "")
+      .replace(new RegExp(`${B}(?:please|pls|thanks|thank you|por favor|gracias)$`, "iu"), "")
       .replace(/\s{2,}/g, " ")
       .trim();
     if (out === before) break;
@@ -424,11 +431,13 @@ const SCHOOLWORK = new Set<SchoolKind>(["test", "quiz", "project", "homework"]);
  */
 export function classifyIntake(text: string, ctx: IntakeContext): IntakeGuess {
   const locale = ctx.locale ?? "en";
-  const dated = (s: string) => readDate(s, ctx.today, locale);
   // A pasted page: the sentence with a day and a school word carries the item; failing that, the first
   // one with a day; a sentence with a school word names it; the rest says what it covers.
   const parts = segments(text);
   const opener = parts[0] ?? "";
+  // In a request to the app ("test me on 3/4", "practice 6/12", "what is 3/4 of 12?") numbers are numbers.
+  const request = /\?\s*$/.test(opener) || ASKS_APP.test(opener) || PRACTICE_LEAD.test(opener);
+  const dated = (s: string) => readDate(s, ctx.today, locale, request);
   // Weightier school work wins: a test over homework, homework over a day off or a field trip.
   const ranked = (pick: (l: string) => unknown) => RANKS.map((names) => parts.find((l) => names.some((n) => cue(l, n)) && pick(l))).find(Boolean);
   const named = ranked(() => true);
