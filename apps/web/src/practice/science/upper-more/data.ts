@@ -80,7 +80,7 @@ const RATES: RateCtx[] = [
 ];
 
 /** Level 2 graphs whose points sit exactly on gridlines: the top point is 6 gridlines up, the line climbs k per step. */
-export function graphPlans(c: RateCtx) {
+function graphPlans(c: RateCtx) {
   const out: { g: number; sx: number; k: number; n: number; b: number }[] = [];
   for (const g of c.grid)
     for (const sx of c.sx)
@@ -94,7 +94,6 @@ export function graphPlans(c: RateCtx) {
         }
   return out;
 }
-export const GRAPH_CONTEXTS = RATES;
 
 export function rateItem(r: Rng, level: number, locale: Locale): ItemBody {
   const c = r.pick(RATES);
@@ -150,7 +149,7 @@ export function rateItem(r: Rng, level: number, locale: Locale): ItemBody {
       [step !== 1 ? (rate10 * step) / 10 : NaN, "change-per-step"],
     ]),
     hints: [
-      tr(locale, `How much does the reading change, and over how many ${c.xu.w[1].en}?`, `¿Cuánto cambia la medida y en cuántos ${c.xu.w[1].es}?`),
+      tr(locale, `How much does the reading change, and over how many ${c.xu.w[1].en}?`, `¿Cuánto cambia la medida y en cuánto tiempo?`),
       tr(locale, `Rate = change in ${c.yName.en.toLowerCase()} ÷ change in time. Use the first and last readings.`, `Tasa = cambio en ${c.yName.es.toLowerCase()} ÷ cambio en el tiempo. Usa la primera y la última medida.`),
       read,
     ],

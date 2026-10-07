@@ -11,7 +11,7 @@ import { bi, dec, misses, r2, type Bi } from "./shared";
 
 const SUB = "₀₁₂₃₄₅₆₇₈₉";
 /** "C6H12O6" → "C₆H₁₂O₆". */
-export const pretty = (f: string) => f.replace(/\d/g, (d) => SUB[Number(d)]);
+const pretty = (f: string) => f.replace(/\d/g, (d) => SUB[Number(d)]);
 /** Read aloud letter by letter: "H2O" → "H 2 O", "NaCl" → "N a C l", "Ca(OH)2" → "C a, O H in parentheses, 2". */
 function sayFormula(f: string, locale: Locale) {
   return f
@@ -23,7 +23,7 @@ function sayFormula(f: string, locale: Locale) {
     .trim();
 }
 /** Atoms of each element in one formula unit, parentheses included. */
-export function atoms(f: string): Map<string, number> {
+function atoms(f: string): Map<string, number> {
   const out = new Map<string, number>();
   const add = (s: string, k: number) => {
     for (const [, sym, n] of s.matchAll(/([A-Z][a-z]?)(\d*)/g)) out.set(sym, (out.get(sym) ?? 0) + k * Number(n || 1));
@@ -184,7 +184,7 @@ export function halfLifeItem(r: Rng, level: number, locale: Locale): ItemBody {
 /** A balanced equation with the smallest whole-number coefficients: [coefficient, formula] on each side. */
 type Side = [number, string][];
 const eq = (left: Side, right: Side) => ({ left, right });
-export const EQUATIONS = [
+const EQUATIONS = [
   eq([[2, "H2"], [1, "O2"]], [[2, "H2O"]]),
   eq([[1, "N2"], [3, "H2"]], [[2, "NH3"]]),
   eq([[2, "Na"], [1, "Cl2"]], [[2, "NaCl"]]),
@@ -324,7 +324,7 @@ const ELEMENT: Record<string, Bi> = {
 };
 const fmass = (f: string) => [...atoms(f)].reduce((s, [x, n]) => s + MASS[x] * n, 0);
 /** Percents by mass that come out to whole tenths: [formula, element]. */
-export const PERCENTS = NAMED.flatMap(([f]) => [...atoms(f).keys()].filter((x) => Number.isInteger((1000 * MASS[x] * atoms(f).get(x)!) / fmass(f))).map((x) => [f, x] as const));
+const PERCENTS = NAMED.flatMap(([f]) => [...atoms(f).keys()].filter((x) => Number.isInteger((1000 * MASS[x] * atoms(f).get(x)!) / fmass(f))).map((x) => [f, x] as const));
 
 export function percentItem(r: Rng, level: number, locale: Locale): ItemBody {
   const pickF = level === 1 ? r.pick(NAMED)[0] : r.pick(PERCENTS)[0];

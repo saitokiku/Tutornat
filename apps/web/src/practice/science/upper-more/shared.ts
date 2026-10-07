@@ -73,21 +73,7 @@ export function withChoices(r: Rng, right: Choice, wrong: Choice[]): Pick<ItemBo
   return { choices, input: "choices", answer: { kind: "choice", index: choices.indexOf(right) } };
 }
 
-/** "1 kilogram" but "2 kilograms": the unit word for a displayed number. */
-export const plural = (n: string, one: string, many: string) => (n === "1" ? one : many);
-
 export const NAMES = [
   "Aiko", "Diego", "Kwame", "Priya", "Luis", "Noah", "Mei", "Omar", "Jamal", "Ana", "Tariq", "Lena", "Ravi", "Camila",
   "Elena", "Mateo", "Sofia", "Kenji", "Amara", "Yusuf", "Ines", "Malik", "Hana", "Arjun", "Zara", "Chen", "Nia", "Valentina",
 ];
-
-/** Spoken form of a line with units and signs: "−" is read "minus", "×" "times", "÷" "divided by", "²" "squared". */
-export function spoken(s: string, locale: Locale) {
-  return s
-    .replace(/−(?=\d)/g, tr(locale, "minus ", "menos "))
-    .replace(/ − /g, tr(locale, " minus ", " menos "))
-    .replace(/ × /g, tr(locale, " times ", " por "))
-    .replace(/ ÷ /g, tr(locale, " divided by ", " entre "))
-    .replace(/²/g, tr(locale, " squared", " al cuadrado"))
-    .replace(/°C/g, tr(locale, " degrees Celsius", " grados Celsius"));
-}

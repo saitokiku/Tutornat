@@ -235,7 +235,7 @@ export function waveItem(r: Rng, level: number, locale: Locale): ItemBody {
 
 // ── s.ohms.law ──────────────────────────────────────────────────────────────────────────────────
 
-const PARTS: Bi[] = [bi("a lamp", "una lámpara"), bi("a small motor", "un motor pequeño"), bi("a buzzer", "un zumbador"), bi("a resistor", "un resistor"), bi("a heating coil", "una resistencia calefactora")];
+const PARTS: Bi[] = [bi("a lamp", "una lámpara"), bi("a small motor", "un motor pequeño"), bi("a buzzer", "un zumbador"), bi("a resistor", "un resistor"), bi("a heating coil", "una bobina calefactora")];
 const BATTERIES = [15, 30, 45, 60, 90, 120, 240]; // tenths of a volt
 const RES = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 40, 50, 60];
 
@@ -271,7 +271,9 @@ export function ohmsItem(r: Rng, level: number, locale: Locale): ItemBody {
       ),
       hints: [
         tr(locale, "Ohm's law links voltage (V), current (I), and resistance (R). Which two do you know?", "La ley de Ohm relaciona el voltaje (V), la corriente (I) y la resistencia (R). ¿Cuáles dos conoces?"),
-        tr(locale, `V = I × R, so ${solved}.`, `V = I × R, así que ${solved}.`),
+        ask === "V"
+          ? tr(locale, "V = I × R: multiply the current by the resistance.", "V = I × R: multiplica la corriente por la resistencia.")
+          : tr(locale, `V = I × R, so ${solved}.`, `V = I × R, así que ${solved}.`),
         work.split(" = ").slice(0, 2).join(" = "),
       ],
       steps: ["V = I × R", work, `${show(ask === "I" ? Iq : ask === "R" ? Rq : Vq)} ${u}`],

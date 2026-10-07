@@ -646,4 +646,3 @@ describe("s.half.life", () => {
   });
 });
 
-// @@COMPUTED

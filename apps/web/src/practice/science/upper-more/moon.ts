@@ -13,7 +13,7 @@ import { bi, dec, withChoices, type Bi } from "./shared";
 
 const DAY = 86_400_000;
 /** The mean synodic month in days: new moon to new moon. */
-export const SYNODIC = 29.53;
+const SYNODIC = 29.53;
 const EIGHTH = SYNODIC / 8;
 
 /** [year, month, day, kind]: new and full moons 2025–2027 at 11:00–23:00 UT (USNO). */
@@ -41,7 +41,7 @@ export const PHASES: { name: Bi; pic: string }[] = [
 const PHASE_DAY10 = [0, 37, 74, 111, 148, 185, 221, 258];
 
 /** The nearest of the eight phases about `days` after a new (or full) moon, by the mean cycle. */
-export function phaseAfter(start: "new" | "full", days: number) {
+function phaseAfter(start: "new" | "full", days: number) {
   const age = ((start === "full" ? SYNODIC / 2 : 0) + days) % SYNODIC;
   return Math.round(age / EIGHTH) % 8;
 }

@@ -21,7 +21,7 @@ const mant = (m100: number) => {
   return frac ? `${s[0]}.${frac}` : s[0];
 };
 /** The ordinary number for m100/100 × 10^e as text, with US thousands commas: (150, 8) → "150,000,000", (250, −5) → "0.000025". */
-export function ordinary(m100: number, e: number) {
+function ordinary(m100: number, e: number) {
   const digits = String(m100).replace(/0+$/, ""); // significant digits
   if (e >= digits.length - 1) return (digits + "0".repeat(e - (digits.length - 1))).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   if (e >= 0) return `${digits.slice(0, e + 1)}.${digits.slice(e + 1)}`;
@@ -62,7 +62,6 @@ const THINGS: Thing[] = [
   t(["Sunlight takes about", "to reach Earth."], ["La luz del Sol tarda unos", "en llegar a la Tierra."], S, [500, 500], 1, 2, MS, 3),
   t(["A sheet of paper is about", "thick."], ["Una hoja de papel mide unos", "de grosor."], M, [100, 100], 1, -4, MM, 3),
 ];
-export const NOTATION_THINGS = THINGS;
 
 /** "10 to the power of minus 6" / "10 elevado a la menos 6". */
 const sayPow = (e: number | "n", locale: Locale) =>
