@@ -105,6 +105,13 @@ describe.each(MATH_3_5_MORE.map((s) => [s.id, s] as const))("%s: every item", (_
             const last = it.steps[it.steps.length - 1];
             for (const h of it.hints) expect(h.includes(last), `${where} hint gives the final step: ${h}`).toBe(false);
             for (const line of [...it.hints, ...it.steps]) for (const e of equations(line)) expect(close(shown(e.left), e.right), `${where} false equation "${line}"`).toBe(true);
+            // Rule 7: the last hint is a first step, never the answer worked out.
+            const key = it.answer;
+            for (const h of it.hints) {
+              if (key.kind === "number") for (const e of equations(h)) expect(/÷/.test(e.left) && close(e.right, key.value), `${where} hint divides out to the key: ${h}`).toBe(false);
+              if (key.kind === "remainder") expect(h, `${where} hint gives the quotient and remainder`).not.toMatch(new RegExp(`= ${key.q}(?:, | R )`));
+              if (key.kind === "fraction") expect(h.includes(`= ${key.n}/${key.d}`), `${where} hint gives the fraction: ${h}`).toBe(false);
+            }
             // Rule 16: every wrong choice names its misconception; the right one does not.
             if (it.choices) {
               it.choices.forEach((c, i) => {
@@ -349,13 +356,18 @@ describe("m.frac.equiv.model", () => {
 
 const SHAPE_SIDES: Record<string, number> = { triangle: 3, quadrilateral: 4, square: 4, pentagon: 5, hexagon: 6 };
 const COUNT_WORDS: Record<string, number> = { Two: 2, Three: 3, Four: 4, Five: 5 };
+/** Sides can make a real (not flat) shape only if each side is shorter than all the others put together. */
+const closes = (sides: number[]) => sides.every((x, i) => x < sides.reduce((s, y, j) => (j === i ? s : s + y), 0));
 
 describe("m.perimeter.missing", () => {
   it("level 1: the key is all the sides added", () => {
     for (const it of items("m.perimeter.missing", 1)) {
       const t = text(it), ans = numberOf(it.answer);
       const listed = /Its sides are ([^.]+)\./.exec(t);
-      if (listed) expect(ans).toBe(nums(listed[1]).reduce((s, x) => s + x, 0));
+      if (listed) {
+        expect(ans).toBe(nums(listed[1]).reduce((s, x) => s + x, 0));
+        expect(closes(nums(listed[1])), t).toBe(true);
+      }
       else if (it.visual?.kind === "rect") expect(ans).toBe([it.visual.w, it.visual.h, it.visual.w, it.visual.h].reduce((s, x) => s + x, 0));
       else {
         const [, shape, side] = /shaped like a (\w+) with all sides the same length\. Each side is (\d+)/.exec(t)!;
@@ -374,6 +386,7 @@ describe("m.perimeter.missing", () => {
         expect(known.length).toBe(COUNT_WORDS[m[3]]);
         expect(known.length + 1).toBe(SHAPE_SIDES[m[1]]);
         expect(ans + known.reduce((s, x) => s + x, 0)).toBe(Number(m[2]));
+        expect(closes([...known, ans]), t).toBe(true);
       } else if ((m = /has a perimeter of (\d+) \w+\. It is (\d+) \w+ long\. How wide/.exec(t))) {
         expect(2 * (Number(m[2]) + ans)).toBe(Number(m[1]));
         expect(ans).toBeLessThan(Number(m[2]));
@@ -577,6 +590,7 @@ describe("m.mult.compare", () => {
       expect(numberOf(it.answer)).toBe(want);
       const n = nums(t), k = n[n.length - 1], total = n.length === 3 ? (/trays/.test(t) ? n[0] * n[1] : n[0] + n[1]) : n[0];
       expect(total % k).toBeGreaterThan(0);
+      for (const h of it.hints) expect(h, "a hint shows the whole division").not.toMatch(/ R \d/);
     }
   });
 });
@@ -736,6 +750,8 @@ describe("m.angles", () => {
       const t = text(it);
       const deg = it.visual?.kind === "clock" ? handAngle(it.visual.h, it.visual.m) : Number(/measures (\d+)°/.exec(t)![1]);
       expect(deg > 0 && deg < 180).toBe(true);
+      // Following the hint (jumps the short way, times 30°) lands on the true angle.
+      if (it.visual?.kind === "clock") expect(30 * Number(/is (\d+) jumps?\.$/.exec(it.hints[2])![1])).toBe(deg);
       expect(choiceLabel(it)).toBe(deg < 90 ? "acute" : deg === 90 ? "right" : "obtuse");
     }
   });
@@ -852,6 +868,7 @@ describe("m.div.2digit", () => {
         const a = it.answer;
         if (level < 3) {
           expect(BigInt(numberOf(a)) * BigInt(d)).toBe(BigInt(n));
+          for (const h of it.hints) expect(h, "a hint names the quotient").not.toMatch(new RegExp(`(try|con) ${numberOf(a)}\\.`));
           if (level === 1) expect(n >= 100 && n <= 999 && numberOf(a) <= 9).toBe(true);
           else expect(n >= 1000 && n <= 9999 && numberOf(a) >= 10).toBe(true);
         } else {

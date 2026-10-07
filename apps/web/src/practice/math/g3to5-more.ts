@@ -361,7 +361,7 @@ const TWO_STEP: TwoStep[] = [
     en: ([a, b, k]) => `A gym class has ${a} girls and ${b} boys. The coach makes teams of ${k}. How many teams are there?`,
     es: ([a, b, k]) => `Una clase de educación física tiene ${a} niñas y ${b} niños. El entrenador forma equipos de ${k}. ¿Cuántos equipos hay?`,
     work: ([a, b, k]) => [`${a} + ${b}`, a + b, `${a + b} ÷ ${k}`, (a + b) / k],
-    plan: ([, , k]) => [`First find how many kids are in the class. Then split them into teams of ${k}.`, `Primero encuentra cuántos niños hay en la clase. Luego sepáralos en equipos de ${k}.`],
+    plan: ([, , k]) => [`First find how many students are in the class in all. Then split them into teams of ${k}.`, `Primero encuentra cuántos estudiantes hay en total en la clase. Luego sepáralos en equipos de ${k}.`],
     unit: ["teams", "equipos"],
     wrong: ([a, b, k]) => [[a + b, "stopped-after-one-step"], [a + b - k, "subtracted-instead-of-divided"]],
   },
@@ -392,6 +392,14 @@ const TWO_STEP: TwoStep[] = [
 
 /** Grade 3 fraction pairs (denominators 2, 3, 4, 6, 8): the second is a multiple of the first. */
 const PAIRS3: [number, number][] = [[2, 4], [2, 6], [2, 8], [3, 6], [4, 8]];
+/**
+ * Bars to match, [parts on top, parts below, shaded on top]: every grade 3 pair, split finer or joined coarser.
+ * Items whose answer is not a single piece come twice, so halves are not most of the level.
+ */
+const BARS3: [number, number, number][] = [
+  [2, 4, 1], [2, 6, 1], [2, 8, 1], [3, 6, 1], [4, 8, 1], [4, 2, 2], [6, 2, 3], [8, 2, 4], [6, 3, 2], [8, 4, 2],
+  ...([[3, 6, 2], [4, 8, 2], [4, 8, 3], [6, 3, 4], [8, 4, 4], [8, 4, 6]] as [number, number, number][]).flatMap((x) => [x, x]),
+];
 
 // ---------- grade 3 perimeter ----------
 
@@ -412,6 +420,13 @@ const POLY: Record<number, { any: Pair; same: Pair }> = {
   5: { any: ["pentagon", "pentágono"], same: ["pentagon", "pentágono"] },
   6: { any: ["hexagon", "hexágono"], same: ["hexagon", "hexágono"] },
 };
+/** n side lengths from 2 to 15 that close up into a real shape: the longest is shorter than all the others together. */
+function polygonSides(r: Rng, n: number) {
+  for (;;) {
+    const sides = Array.from({ length: n }, () => r.int(2, 15));
+    if (2 * Math.max(...sides) < sides.reduce((s, x) => s + x, 0)) return sides;
+  }
+}
 const COUNT_WORD: Record<number, Pair> = { 2: ["Two", "Dos"], 3: ["Three", "Tres"], 4: ["Four", "Cuatro"], 5: ["Five", "Cinco"] };
 const RECT_PLACES: { en: string; es: string; units: Len[] }[] = [
   { en: "A rectangular garden", es: "Un jardín rectangular", units: [M, FT] },
@@ -1800,11 +1815,9 @@ export const MATH_3_5_MORE: Skill[] = [
     generate(r, level, locale) {
       const t = (en: string, es: string) => tr(locale, en, es);
       if (level === 1) {
-        const [x, y] = r.pick(PAIRS3);
-        const up = r.bool(0.6);
-        const [p, q] = up ? [x, y] : [y, x];
+        const [p, q, s] = r.pick(BARS3);
+        const up = q > p;
         const k = up ? q / p : p / q;
-        const s = up ? r.int(1, p - 1) : k * r.int(1, q - 1);
         const n = (s * q) / p;
         const name = denName(q, locale);
         const answer: Answer = { kind: "fraction", n, d: q };
@@ -1816,11 +1829,21 @@ export const MATH_3_5_MORE: Skill[] = [
           input: "fraction-bar",
           pad: { kind: "fraction-bar", parts: q, maxParts: 12 },
           answer,
-          wrong: misses(answer, [[ft(s, q), "shaded-the-same-number-of-parts"], [ft(q - n, q), "shaded-the-unshaded-part"]]),
+          // Shading as many parts as on top fills the whole bar when it has fewer parts than that.
+          wrong: misses(answer, [
+            [ft(Math.min(s, q), q), "shaded-the-same-number-of-parts"],
+            [ft(q - n, q), "shaded-the-unshaded-part"],
+            up ? [ft(s + q - p, q), "added-instead-of-multiplied"] : s > p - q && [ft(s - p + q, q), "subtracted-instead-of-divided"],
+          ]),
           hints: [
             t("Equal fractions cover the same amount of the bar.", "Las fracciones equivalentes cubren la misma parte de la barra."),
-            up ? t(`Split every part of the top bar into ${k} equal pieces.`, `Divide cada parte de la barra de arriba en ${k} partes iguales.`) : t(`Join every ${k} parts of the top bar into one bigger part.`, `Junta cada ${k} partes de la barra de arriba en una parte más grande.`),
-            up ? `${ft(1, p)} = ${ft(k, q)}.` : `${ft(k, p)} = ${ft(1, q)}.`,
+            up
+              ? t(`Split every part of the top bar into equal pieces, so the whole bar has ${q} pieces.`, `Divide cada parte de la barra de arriba en partes iguales, para que la barra entera tenga ${q} partes.`)
+              : t(`Join the parts of the top bar into ${q} equal groups.`, `Junta las partes de la barra de arriba en ${q} grupos iguales.`),
+            // The first step only: how to split or join. The learner still counts the shaded pieces.
+            up
+              ? t(`${q} ÷ ${p} = ${k}, so split each part into ${k} pieces. Then count the shaded pieces.`, `${q} ÷ ${p} = ${k}, así que divide cada parte en ${k} partes. Luego cuenta las partes sombreadas.`)
+              : t(`${p} ÷ ${q} = ${k}, so every ${k} parts make 1 bigger part. Then count the shaded bigger parts.`, `${p} ÷ ${q} = ${k}, así que cada ${k} partes forman 1 parte más grande. Luego cuenta las partes grandes sombreadas.`),
           ],
           steps: [...new Set([up ? `${ft(1, p)} = ${ft(k, q)}` : `${ft(k, p)} = ${ft(1, q)}`, `${ft(s, p)} = ${ft(n, q)}`]), t(`Shade ${n} of the ${q} parts.`, `Sombrea ${n} de las ${q} partes.`)],
           seconds: 20,
@@ -1989,7 +2012,7 @@ export const MATH_3_5_MORE: Skill[] = [
       if (level === 1) {
         if (kind < 0.6) {
           const place = r.pick(PLACES), u = r.pick(place.units), ab = say2(locale, u.ab);
-          const n = r.int(3, 6), sides = Array.from({ length: n }, () => r.int(2, 15)), P = sides.reduce((s, x) => s + x, 0);
+          const n = r.int(3, 6), sides = polygonSides(r, n), P = sides.reduce((s, x) => s + x, 0);
           const shape = say2(locale, POLY[n].any), list = listOf(sides.map((s) => `${s} ${ab}`), locale);
           const text = t(`${place.en} is shaped like a ${shape}. Its sides are ${list}. What is its perimeter?`, `${place.es} tiene forma de ${shape}. Sus lados miden ${list}. ¿Cuál es su perímetro?`);
           const answer: Answer = { kind: "number", value: P };
@@ -2050,7 +2073,7 @@ export const MATH_3_5_MORE: Skill[] = [
       }
       if (kind < 0.5) {
         const place = r.pick(PLACES), u = r.pick(place.units), ab = say2(locale, u.ab);
-        const n = r.int(3, 6), sides = Array.from({ length: n }, () => r.int(2, 15)), P = sides.reduce((s, x) => s + x, 0);
+        const n = r.int(3, 6), sides = polygonSides(r, n), P = sides.reduce((s, x) => s + x, 0);
         const known = sides.slice(0, -1), sum = P - sides[n - 1], x = sides[n - 1];
         const shape = say2(locale, POLY[n].any), list = listOf(known.map((s) => `${s} ${ab}`), locale);
         const text = t(
@@ -2295,7 +2318,7 @@ export const MATH_3_5_MORE: Skill[] = [
     id: "m.bargraph.scaled",
     subject: "math",
     grade: "3",
-    title: { en: "Scaled picture and bar graphs", es: "Pictogramas y gráficas de barras con escala" },
+    title: { en: "Scaled picture graphs and bar graph problems", es: "Pictogramas con escala y problemas con gráficas de barras" },
     standard: "3.MD.B.3",
     prereqs: ["m.mult.facts", "m.addsub.3digit"],
     content: "computed",
@@ -2311,7 +2334,7 @@ export const MATH_3_5_MORE: Skill[] = [
         const [hi, lo] = counts[i] > counts[j] ? [i, j] : [j, i];
         const intro = t(
           `The picture graph shows votes for the class's ${g.en}. Each dot stands for ${k} votes. From left to right, the groups are ${listOf(cats.map((c) => c[0]), "en")}.`,
-          `El pictograma muestra los votos por ${g.es}. Cada punto representa ${k} votos. De izquierda a derecha, los grupos son: ${listOf(cats.map((c) => c[1]), "es")}.`,
+          `El pictograma muestra los votos para elegir ${g.es} de la clase. Cada punto representa ${k} votos. De izquierda a derecha, los grupos son: ${listOf(cats.map((c) => c[1]), "es")}.`,
         );
         const visual = { kind: "dots" as const, groups: counts };
         const alt = t(`Three groups of dots, from left to right: ${listOf(counts.map(String), "en")}`, `Tres grupos de puntos, de izquierda a derecha: ${listOf(counts.map(String), "es")}`);
@@ -2358,7 +2381,9 @@ export const MATH_3_5_MORE: Skill[] = [
           seconds: 45,
         };
       }
-      // A bar graph in words: bars end on a scale line or halfway between two lines.
+      // Level 2 is a word problem about a bar graph: the bars are described, because the Visual union has no
+      // bar graph yet. When it gets one, show the bars and scale lines here and drop the sentences.
+      // Bars end on a scale line or halfway between two lines.
       const k = r.pick([2, 4, 10, 5]);
       const half = k % 2 === 0;
       const steps = r.shuffle([2, 3, 4, 5, 6, 7, 8, 9]).slice(0, 3);
@@ -2368,7 +2393,7 @@ export const MATH_3_5_MORE: Skill[] = [
         i === halfAt
           ? t(`The bar for ${cats[i][0]} ends halfway between ${steps[i] * k} and ${steps[i] * k + k}.`, `La barra ${del(cats[i][1])} llega a la mitad entre ${steps[i] * k} y ${steps[i] * k + k}.`)
           : t(`The bar for ${cats[i][0]} ends at ${vals[i]}.`, `La barra ${del(cats[i][1])} llega hasta ${vals[i]}.`);
-      const intro = t(`In a bar graph of votes for the class's ${g.en}, the scale counts by ${k}.`, `En una gráfica de barras de los votos por ${g.es}, la escala va de ${k} en ${k}.`);
+      const intro = t(`In a bar graph of votes for the class's ${g.en}, the scale counts by ${k}.`, `En una gráfica de barras de los votos para elegir ${g.es} de la clase, la escala va de ${k} en ${k}.`);
       const [i, j] = r.shuffle([0, 1, 2]).slice(0, 2);
       const kind = r.int(0, 2);
       const [hi, lo] = vals[i] > vals[j] ? [i, j] : [j, i];
@@ -2671,6 +2696,12 @@ export const MATH_3_5_MORE: Skill[] = [
             ? t("Only full groups count, so the leftover is not enough for another one.", "Solo cuentan los grupos completos, así que lo que sobra no alcanza para otro.")
             : t("The question asks how many are left over, so the answer is the remainder.", "La pregunta es cuántos sobran, así que la respuesta es el residuo.");
       const divide = `${total} ÷ ${k} = ${q} R ${rem}`;
+      // A first chunk of the division, smaller than the quotient, so the hint never shows the quotient or the remainder.
+      const chunk = q > 10 ? 10 : q > 5 ? 5 : 2;
+      const start = t(
+        `Take out ${chunk} groups of ${k} first: ${k} × ${chunk} = ${k * chunk}, and ${total} − ${k * chunk} = ${total - k * chunk} are still left.`,
+        `Primero saca ${chunk} grupos de ${k}: ${k} × ${chunk} = ${k * chunk}, y todavía quedan ${total} − ${k * chunk} = ${total - k * chunk}.`,
+      );
       return {
         prompt: [text],
         say: text,
@@ -2683,7 +2714,7 @@ export const MATH_3_5_MORE: Skill[] = [
         hints: [
           t("Divide first. Then decide what the leftover means in this story.", "Primero divide. Luego decide qué significa lo que sobra en esta historia."),
           meaning,
-          st.first ? `${st.first(x)}.` : `${divide}.`,
+          st.first ? `${st.first(x)}.` : start,
         ],
         steps: [
           ...(st.first ? [st.first(x)] : []),
@@ -3091,7 +3122,7 @@ export const MATH_3_5_MORE: Skill[] = [
         const choices: Choice[] = KINDS.map(([label], i) => ({ label: say2(locale, label), say: say2(locale, label), ...(i === want ? {} : { why: tag(i) }) }));
         const k = Math.min(h, 12 - h);
         const text = byClock
-          ? t(`At ${h}:00, what kind of angle do the clock hands make?`, `A ${laLas(h * 60)} ${h}:00, ¿qué tipo de ángulo forman las manecillas del reloj?`)
+          ? t(`At ${h}:00, what kind of angle is the smaller angle between the clock hands?`, `A ${laLas(h * 60)} ${h}:00, ¿qué tipo de ángulo es el ángulo más pequeño entre las manecillas del reloj?`)
           : t(`An angle measures ${deg}°. What kind of angle is it?`, `Un ángulo mide ${deg}°. ¿Qué tipo de ángulo es?`);
         return {
           prompt: [text],
@@ -3103,8 +3134,11 @@ export const MATH_3_5_MORE: Skill[] = [
           hints: byClock
             ? [
                 t("Each number on the clock is 30° from the next one.", "Cada número del reloj está a 30° del siguiente."),
-                t("Count the hour marks between the hands and multiply by 30°. Then compare with 90°.", "Cuenta las marcas de hora entre las manecillas y multiplica por 30°. Luego compara con 90°."),
-                t(`At ${h}:00 the hands are ${k} hour ${pl(k, "mark", "marks")} apart.`, `A ${laLas(h * 60)} ${h}:00 las manecillas están a ${k} ${pl(k, "marca", "marcas")} de hora.`),
+                t(
+                  "Count the jumps from one number to the next, going the short way from one hand to the other, and multiply by 30°. Then compare with 90°.",
+                  "Cuenta los saltos de un número al siguiente, por el camino más corto de una manecilla a la otra, y multiplica por 30°. Luego compara con 90°.",
+                ),
+                t(`At ${h}:00, the short way from one hand to the other is ${k} ${pl(k, "jump", "jumps")}.`, `A ${laLas(h * 60)} ${h}:00, el camino más corto de una manecilla a la otra es de ${k} ${pl(k, "salto", "saltos")}.`),
               ]
             : [
                 t("Compare the angle with a right angle. A right angle is 90°.", "Compara el ángulo con un ángulo recto. Un ángulo recto mide 90°."),
@@ -3138,7 +3172,7 @@ export const MATH_3_5_MORE: Skill[] = [
             hints: [
               t("A full turn around the clock is 360°.", "Una vuelta completa al reloj mide 360°."),
               t("The 12 hour marks split the full turn into 12 equal angles.", "Las 12 marcas de hora dividen la vuelta completa en 12 ángulos iguales."),
-              t(`The hands are ${k} hour ${pl(k, "mark", "marks")} apart.`, `Las manecillas están a ${k} ${pl(k, "marca", "marcas")} de hora.`),
+              t(`Going the short way, the hands are ${k} ${pl(k, "jump", "jumps")} apart, from one number to the next.`, `Por el camino más corto, las manecillas están a ${k} ${pl(k, "salto", "saltos")} de distancia, de un número al siguiente.`),
             ],
             steps: [`360° ÷ 12 = 30°`, `${k} × 30° = ${deg}°`],
             seconds: 20,
@@ -3279,12 +3313,20 @@ export const MATH_3_5_MORE: Skill[] = [
         return d;
       };
       if (level === 1) {
-        let d: number, q: number;
+        let d: number, q: number, R: number, est: number;
         do {
           d = twoDigit();
           q = r.int(2, 9);
-        } while (d * q < 100);
-        const n = d * q, R = round10(d), est = Math.max(1, Math.min(9, Math.floor(n / R)));
+          R = round10(d);
+          est = Math.max(1, Math.min(9, Math.floor((d * q) / R)));
+          // An estimate at most 2 away, so the worked steps can adjust one at a time and still fit.
+        } while (d * q < 100 || Math.abs(est - q) > 2);
+        const n = d * q;
+        const work = [t(`${R} × ${est} = ${R * est}, so try ${est}.`, `${R} × ${est} = ${R * est}, así que prueba con ${est}.`)];
+        for (let e = est; e !== q; e += e < q ? 1 : -1) {
+          const much = d * e > n, next = much ? e - 1 : e + 1;
+          work.push(t(`${d} × ${e} = ${d * e}, which is too ${much ? "much" : "little"}, so try ${next}.`, `${d} × ${e} = ${d * e}, que es ${much ? "demasiado" : "muy poco"}, así que prueba con ${next}.`));
+        }
         const answer: Answer = { kind: "number", value: q };
         return {
           prompt: [`${n} ÷ ${d} = `, blank],
@@ -3295,16 +3337,10 @@ export const MATH_3_5_MORE: Skill[] = [
           hints: [
             t(`${d} is close to ${R}. About how many ${R}s are in ${n}?`, `${d} se acerca a ${R}. ¿Cuántas veces cabe ${R} en ${n}, más o menos?`),
             t(`Estimate with ${R}, then multiply ${d} by your estimate and adjust.`, `Estima con ${R}, luego multiplica ${d} por tu estimación y ajusta.`),
-            t(`${R} × ${est} = ${R * est}, so try ${est}.`, `${R} × ${est} = ${R * est}, así que prueba con ${est}.`),
+            // The estimate only: the learner still multiplies to check it.
+            t(`${R} × ${est} = ${R * est}. Now multiply ${d} by your estimate to check it.`, `${R} × ${est} = ${R * est}. Ahora multiplica ${d} por tu estimación para comprobarla.`),
           ],
-          steps: [
-            t(`${R} × ${est} = ${R * est}, so try ${est}.`, `${R} × ${est} = ${R * est}, así que prueba con ${est}.`),
-            ...(est !== q
-              ? [t(`${d} × ${est} = ${d * est}, which is too ${d * est > n ? "much" : "little"}, so try ${q}.`, `${d} × ${est} = ${d * est}, que es ${d * est > n ? "demasiado" : "muy poco"}, así que prueba con ${q}.`)]
-              : []),
-            `${d} × ${q} = ${n}`,
-            `${n} ÷ ${d} = ${q}`,
-          ],
+          steps: work.length < 3 ? [...work, `${d} × ${q} = ${n}`, `${n} ÷ ${d} = ${q}`] : [...work, t(`${d} × ${q} = ${n}, so ${n} ÷ ${d} = ${q}`, `${d} × ${q} = ${n}, así que ${n} ÷ ${d} = ${q}`)],
           seconds: 30,
         };
       }
@@ -3323,6 +3359,9 @@ export const MATH_3_5_MORE: Skill[] = [
       }
       const n = d * q + rem, stages = longDivision(n, d), R = round10(d);
       const lines = stages.map((s) => stageText(s, d, locale));
+      // With a one-digit quotient the first stage is the whole answer, so the hint stops at an estimate.
+      const e = Math.max(1, Math.min(9, Math.floor(stages[0].chunk / R)));
+      const firstStep = stages.length > 1 ? lines[0] : t(`Estimate with ${R}: ${R} × ${e} = ${R * e}. Try ${e}, then multiply ${d} × ${e} and adjust.`, `Estima con ${R}: ${R} × ${e} = ${R * e}. Prueba con ${e}, luego multiplica ${d} × ${e} y ajusta.`);
       const answer: Answer = rem ? { kind: "remainder", q, r: rem } : { kind: "number", value: q };
       return {
         prompt: [`${group(n)} ÷ ${d} = `, blank],
@@ -3338,7 +3377,7 @@ export const MATH_3_5_MORE: Skill[] = [
         hints: [
           t(`How many ${d}s fit in ${stages[0].chunk}?`, `¿Cuántas veces cabe ${d} en ${stages[0].chunk}?`),
           t(`Divide, multiply, subtract, bring down. Round ${d} to ${R} to estimate each digit.`, `Divide, multiplica, resta y baja la siguiente cifra. Redondea ${d} a ${R} para estimar cada cifra.`),
-          lines[0],
+          firstStep,
         ],
         steps: [
           ...lines,
@@ -3654,7 +3693,7 @@ export const MATH_3_5_MORE: Skill[] = [
     id: "m.lineplot.frac",
     subject: "math",
     grade: "5",
-    title: { en: "Line plots with fractions", es: "Diagramas de puntos con fracciones" },
+    title: { en: "Measurement data in fractions", es: "Datos de medidas en fracciones" },
     standard: "5.MD.B.2",
     prereqs: ["m.frac.addunlike", "m.frac.mult"],
     content: "computed",
@@ -3692,8 +3731,10 @@ export const MATH_3_5_MORE: Skill[] = [
       const dataParts: MathPart[] = data.flatMap((k, i) => (i === 0 ? [fparts(k)] : [i === c - 1 ? t(" and ", " y ") : ", ", fparts(k)]));
       const intro = say2(locale, plot.intro(c, n));
       const dataSay = listOf(data.map(fSay), locale);
+      // The data come as a list: the Visual union has no line plot (stacked Xs) yet. When it gets one, draw
+      // the plot from `data` here and let the questions point at it.
       const visual = { kind: "number-line" as const, min: 0, max: 1, marks: [0, 1], denominator: 8 };
-      const alt = t("A number line from 0 to 1 marked in eighths, for making a line plot", "Una recta numérica de 0 a 1 marcada en octavos, para hacer un diagrama de puntos");
+      const alt = t("A number line from 0 to 1 marked in eighths", "Una recta numérica de 0 a 1 marcada en octavos");
       const eighths = data.map((k) => ft(k, 8)).join(", ");
       const S = data.reduce((s, k) => s + k, 0);
       const naiveSum = (() => {
@@ -3705,6 +3746,14 @@ export const MATH_3_5_MORE: Skill[] = [
         const kind = r.int(0, 2);
         if (kind === 0) {
           const v = r.pick(data), count = data.filter((k) => k === v).length;
+          // A partial count, stopping before the last one, so the hint never gives the total.
+          const lastAt = data.lastIndexOf(v), before = data.slice(0, lastAt).filter((k) => k === v).length;
+          const partial =
+            lastAt < 2
+              ? t(`Start at the first measurement: it is ${fText(data[0])}.`, `Empieza por la primera medida: es ${fText(data[0])}.`)
+              : before === 0
+                ? t(`${fText(v)} does not appear in the first ${lastAt} measurements.`, `${fText(v)} no aparece en las primeras ${lastAt} medidas.`)
+                : t(`In the first ${lastAt} measurements, ${fText(v)} appears ${before} ${pl(before, "time", "times")}.`, `En las primeras ${lastAt} medidas, ${fText(v)} aparece ${before} ${pl(before, "vez", "veces")}.`);
           const answer: Answer = { kind: "number", value: count };
           const [pre, post] = plot.count.map((p) => say2(locale, p));
           return {
@@ -3716,8 +3765,8 @@ export const MATH_3_5_MORE: Skill[] = [
             wrong: misses(answer, [[c, "counted-every-piece"]]),
             hints: [
               t(`Find every ${fText(v)} in the list.`, `Busca cada ${fText(v)} en la lista.`),
-              t("On a line plot, each measurement is one X above its number. Count the Xs above that number.", "En un diagrama de puntos, cada medida es una X sobre su número. Cuenta las X sobre ese número."),
-              t(`Go through the list in order and mark each ${fText(v)}.`, `Recorre la lista en orden y marca cada ${fText(v)}.`),
+              t(`Go through the list in order and make a tally mark for each ${fText(v)}.`, `Recorre la lista en orden y haz una marca de conteo por cada ${fText(v)}.`),
+              partial,
             ],
             steps: [t(`${fText(v)} appears ${count} ${pl(count, "time", "times")} in the list.`, `${fText(v)} aparece ${count} ${pl(count, "vez", "veces")} en la lista.`), `${count} ${say2(locale, plot.item)}`],
             seconds: 30,
