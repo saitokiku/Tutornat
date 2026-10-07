@@ -4,6 +4,7 @@ import type { Skill } from "../types";
 import { fromBank, type BankLevel } from "./k5-more/bank";
 import { daylight, habitatSurvey, weatherChart } from "./k5-more/computed-early";
 import { BANKS_1 } from "./k5-more/grade-1";
+import { BANKS_2 } from "./k5-more/grade-2";
 import { BANKS_K } from "./k5-more/grade-k";
 
 // K–5 science, second strand: the NGSS performance expectations the first strand (early.ts) does not
@@ -14,7 +15,7 @@ import { BANKS_K } from "./k5-more/grade-k";
 
 export type { BankLevel, Entry, Option, Pair } from "./k5-more/bank";
 
-export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1 };
+export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1, ...BANKS_2 };
 
 const fromBanks = (id: string) => (r: Rng, level: number, locale: Locale) => fromBank(r, BANKS[id][level - 1], locale);
 
@@ -40,5 +41,9 @@ export const SCIENCE_K_5_MORE: Skill[] = [
   draft({ id: "s.sky.patterns", grade: "1", en: "Patterns in the sky", es: "Patrones en el cielo", standard: "1-ESS1-1", prereqs: [], levels: 1 }),
   computed({ id: "s.daylight.hours", grade: "1", en: "Daylight through the year", es: "La luz del día durante el año", standard: "1-ESS1-2", prereqs: ["s.sky.patterns", "s.weather.chart"], levels: 3 }, daylight),
   // ── Grade 2 ──
+  draft({ id: "s.plants.grow", grade: "2", en: "Plants: needs, seeds and pollen", es: "Las plantas: necesidades, semillas y polen", standard: "2-LS2-1", prereqs: ["s.needs", "s.parts.jobs"], levels: 3 }),
   computed({ id: "s.habitat.survey", grade: "2", en: "Counting living things in habitats", es: "Contar seres vivos en los hábitats", standard: "2-LS4-1", prereqs: ["s.habitats"], levels: 3 }, habitatSurvey),
+  draft({ id: "s.landforms.water", grade: "2", en: "Landforms, water and maps", es: "Formas del terreno, agua y mapas", standard: "2-ESS2-2", prereqs: [], levels: 2 }),
+  draft({ id: "s.wind.water.land", grade: "2", en: "Wind and water change land", es: "El viento y el agua cambian la tierra", standard: "2-ESS2-1", prereqs: ["s.landforms.water"], levels: 2 }),
+  draft({ id: "s.heat.cool", grade: "2", en: "Heating and cooling", es: "Calentar y enfriar", standard: "2-PS1-4", prereqs: ["s.states.matter"], levels: 2 }),
 ];

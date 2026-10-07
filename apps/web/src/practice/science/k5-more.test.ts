@@ -25,7 +25,11 @@ const PLAN = [
   ["s.parents.young", "1", "1-LS1-2", ["s.living"], 2, "draft"],
   ["s.sky.patterns", "1", "1-ESS1-1", [], 1, "draft"],
   ["s.daylight.hours", "1", "1-ESS1-2", ["s.sky.patterns", "s.weather.chart"], 3, "computed"],
+  ["s.plants.grow", "2", "2-LS2-1", ["s.needs", "s.parts.jobs"], 3, "draft"],
   ["s.habitat.survey", "2", "2-LS4-1", ["s.habitats"], 3, "computed"],
+  ["s.landforms.water", "2", "2-ESS2-2", [], 2, "draft"],
+  ["s.wind.water.land", "2", "2-ESS2-1", ["s.landforms.water"], 2, "draft"],
+  ["s.heat.cool", "2", "2-PS1-4", ["s.states.matter"], 2, "draft"],
 ] as const;
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => i * 104729 + 7);
