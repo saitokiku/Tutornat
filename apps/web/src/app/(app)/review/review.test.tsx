@@ -5,6 +5,7 @@ import { signUp } from "@/lib/auth";
 import { gradeSpan, isReviewed, previewLevel, previewSkill, reviewOf, reviewSkill, reviewState, reviewedLines, strands } from "@/lib/review";
 import { read, resetMemory, update } from "@/lib/store";
 import { ENGLISH_K_4, ENGLISH_K_4_BANKS } from "@/practice/english/early";
+import { BANKS } from "@/practice/english/upper";
 import { STRANDS } from "@/practice/registry";
 import { getSkill, gradeIndex, SKILLS } from "@/practice/skills";
 import { ReviewTool } from "./ReviewTool";
@@ -109,6 +110,25 @@ describe("previewLevel", () => {
     for (const p of lv.pairs) expect(p.es.say).toBe(bySay.get(p.en.say));
   });
 
+  it("shows each question of a level with pooled wrong choices once, with every wrong choice the pool can offer", () => {
+    // Level 2 of e.fallacies shows the right name with three of the seven others, so one question has
+    // dozens of versions. Independent route: the bank lists the questions, and the fallacies it names.
+    const lv = previewLevel("e.fallacies", 2);
+    const bank = BANKS.FALLACIES[1];
+    expect(lv.complete).toBe(true);
+    expect(lv.pairs).toHaveLength(new Set(bank.map((e) => e.en[0])).size);
+    const named = new Set(BANKS.FALLACIES.flat().map((e) => e.en[1])).size;
+    for (const p of lv.pairs) {
+      expect(p.versions, p.en.say).toBeGreaterThan(1);
+      for (const side of ["en", "es"] as const) {
+        const labels = new Set([...p[side].choices!, ...p.others[side]].map((c) => c.label));
+        expect(labels.size, `${side}: ${p.en.say}`).toBe(named);
+      }
+    }
+    // Fixed-choice banks have one version per question and nothing extra.
+    expect(previewLevel("e.rhyme", 1).pairs.every((p) => p.versions === 1 && !p.others.en.length && !p.others.es.length)).toBe(true);
+  });
+
   it("takes samples of computed skills and stops at the cap for number-made levels", () => {
     expect(previewSkill(computed).every((lv) => lv.pairs.length === 3 && !lv.complete)).toBe(true);
     const capped = previewLevel(computed.id, 1, { cap: 50 });
@@ -178,6 +198,14 @@ describe("ReviewTool", () => {
     // Picking another subject resets the strand.
     await user.click(screen.getByRole("button", { name: "All" }));
     expect(screen.getByLabelText("Strand")).toHaveValue("all");
+  });
+
+  it("shows one version of a pooled question, with the other wrong choices and their misconception tags listed", async () => {
+    await grownUp();
+    params.skill = "e.fallacies";
+    render(<ReviewTool />);
+    expect(screen.getAllByText(/^Comes in \d+ versions/).length).toBe(previewLevel("e.fallacies", 2).pairs.length);
+    expect(screen.getAllByRole("heading", { level: 5, name: "Wrong choices in other versions" }).length).toBeGreaterThan(0);
   });
 
   it("shows computed skills as checked by code, with no approve button", async () => {

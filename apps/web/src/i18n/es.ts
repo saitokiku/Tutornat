@@ -2078,6 +2078,8 @@ const es: Record<Key, string> = {
   "trust.review.picture": "Imagen",
   "trust.review.markable": "Se pueden tocar las fichas para marcarlas al contar.",
   "trust.review.choices": "Opciones",
+  "trust.review.versions": "Viene en {n} versiones que solo cambian en las otras opciones, las pistas o los pasos. Aquí se muestra una, con todas las demás opciones incorrectas que ofrecen las versiones.",
+  "trust.review.otherChoices": "Opciones incorrectas de otras versiones",
   "trust.review.key": "Correcta",
   "trust.review.why": "muestra: {why}",
   "trust.review.answer": "Respuesta",

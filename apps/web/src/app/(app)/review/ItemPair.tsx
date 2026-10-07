@@ -8,26 +8,27 @@ import { useT } from "@/i18n";
 import type { Locale, Subject } from "@/lib/types";
 import type { PreviewPair } from "@/lib/review";
 import { answerText } from "@/practice/answer";
-import type { Item } from "@/practice/types";
+import type { Choice, Item } from "@/practice/types";
 
 /** One question as both languages see it from the same seed, with everything a reviewer checks. */
 export function ItemPair({ pair, subject, n }: { pair: PreviewPair; subject: Subject; n: number }) {
   const t = useT();
   return (
     <li className="rounded-md border border-border bg-panel">
-      <p className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 font-opmono text-xs text-muted">
+      <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-border px-4 py-2 font-opmono text-xs text-muted">
         <span>#{n}</span>
         <span>{t("trust.review.seed", { seed: pair.seed })}</span>
       </p>
+      {pair.versions > 1 && <p className="border-b border-border bg-panel2/60 px-4 py-2 text-xs text-muted">{t("trust.review.versions", { n: pair.versions })}</p>}
       <div className="grid divide-y divide-border md:grid-cols-2 md:divide-x md:divide-y-0">
-        <Side item={pair.en} locale="en" subject={subject} />
-        <Side item={pair.es} locale="es" subject={subject} />
+        <Side item={pair.en} others={pair.others.en} locale="en" subject={subject} />
+        <Side item={pair.es} others={pair.others.es} locale="es" subject={subject} />
       </div>
     </li>
   );
 }
 
-function Side({ item, locale, subject }: { item: Item; locale: Locale; subject: Subject }) {
+function Side({ item, others, locale, subject }: { item: Item; others: Choice[]; locale: Locale; subject: Subject }) {
   const t = useT();
   const id = useId();
   const key = item.answer.kind === "choice" ? item.answer.index : -1;
@@ -80,6 +81,22 @@ function Side({ item, locale, subject }: { item: Item; locale: Locale; subject: 
                   </span>
                 )}
                 {i === key && <span className="text-xs font-semibold text-good">{t("trust.review.key")}</span>}
+                {c.why && <span className="font-opmono text-xs text-warn">{t("trust.review.why", { why: c.why })}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {others.length > 0 && (
+        <div>
+          <h5 className="text-xs font-semibold text-muted">{t("trust.review.otherChoices")}</h5>
+          <ul className="mt-1 space-y-1">
+            {others.map((c) => (
+              <li key={c.label} className="flex flex-wrap items-baseline gap-x-2 px-2 py-1">
+                <span lang={locale} className="font-medium text-ink">
+                  {c.picture && <span aria-hidden="true">{c.picture} </span>}
+                  {c.label}
+                </span>
                 {c.why && <span className="font-opmono text-xs text-warn">{t("trust.review.why", { why: c.why })}</span>}
               </li>
             ))}

@@ -2076,6 +2076,8 @@ const en = {
   "trust.review.picture": "Picture",
   "trust.review.markable": "The counters can be tapped to mark them while counting.",
   "trust.review.choices": "Choices",
+  "trust.review.versions": "Comes in {n} versions that differ only in their other choices, hints or steps. One is shown here, with every other wrong choice the versions offer.",
+  "trust.review.otherChoices": "Wrong choices in other versions",
   "trust.review.key": "Key",
   "trust.review.why": "shows: {why}",
   "trust.review.answer": "Answer",
