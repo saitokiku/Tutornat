@@ -31,7 +31,7 @@ Rule: a box is ticked only after its check actually ran. Note blockers under the
 Owner: "make something good finished and polished that i would like full." Work strictly top to bottom.
 Tick an item only after its check ran and the work is committed. One item in progress at a time.
 
-In progress: 7 (final) · started: 05:30 · check-ins without a commit: 0
+In progress: (none) — overnight queue finished · check-ins without a commit: 0
 
 1. [x] UX fixes A — safety & correctness: grown-up gate (Parent / manage / add), learner-scoped Settings, plurals, sign-out lands on landing, "In English/Spanish" tags, ≥40px targets, magic-box noise (counter near limit, shortcut hint), wider science keywords, Family figures + "no activity", "Choose a course", phone scene toggle. (critique #2,6,7,8,10,11,12,14,15)
 2. [x] UX fixes B — stage for pre-readers: tap-to-hear on every learner text (default on for K–2), Read aloud includes widget items, tutor panel collapsed by default, larger K–2 stage type, Look/Try/Check/Do icons, finish screen without an all-zero line. (critique #1,9,13)
@@ -40,8 +40,29 @@ In progress: 7 (final) · started: 05:30 · check-ins without a commit: 0
 5. [x] Polish pass, screen by screen (impeccable polish + craft floor): landing, auth, profiles, home, magic box, generation, courses, course page, stage + each widget, growth, family, settings — desktop and phone.
 6. [x] Depth: write lessons 2–4 for every catalogue course; add a grade 9 science course; keep the catalogue integrity test green.
 6b. [x] Review fixes: 14 findings from the independent review (multi-tab store, gate bypass on profiles, repeat Check inflation, assisted carry-forward, builder Back deleting a course, redo finished lesson, gated delete, html lang, page titles + focus, open redirect, reorder focus, store shape validation, DST week stepping, double submit, landing strings).
-7. [ ] Final: `npm run verify`, journey test, last screenshot review, update README/STATUS, write the Morning report below, delete the cron job.
+7. [x] Final: `npm run verify`, journey test, last screenshot review, update README/STATUS, write the Morning report below, delete the cron job.
 
-## Morning report
+## Morning report (2026-10-07)
 
-(written at the end of the night)
+**Try it — 2 minutes**
+1. `cd ~/Documents/GitHub/Tutornat && npm install && npm run dev` → open http://localhost:3000
+2. Get started → create a family account (stays in this browser) → add a kindergartner and a grade 4 learner.
+3. Tap the kindergartner → picture tiles → "First, next, last" → tap any 🔊 to hear a line, sort the story, check it.
+4. Switch → Parent → answer the times-table question → Family shows exactly what happened.
+
+**What works now**
+- Landing with a live fraction-bar hero; EN/ES everywhere (toggle on landing and sign-in).
+- Family account → learner profiles; grown-up gate in front of Parent, manage learners, delete.
+- K–2 home is picture-first with tap-to-hear; grade 3+ home leads with the magic box.
+- 13 hand-written courses, 52 lessons, 5 interactive widgets; honest Growth + Family record.
+- Magic box builds a template outline (labelled), offers a matching ready-made course, never dead-ends.
+- Gates green: 45 unit tests, journey + axe accessibility audit at 1440 and 390 px, production build.
+
+**Not done / needs you**
+- AI tutor and real course writing (OpenMAIC) — not connected; outlines from the box are templates.
+- Real accounts/database — demo saves in the browser only.
+- Deploy to kaizenedu.net — waiting for your go-ahead. Work is on branch `foundation`, not pushed.
+- Rotate the six provider keys committed in the old KaizenEdu repo.
+- Spanish copy needs a native-speaker read before launch.
+
+**Next:** say "push and deploy a preview" to get a Vercel preview link, or pick the backend (ROADMAP Phase 2).
