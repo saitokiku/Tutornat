@@ -4,9 +4,9 @@ import { useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { IconCheck } from "@/components/icons";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
-import { Hear } from "../hear";
+import { Hear, useHear } from "../hear";
 import { CheckRow } from "./CheckRow";
-import { Act } from "./Stepper";
+import { Act, roundButton } from "./Stepper";
 import { signed } from "./order";
 
 type Props = { widget: Extract<Widget, { kind: "coordinate" }>; onCheck?: (correct: boolean) => void; tint?: string };
@@ -26,6 +26,7 @@ export const togglePoint = (list: Pt[], p: Pt): Pt[] => (has(list, p) ? list.fil
  */
 export function Coordinate({ widget, onCheck, tint = "var(--color-math)" }: Props) {
   const t = useT();
+  const { young } = useHear();
   const { min, max } = widget;
   const startAt = (v: number) => Math.max(min, Math.min(max, v));
   const [cursor, setCursor] = useState<Pt>([startAt(0), startAt(0)]);
@@ -59,7 +60,7 @@ export function Coordinate({ widget, onCheck, tint = "var(--color-math)" }: Prop
   };
   const listed = points.length ? t("stg.coord.points", { list: points.map(pointText).join(", ") }) : t("stg.coord.none");
   const readout = `${t("stg.coord.cursor", { point: pointText(cursor) })} ${listed}`;
-  const arrow = "grid size-11 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30";
+  const arrow = `${roundButton(young)} border border-border bg-panel text-ink hover:border-ink/30`;
 
   return (
     <div className="space-y-5">

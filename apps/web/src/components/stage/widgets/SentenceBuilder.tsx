@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
 import { Hear, useHear } from "../hear";
+import { Spoken } from "../narration";
+import type { Segment } from "../useSpeech";
 import { CheckRow } from "./CheckRow";
 import { Act } from "./Stepper";
 import { scramble } from "./order";
 
 type SentenceWidget = Extract<Widget, { kind: "sentence-builder" }>;
-type Props = { widget: SentenceWidget; onCheck?: (correct: boolean) => void; lang?: string };
+type Props = { widget: SentenceWidget; onCheck?: (correct: boolean) => void; onSay?: (segments: Segment[]) => void; lang?: string };
 
 /** An answer as positions in `words` (repeated words take the next unused copy). */
 function asIndices(words: string[], answer: string[]) {
@@ -29,9 +31,9 @@ export const matchesAnswer = (built: string[], answers: string[][]) => answers.s
 /**
  * Tap words to build a sentence; tap a word in the sentence to take it back out. Any of the answers
  * counts. Every word is a button, focus stays in the bank or the sentence as words move, and the
- * sentence so far is read out.
+ * sentence so far is read out. Read aloud reads the words still waiting in the bank.
  */
-export function SentenceBuilder({ widget, onCheck, lang }: Props) {
+export function SentenceBuilder({ widget, onCheck, onSay, lang }: Props) {
   const t = useT();
   const { young } = useHear();
   const [bank] = useState(() => bankOrder(widget));
@@ -47,6 +49,9 @@ export function SentenceBuilder({ widget, onCheck, lang }: Props) {
     if (next.current) refs.current.get(next.current)?.focus();
     next.current = null;
   }, [picked]);
+  useEffect(() => {
+    onSay?.(bank.filter((i) => !picked.includes(i)).map((i) => ({ key: `word.${i}`, text: widget.words[i] })));
+  }, [bank, picked, onSay, widget.words]);
 
   const add = (i: number) => {
     const k = left.indexOf(i);
@@ -98,7 +103,7 @@ export function SentenceBuilder({ widget, onCheck, lang }: Props) {
           {left.map((i) => (
             <li key={i} className="flex items-center gap-1">
               <button ref={(el) => void refs.current.set(`bank:${i}`, el)} type="button" onClick={() => add(i)} aria-label={t("stg.sb.add", { word: widget.words[i] })} className={chip}>
-                {widget.words[i]}
+                <Spoken k={`word.${i}`} text={widget.words[i]} />
               </button>
               <Hear text={widget.words[i]} />
             </li>

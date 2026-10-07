@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
 import { Hear } from "../hear";
@@ -17,7 +17,10 @@ export type Pans = { a: number; l: number; r: number };
 export const solutionOf = (w: BalanceWidget) => (w.rightUnits - w.leftUnits) / w.xCount;
 /** Left minus right, weighing each x-box at the true value of x. Positive: the left side is heavier. */
 export const tip = (p: Pans, x: number) => p.a * x + p.l - p.r;
-export const equationText = (p: Pans) => `${p.a === 1 ? "" : p.a}x${p.l ? ` + ${p.l}` : ""} = ${p.r}`;
+/** What the scale says about the two sides: equal when level, otherwise which side is more. */
+export const relation = (d: number) => (d === 0 ? "=" : d > 0 ? ">" : "<");
+/** The pans as a statement: "3x + 4 = 19" when level, "3x + 3 < 19" once one side is lighter. Never a false "=". */
+export const equationText = (p: Pans, rel: "=" | "<" | ">" = "=") => `${p.a === 1 ? "" : p.a}x${p.l ? ` + ${p.l}` : ""} ${rel} ${p.r}`;
 export const isSolved = (p: Pans, x: number) => p.a === 1 && p.l === 0 && tip(p, x) === 0;
 
 /** The moves. Each returns the new pans, or null when it can't be done. Only "both" moves keep balance. */
@@ -70,7 +73,8 @@ export function Balance({ widget, onCheck, tint = "var(--color-math)" }: Props) 
   const [history, setHistory] = useState<Pans[]>([]);
   const [result, setResult] = useState<boolean | null>(null);
   const d = tip(pans, x);
-  const eq = equationText(pans);
+  const eq = equationText(pans, relation(d));
+  const splitNote = useId();
   const state = d === 0 ? t("stg.bal.level") : d > 0 ? t("stg.bal.leftHeavy") : t("stg.bal.rightHeavy");
   const solved = isSolved(pans, x);
   const readout = `${eq}. ${state}${solved ? ` ${t("stg.bal.solved", { n: pans.r })}` : ""}`;
@@ -150,12 +154,16 @@ export function Balance({ widget, onCheck, tint = "var(--color-math)" }: Props) 
           {t("stg.bal.takeBoth")}
         </Act>
         {start.a > 1 && (
-          <Act onClick={() => act("split")} off={disabled("split")}>
+          <Act onClick={() => act("split")} off={disabled("split")} aria-describedby={pans.a > 1 && disabled("split") ? splitNote : undefined}>
             {t("stg.bal.split", { n: pans.a > 1 ? pans.a : start.a })}
           </Act>
         )}
       </div>
-      {pans.a > 1 && disabled("split") && <p className="text-xs text-muted">{t("stg.bal.splitLater", { n: pans.a })}</p>}
+      {pans.a > 1 && disabled("split") && (
+        <p id={splitNote} className="text-xs text-muted">
+          {t("stg.bal.splitLater", { n: pans.a })}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <Act variant="ghost" onClick={undo} off={!history.length}>
           {t("stg.bal.undo")}
@@ -172,6 +180,7 @@ export function Balance({ widget, onCheck, tint = "var(--color-math)" }: Props) 
       </div>
 
       <CheckRow
+        disabled={!history.length}
         result={result}
         onCheck={() => {
           setResult(solved);

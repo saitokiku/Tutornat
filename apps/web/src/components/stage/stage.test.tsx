@@ -36,7 +36,7 @@ describe("QuizView", () => {
 
   it("a correct answer after a hint is recorded as helped", async () => {
     const onAnswer = vi.fn();
-    render(<QuizView scene={scene} onAnswer={onAnswer} onSpeakText={() => {}} />);
+    render(<QuizView scene={scene} onAnswer={onAnswer} />);
     await userEvent.click(screen.getByRole("button", { name: /Show a hint/ }));
     await userEvent.click(screen.getByLabelText("1/2"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
@@ -46,13 +46,48 @@ describe("QuizView", () => {
 
   it("a correct answer without help is recorded as on your own", async () => {
     const onAnswer = vi.fn();
-    render(<QuizView scene={scene} onAnswer={onAnswer} onSpeakText={() => {}} />);
+    render(<QuizView scene={scene} onAnswer={onAnswer} />);
     await userEvent.click(screen.getByLabelText("1/4"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
     expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s5:q1", correct: false, assisted: false });
     await userEvent.click(screen.getByLabelText("1/2"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
     expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s5:q1", correct: true, assisted: false });
+  });
+});
+
+describe("QuizView focus", () => {
+  const two = {
+    id: "s6", kind: "quiz" as const, title: "Check",
+    questions: [
+      { id: "q1", prompt: "Which is more?", choices: ["1/2", "1/4"], answer: 0, hint: "Fewer pieces are bigger.", explain: "1/2 is more." },
+      { id: "q2", prompt: "Which is less?", choices: ["1/3", "1/6"], answer: 1, hint: "More pieces are smaller.", explain: "1/6 is less." },
+    ],
+  };
+
+  it("never drops keyboard focus: check, hint and the next question", async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn();
+    render(<QuizView scene={two} onAnswer={onAnswer} />);
+    const check = screen.getByRole("button", { name: "Check" });
+    expect(check).toHaveAttribute("aria-disabled", "true"); // nothing chosen yet
+    await user.click(screen.getByRole("button", { name: /Show a hint/ }));
+    expect(document.activeElement).toHaveTextContent("Fewer pieces are bigger.");
+    await user.click(screen.getByLabelText("1/2"));
+    check.focus();
+    await user.keyboard("{Enter}");
+    expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s6:q1", correct: true, assisted: true });
+    expect(document.activeElement).toBe(check);
+    await user.click(screen.getByRole("button", { name: "Next question" }));
+    expect(document.activeElement).toHaveTextContent("Which is less?");
+  });
+
+  it("Why takes focus to the explanation", async () => {
+    render(<QuizView scene={two} onAnswer={() => {}} />);
+    await userEvent.click(screen.getByLabelText("1/4"));
+    await userEvent.click(screen.getByRole("button", { name: "Check" }));
+    await userEvent.click(screen.getByRole("button", { name: "Why" }));
+    expect(document.activeElement).toHaveTextContent("1/2 is more.");
   });
 });
 
@@ -87,12 +122,12 @@ describe("tap to hear", () => {
     };
     const { unmount } = render(
       <HearContext.Provider value={{ hear: true, young: true, locale: "en" }}>
-        <QuizView scene={scene} onAnswer={() => {}} onSpeakText={() => {}} />
+        <QuizView scene={scene} onAnswer={() => {}} />
       </HearContext.Provider>,
     );
     expect(screen.getAllByRole("button", { name: /^Read aloud:/ })).toHaveLength(4);
     unmount();
-    render(<QuizView scene={scene} onAnswer={() => {}} onSpeakText={() => {}} />);
+    render(<QuizView scene={scene} onAnswer={() => {}} />);
     expect(screen.queryAllByRole("button", { name: /^Read aloud:/ })).toHaveLength(0);
   });
 });

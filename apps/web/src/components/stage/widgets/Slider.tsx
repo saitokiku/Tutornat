@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useHear } from "../hear";
+import { roundButton } from "./Stepper";
 
 export function StepButtons({
   onPrev,
@@ -19,7 +21,8 @@ export function StepButtons({
   nextDisabled?: boolean;
   children?: ReactNode;
 }) {
-  const cls = "grid size-11 place-items-center rounded-full text-ink hover:bg-panel2 disabled:opacity-30";
+  const { young } = useHear();
+  const cls = `${roundButton(young)} text-ink hover:bg-panel2 disabled:opacity-30`;
   return (
     <div className="inline-flex items-center rounded-full border border-border bg-panel">
       <button type="button" onClick={onPrev} disabled={prevDisabled} aria-label={prevLabel} className={cls}>

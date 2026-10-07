@@ -18,6 +18,32 @@ const NAME: Record<Place, Key> = { h: "stg.pv.h", t: "stg.pv.t", o: "stg.pv.o" }
 const ADD: Record<Place, Key> = { h: "stg.pv.addH", t: "stg.pv.addT", o: "stg.pv.addO" };
 const SUB: Record<Place, Key> = { h: "stg.pv.subH", t: "stg.pv.subT", o: "stg.pv.subO" };
 
+/** A small picture of each block beside its name: a flat, a rod, a cube. */
+function Glyph({ place, tint }: { place: Place; tint: string }) {
+  const lines = (n: number, along: "x" | "y", len: number) =>
+    Array.from({ length: n - 1 }, (_, k) => (along === "x" ? <line key={k} x1={1 + (k + 1) * 2} x2={1 + (k + 1) * 2} y1={1} y2={1 + len} /> : <line key={k} y1={1 + (k + 1) * 2} y2={1 + (k + 1) * 2} x1={1} x2={1 + len} />));
+  return (
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 22 22" className="shrink-0">
+      <g fill={tint} stroke="var(--color-panel)" strokeWidth={0.6}>
+        {place === "h" && (
+          <>
+            <rect x={1} y={1} width={20} height={20} rx={1.5} />
+            {lines(10, "x", 20)}
+            {lines(10, "y", 20)}
+          </>
+        )}
+        {place === "t" && (
+          <g transform="translate(8 0)">
+            <rect x={1} y={1} width={4} height={20} rx={1} />
+            {lines(10, "y", 4)}
+          </g>
+        )}
+        {place === "o" && <rect x={7} y={7} width={8} height={8} rx={1.5} />}
+      </g>
+    </svg>
+  );
+}
+
 /** The largest number the blocks may make, and so which places are shown. */
 export const placeMax = (w: { target: number; max?: number }) => Math.min(999, w.max ?? (w.target >= 100 ? 999 : 99));
 export const placesFor = (max: number): Place[] => (max >= 100 ? ["h", "t", "o"] : max >= 10 ? ["t", "o"] : ["o"]);
@@ -40,7 +66,7 @@ export function PlaceValue({ widget, onCheck, tint = "var(--color-math)" }: Prop
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-5 sm:gap-8">
-        <figure className="flex min-h-28 min-w-0 flex-1 items-center rounded-md bg-panel2 px-4 py-4">
+        <figure className="flex min-h-28 w-full min-w-0 items-center rounded-md bg-panel2 px-4 py-4 sm:w-auto sm:flex-1">
           {value === 0 ? (
             <p className="text-sm text-muted">{t("stg.pv.empty")}</p>
           ) : (
@@ -81,6 +107,7 @@ export function PlaceValue({ widget, onCheck, tint = "var(--color-math)" }: Prop
             plusLabel={t(ADD[p])}
             minusDisabled={n[p] <= 0}
             plusDisabled={n[p] >= 9 || value + VALUE[p] > max}
+            glyph={<Glyph place={p} tint={tint} />}
           />
         ))}
       </div>
@@ -92,6 +119,7 @@ export function PlaceValue({ widget, onCheck, tint = "var(--color-math)" }: Prop
       </div>
 
       <CheckRow
+        disabled={value === 0}
         result={result}
         onCheck={() => {
           const ok = value === widget.target;

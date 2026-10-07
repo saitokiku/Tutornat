@@ -351,7 +351,7 @@ const moon: CatalogueEntry = {
           id: "s7",
           kind: "interactive",
           title: "Tomorrow's moonrise",
-          prompt: "Tonight the Moon rose at 7:00. It rises about 50 minutes later each day. Set the clock to about when it will rise tomorrow.",
+          prompt: "Tonight the Moon rose at 7:00. Here it rises 50 minutes later each day. Set the clock to 50 minutes after 7:00, the time it will rise tomorrow.",
           widget: { kind: "clock", h: 7, m: 0, target: { h: 7, m: 50 } },
         },
       ],

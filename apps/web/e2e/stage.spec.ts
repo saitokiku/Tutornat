@@ -163,6 +163,21 @@ test("a narrated slide plays, marks the word, pauses, resumes and stops", async 
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
+test("K–2: say it with me tells the child when it is their turn", async ({ page }) => {
+  const errors = collectErrors(page);
+  await fakeVoice(page);
+  await learnerWithLesson(page, "chant", "K", [slide, quiz]);
+  await noOverflow(page);
+  await page.getByRole("button", { name: "Say it with me" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Your turn. Say it out loud." })).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator("[data-spoken=turn]")).toBeVisible();
+  const spoken = await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken);
+  expect(spoken).toContain("Your turn.");
+  await page.getByRole("button", { name: "Stop reading" }).click();
+  await expect(page.locator("[data-spoken]")).toHaveCount(0);
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
 test.describe("with reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
   test("the word being read is a still underline", async ({ page }) => {
@@ -229,7 +244,17 @@ test("a balance is solved with the keyboard alone", async ({ page }) => {
   await expect(check).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("status").filter({ hasText: "That's right." })).toBeVisible();
+  // The learner who pressed Check keeps focus there while the result is announced.
+  await expect(check).toBeFocused();
+  await expect(check).toHaveAttribute("aria-disabled", "true");
   expect(errors, errors.join("\n")).toEqual([]);
+});
+
+test("a tipped balance never shows a false equation", async ({ page }) => {
+  await learnerWithLesson(page, "balance-tip", "7", [balance, quiz]);
+  await page.getByRole("button", { name: "Take 1 from the left" }).click();
+  await expect(page.getByText("3x + 3 < 19. The right side is heavier.")).toBeVisible();
+  await expect(page.getByText("3x + 3 = 19")).toHaveCount(0);
 });
 
 test("finishing a lesson never opens the next one", async ({ page }) => {
@@ -242,7 +267,8 @@ test("finishing a lesson never opens the next one", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Lesson finished" })).toBeVisible();
   await expect(page.getByText("Written by people")).toBeVisible();
-  await expect(page.getByText("Right on your own")).toBeVisible();
+  await expect(page.locator("dt", { hasText: "Right on your own" }).locator("+ dd")).toHaveText("1");
+  await expect(page.getByText("Not tried")).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Start the next lesson/ })).toHaveAttribute("href", `/learn/${COURSE}/l2`);
   await noOverflow(page);
 

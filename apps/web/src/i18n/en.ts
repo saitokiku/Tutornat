@@ -1359,6 +1359,12 @@ const en = {
   "stg.sb.remove": "Take out “{word}”",
   "stg.sb.clear": "Clear",
   "stg.sb.yours": "Your sentence: {text}",
+  "stg.yourTurnCue": "Your turn.",
+  "stg.speechFailed": "This browser couldn't read aloud just now. Everything is still on the screen.",
+  "stg.draftScene": "This part was written by AI. A teacher hasn't checked it yet.",
+  "stg.finish.untried": "Not tried",
+  "stg.finish.untriedSaid": "{n} not tried.",
+  "stg.finish.noChecks": "This lesson has nothing to check.",
 } as const;
 
 export default en;

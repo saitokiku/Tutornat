@@ -4,13 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { IconCheck, IconChevronDown, IconChevronUp } from "@/components/icons";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
-import { Hear, useHear } from "../hear";
+import { Hear, sentences, useHear } from "../hear";
+import { Spoken } from "../narration";
+import type { Segment } from "../useSpeech";
 import { CheckRow } from "./CheckRow";
-import { Act } from "./Stepper";
+import { Act, roundButton } from "./Stepper";
 import { scramble } from "./order";
 
 type SequenceWidget = Extract<Widget, { kind: "sequence" }>;
-type Props = { widget: SequenceWidget; onCheck?: (correct: boolean) => void; lang?: string };
+type Props = { widget: SequenceWidget; onCheck?: (correct: boolean) => void; onSay?: (segments: Segment[]) => void; lang?: string };
 
 /** The order a sequence opens in: scrambled the same way every time, never already right. */
 export const startOrder = (w: SequenceWidget) => scramble(w.items.map((i) => i.id)).map((i) => w.items[i].id);
@@ -25,12 +27,14 @@ export function shift(order: string[], from: number, dir: -1 | 1) {
 
 /**
  * Put steps in order (a life cycle, a story, how to do something) with "move up" and "move down"
- * buttons. No dragging. Focus follows the step being moved, and the new place is read out.
+ * buttons. No dragging. Focus follows the step being moved, and the new place is read out. Read aloud
+ * reads the steps in the order they stand now.
  */
-export function Sequence({ widget, onCheck, lang }: Props) {
+export function Sequence({ widget, onCheck, onSay, lang }: Props) {
   const t = useT();
   const { young } = useHear();
-  const [order, setOrder] = useState(() => startOrder(widget));
+  const [start] = useState(() => startOrder(widget));
+  const [order, setOrder] = useState(start);
   const [said, setSaid] = useState("");
   const [result, setResult] = useState<boolean | null>(null);
   const [checked, setChecked] = useState(false);
@@ -44,6 +48,9 @@ export function Sequence({ widget, onCheck, lang }: Props) {
     if (f) buttons.current.get(`${f.id}:${f.dir}`)?.focus();
     focus.current = null;
   }, [order]);
+  useEffect(() => {
+    onSay?.(order.map((id) => ({ key: `seq.${id}`, text: widget.items.find((i) => i.id === id)?.text ?? "" })));
+  }, [order, onSay, widget.items]);
 
   const move = (from: number, dir: -1 | 1) => {
     const id = order[from];
@@ -55,6 +62,7 @@ export function Sequence({ widget, onCheck, lang }: Props) {
     setResult(null);
     setChecked(false);
   };
+  const arrow = `${roundButton(young)} border border-border bg-panel text-ink hover:border-ink/30`;
 
   return (
     <div className="space-y-5">
@@ -62,55 +70,60 @@ export function Sequence({ widget, onCheck, lang }: Props) {
         {order.map((id, i) => {
           const right = checked && widget.items[i].id === id;
           const wrong = checked && !right;
+          const mark = checked ? t(wrong ? "stg.seq.wrong" : "stg.seq.right") : "";
           return (
             <li key={id} className={`flex items-center gap-3 rounded-md border px-3 py-2.5 sm:px-4 ${wrong ? "border-bad/50 bg-bad/5" : "border-border bg-panel"}`}>
-              <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-panel2 font-opmono text-sm tabular-nums text-ink">
+              <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full bg-panel2 font-opmono tabular-nums text-ink ${young ? "size-10 text-body" : "size-8 text-sm"}`}>
                 {i + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className={`text-ink ${young ? "text-t3" : "text-body"}`}>
+                <p className={`break-words text-ink ${young ? "text-t3" : "text-body"}`}>
                   <span className="sr-only">{t("stg.seq.step", { n: i + 1 })}: </span>
-                  {text(id)}
+                  <Spoken k={`seq.${id}`} text={text(id)} />
                 </p>
                 {checked && (
-                  <p className={`mt-0.5 inline-flex items-center gap-1 text-xs font-medium ${wrong ? "text-bad" : "text-good"}`}>
-                    {wrong ? t("stg.seq.wrong") : (
+                  <p className={`mt-0.5 inline-flex items-center gap-1 font-medium ${young ? "text-sm" : "text-xs"} ${wrong ? "text-bad" : "text-good"}`}>
+                    {wrong ? mark : (
                       <>
-                        <IconCheck size={14} /> {t("stg.seq.right")}
+                        <IconCheck size={14} /> {mark}
                       </>
                     )}
                   </p>
                 )}
               </div>
-              <Hear text={text(id)} />
+              <Hear text={mark ? sentences(text(id), mark) : text(id)} />
               <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
                 <Act
                   ref={(el) => void buttons.current.set(`${id}:up`, el)}
                   off={i === 0}
                   onClick={() => move(i, -1)}
                   aria-label={t("stg.seq.up", { item: text(id) })}
-                  className="grid size-11 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30"
+                  className={arrow}
                 >
-                  <IconChevronUp size={18} />
+                  <IconChevronUp size={young ? 22 : 18} />
                 </Act>
                 <Act
                   ref={(el) => void buttons.current.set(`${id}:down`, el)}
                   off={i === order.length - 1}
                   onClick={() => move(i, 1)}
                   aria-label={t("stg.seq.down", { item: text(id) })}
-                  className="grid size-11 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30"
+                  className={arrow}
                 >
-                  <IconChevronDown size={18} />
+                  <IconChevronDown size={young ? 22 : 18} />
                 </Act>
               </div>
             </li>
           );
         })}
       </ol>
-      <p aria-live="polite" className="text-sm text-muted">
-        {said}
-      </p>
+      <div className="flex items-center gap-3">
+        <p aria-live="polite" className="text-sm text-muted">
+          {said}
+        </p>
+        {said && <Hear text={said} />}
+      </div>
       <CheckRow
+        disabled={order.every((id, i) => start[i] === id)}
         result={result}
         onCheck={() => {
           const ok = order.every((id, i) => widget.items[i].id === id);

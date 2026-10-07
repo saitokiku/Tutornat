@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
+import { Hear } from "../hear";
 import { fractionLabel } from "../visuals";
 import { CheckRow } from "./CheckRow";
 import { StepButtons } from "./Slider";
@@ -27,6 +28,7 @@ export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }
   const W = 640, pad = 28;
   const x = (i: number) => pad + (i / (count - 1)) * (W - pad * 2);
   const value = valueAt(index);
+  const readout = t("w.number.readout", { value: label(value) });
 
   return (
     <div className="space-y-5">
@@ -80,8 +82,9 @@ export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }
           <span className="min-w-14 text-center font-opmono text-sm tabular-nums text-ink">{label(value)}</span>
         </StepButtons>
         <p aria-live="polite" className="text-sm text-muted">
-          {t("w.number.readout", { value: label(value) })}
+          {readout}
         </p>
+        <Hear text={readout} />
       </div>
       {widget.target !== undefined && (
         <CheckRow

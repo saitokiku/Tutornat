@@ -23,6 +23,20 @@ export const clockText = (h: number, m: number) => `${h}:${String(m).padStart(2,
 /** The minute hand moves 5 minutes a press unless a start or target time needs single minutes. */
 export const minuteStep = (w: { m: number; target?: { m: number } }) => (w.m % 5 === 0 && (w.target?.m ?? 0) % 5 === 0 ? 5 : 1);
 
+/** A small clock face beside each control's name, with only that control's hand drawn. */
+function Hand({ which, tint }: { which: "hour" | "minute"; tint: string }) {
+  return (
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 22 22" className="shrink-0">
+      <circle cx={11} cy={11} r={9.5} fill="var(--color-panel)" stroke="var(--color-ink)" strokeWidth={1.4} />
+      {which === "hour" ? (
+        <line x1={11} y1={11} x2={16} y2={11} stroke="var(--color-ink)" strokeWidth={2.6} strokeLinecap="round" />
+      ) : (
+        <line x1={11} y1={11} x2={11} y2={3.5} stroke={tint} strokeWidth={1.8} strokeLinecap="round" />
+      )}
+    </svg>
+  );
+}
+
 /**
  * Set the hands to a time. Like a real clock, turning the minute hand past 12 moves the hour hand on;
  * the hour hand moves a whole hour a press. Buttons work by tap and keyboard; the time is read out.
@@ -55,6 +69,7 @@ export function ClockWidget({ widget, onCheck, tint = "var(--color-math)" }: Pro
           onPlus={() => turn(60)}
           minusLabel={t("stg.clock.hourBack")}
           plusLabel={t("stg.clock.hourFwd")}
+          glyph={<Hand which="hour" tint={tint} />}
         />
         <Stepper
           label={t("stg.clock.minute")}
@@ -63,6 +78,7 @@ export function ClockWidget({ widget, onCheck, tint = "var(--color-math)" }: Pro
           onPlus={() => turn(step)}
           minusLabel={t("stg.clock.minBack", { n: step })}
           plusLabel={t("stg.clock.minFwd", { n: step })}
+          glyph={<Hand which="minute" tint={tint} />}
         />
       </div>
       <div className="flex items-center gap-3">
@@ -73,6 +89,7 @@ export function ClockWidget({ widget, onCheck, tint = "var(--color-math)" }: Pro
       </div>
       {widget.target && (
         <CheckRow
+          disabled={total === toMinutes(widget.h, widget.m)}
           result={result}
           onCheck={() => {
             const ok = toMinutes(h, m) === toMinutes(widget.target!.h, widget.target!.m);

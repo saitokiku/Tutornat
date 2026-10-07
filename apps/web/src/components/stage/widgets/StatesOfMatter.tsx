@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
+import { Hear } from "../hear";
 import { CheckRow } from "./CheckRow";
 import { StepButtons } from "./Slider";
 
@@ -37,6 +38,7 @@ export function StatesOfMatter({ widget, onCheck }: Props) {
   const state = stateAt(temp);
   const stateLabel = t(`w.matter.${state}` as const);
   const warmth = index / (COUNT - 1);
+  const readout = t("w.matter.readout", { t: shown, state: stateLabel });
 
   return (
     <div className="space-y-5">
@@ -94,8 +96,9 @@ export function StatesOfMatter({ widget, onCheck }: Props) {
           <span className="min-w-16 text-center font-opmono text-sm tabular-nums text-ink">{shown} °C</span>
         </StepButtons>
         <p aria-live="polite" className="text-sm text-muted">
-          {t("w.matter.readout", { t: shown, state: stateLabel })}
+          {readout}
         </p>
+        <Hear text={readout} />
       </div>
       {widget.target && (
         <CheckRow

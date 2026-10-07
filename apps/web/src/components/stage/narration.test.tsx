@@ -1,8 +1,8 @@
 import { act, cleanup, render, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { QuizQuestion, SlideScene } from "@/lib/types";
-import { speakText } from "./hear";
-import { NarrationContext, quizSpeech, repeatSegments, slideSegments, Spoken } from "./narration";
+import { sentences, speakText } from "./hear";
+import { NarrationContext, orderBlocks, quizSpeech, repeatSegments, slideSegments, Spoken } from "./narration";
 import { installSpeech } from "./speech-fake";
 import { turnMs, useSpeech } from "./useSpeech";
 
@@ -24,11 +24,24 @@ describe("narration segments", () => {
     expect(repeatSegments(slide, true).map((s) => s.text)).toEqual(["Half is lit", "Sunlight lights half the Moon.", "Waxing grows.", "Waning shrinks."]);
   });
 
+  it("K–2 moves only the first picture up; a later one stays by its words", () => {
+    const blocks = [...slide.blocks, { type: "visual" as const, visual: { kind: "moon" as const, phase: 0.5 }, alt: "Full." }];
+    expect(orderBlocks(blocks, true).map((x) => x.i)).toEqual([1, 0, 2, 3]);
+    expect(orderBlocks(blocks, false).map((x) => x.i)).toEqual([0, 1, 2, 3]);
+    expect(orderBlocks([{ type: "text", text: "Only words." }], true).map((x) => x.i)).toEqual([0]);
+  });
+
   it("places a quiz question's prompt and choices inside one spoken piece", () => {
     const q: QuizQuestion = { id: "q", prompt: "Which?", choices: ["Red", "Blue"], answer: 0, hint: "", explain: "" };
     const s = quizSpeech(q);
     expect(s.text).toBe("Which? 1. Red. 2. Blue.");
     expect(s.text.slice(s.choices[1], s.choices[1] + 4)).toBe("Blue");
+  });
+
+  it("joins pieces into sentences to read aloud", () => {
+    expect(sentences("Seed", "Not here yet")).toBe("Seed. Not here yet.");
+    expect(sentences("Ana waters the seed.", "Sorted right")).toBe("Ana waters the seed. Sorted right.");
+    expect(sentences("Is it?", "", "Yes")).toBe("Is it? Yes.");
   });
 
   it("gives a learner time to say a line back, more for longer lines", () => {
@@ -69,6 +82,16 @@ describe("Spoken", () => {
     expect(cls).toContain("motion-reduce:underline");
     expect(cls).toContain("motion-reduce:bg-transparent");
     expect(cls).not.toMatch(/motion-reduce:transition|animate-/);
+  });
+
+  it("on a say-it-with-me turn the line stays underlined with a speaking mark", () => {
+    const { container } = render(
+      <NarrationContext.Provider value={{ seg: 0, key: "b0", start: -1, end: -1, turn: true }}>
+        <Spoken k="b0" text="Look here" />
+      </NarrationContext.Provider>,
+    );
+    expect(container.querySelector("[data-spoken=segment]")?.textContent).toBe("Look here");
+    expect(container.querySelector("[data-spoken=turn]")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("underlines the whole piece until the browser reports words", () => {
@@ -174,6 +197,30 @@ describe("useSpeech", () => {
     expect(result.current.status).toBe("idle"); // that was the last line
   });
 
+  it("says the cue before each turn, and a pause in a turn marks the line that comes next", () => {
+    vi.useFakeTimers();
+    const three = [...segs, { key: "b1", text: "Waxing grows." }];
+    const { result } = renderHook(() => useSpeech("en", "a"));
+    act(() => result.current.narrate(three, { repeat: true, cue: "Your turn." }));
+    fake.end(); // the first line
+    expect(fake.last().text).toBe("Your turn.");
+    expect(result.current.status).toBe("turn");
+    expect(result.current.pos).toMatchObject({ key: "title", start: -1, turn: true });
+    // The gap starts once the cue is said.
+    act(() => void vi.advanceTimersByTime(20_000));
+    expect(fake.last().text).toBe("Your turn.");
+    fake.end(); // the cue
+    act(() => void vi.advanceTimersByTime(turnMs("Half is lit")));
+    expect(fake.last().text).toBe("Sunlight lights half the Moon.");
+    fake.end();
+    fake.end(); // its cue
+    act(() => result.current.pause());
+    expect(result.current.pos).toMatchObject({ seg: 2, key: "b1", start: -1 });
+    expect(result.current.pos?.turn).toBeUndefined();
+    act(() => result.current.resume());
+    expect(fake.last().text).toBe("Waxing grows.");
+  });
+
   it("stops when another voice takes over, or the scene changes", () => {
     const { result, rerender } = renderHook(({ k }) => useSpeech("en", k), { initialProps: { k: "a" } });
     act(() => result.current.narrate(segs));
@@ -184,11 +231,18 @@ describe("useSpeech", () => {
     expect(result.current.status).toBe("idle");
   });
 
-  it("an error from the browser ends narration instead of leaving it stuck", () => {
+  it("an error from the browser ends narration and says so; the next start clears it", () => {
     const { result } = renderHook(() => useSpeech("en", "a"));
     act(() => result.current.narrate(segs));
     act(() => fake.last().onerror?.({ error: "synthesis-failed" }));
     expect(result.current.status).toBe("idle");
+    expect(result.current.failed).toBe(true);
+    act(() => result.current.narrate(segs));
+    expect(result.current.failed).toBe(false);
+    // Another voice taking over is not a failure.
+    act(() => fake.last().onerror?.({ error: "interrupted" }));
+    expect(result.current.status).toBe("idle");
+    expect(result.current.failed).toBe(false);
   });
 
   it("without speechSynthesis, nothing is offered", () => {

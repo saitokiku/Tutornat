@@ -1283,7 +1283,7 @@ const es: Record<Key, string> = {
   "stg.origin.people": "Escrito por personas",
   "stg.origin.sources": "Hecho con fuentes reales",
   "stg.finish.summary": "{own} bien por tu cuenta, {help} bien con ayuda, {missed} todavía no.",
-  "stg.finish.honest": "Las preguntas de una lección son práctica. Una habilidad se demuestra con revisiones en días distintos.",
+  "stg.finish.honest": "Las preguntas de una lección son práctica. Una habilidad se demuestra con pruebas en días distintos.",
   "stg.finish.next": "Lo siguiente en este curso",
   "stg.finish.startNext": "Empezar la siguiente lección",
   "stg.finish.last": "Esa fue la última lección de este curso.",
@@ -1361,6 +1361,12 @@ const es: Record<Key, string> = {
   "stg.sb.remove": "Quitar “{word}”",
   "stg.sb.clear": "Borrar",
   "stg.sb.yours": "Tu oración: {text}",
+  "stg.yourTurnCue": "Te toca.",
+  "stg.speechFailed": "Este navegador no pudo leer en voz alta. Todo sigue en la pantalla.",
+  "stg.draftScene": "Esta parte la escribió la IA. Un maestro todavía no la ha revisado.",
+  "stg.finish.untried": "Sin intentar",
+  "stg.finish.untriedSaid": "{n} sin intentar.",
+  "stg.finish.noChecks": "Esta lección no tiene nada que comprobar.",
 };
 
 export default es;

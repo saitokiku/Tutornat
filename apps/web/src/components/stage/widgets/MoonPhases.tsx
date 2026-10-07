@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
 import type { Widget } from "@/lib/types";
+import { Hear } from "../hear";
 import { MoonVisual } from "../visuals";
 import { CheckRow } from "./CheckRow";
 import { StepButtons } from "./Slider";
@@ -33,6 +34,7 @@ export function MoonPhases({ widget, onCheck }: Props) {
   const [result, setResult] = useState<boolean | null>(null);
   const set = (d: number) => (setDay(Math.max(0, Math.min(29, d))), setResult(null));
   const name = t(phaseKey(day));
+  const readout = t("w.moon.readout", { day, name });
 
   // Orbit: new moon sits between Earth and the Sun (left); the Moon travels counterclockwise.
   const a = Math.PI + (2 * Math.PI * day) / CYCLE;
@@ -80,8 +82,9 @@ export function MoonPhases({ widget, onCheck }: Props) {
           style={{ accentColor: "var(--color-ink)" }}
         />
         <p aria-live="polite" className="text-sm text-muted">
-          {t("w.moon.readout", { day, name })}
+          {readout}
         </p>
+        <Hear text={readout} />
       </div>
       {widget.target !== undefined && (
         <CheckRow

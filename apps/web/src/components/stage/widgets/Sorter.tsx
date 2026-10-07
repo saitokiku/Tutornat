@@ -4,7 +4,7 @@ import { useState } from "react";
 import { IconCheck } from "@/components/icons";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
-import { Hear, useHear } from "../hear";
+import { Hear, sentences, useHear } from "../hear";
 import { Spoken } from "../narration";
 import { CheckRow } from "./CheckRow";
 
@@ -25,6 +25,7 @@ export function Sorter({ widget, onCheck, lang }: Props) {
   const [result, setResult] = useState<boolean | null>(null);
   const sorted = widget.items.filter((i) => picks[i.id] !== undefined).length;
   const words = isWordSort(widget);
+  const readout = t("w.sort.readout", { n: sorted, total: widget.items.length });
 
   return (
     <div className="space-y-5">
@@ -42,13 +43,14 @@ export function Sorter({ widget, onCheck, lang }: Props) {
         {widget.items.map((item) => {
           const pick = picks[item.id];
           const wrong = checked && pick !== item.answer;
+          const mark = checked ? t(wrong ? "w.sort.wrong" : "w.sort.right") : "";
           return (
             <li key={item.id} className={`rounded-md border px-4 py-3 ${wrong ? "border-bad/50 bg-bad/5" : "border-border bg-panel"}`}>
               <div className="flex items-start gap-3">
                 <p className={`flex-1 text-ink ${words ? "font-semibold" : ""} ${young ? "text-t3" : "text-body"}`}>
                   <Spoken k={`item.${item.id}`} text={item.text} />
                 </p>
-                <Hear text={item.text} />
+                <Hear text={mark ? sentences(item.text, mark) : item.text} />
               </div>
               <div role="group" aria-label={item.text} className="mt-2.5 flex flex-wrap items-center gap-2">
                 {widget.categories.map((c, ci) => (
@@ -58,16 +60,16 @@ export function Sorter({ widget, onCheck, lang }: Props) {
                     aria-pressed={pick === ci}
                     aria-label={t("w.sort.put", { item: item.text, category: c })}
                     onClick={() => (setPicks({ ...picks, [item.id]: ci }), setChecked(false), setResult(null))}
-                    className={`k-chip border-border bg-panel px-4 font-semibold text-ink hover:border-ink/40 aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper ${young ? "min-h-12 text-body" : "min-h-11 text-sm"}`}
+                    className={`k-chip border-border bg-panel px-4 font-semibold text-ink hover:border-ink/40 aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper ${young ? "min-h-14 px-5 text-body" : "min-h-11 text-sm"}`}
                   >
                     <span aria-hidden="true">{c}</span>
                   </button>
                 ))}
                 {checked && (
                   <span className={`ml-auto inline-flex items-center gap-1 text-xs font-medium ${wrong ? "text-bad" : "text-good"}`}>
-                    {wrong ? t("w.sort.wrong") : (
+                    {wrong ? mark : (
                       <>
-                        <IconCheck size={14} /> {t("w.sort.right")}
+                        <IconCheck size={14} /> {mark}
                       </>
                     )}
                   </span>
@@ -77,9 +79,12 @@ export function Sorter({ widget, onCheck, lang }: Props) {
           );
         })}
       </ul>
-      <p aria-live="polite" className="font-opmono text-xs tabular-nums text-muted">
-        {t("w.sort.readout", { n: sorted, total: widget.items.length })}
-      </p>
+      <div className="flex items-center gap-3">
+        <p aria-live="polite" className={`font-opmono tabular-nums text-muted ${young ? "text-sm" : "text-xs"}`}>
+          {readout}
+        </p>
+        <Hear text={readout} />
+      </div>
       <CheckRow
         disabled={sorted < widget.items.length}
         result={result}

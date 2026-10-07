@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Widget } from "@/lib/types";
 import { HearContext } from "../hear";
 import { AreaModel, partialProducts } from "./AreaModel";
-import { Balance, equationText, isSolved, MOVES, solutionOf, tip } from "./Balance";
+import { Balance, equationText, isSolved, MOVES, relation, solutionOf, tip } from "./Balance";
 import { clockText, ClockWidget, fromMinutes, minuteStep, toMinutes } from "./Clock";
 import { Coordinate, samePoints, togglePoint } from "./Coordinate";
 import { scramble } from "./order";
@@ -13,6 +13,10 @@ import { PlaceValue, placeMax, placesFor } from "./PlaceValue";
 import { bankOrder, matchesAnswer, SentenceBuilder } from "./SentenceBuilder";
 import { Sequence, shift, startOrder } from "./Sequence";
 import { isWordSort, Sorter } from "./Sorter";
+import { FractionBar } from "./FractionBar";
+import { MoonPhases } from "./MoonPhases";
+import { NumberLineWidget } from "./NumberLine";
+import { StatesOfMatter } from "./StatesOfMatter";
 
 type User = ReturnType<typeof userEvent.setup>;
 const nameOf = (el: Element | null) => el?.getAttribute("aria-label") ?? el?.textContent?.trim() ?? "";
@@ -77,8 +81,34 @@ describe("AreaModel", () => {
     readout("1 × 1 = 1 square");
     await user.keyboard("{Tab}{Enter}"); // More rows
     await press(user, "More columns", 3);
-    await press(user, "Check my answer");
+    const check = await tabTo(user, "Check my answer");
+    await user.keyboard("{Enter}");
     expect(onCheck).toHaveBeenLastCalledWith(true);
+    // The learner who just checked keeps focus while the result is announced.
+    expect(document.activeElement).toBe(check);
+    expect(check).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("That's right.");
+    // Pressing it again does nothing until something changes.
+    await user.keyboard("{Enter}");
+    expect(onCheck).toHaveBeenCalledTimes(1);
+  });
+
+  it("Check waits until something has changed (the start is never the answer)", async () => {
+    const onCheck = vi.fn();
+    const starts: ReactElement[] = [
+      <AreaModel key="a" widget={w} onCheck={onCheck} />,
+      <PlaceValue key="p" widget={{ kind: "place-value", target: 15 }} onCheck={onCheck} />,
+      <ClockWidget key="c" widget={{ kind: "clock", h: 7, m: 0, target: { h: 7, m: 50 } }} onCheck={onCheck} />,
+      <Balance key="b" widget={{ kind: "balance", xCount: 3, leftUnits: 4, rightUnits: 19 }} onCheck={onCheck} />,
+    ];
+    for (const ui of starts) {
+      const { unmount } = render(ui);
+      const check = screen.getByRole("button", { name: "Check my answer" });
+      expect(check).toHaveAttribute("aria-disabled", "true");
+      await userEvent.click(check);
+      unmount();
+    }
+    expect(onCheck).not.toHaveBeenCalled();
   });
 
   it("a different shape with the same area is not yet right", async () => {
@@ -170,6 +200,15 @@ describe("Balance", () => {
     expect(isSolved({ a: 1, l: 0, r: 4 }, 5)).toBe(false);
   });
 
+  it("never writes = for a tipped scale", () => {
+    const say = (p: { a: number; l: number; r: number }, x: number) => equationText(p, relation(tip(p, x)));
+    expect(say({ a: 3, l: 4, r: 19 }, 5)).toBe("3x + 4 = 19");
+    expect(say(MOVES.left({ a: 3, l: 4, r: 19 })!, 5)).toBe("3x + 3 < 19");
+    // x + 1 = 7 (x = 6): taking from the left only must not read as the answer x = 7.
+    expect(say(MOVES.left({ a: 1, l: 1, r: 7 })!, 6)).toBe("x < 7");
+    expect(say(MOVES.right({ a: 1, l: 1, r: 7 })!, 6)).toBe("x + 1 > 6");
+  });
+
   it("is solved by keyboard: take 4 from both sides, split into 3 groups", async () => {
     const user = userEvent.setup();
     const onCheck = vi.fn();
@@ -190,12 +229,22 @@ describe("Balance", () => {
     const onCheck = vi.fn();
     render(<Balance widget={w} onCheck={onCheck} />);
     await userEvent.click(screen.getByRole("button", { name: "Take 1 from the left" }));
-    readout("3x + 3 = 19. The right side is heavier.");
-    expect(screen.getByRole("img", { name: "3x + 3 = 19. The right side is heavier." })).toBeInTheDocument();
+    readout("3x + 3 < 19. The right side is heavier.");
+    expect(screen.getByRole("img", { name: "3x + 3 < 19. The right side is heavier." })).toBeInTheDocument();
+    expect(screen.queryByText("3x + 3 = 19", { exact: false })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
     expect(onCheck).toHaveBeenLastCalledWith(false);
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     readout("3x + 4 = 19. The balance is level.");
+    // Back at the start there is nothing new to check.
+    expect(screen.getByRole("button", { name: "Check my answer" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("says why Split can't be used yet, on the button itself", () => {
+    render(<Balance widget={w} />);
+    const split = screen.getByRole("button", { name: "Split both sides into 3 equal groups" });
+    expect(split).toHaveAttribute("aria-disabled", "true");
+    expect(split).toHaveAccessibleDescription("To split into 3 equal groups, every count on both sides has to share out with none left over.");
   });
 });
 
@@ -284,9 +333,26 @@ describe("Sequence", () => {
   it("checking a wrong order marks the steps that are out of place", async () => {
     const onCheck = vi.fn();
     render(<Sequence widget={w} onCheck={onCheck} />);
+    // The scrambled start is never right, so Check waits for a first move.
+    await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
+    expect(onCheck).not.toHaveBeenCalled();
+    const start = startOrder(w);
+    const right = w.items.map((i) => i.id).join();
+    const k = start.findIndex((_, i) => i < start.length - 1 && shift(start, i, 1).join() !== right);
+    await userEvent.click(screen.getByRole("button", { name: `Move “${w.items.find((i) => i.id === start[k])!.text}” down` }));
     await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
     expect(onCheck).toHaveBeenLastCalledWith(false);
     expect(screen.getAllByText("Not here yet").length).toBeGreaterThan(0);
+  });
+
+  it("tells narration the steps in the order they stand now", async () => {
+    const onSay = vi.fn();
+    render(<Sequence widget={w} onSay={onSay} />);
+    const start = startOrder(w);
+    expect(onSay.mock.lastCall![0].map((s: { key: string }) => s.key)).toEqual(start.map((id) => `seq.${id}`));
+    const first = w.items.find((i) => i.id === start[0])!;
+    await userEvent.click(screen.getByRole("button", { name: `Move “${first.text}” down` }));
+    expect(onSay.mock.lastCall![0].map((s: { text: string }) => s.text)[1]).toBe(first.text);
   });
 });
 
@@ -308,6 +374,15 @@ describe("SentenceBuilder", () => {
     readout("Your sentence: Nia flies her kite.");
     await press(user, "Check my answer");
     expect(onCheck).toHaveBeenLastCalledWith(true);
+  });
+
+  it("tells narration the words still in the bank", async () => {
+    const onSay = vi.fn();
+    render(<SentenceBuilder widget={w} onSay={onSay} />);
+    expect(onSay.mock.lastCall![0]).toHaveLength(4);
+    await userEvent.click(screen.getByRole("button", { name: "Add “Nia”" }));
+    expect(onSay.mock.lastCall![0].map((s: { text: string }) => s.text)).not.toContain("Nia");
+    expect(onSay.mock.lastCall![0]).toHaveLength(3);
   });
 
   it("a word tapped in the sentence goes back; a wrong order is not yet", async () => {
@@ -347,7 +422,7 @@ describe("Sorter as a word sort", () => {
 });
 
 describe("K–2 sizing and read-aloud", () => {
-  const young = (ui: ReactElement) => render(<HearContext.Provider value={{ hear: true, young: true, locale: "en" }}>{ui}</HearContext.Provider>);
+  const young = (ui: ReactElement) => render(<HearContext.Provider value={{ hear: true, young: true, big: true, locale: "en" }}>{ui}</HearContext.Provider>);
 
   it("the check result can be heard and the check button is 56px", async () => {
     young(<PlaceValue widget={{ kind: "place-value", target: 1, max: 9 }} />);
@@ -361,5 +436,42 @@ describe("K–2 sizing and read-aloud", () => {
     young(<SentenceBuilder widget={{ kind: "sentence-builder", words: ["Hi", "Sam."], answers: [["Hi", "Sam."]] }} />);
     expect(screen.getByRole("button", { name: "Read aloud: Hi" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Read aloud: Sam." })).toBeInTheDocument();
+  });
+
+  it("the older widgets' readouts can be heard too", () => {
+    const cases: [ReactElement, string][] = [
+      [<NumberLineWidget key="n" widget={{ kind: "number-line", min: 0, max: 10, step: 1, start: 3, target: 7 }} />, "The marker is at 3"],
+      [<StatesOfMatter key="s" widget={{ kind: "states-of-matter", startC: 20 }} />, "At 20 °C, water is a liquid."],
+      [<MoonPhases key="m" widget={{ kind: "moon-phases" }} />, "Day 0: new moon"],
+      [<FractionBar key="f" widget={{ kind: "fraction-bar", parts: 4, shaded: 1 }} />, "1 of 4 parts shaded = 1/4"],
+      [<Sorter key="o" widget={{ kind: "sorter", categories: ["Noun", "Verb"], items: [{ id: "cat", text: "cat", answer: 0 }, { id: "run", text: "run", answer: 1 }, { id: "hop", text: "hop", answer: 1 }] }} />, "0 of 3 sorted"],
+    ];
+    for (const [ui, said] of cases) {
+      const { unmount } = young(ui);
+      expect(screen.getByRole("button", { name: `Read aloud: ${said}` })).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("the things a child works with are 56px, with labels they can hear", () => {
+    const { unmount } = young(<PlaceValue widget={{ kind: "place-value", target: 15 }} />);
+    for (const name of ["Add a ten", "Take away a one", "Read aloud: Tens", "Read aloud: Ones"]) expect(screen.getByRole("button", { name }).className).toContain("size-14");
+    unmount();
+    young(<Balance widget={{ kind: "balance", xCount: 1, leftUnits: 2, rightUnits: 5 }} />);
+    expect(screen.getByRole("button", { name: "Take 1 from both sides" }).className).toContain("min-h-14");
+  });
+
+  it("sequence arrows and sorter chips are 56px; a checked step's mark is heard with it", async () => {
+    const seq: Extract<Widget, { kind: "sequence" }> = { kind: "sequence", items: [{ id: "a", text: "Seed" }, { id: "b", text: "Sprout" }, { id: "c", text: "Flower" }] };
+    const { unmount } = young(<Sequence widget={seq} />);
+    expect(screen.getByRole("button", { name: "Move “Seed” down" }).className).toContain("size-14");
+    const first = startOrder(seq)[0];
+    const text = seq.items.find((i) => i.id === first)!.text;
+    await userEvent.click(screen.getByRole("button", { name: `Move “${text}” down` }));
+    await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
+    expect(screen.getAllByRole("button", { name: /^Read aloud: .*\. (Not here yet|In the right place)\.$/ }).length).toBe(3);
+    unmount();
+    young(<Sorter widget={{ kind: "sorter", categories: ["Noun", "Verb"], items: [{ id: "cat", text: "cat", answer: 0 }, { id: "run", text: "run", answer: 1 }, { id: "hop", text: "hop", answer: 1 }] }} />);
+    expect(screen.getByRole("button", { name: "Put “cat” in Noun" }).className).toContain("min-h-14");
   });
 });

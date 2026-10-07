@@ -107,6 +107,7 @@ export function AreaModel({ widget, onCheck, tint = "var(--color-math)" }: Props
 
       {widget.target && (
         <CheckRow
+          disabled={rows === clamp(widget.rows) && cols === clamp(widget.cols)}
           result={result}
           onCheck={() => {
             const ok = rows === widget.target!.rows && cols === widget.target!.cols;

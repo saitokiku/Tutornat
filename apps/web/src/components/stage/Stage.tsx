@@ -10,14 +10,14 @@ import { logAct } from "@/lib/acts";
 import { checkMemory, lessonState, record } from "@/lib/activity";
 import { read } from "@/lib/store";
 import type { Course, Lesson, Profile, Scene } from "@/lib/types";
-import { InteractiveView, ProjectView, QuizView, SlideView, bigButton, type OnAnswer } from "./scenes";
+import { InteractiveView, ProjectView, QuizView, SlideView, type OnAnswer } from "./scenes";
 import { useTitle } from "@/components/LangSync";
-import { Finish, type Tally } from "./Finish";
-import { Hear, HearContext } from "./hear";
-import { courseOrigin, lessonHasChecks, lessonRef, ORIGIN_KEY, secondsSince } from "./lesson";
+import { Finish } from "./Finish";
+import { Hear, HearContext, bigButton } from "./hear";
+import { awaitingReview, checkIds, courseOrigin, lessonHasChecks, lessonRef, ORIGIN_KEY, secondsSince, settle, tallyOf, type CheckResult } from "./lesson";
 import { NarrationBar, NarrationContext, repeatSegments, sceneSegments, Spoken } from "./narration";
 import { TutorPanel } from "./TutorPanel";
-import { useSpeech } from "./useSpeech";
+import { useSpeech, type Segment } from "./useSpeech";
 
 const MAX_SECONDS = 2 * 60 * 60;
 const KIND_ICON: Record<Scene["kind"], typeof IconEye> = { slide: IconEye, interactive: IconHand, quiz: IconCheckCircle, project: IconHome };
@@ -28,19 +28,25 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
   useTitle(lesson.title);
   const [index, setIndex] = useState(0);
   const [visited, setVisited] = useState<Set<number>>(() => new Set([0]));
-  const [tally, setTally] = useState<Tally>({ own: 0, help: 0, missed: 0 });
+  const [results, setResults] = useState<Record<string, CheckResult>>({});
   const [finished, setFinished] = useState<number | null>(null); // seconds spent, once finished
   const [startedAt] = useState(() => Date.now());
   const [showScenes, setShowScenes] = useState(false);
   const [showTutor, setShowTutor] = useState(false);
   const [boardNote, setBoardNote] = useState(false);
-  const [quizText, setQuizText] = useState("");
+  // What the scene body says about itself for narration (the quiz question on screen, a manipulative's
+  // steps or word tiles in their current order), tagged with the scene it came from.
+  const [live, setLive] = useState<{ sceneId: string; segs: Segment[] } | null>(null);
   const scene = lesson.scenes[index];
-  const speech = useSpeech(course.locale, `${lesson.id}:${index}:${finished !== null}`);
+  const said = scene && live?.sceneId === scene.id ? live.segs : [];
+  // Narration stops on a new scene, a new quiz question, or the finish.
+  const quizKey = scene?.kind === "quiz" ? said.map((s) => s.text).join("|") : "";
+  const speech = useSpeech(course.locale, `${lesson.id}:${index}:${quizKey}:${finished !== null}`);
   const base = { profileId: learner.id, courseId: course.id, lessonId: lesson.id };
   const nextLesson = course.lessons[course.lessons.findIndex((l) => l.id === lesson.id) + 1];
   const origin = courseOrigin(course);
   const young = isYoung(learner);
+  const sceneId = scene?.id ?? "";
 
   // A lesson counts as started once, the first time it is opened. Each sitting with checks is a
   // teaching act whose intent is that its checks come out right on the learner's own (once a day).
@@ -58,21 +64,29 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     cancelAnimationFrame(raf.current);
     raf.current = requestAnimationFrame(() => document.getElementById("scene-title")?.focus());
   };
+  const memory = useRef(checkMemory());
+  // The tutor beside a scene is help, the same rule as Practice: every check on a scene the tutor was
+  // open for counts as helped when it is answered.
+  const tutorHelps = (s: Scene | undefined) => s && checkIds(s).forEach((id) => memory.current.help(id));
   const go = (i: number) => {
     focusTitle();
     setIndex(i);
     setVisited((v) => new Set(v).add(i));
     setShowScenes(false);
     setBoardNote(false);
+    if (showTutor) tutorHelps(lesson.scenes[i]);
   };
-  const memory = useRef(checkMemory());
+  const toggleTutor = () => {
+    if (!showTutor) tutorHelps(scene);
+    setShowTutor(!showTutor);
+  };
   const onAnswer: OnAnswer = ({ sceneId, correct, assisted: shown }) => {
     const { record: fresh, assisted } = memory.current.judge(sceneId, correct, shown);
-    if (!fresh) return;
-    record({ ...base, type: "quiz_answered", sceneId, correct, assisted });
-    setTally((s) => (correct ? (assisted ? { ...s, help: s.help + 1 } : { ...s, own: s.own + 1 }) : { ...s, missed: s.missed + 1 }));
+    if (fresh) record({ ...base, type: "quiz_answered", sceneId, correct, assisted });
+    setResults((r) => ({ ...r, [sceneId]: settle(r[sceneId], correct, assisted) }));
   };
   const onHelp = useCallback((id: string) => memory.current.help(id), []);
+  const onSay = useCallback((segs: Segment[]) => setLive({ sceneId, segs }), [sceneId]);
   // Finishing records the lesson and shows the finish. It never opens the next lesson.
   const finish = () => {
     const seconds = secondsSince(startedAt, MAX_SECONDS);
@@ -81,7 +95,6 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     speech.stop();
     focusTitle();
   };
-  const onSpeakText = useCallback((text: string) => setQuizText(text), []);
 
   const header = (
     <header className="flex items-center gap-2 border-b border-border bg-panel px-2 py-2 sm:gap-4 sm:px-6 sm:py-3">
@@ -106,10 +119,10 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
       </div>
       {lesson.scenes.length > 0 && finished === null && (
         <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" className="px-3" onClick={() => setBoardNote(!boardNote)} aria-label={t("stage.whiteboard")}>
+          <Button variant="ghost" className="min-w-11 px-3" onClick={() => setBoardNote(!boardNote)} aria-label={t("stage.whiteboard")}>
             <IconBoard size={16} />
           </Button>
-          <Button variant={showTutor ? "secondary" : "ghost"} className="px-3" aria-expanded={showTutor} onClick={() => setShowTutor(!showTutor)} aria-label={showTutor ? t("tutor.hide") : t("tutor.show")}>
+          <Button variant={showTutor ? "secondary" : "ghost"} className="min-w-11 px-3" aria-expanded={showTutor} onClick={toggleTutor} aria-label={showTutor ? t("tutor.hide") : t("tutor.show")}>
             <IconChat size={16} /> <span className="hidden sm:inline">{t("tutor.title")}</span>
           </Button>
         </div>
@@ -145,11 +158,12 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     );
 
   const last = index === lesson.scenes.length - 1;
-  const segments = sceneSegments(scene, young, quizText);
+  const segments = sceneSegments(scene, young, said);
   const repeat = young && scene.kind === "slide" ? repeatSegments(scene, young) : undefined;
+  const draft = awaitingReview(course, lesson.id, scene.id);
 
   return (
-    <HearContext.Provider value={{ hear: young, young, locale: course.locale }}>
+    <HearContext.Provider value={{ hear: young, young, big: young, locale: course.locale }}>
     <div className="min-h-dvh bg-paper">
       {header}
       <div className={`mx-auto grid max-w-[90rem] gap-4 px-3 py-4 sm:px-6 lg:grid-cols-[14rem_1fr] ${showTutor ? "xl:grid-cols-[14rem_1fr_19rem]" : ""}`}>
@@ -199,11 +213,14 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
         <main className="min-w-0">
           <section aria-labelledby="scene-title" className="rounded-lg border border-border bg-panel shadow-soft">
             {finished !== null ? (
-              <Finish course={course} lesson={lesson} learner={learner} tally={tally} seconds={finished} next={nextLesson} />
+              <Finish course={course} lesson={lesson} learner={learner} tally={tallyOf(lesson, results)} seconds={finished} next={nextLesson} />
             ) : (
               <NarrationContext.Provider value={speech.pos}>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-8">
-                  <span className="font-opmono text-[11px] uppercase tracking-wider text-muted">{t(`stage.kind.${scene.kind}` as const)}</span>
+                  <div className="min-w-0">
+                    <span className="font-opmono text-[11px] uppercase tracking-wider text-muted">{t(`stage.kind.${scene.kind}` as const)}</span>
+                    {draft && <p className="text-xs text-muted">{t("stg.draftScene")}</p>}
+                  </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <NarrationBar speech={speech} segments={segments} repeat={repeat} />
                     <span className="hidden font-opmono text-xs tabular-nums text-muted lg:inline">{t("stage.sceneOf", { n: index + 1, total: lesson.scenes.length })}</span>
@@ -218,8 +235,8 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                   </div>
                   {boardNote && <Notice>{t("stage.whiteboardOff")}</Notice>}
                   {scene.kind === "slide" && <SlideView scene={scene} subject={course.subject} />}
-                  {scene.kind === "interactive" && <InteractiveView scene={scene} subject={course.subject} onAnswer={onAnswer} lang={course.locale} />}
-                  {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSpeakText={onSpeakText} onHelp={onHelp} />}
+                  {scene.kind === "interactive" && <InteractiveView scene={scene} subject={course.subject} onAnswer={onAnswer} onSay={onSay} lang={course.locale} />}
+                  {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSay={onSay} onHelp={onHelp} />}
                   {scene.kind === "project" && <ProjectView scene={scene} />}
                 </div>
                 <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">
