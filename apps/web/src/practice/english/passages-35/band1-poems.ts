@@ -1,0 +1,113 @@
+import { Q, type Passage } from "./types";
+
+// Band 1 poems, grade 2–3 text band (draft: written for KaizenEDU, not yet reviewed by a teacher).
+export const BAND1_POEMS: Passage[] = [
+  {
+    id: "city-rain",
+    kind: "poem",
+    band: 1,
+    title: ["City Rain", "Lluvia en la ciudad"],
+    en: [
+      "From my window on the ninth floor,\nI watch the rain arrive.\nIt taps the glass with tiny fingers,\nasking to come inside.",
+      "Down on the street, umbrellas bloom\nlike flowers made of cloth:\nred and yellow, black and blue,\nall hurrying across.",
+      "The gutters sing a gurgling song.\nThe buses splash and hiss.\nA pigeon tucks its head away\nand waits for the storm to pass.",
+      "My mother says the city's dirty,\nbut I don't think that's true.\nThe rain is giving it a bath,\nand every roof looks new.",
+      "When the clouds roll off at last,\nthe sidewalks shine like glass.\nI press my nose against the window\nand watch the puddles flash.",
+      "Tomorrow I will jump in every puddle\nin my yellow boots,\nbut tonight I fall asleep\nto the soft hum of the rain.",
+    ],
+    es: [
+      "Desde mi ventana, en el piso nueve,\nveo llegar la lluvia.\nToca el vidrio con deditos\ny pide permiso para entrar.",
+      "Abajo, en la calle, florecen los paraguas\ncomo flores de tela:\nrojos y amarillos, negros y azules,\ntodos con mucha prisa.",
+      "Las alcantarillas cantan gorgoteando.\nLos autobuses salpican y silban.\nUna paloma esconde la cabeza\ny espera a que pase la tormenta.",
+      "Mi mamá dice que la ciudad está sucia,\npero yo no lo creo.\nLa lluvia le está dando un baño\ny cada techo parece nuevo.",
+      "Cuando por fin se van las nubes,\nlas aceras brillan como vidrio.\nPego la nariz a la ventana\ny veo destellar los charcos.",
+      "Mañana saltaré en cada charco\ncon mis botas amarillas,\npero esta noche me duermo\ncon el suave murmullo de la lluvia.",
+    ],
+    qs: [
+      Q("pov", ["Who is the speaker of this poem?", "¿Quién habla en este poema?"], ["A child watching the rain from a high window", "Un niño o una niña que mira la lluvia desde un piso alto"], [["The rain falling on the city", "La lluvia que cae sobre la ciudad", "wrong-character"], ["The speaker's mother", "La mamá de quien habla", "wrong-character"], ["A bus driver on the street", "Un chofer de autobús en la calle", "not-in-text"]], ["Look at the first two lines. Where is the speaker?", "Mira los dos primeros versos. ¿Dónde está quien habla?"], ["From my window on the ninth floor", "Desde mi ventana, en el piso nueve"]),
+      Q("words", ["In the poem, what does “umbrellas bloom” mean?", "En el poema, ¿qué significa “florecen los paraguas”?"], ["Many open umbrellas look like colorful flowers.", "Muchos paraguas abiertos parecen flores de colores."], [["Flowers are growing on the street.", "Están creciendo flores en la calle.", "took-literally"], ["The umbrellas are broken.", "Los paraguas están rotos.", "ignored-context"], ["People are selling flowers.", "La gente está vendiendo flores.", "not-in-text"]], ["Umbrellas cannot really bloom. What do they look like when they pop open?", "Los paraguas no florecen de verdad. ¿Cómo se ven cuando se abren?"], ["Down on the street, umbrellas bloom", "Abajo, en la calle, florecen los paraguas"]),
+      Q("theme", ["What is the speaker's main message about the rain?", "¿Cuál es el mensaje principal de quien habla sobre la lluvia?"], ["Rain can make an ordinary city look fresh and beautiful.", "La lluvia puede hacer que una ciudad común se vea limpia y hermosa."], [["The speaker lives on the ninth floor.", "Quien habla vive en el piso nueve.", "plot-summary"], ["Rain makes the city dirty.", "La lluvia ensucia la ciudad.", "opposite-of-text"], ["Pigeons do not like rain.", "A las palomas no les gusta la lluvia.", "too-narrow"]], ["Read the stanza where the speaker disagrees with Mother.", "Lee la estrofa en la que quien habla no está de acuerdo con su mamá."], ["The rain is giving it a bath", "La lluvia le está dando un baño"]),
+      Q("details", ["What does the pigeon do during the rain?", "¿Qué hace la paloma mientras llueve?"], ["It tucks in its head until the storm is over.", "Mete la cabeza hasta que se acaba la tormenta."], [["It splashes in the puddles.", "Chapotea en los charcos.", "wrong-detail"], ["It sings a song.", "Canta una canción.", "wrong-detail"], ["It flies to the window.", "Vuela hasta la ventana.", "not-in-text"]], ["Find the pigeon in the poem.", "Busca la paloma en el poema."], ["A pigeon tucks its head away", "Una paloma esconde la cabeza"]),
+    ],
+  },
+  {
+    id: "grandfather-hands",
+    kind: "poem",
+    band: 1,
+    title: ["My Grandfather's Hands", "Las manos de mi abuelo"],
+    en: [
+      "My grandfather's hands\nare rough as tree bark,\nwith knuckles like knots\nand lines like old maps.",
+      "Those hands built the fence\naround our whole yard,\nfixed the creaky porch steps,\nand turned the stony soil\ninto rows of corn and beans.",
+      "But when he holds a baby bird\nthat fell out of its nest,\nhis hands become a cradle,\nsoft as a folded blanket.",
+      "On Saturday mornings\nhe guides my hands in the dirt.\n“Not too deep,” he says,\nand together we press a seed into the ground.",
+      "He tells me trees grow slowly,\nthat the best things take their time,\nthat a fence stands straight for fifty years\nif you set each post just right.",
+      "Someday my hands will be rough too,\nfrom fences and gardens and years.\nI hope they will also know\nhow to be gentle with something small.",
+    ],
+    es: [
+      "Las manos de mi abuelo\nson ásperas como corteza de árbol,\ncon nudillos como nudos\ny líneas como mapas viejos.",
+      "Esas manos hicieron la cerca\nque rodea todo el patio,\narreglaron los escalones que rechinan\ny convirtieron la tierra pedregosa\nen surcos de maíz y frijol.",
+      "Pero cuando sostiene un pajarito\nque se cayó del nido,\nsus manos se vuelven una cuna,\nsuaves como una cobija doblada.",
+      "Los sábados en la mañana\nguía mis manos en la tierra.\n“No tan hondo”, me dice,\ny juntos metemos una semilla en el suelo.",
+      "Me dice que los árboles crecen despacio,\nque lo mejor se toma su tiempo,\nque una cerca dura cincuenta años derecha\nsi pones bien cada poste.",
+      "Algún día mis manos también serán ásperas,\nde cercas, de huertos y de años.\nOjalá también sepan\ncómo cuidar con ternura algo pequeño.",
+    ],
+    qs: [
+      Q("words", ["In the poem, what does “his hands become a cradle” mean?", "En el poema, ¿qué significa “sus manos se vuelven una cuna”?"], ["He holds the bird very gently and keeps it safe.", "Sostiene al pajarito con mucho cuidado y lo protege."], [["His hands turn into a bed for babies.", "Sus manos se convierten en una camita de bebé.", "took-literally"], ["His hands are as rough as tree bark.", "Sus manos son ásperas como corteza.", "wrong-detail"], ["He builds a nest for the bird.", "Le construye un nido al pajarito.", "not-in-text"]], ["A cradle is a small bed that keeps a baby safe. How is he holding the bird?", "Una cuna es una camita que protege a un bebé. ¿Cómo sostiene al pajarito?"], ["his hands become a cradle", "sus manos se vuelven una cuna"]),
+      Q("theme", ["What is the theme of the poem?", "¿Cuál es el tema del poema?"], ["A person can be both strong and gentle.", "Una persona puede ser fuerte y tierna a la vez."], [["Grandfather builds a fence and plants a garden.", "El abuelo hace una cerca y siembra un huerto.", "plot-summary"], ["Hard work makes your hands hurt.", "El trabajo duro hace que te duelan las manos.", "unsupported-lesson"], ["Seeds should not be planted too deep.", "Las semillas no se deben sembrar muy hondo.", "too-narrow"]], ["Compare what his hands do in the second stanza with what they do in the third.", "Compara lo que hacen sus manos en la segunda estrofa con lo que hacen en la tercera."], ["But when he holds a baby bird", "Pero cuando sostiene un pajarito"]),
+      Q("pov", ["Who is the speaker of the poem?", "¿Quién habla en el poema?"], ["A grandchild who gardens with Grandfather", "Un nieto o una nieta que trabaja en el huerto con el abuelo"], [["The grandfather himself", "El propio abuelo", "wrong-character"], ["The baby bird", "El pajarito", "wrong-character"], ["A neighbor watching from the fence", "Un vecino que mira desde la cerca", "not-in-text"]], ["Look for the words “my grandfather” and “my hands.”", "Busca las palabras “mi abuelo” y “mis manos”."], ["he guides my hands in the dirt", "guía mis manos en la tierra"]),
+      Q("details", ["What does Grandfather tell the speaker when they plant?", "¿Qué le dice el abuelo a quien habla cuando siembran?"], ["Not to put the seed in too far down", "Que no meta la semilla muy abajo"], [["To fix the porch steps", "Que arregle los escalones", "wrong-detail"], ["To plant corn and beans", "Que siembre maíz y frijol", "wrong-detail"], ["To water the seed every day", "Que riegue la semilla todos los días", "not-in-text"]], ["Find the words Grandfather says out loud.", "Busca las palabras que dice el abuelo en voz alta."], ["“Not too deep,” he says", "“No tan hondo”, me dice"]),
+    ],
+  },
+  {
+    id: "hive",
+    kind: "poem",
+    band: 1,
+    title: ["The Hive", "La colmena"],
+    en: [
+      "We are the sisters of the hive,\nthousands of wings with a single hum.\nAll day we leave, and all day we come home,\nheavy with sweetness, warm with sun.",
+      "We visit the clover, the apple tree,\nthe sunflower turning its golden face.\nWe sip, and we sip, and we carry it back,\neach drop of nectar in its place.",
+      "Inside, the dark is warm and busy.\nWe pass the nectar, sister to sister,\nthen beat our wings like tiny fans\nuntil the sweetness thickens.",
+      "We build our rooms with six straight walls,\nall wax, all neat, all side by side,\nand when the honey is ready at last\nwe seal each room and close it tight.",
+      "No single bee could fill one jar.\nIt takes us all, and all our days.\nSo when you taste the gold on your toast,\nremember the hum. Remember the hive.",
+    ],
+    es: [
+      "Somos las hermanas de la colmena,\nmiles de alas con un solo zumbido.\nTodo el día salimos y todo el día volvemos,\ncargadas de dulzura, tibias de sol.",
+      "Visitamos el trébol, el manzano,\nel girasol que vuelve su cara dorada.\nSorbemos y sorbemos, y lo llevamos a casa,\ncada gota de néctar en su lugar.",
+      "Adentro, la oscuridad es tibia y ocupada.\nNos pasamos el néctar de hermana a hermana\ny batimos las alas como abanicos diminutos\nhasta que la dulzura se espesa.",
+      "Construimos cuartos de seis paredes rectas,\ntodos de cera, ordenados, uno junto al otro,\ny cuando por fin la miel está lista\nsellamos cada cuarto y lo cerramos bien.",
+      "Ninguna abeja sola llenaría un frasco.\nHacemos falta todas, y todos nuestros días.\nAsí que cuando pruebes el oro en tu pan,\nrecuerda el zumbido. Recuerda la colmena.",
+    ],
+    qs: [
+      Q("pov", ["Who is speaking in this poem?", "¿Quién habla en este poema?"], ["The worker bees of the hive, speaking together", "Las abejas obreras de la colmena, que hablan juntas"], [["A child eating toast with honey", "Un niño que come pan con miel", "wrong-character"], ["The sunflower in the field", "El girasol del campo", "wrong-character"], ["A beekeeper who owns the hive", "Un apicultor dueño de la colmena", "not-in-text"]], ["Read the first line. Who does “we” mean?", "Lee el primer verso. ¿Quiénes son “nosotras”?"], ["We are the sisters of the hive", "Somos las hermanas de la colmena"]),
+      Q("words", ["In the poem, what is “the gold on your toast”?", "En el poema, ¿qué es “el oro en tu pan”?"], ["Honey spread on bread", "La miel untada en el pan"], [["Real gold coins", "Monedas de oro de verdad", "took-literally"], ["The sunflower's golden face", "La cara dorada del girasol", "wrong-detail"], ["Butter melting in the sun", "Mantequilla derretida al sol", "ignored-context"]], ["The poem is about bees at work. Think about what they make.", "El poema trata del trabajo de las abejas. Piensa en lo que producen."], ["So when you taste the gold on your toast", "Así que cuando pruebes el oro en tu pan"]),
+      Q("theme", ["What is the message of the poem?", "¿Cuál es el mensaje del poema?"], ["Big things get done when many work together.", "Las grandes cosas se logran cuando muchos trabajan juntos."], [["Bees visit clover and apple trees.", "Las abejas visitan el trébol y el manzano.", "plot-summary"], ["Honey is the best food.", "La miel es el mejor alimento.", "unsupported-lesson"], ["Wax rooms have six walls.", "Los cuartos de cera tienen seis paredes.", "too-narrow"]], ["Read the first two lines of the last stanza.", "Lee los dos primeros versos de la última estrofa."], ["No single bee could fill one jar.", "Ninguna abeja sola llenaría un frasco."]),
+      Q("details", ["What do the bees do to make the nectar thicker?", "¿Qué hacen las abejas para que el néctar se espese?"], ["They beat their wings over it.", "Le baten las alas encima."], [["They seal it with wax.", "La sellan con cera.", "wrong-order"], ["They visit more flowers.", "Visitan más flores.", "wrong-detail"], ["They add water to it.", "Le agregan agua.", "not-in-text"]], ["Look at the stanza that takes place inside the hive.", "Mira la estrofa que pasa dentro de la colmena."], ["until the sweetness thickens", "hasta que la dulzura se espesa"]),
+    ],
+  },
+  {
+    id: "moon-watch",
+    kind: "poem",
+    band: 1,
+    title: ["Moon Watch", "Mirando la luna"],
+    en: [
+      "On the first night, I looked and looked,\nbut the sky had lost its moon.\nGrandma said, “It's still up there.\nIt's only hiding. Wait.”",
+      "A few nights later, a silver thread\nhung over the parking lot,\nthin as the edge of a fingernail,\nas if someone had cut the dark.",
+      "Each night it grew a little rounder:\na slice, a half, a lemon,\nuntil one evening it rose over the hills\nlike a plate of polished silver.",
+      "That night the whole street glowed.\nI could see my shadow on the sidewalk\nand every leaf on Grandma's lemon tree\nwithout turning on a light.",
+      "Then, night by night, it thinned again.\nI marked it on my calendar:\na circle, a half, a fingernail.\nI was not sad. I knew the secret now.\nThe moon is never really gone.",
+    ],
+    es: [
+      "La primera noche busqué y busqué,\npero al cielo se le había perdido la luna.\nLa abuela dijo: “Sigue ahí arriba.\nSolo se está escondiendo. Espera”.",
+      "Unas noches después, un hilo de plata\ncolgaba sobre el estacionamiento,\ndelgado como la orilla de una uña,\ncomo si alguien hubiera cortado la oscuridad.",
+      "Cada noche se ponía un poco más redonda:\nuna tajada, una mitad, un limón,\nhasta que una tarde salió sobre las colinas\ncomo un plato de plata pulida.",
+      "Esa noche brillaba toda la calle.\nPodía ver mi sombra en la acera\ny cada hoja del limonero de la abuela\nsin prender ninguna luz.",
+      "Luego, noche tras noche, se adelgazó otra vez.\nLa fui marcando en mi calendario:\nun círculo, una mitad, una uña.\nNo me puse triste. Ya sabía el secreto.\nLa luna nunca se va de verdad.",
+    ],
+    qs: [
+      Q("words", ["In the poem, what is the “silver thread”?", "En el poema, ¿qué es el “hilo de plata”?"], ["A very thin moon", "Una luna muy delgada"], [["A real string made of silver", "Un hilo de verdad hecho de plata", "took-literally"], ["A full moon", "Una luna llena", "opposite-meaning"], ["A streetlight over the parking lot", "Una lámpara sobre el estacionamiento", "ignored-context"]], ["The poem is about the moon's shapes. What looks thin and silver in the night sky?", "El poema trata de las formas de la luna. ¿Qué se ve delgado y plateado en el cielo de noche?"], ["thin as the edge of a fingernail", "delgado como la orilla de una uña"]),
+      Q("pov", ["Who is the speaker of this poem?", "¿Quién habla en este poema?"], ["A grandchild who watches the moon each night", "Un nieto o una nieta que mira la luna cada noche"], [["Grandma", "La abuela", "wrong-character"], ["The moon", "La luna", "wrong-character"], ["A scientist in a lab", "Una científica en un laboratorio", "not-in-text"]], ["Who says “I” in the poem, and who is Grandma to that person?", "¿Quién dice “yo” en el poema, y quién es la abuela para esa persona?"], ["I marked it on my calendar", "La fui marcando en mi calendario"]),
+      Q("theme", ["What does the speaker understand by the end?", "¿Qué entiende quien habla al final?"], ["The moon only seems to disappear; it always comes back.", "La luna solo parece desaparecer; siempre regresa."], [["The moon is a plate of polished silver.", "La luna es un plato de plata pulida.", "took-literally"], ["Grandma has a lemon tree.", "La abuela tiene un limonero.", "too-narrow"], ["Moonlight is too dim to see by.", "La luz de la luna es demasiado débil para ver.", "opposite-of-text"]], ["Read the last two lines of the poem.", "Lee los dos últimos versos del poema."], ["The moon is never really gone.", "La luna nunca se va de verdad."]),
+      Q("details", ["What could the speaker see on the night of the full moon?", "¿Qué podía ver quien habla la noche de luna llena?"], ["A shadow and the leaves on a tree, with no lamp on", "Su sombra y las hojas de un árbol, sin lámpara"], [["Only a thin silver line", "Solo una línea plateada delgada", "wrong-order"], ["Nothing at all, because it was dark", "Nada, porque estaba oscuro", "opposite-of-text"], ["Stars over the ocean", "Estrellas sobre el mar", "not-in-text"]], ["Find the stanza right after the moon rose like a plate.", "Busca la estrofa que sigue a cuando la luna salió como un plato."], ["I could see my shadow on the sidewalk", "Podía ver mi sombra en la acera"]),
+    ],
+  },
+];
