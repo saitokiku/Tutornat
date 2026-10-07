@@ -258,6 +258,14 @@ describe("the demo tutor beside a problem", () => {
     expect(demoOpening(ctx({ grade: "K" })).text.split("\n")[0]).toBe("I'm the demo tutor.");
   });
 
+  it("continues the ladder past hints already opened on the problem", () => {
+    expect(demoOpening({ ...c, hintsSeen: 2 }).text).toContain(item.hints[2]);
+    expect(demoOpening({ ...c, hintsSeen: 2 }).state.hintsGiven).toBe(3);
+    const all = demoOpening({ ...c, hintsSeen: item.hints.length });
+    expect(all.text.split("\n")[1]).toBe("What have you tried so far?");
+    expect(all.state.hintsGiven).toBe(item.hints.length);
+  });
+
   it("walks the hint ladder, then stops", async () => {
     let s = demoOpening(c).state;
     for (let i = 1; i < item.hints.length; i++) {

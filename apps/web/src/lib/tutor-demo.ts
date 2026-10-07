@@ -33,6 +33,8 @@ export type DemoContext = {
   today: string;
   /** The problem on screen, when the tutor sits beside one. */
   item?: Item;
+  /** Hints the learner already opened on that problem, so the tutor's ladder continues past them. */
+  hintsSeen?: number;
   homework?: { title: string; notes?: string };
   /** The lesson on the stage, when the tutor sits beside one. */
   lesson?: { title: string };
@@ -342,7 +344,12 @@ export function demoOpening(ctx: DemoContext): DemoTurn {
   const l = ctx.locale;
   const intro = t(l, young(ctx.grade) ? "tut.demo.introYoung" : "tut.demo.intro");
   const state: DemoState = { hintsGiven: 0, tries: 0, shown: [] };
-  if (ctx.item) return { text: `${intro}\n${t(l, "tutor.demo.open")} ${ctx.item.hints[0]}`, cards: [], state: { ...state, hintsGiven: 1, skillId: ctx.item.skillId } };
+  if (ctx.item) {
+    // The next vetted hint they haven't seen; with every hint seen, ask what they tried.
+    const seen = Math.min(Math.max(0, ctx.hintsSeen ?? 0), ctx.item.hints.length);
+    const opening = seen < ctx.item.hints.length ? `${t(l, "tutor.demo.open")} ${ctx.item.hints[seen]}` : t(l, "tutor.open.problem");
+    return { text: `${intro}\n${opening}`, cards: [], state: { ...state, hintsGiven: Math.min(seen + 1, ctx.item.hints.length), skillId: ctx.item.skillId } };
+  }
   if (ctx.homework) return { text: `${intro}\n${t(l, "tutor.open.homework", { title: ctx.homework.title })}`, cards: [], state };
   if (ctx.lesson) return { text: `${intro}\n${t(l, "tutor.open.lesson")}`, cards: [], state: { ...state, topic: ctx.lesson.title } };
   return { text: `${intro}\n${t(l, young(ctx.grade) ? "tut.open.young" : "tutor.open.talk")}`, cards: [], state };

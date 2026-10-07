@@ -41,6 +41,8 @@ export type ChatSetup = {
   item?: Item;
   /** The practice set the problem is in, when the tutor sits beside one. */
   setId?: string;
+  /** Hints the learner already opened on the problem. */
+  hintsSeen?: number;
   tries?: number;
   lastAnswer?: string;
   lesson?: { title: string; scene: string };
@@ -114,7 +116,7 @@ function AiChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
       entries={entries}
       busy={status === "submitted" || status === "streaming"}
       error={error ? t(/photo_too_big/.test(failure) ? "tut.photo.tooBig" : /bad_photo/.test(failure) ? "tut.photo.unreadable" : "tutor.error") : null}
-      onSend={(text, photo) => sendMessage({ text, files: photo ? [{ type: "file", mediaType: photo.mediaType, url: photo.url, filename: "problem.jpg" }] : undefined }, { body: { context } })}
+      onSend={(text, photo) => sendMessage({ text, files: photo ? [{ type: "file", mediaType: photo.mediaType, url: photo.url, filename: "problem.jpg" }] : undefined }, { body: { context, hintsSeen: setup.hintsSeen } })}
       onStop={stop}
       label={t("tut.label.ai")}
       readsPhotos
@@ -133,6 +135,7 @@ function DemoChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
     grade: learner.grade,
     today: localDate(Date.now()),
     item,
+    hintsSeen: setup.hintsSeen,
     homework: setup.homework,
     lesson: setup.lesson ? { title: setup.lesson.title } : undefined,
     seed: randomSeed,

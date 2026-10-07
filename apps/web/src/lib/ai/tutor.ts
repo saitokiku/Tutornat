@@ -75,7 +75,11 @@ const lastText = (m: UIMessage | undefined) =>
     .map((p) => p.text)
     .join(" ");
 
-export type TutorRequest = { messages: UIMessage[]; context: unknown };
+/** `hintsSeen`: hints the learner already opened on the problem in practice, so next_hint continues past them. */
+export type TutorRequest = { messages: UIMessage[]; context: unknown; hintsSeen?: unknown };
+
+/** A count the browser sent, made safe: a whole number from 0 to 5, else 0. */
+const hintCount = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.min(5, Math.max(0, Math.floor(v))) : 0);
 
 export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promise<Response> {
   const parsed = TutorContext.safeParse(body.context);
@@ -97,7 +101,7 @@ export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promi
     model,
     system,
     messages: await convertToModelMessages(photos.messages),
-    tools: tutorTools(ctx, { hintsGiven: hintsGiven(messages) }),
+    tools: tutorTools(ctx, { hintsGiven: (ctx.item ? hintCount(body.hintsSeen) : 0) + hintsGiven(messages) }),
     stopWhen: isStepCount(5),
     maxOutputTokens: 700,
   });

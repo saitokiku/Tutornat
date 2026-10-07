@@ -165,6 +165,19 @@ describe("the hint ladder across turns", () => {
     expect(hintsGiven([first.m, again])).toBe(2);
     expect(JSON.stringify(prompts[0])).not.toContain(JSON.stringify(item.answer)); // no key in what the model sees
   });
+
+  it("starts past the hints the learner already opened in practice, and ignores a bad count", async () => {
+    const practice: TutorContext = { locale: "en", grade: "4", surface: "practice", item: { skillId: "m.frac.addlike", level: 1, seed: 7 }, tries: 1 };
+    const item = makeItem("m.frac.addlike", 1, 7, "en");
+    const hintOf = async (hintsSeen: unknown) => {
+      const { model } = toolModel("next_hint", {});
+      const m = await reply(await tutorTurn({ messages: [user("hint please")], context: practice, hintsSeen }, model));
+      return (m.parts.find((p) => p.type === "tool-next_hint") as { output?: { hint?: string } }).output?.hint;
+    };
+    expect(await hintOf(2)).toBe(item.hints[2]);
+    expect(await hintOf("lots")).toBe(item.hints[0]);
+    expect(await hintOf(-4)).toBe(item.hints[0]);
+  });
 });
 
 describe("similar_problem", () => {

@@ -72,6 +72,8 @@ function Panel({ ctx, learner, surface, onClose }: { ctx: DockContext; learner: 
             surface,
             item: ctx.item,
             setId: ctx.setId,
+            // The Runner's open hints, once it passes them (DockContext.hints); until then the ladder starts at one.
+            hintsSeen: (ctx as DockContext & { hints?: number }).hints,
             tries: ctx.tries,
             lastAnswer: ctx.lastAnswer,
             title: getSkill(ctx.item.skillId)?.title[learner.locale] ?? "",
