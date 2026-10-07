@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthCard, TextLink } from "@/components/auth/AuthFrame";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { Button, Field, Notice, btn } from "@/components/ui";
 import { useT } from "@/i18n";
-import { resetPassword, resetTokenValid } from "@/lib/auth";
+import { checkResetToken, resetPassword } from "@/lib/auth";
 
 export default function ResetPasswordPage() {
   const t = useT();
@@ -18,15 +18,25 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
-  const valid = resetTokenValid(token);
+  const [checked, setChecked] = useState<{ token: string; valid: boolean } | null>(null);
+  const valid = checked?.token === token ? checked.valid : null;
+
+  useEffect(() => {
+    let live = true;
+    void checkResetToken(token).then((v) => live && setChecked({ token, valid: v }));
+    return () => {
+      live = false;
+    };
+  }, [token]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     const r = await resetPassword(token, password);
     setBusy(false);
+    // With a server the reset also signs this browser in, and the page moves on to the family.
     if (r.ok) return setDone(true);
-    setError(t(r.fields?.password ?? r.error ?? "auth.resetInvalid"));
+    setError(t(r.fields?.password ?? r.error ?? "auth.resetInvalid", { minutes: r.retryMinutes ?? 1 }));
   }
 
   return (
@@ -39,6 +49,10 @@ export default function ResetPasswordPage() {
               {t("auth.signIn")}
             </Link>
           </div>
+        ) : valid === null ? (
+          <p aria-busy="true" className="text-sm text-muted">
+            {t("common.loading")}
+          </p>
         ) : !valid ? (
           <div className="space-y-4">
             <Notice tone="bad">{t("auth.resetInvalid")}</Notice>

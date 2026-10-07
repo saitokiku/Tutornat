@@ -28,7 +28,7 @@ export default function SignInPage() {
   const next = useSearchParams().get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<Key | null>(null);
+  const [error, setError] = useState<{ key: Key; minutes?: number } | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -36,7 +36,7 @@ export default function SignInPage() {
     setBusy(true);
     const r = await signIn(email, password);
     setBusy(false);
-    if (!r.ok) return setError(r.error ?? "err.badLogin");
+    if (!r.ok) return setError({ key: r.error ?? "err.badLogin", minutes: r.retryMinutes });
     router.push(sameSite(next) ?? "/profiles");
   }
 
@@ -44,7 +44,7 @@ export default function SignInPage() {
     <Guard need="guest">
       <AuthCard title={t("auth.signInTitle")} footer={<>{t("auth.noAccount")} <TextLink href="/sign-up">{t("auth.signUp")}</TextLink></>}>
         <form onSubmit={submit} className="space-y-5" noValidate>
-          {error && <Notice tone="bad">{t(error)}</Notice>}
+          {error && <Notice tone="bad">{t(error.key, { minutes: error.minutes ?? 1 })}</Notice>}
           <Field label={t("auth.email")}>
             {(a) => <input {...a} type="email" autoComplete="email" required className="k-input" value={email} onChange={(e) => setEmail(e.target.value)} />}
           </Field>

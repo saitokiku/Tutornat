@@ -39,7 +39,14 @@ function remembered(): "server" | "local" | null {
 /** Asked once per page load. Unit tests run browser-only unless they say otherwise. */
 export function serverStatus(): Promise<ServerStatus> {
   if (testStatus) return Promise.resolve(testStatus);
-  if (process.env.NODE_ENV === "test" || typeof window === "undefined") return Promise.resolve(LOCAL);
+  if (typeof window === "undefined") return Promise.resolve(LOCAL);
+  if (process.env.NODE_ENV === "test") {
+    if (!statusValue) {
+      statusValue = LOCAL;
+      notify();
+    }
+    return Promise.resolve(LOCAL);
+  }
   statusPromise ??= fetch("/api/auth/status", { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
     .then((j: Partial<ServerStatus>) => {
@@ -61,6 +68,9 @@ export function serverStatus(): Promise<ServerStatus> {
     });
   return statusPromise;
 }
+
+/** The status if already known (no request). */
+export const knownStatus = () => testStatus ?? statusValue;
 
 export function setServerStatusForTests(s: ServerStatus | null) {
   testStatus = s;

@@ -2,8 +2,8 @@ import type { Key } from "@/i18n/en";
 import { validate, type FieldErrors } from "./server/db/fields";
 import { CONSENT_NOTICE_VERSION, consentAllows, needsConsent, type ConsentReceipt, type ConsentScope } from "./server/db/policy";
 import type { PublicAccount } from "./server/db/wire";
-import { newId, read, update } from "./store";
-import { activeAccount, receipts, serverStatus, signedIn, signedOut, storeReceipts, useReceipts, useServerStatus, useSyncState } from "./sync";
+import { newId, read, update, useStore } from "./store";
+import { activeAccount, knownStatus, receipts, serverStatus, signedIn, signedOut, storeReceipts, syncNow, useReceipts, useServerStatus, useSyncState } from "./sync";
 import type { Account, Locale } from "./types";
 
 // Accounts, both ways the app runs:
@@ -197,7 +197,7 @@ const OPEN: ConsentGate = { needed: false, ai: true, voice: true };
 export function useConsent(profileId: string | null | undefined): ConsentGate {
   const list = useReceipts();
   const status = useServerStatus();
-  const profile = read().profiles.find((p) => p.id === profileId);
+  const profile = useStore((s) => s.profiles.find((p) => p.id === profileId));
   if (!accountsOnServer() || !profile || !needsConsent(profile.grade)) return OPEN;
   const mine = list.filter((r) => r.profileId === profile.id);
   const production = status?.production ?? true;
@@ -207,9 +207,10 @@ export function useConsent(profileId: string | null | undefined): ConsentGate {
 }
 
 /** The same answer outside React (for request code). */
-export function consentFor(profileId: string, scope: ConsentScope, production = true): boolean {
+export function consentFor(profileId: string, scope: ConsentScope): boolean {
   const profile = read().profiles.find((p) => p.id === profileId);
   if (!accountsOnServer() || !profile) return true;
+  const production = knownStatus()?.production ?? true;
   return consentAllows({ grade: profile.grade, receipts: receipts().filter((r) => r.profileId === profileId), scope, production });
 }
 
@@ -236,6 +237,8 @@ export async function loadConsent(): Promise<ConsentOptions | null> {
 export type GrantInput = { profileId: string; scope: ConsentScope[]; method: string; under13: boolean };
 
 export async function grantConsent(input: GrantInput): Promise<{ ok: true; receipt: ConsentReceipt } | { ok: false; error: Key }> {
+  // A learner added a moment ago must reach the server before consent can name them.
+  await syncNow();
   const a = await post("/api/consent", { ...input, noticeVersion: CONSENT_NOTICE_VERSION });
   if (!a) return { ok: false, error: "acct.err.offline" };
   if (a.status !== 200) return { ok: false, error: a.body.error === "method" ? "acct.consent.errMethod" : a.body.error === "learner" ? "acct.consent.errLearner" : "acct.err.server" };

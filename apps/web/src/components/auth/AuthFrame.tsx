@@ -5,9 +5,11 @@ import type { ReactNode } from "react";
 import { KaizenLogo } from "@/components/brand";
 import { LangToggle } from "@/components/LangToggle";
 import { useT } from "@/i18n";
+import { useServerStatus } from "@/lib/auth";
 
 export function AuthFrame({ children }: { children: ReactNode }) {
   const t = useT();
+  const status = useServerStatus();
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
       <header className="flex items-center justify-between px-5 py-5 sm:px-8">
@@ -17,7 +19,18 @@ export function AuthFrame({ children }: { children: ReactNode }) {
       <main className="flex flex-1 items-start justify-center px-5 pb-16 pt-6 sm:items-center sm:pt-0">
         <div className="w-full max-w-[26rem]">{children}</div>
       </main>
-      <footer className="px-5 pb-6 text-center text-xs text-muted">{t("auth.demoNote")}</footer>
+      <footer className="min-h-12 px-5 pb-6 text-center text-xs text-muted">
+        {status?.mode === "server" ? (
+          <>
+            {t("acct.serverNote")}{" "}
+            <Link href="/privacy" className="inline-flex min-h-11 items-center font-semibold text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
+              {t("acct.privacyLink")}
+            </Link>
+          </>
+        ) : status ? (
+          t("auth.demoNote")
+        ) : null}
+      </footer>
     </div>
   );
 }

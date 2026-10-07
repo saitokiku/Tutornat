@@ -1,16 +1,19 @@
 "use client";
 
 import { useTitle } from "@/components/LangSync";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SyncStatus } from "@/components/auth/SyncStatus";
+import { needsConsent } from "@/lib/server/db/policy";
 import { useEffect, useState } from "react";
 import { KaizenLogo } from "@/components/brand";
 import { IconFamily, IconLogout, IconPen, IconPlus, IconTrash } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
 import { LearnerForm } from "@/components/profiles/LearnerForm";
 import { ParentGate } from "@/components/profiles/ParentGate";
-import { Button } from "@/components/ui";
+import { Button, btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
-import { signOut } from "@/lib/auth";
+import { accountsOnServer, signOut } from "@/lib/auth";
 import { createLearner, learnersOf, removeLearner, selectLearner, updateLearner } from "@/lib/profiles";
 import { read, useStore } from "@/lib/store";
 import { goalsOf } from "@/lib/family";
@@ -67,6 +70,7 @@ export default function ProfilesPage() {
 
       <main className="mx-auto max-w-3xl px-5 pb-20 pt-6 sm:px-8 sm:pt-12">
         <h1 className="text-center font-brand text-t1 font-semibold text-ink sm:text-d3">{t("profiles.title")}</h1>
+        <SyncStatus className="mt-2 justify-center" />
         {learners.length === 0 && <p className="mt-3 text-center text-sm text-muted">{t("profiles.empty")}</p>}
         {unlocked && goals === undefined && learners.length > 0 && (
           <div className="mt-8">
@@ -134,6 +138,21 @@ export default function ProfilesPage() {
               {managing ? t("profiles.doneManaging") : t("profiles.manage")}
             </Button>
           </div>
+        )}
+
+        {unlocked && !managing && !showForm && accountsOnServer() && learners.some((l) => needsConsent(l.grade)) && (
+          // Parent-first: the AI tutor and voice stay off for children until a grown-up consents.
+          <section aria-labelledby="consent-card" className="mx-auto mt-10 flex max-w-xl flex-wrap items-center gap-4 rounded-lg border border-border bg-panel p-5 shadow-soft">
+            <div className="min-w-0 flex-1 basis-60">
+              <h2 id="consent-card" className="font-brand text-t3 font-semibold text-ink">
+                {t("acct.consent.title")}
+              </h2>
+              <p className="mt-1 text-sm text-muted">{t("acct.consent.cardBody")}</p>
+            </div>
+            <Link href="/consent" className={btn("secondary")}>
+              {t("acct.consent.review")}
+            </Link>
+          </section>
         )}
 
         {pendingGate && (
