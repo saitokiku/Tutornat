@@ -3,11 +3,13 @@ import type { Rng } from "../rng";
 import type { Skill } from "../types";
 import { fromBank, type BankLevel } from "./k5-more/bank";
 import { climateData, motionPatterns, waveShape } from "./k5-more/computed-3-4";
+import { earthWater, matterMass } from "./k5-more/computed-5";
 import { daylight, habitatSurvey, weatherChart } from "./k5-more/computed-early";
 import { BANKS_1 } from "./k5-more/grade-1";
 import { BANKS_2 } from "./k5-more/grade-2";
 import { BANKS_3 } from "./k5-more/grade-3";
 import { BANKS_4 } from "./k5-more/grade-4";
+import { BANKS_5 } from "./k5-more/grade-5";
 import { BANKS_K } from "./k5-more/grade-k";
 
 // K–5 science, second strand: the NGSS performance expectations the first strand (early.ts) does not
@@ -18,7 +20,7 @@ import { BANKS_K } from "./k5-more/grade-k";
 
 export type { BankLevel, Entry, Option, Pair } from "./k5-more/bank";
 
-export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1, ...BANKS_2, ...BANKS_3, ...BANKS_4 };
+export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1, ...BANKS_2, ...BANKS_3, ...BANKS_4, ...BANKS_5 };
 
 const fromBanks = (id: string) => (r: Rng, level: number, locale: Locale) => fromBank(r, BANKS[id][level - 1], locale);
 
@@ -63,4 +65,9 @@ export const SCIENCE_K_5_MORE: Skill[] = [
   draft({ id: "s.speed.collisions", grade: "4", en: "Speed, energy and collisions", es: "Velocidad, energía y choques", standard: "4-PS3-1", prereqs: ["s.energy.forms"], levels: 2 }),
   draft({ id: "s.renewable", grade: "4", en: "Renewable and nonrenewable energy", es: "Energía renovable y no renovable", standard: "4-ESS3-1", prereqs: ["s.energy.forms"], levels: 2 }),
   draft({ id: "s.quakes.volcanoes", grade: "4", en: "Earthquakes, volcanoes and maps", es: "Terremotos, volcanes y mapas", standard: "4-ESS3-2", prereqs: ["s.rocks"], levels: 2 }),
+  // ── Grade 5 ──
+  computed({ id: "s.matter.mass", grade: "5", en: "Matter: mass and properties", es: "La materia: masa y propiedades", standard: "5-PS1-2", prereqs: ["s.states.matter", "s.heat.cool"], levels: 3 }, matterMass),
+  draft({ id: "s.plant.matter", grade: "5", en: "Plants, decomposers and Earth's systems", es: "Plantas, descomponedores y sistemas de la Tierra", standard: "5-LS1-1", prereqs: ["s.food.chains", "s.plants.grow"], levels: 3 }),
+  computed({ id: "s.earth.water", grade: "5", en: "Where Earth's water is", es: "Dónde está el agua de la Tierra", standard: "5-ESS2-2", prereqs: ["s.water.cycle"], levels: 3 }, earthWater),
+  draft({ id: "s.sun.gravity", grade: "5", en: "Gravity, the Sun and shadows", es: "La gravedad, el Sol y las sombras", standard: "5-PS2-1", prereqs: ["s.earth.sun.moon"], levels: 3 }),
 ];

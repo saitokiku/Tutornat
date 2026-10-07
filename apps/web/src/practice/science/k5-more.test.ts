@@ -42,6 +42,10 @@ const PLAN = [
   ["s.speed.collisions", "4", "4-PS3-1", ["s.energy.forms"], 2, "draft"],
   ["s.renewable", "4", "4-ESS3-1", ["s.energy.forms"], 2, "draft"],
   ["s.quakes.volcanoes", "4", "4-ESS3-2", ["s.rocks"], 2, "draft"],
+  ["s.matter.mass", "5", "5-PS1-2", ["s.states.matter", "s.heat.cool"], 3, "computed"],
+  ["s.plant.matter", "5", "5-LS1-1", ["s.food.chains", "s.plants.grow"], 3, "draft"],
+  ["s.earth.water", "5", "5-ESS2-2", ["s.water.cycle"], 3, "computed"],
+  ["s.sun.gravity", "5", "5-PS2-1", ["s.earth.sun.moon"], 3, "draft"],
 ] as const;
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => i * 104729 + 7);
@@ -476,5 +480,206 @@ describe("s.wave.shape", () => {
       expect(rest * 2, `${where} rest line is midway`).toBe(top + bottom);
       expect(Number(keyLabel(en)), where).toBe(level === 1 ? top - rest : gaps[0]);
     });
+  });
+});
+
+const num = (s: string) => Number(s.replace(/,/g, ""));
+
+describe("s.matter.mass", () => {
+  // Chemistry kept apart from the generator: salt dissolves up to about 36 g per 100 g of water;
+  // NaHCO3 (84.01 g/mol) gives one CO2 (44.01 g/mol); household vinegar is about 5% acetic acid
+  // (60.05 g/mol), one acid per CO2.
+  const CO2_PER_G_SODA = 44.01 / 84.01;
+  const CO2_PER_G_VINEGAR = (0.05 / 60.05) * 44.01;
+  // Properties of each material, written independently: [magnet pulls it, conducts, dissolves, its water conducts].
+  const PROPS: Record<string, [boolean, boolean, boolean, boolean | null, RegExp]> = {
+    Iron: [true, true, false, null, /gray/],
+    Aluminum: [false, true, false, null, /silver/],
+    Copper: [false, true, false, null, /reddish-brown/],
+    Salt: [false, false, true, true, /white crystals/],
+    Sugar: [false, false, true, false, /white crystals/],
+    Chalk: [false, false, false, null, /white powder/],
+  };
+
+  it("conserves mass, finds escaped gas within what the reaction can make, and names the material every test fits", () => {
+    const kinds = new Set<string>();
+    eachItem("s.matter.mass", (en, es, level, where) => {
+      const text = promptText(en);
+      if (level === 3) {
+        const observed: [boolean, boolean, boolean, boolean | null] = [
+          /A magnet pulls it\./.test(text),
+          /It conducts electricity\./.test(text),
+          /It dissolves in water/.test(text),
+          /then the water conducts/.test(text) ? true : /water still does not conduct/.test(text) ? false : null,
+        ];
+        const look = /It is ([^.]+)\./.exec(text)![1];
+        const fits = (name: string) => {
+          const p = PROPS[name];
+          return p[0] === observed[0] && p[1] === observed[1] && p[2] === observed[2] && p[3] === observed[3] && p[4].test(look);
+        };
+        expect(fits(keyLabel(en)), `${where} key ${keyLabel(en)} does not fit`).toBe(true);
+        for (const c of en.choices!) if (c.label !== keyLabel(en)) expect(fits(c.label), `${where} ${c.label} also fits`).toBe(false);
+        kinds.add("identify");
+        return;
+      }
+      const key = Number(keyLabel(en));
+      let m: RegExpExecArray | null;
+      if ((m = /stirs (\d+) grams of (sugar|salt) into (\d+) grams of water/.exec(text))) {
+        const [solute, water] = [Number(m[1]), Number(m[3])];
+        if (m[2] === "salt") expect(solute, `${where} salt would not all dissolve`).toBeLessThanOrEqual(0.36 * water);
+        expect(key - water, where).toBe(solute);
+        kinds.add("dissolve");
+      } else if ((m = /has (\d+) grams of salt water in a dish\. .* and (\d+) grams of salt are left/.exec(text))) {
+        const [total, salt] = [Number(m[1]), Number(m[2])];
+        expect(salt / total, `${where} saltier than water can hold`).toBeLessThanOrEqual(0.27);
+        expect(key + salt, where).toBe(total);
+        kinds.add("evaporate");
+      } else if ((m = /seals (\d+) grams of steel wool in a jar of air\. The jar and everything in it have a mass of (\d+) grams/.exec(text))) {
+        expect(key, where).toBe(Number(m[2]));
+        kinds.add("rust");
+      } else if ((m = /mixes (\d+) grams of vinegar with (\d+) grams of baking soda/.exec(text))) {
+        const [vinegar, soda] = [Number(m[1]), Number(m[2])];
+        if (/sealed bag/.test(text)) {
+          expect(key - vinegar, where).toBe(soda);
+          kinds.add("sealed");
+        } else {
+          const after = Number(/have a mass of (\d+) grams/.exec(text)![1]);
+          expect(after + key, where).toBe(vinegar + soda);
+          expect(key, `${where} more gas than the reaction can make`).toBeLessThanOrEqual(Math.min(soda * CO2_PER_G_SODA, vinegar * CO2_PER_G_VINEGAR));
+          expect(key, where).toBeGreaterThan(0);
+          kinds.add("open");
+        }
+      } else throw new Error(`${where} unknown prompt: ${text}`);
+    });
+    expect([...kinds].sort()).toEqual(["dissolve", "evaporate", "identify", "open", "rust", "sealed"]);
+  });
+});
+
+describe("s.earth.water", () => {
+  // USGS "Where is Earth's water": 96.5% oceans + 0.9% saline lakes and groundwater, 2.5% fresh;
+  // fresh water is 68.7% ice and glaciers, 30.1% groundwater, 1.2% surface and other.
+  const USGS = { salt: 97.4, fresh: 2.5, ice: 68.7, ground: 30.1, other: 1.2 };
+  const shareOf = (desc: string) => (/ice and glaciers/.test(desc) ? "ice" : /groundwater/.test(desc) ? "ground" : "other") as "ice" | "ground" | "other";
+
+  it("uses the real shares, rounded, and keys each amount from the totals in the prompt", () => {
+    eachItem("s.earth.water", (en, es, level, where) => {
+      const text = promptText(en);
+      const key = num(keyLabel(en));
+      if (level === 1) {
+        const total = num(/poured into ([\d,]+) /.exec(text)![1]);
+        expect(Math.abs(97 - USGS.salt), where).toBeLessThan(0.5);
+        expect(Math.abs(3 - USGS.fresh), where).toBeLessThanOrEqual(0.5);
+        const fresh = /would be fresh water\?$/.test(text);
+        expect(key * 100, where).toBe((fresh ? 3 : 97) * total);
+      } else if (level === 2) {
+        const m = /fresh water in ([\d,]+) \w+\. About ([\d,]+) would be ([^.]+)\. About ([\d,]+) would be ([^.]+)\. The rest would be ([^.]+)\./.exec(text)!;
+        const total = num(m[1]);
+        const parts: [number, string][] = [[num(m[2]), m[3]], [num(m[4]), m[5]], [key, m[6]]];
+        expect(parts.reduce((s, [v]) => s + v, 0), where).toBe(total);
+        for (const [v, desc] of parts) expect(Math.abs((100 * v) / total - USGS[shareOf(desc)]), `${where} ${desc}`).toBeLessThan(0.5);
+        expect(new Set(parts.map(([, d]) => shareOf(d))).size, where).toBe(3);
+      } else {
+        const total = num(/water as ([\d,]+) drops/.exec(text)![1]);
+        const [, share, desc] = /about (\d+) out of every 100 drops are ([^.]+)\./.exec(text)!;
+        expect(Math.abs(Number(share) - USGS[shareOf(desc)]), where).toBeLessThan(0.5);
+        expect(key * 100 * 100, where).toBe(total * 3 * Number(share));
+      }
+    });
+  });
+});
+
+describe("grade coverage", () => {
+  it("gives every grade K–5 six to eight science skills across both K–5 strands", () => {
+    for (const grade of ["K", "1", "2", "3", "4", "5"]) {
+      const n = [...SCIENCE_K_5, ...SCIENCE_K_5_MORE].filter((s) => s.grade === grade).length;
+      expect(n, `grade ${grade}`).toBeGreaterThanOrEqual(6);
+      expect(n, `grade ${grade}`).toBeLessThanOrEqual(8);
+    }
+  });
+});
+
+describe("science facts in the banks", () => {
+  const entries = (id: string) => BANKS[id].flatMap((l) => l.items);
+  const keyOf = (e: Entry) => e.a[0].t[0];
+
+  // Known answers, written independently of the banks: each matcher must hit at least one entry.
+  const FACTS: [string, string, RegExp, RegExp][] = [
+    ["dark colors warm more in sunlight", "s.sun.warms", /Which shirt gets warmer/, /^A black shirt$/],
+    ["shade is cooler", "s.sun.warms", /Where do you feel cooler/, /shade/],
+    ["tornado: lowest room, no windows", "s.weather.ready", /tornado warning/, /no windows/],
+    ["never cross floodwater", "s.weather.ready", /Floodwater covers the road/, /Turn around/],
+    ["beavers build dams", "s.living.change", /beaver/, /dam/],
+    ["sounds come from vibrations", "s.sound.vibrate", /What do all sounds come from/, /vibrate/],
+    ["the Moon reflects sunlight", "s.light.see", /see the Moon at night/, /^Sunlight/],
+    ["a flame makes its own light", "s.light.see", /Which one makes its own light/, /candle/],
+    ["cat eyes reflect light", "s.light.see", /cat's eyes shine/, /bounce light back/],
+    ["glass lets light through", "s.light.through", /clear window\. What happens/, /right through/],
+    ["mirrors reflect", "s.light.through", /at a mirror\. What happens/, /bounces back/],
+    ["cardboard blocks light", "s.light.through", /cardboard box/, /^No light/],
+    ["flytraps catch insects", "s.parts.jobs", /flytrap/, /catch bugs/],
+    ["sea turtles get no parent care", "s.parents.young", /sea turtle lays eggs/, /^No/],
+    ["tadpoles become frogs", "s.parents.young", /tadpole/, /frog/],
+    ["the Moon can be seen in the day", "s.sky.patterns", /Moon in the daytime/, /^Yes$/],
+    ["stars are still there in the day", "s.sky.patterns", /stars in the daytime/, /^Still there/],
+    ["coconuts travel by sea", "s.plants.grow", /coconut floats/, /floats across the ocean/],
+    ["corn is wind-pollinated", "s.plants.grow", /Corn pollen/, /wind/i],
+    ["seeds sprout without soil", "s.plants.grow", /wet paper towel/, /without soil/],
+    ["the ocean is salty", "s.landforms.water", /Which body of water is salty/, /ocean/],
+    ["water covers more of Earth than land", "s.landforms.water", /globe, which covers more/, /^Water$/],
+    ["wind moves dunes", "s.wind.water.land", /Sand dunes move/, /^Wind$/],
+    ["bare hills lose more soil", "s.wind.water.land", /Two hills get heavy rain/, /bare/],
+    ["burning cannot be undone", "s.heat.cool", /Paper burns to ash/, /^No/],
+    ["melting can be undone", "s.heat.cool", /ice pop melts/, /^Yes/],
+    ["a frozen leaf is damaged for good", "s.heat.cool", /leaf freezes/, /^No/],
+    ["web spinning is inherited", "s.traits.inherited", /spider spins its first web/, /^Inherited$/],
+    ["talking parrots learned it", "s.traits.inherited", /parrot learns/, /^Learned$/],
+    ["flamingo color comes from food", "s.traits.inherited", /Flamingos/, /Food/],
+    ["paleness from darkness is not inherited", "s.traits.inherited", /grows in the dark and turns pale/, /^Green/],
+    ["lower layers are usually older", "s.fossils.past", /Layer A is below layer B/, /layer A/],
+    ["seashells in a desert mean an old sea", "s.fossils.past", /Seashell fossils are found in a desert/, /under the sea/],
+    ["flat teeth grind plants", "s.fossils.past", /flat and wide/, /^Plants$/],
+    ["a camel's hump stores fat", "s.adapt.survive", /camel stores fat/, /without food/],
+    ["longer necks reach more leaves", "s.adapt.survive", /Giraffes vary/, /longer necks/],
+    ["like charges repel", "s.magnets.static", /same wool sweater/, /push apart/],
+    ["magnets lift steel cans", "s.magnets.static", /recycling center/, /^Steel/],
+    ["magnetic pull weakens with distance", "s.magnets.static", /farther from a steel nail/, /weaker/],
+    ["we see by reflected light", "s.eyes.senses", /lamp let you see a book/, /bounces off the book into your eyes/],
+    ["pupils shrink in bright light", "s.eyes.senses", /pupils get smaller/, /less light/],
+    ["snakes smell with their tongues", "s.eyes.senses", /snake flicks/, /Smelling/],
+    ["lungs take in oxygen", "s.structures.functions", /What do the lungs do/, /oxygen/],
+    ["more speed, more energy of motion", "s.speed.collisions", /roller coaster/, /bottom/],
+    ["energy passes in a collision", "s.speed.collisions", /Pool ball A/, /rolls forward/],
+    ["coal is nonrenewable", "s.renewable", /Coal formed/, /^Nonrenewable$/],
+    ["uranium is nonrenewable", "s.renewable", /uranium/, /^Nonrenewable$/],
+    ["geothermal heat is renewable", "s.renewable", /heat from deep inside Earth/, /^Renewable$/],
+    ["drop, cover and hold on", "s.quakes.volcanoes", /shaking while you are indoors/, /Drop, cover and hold on/],
+    ["the Ring of Fire circles the Pacific", "s.quakes.volcanoes", /Ring of Fire/, /Pacific/],
+    ["Florida has very few earthquakes", "s.quakes.volcanoes", /very few earthquakes/, /^Florida$/],
+    ["close contour lines mean steep land", "s.quakes.volcanoes", /very close together/, /^Steep land$/],
+    ["a willow's mass did not come from soil", "s.plant.matter", /willow/, /did not come from soil/],
+    ["plant mass comes from carbon dioxide and water", "s.plant.matter", /giant tree/, /^Carbon dioxide/],
+    ["mold is a decomposer", "s.plant.matter", /Which of these is a decomposer/, /^Mold$/],
+    ["living things form the biosphere", "s.plant.matter", /all living things/, /^Biosphere$/],
+    ["down is toward Earth's center", "s.sun.gravity", /dropped in Australia/, /center/],
+    ["the Sun looks bright because it is close", "s.sun.gravity", /brighter than other stars/, /closer/],
+    ["sunlight takes about 8 minutes", "s.sun.gravity", /sunlight take to reach Earth/, /8 minutes/],
+    ["US noon shadows point north", "s.sun.gravity", /shadows point at noon/, /^North$/],
+    ["winter noon shadows are longer because the Sun is lower", "s.sun.gravity", /longer in winter/, /lower/],
+  ];
+
+  it.each(FACTS)("%s", (_, id, q, key) => {
+    const hits = entries(id).filter((e) => q.test(e.q[0]));
+    expect(hits.length, "matcher found no entry").toBeGreaterThan(0);
+    for (const e of hits) expect(keyOf(e), e.q[0]).toMatch(key);
+  });
+
+  it("never makes a common misconception the key, and does offer them as distractors", () => {
+    const WRONG = /The soil it eats|ate the soil|Light shoots out of your eyes|hump is full of water|farther from the Sun in winter|no gravity on the Moon|the biggest star|Necks grow longer when|turn pale when they need|The Sun moves around Earth|travels around Earth each day|a tan is inherited|Fish once lived on dry mountains|Seeds need soil to sprout/i;
+    const all = Object.values(BANKS).flatMap((levels) => levels.flatMap((l) => l.items));
+    for (const e of all) expect(keyOf(e), e.q[0]).not.toMatch(WRONG);
+    const distractors = all.flatMap((e) => e.a.slice(1).map((c) => c.t[0]));
+    for (const m of ["The hump is full of water", "Earth is farther from the Sun in winter", "There is no gravity on the Moon", "It is the biggest star", "Light shoots out of your eyes to the book", "Necks grow longer when giraffes stretch", "The soil it eats"]) {
+      expect(distractors, m).toContain(m);
+    }
   });
 });
