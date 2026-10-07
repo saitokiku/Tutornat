@@ -10,7 +10,8 @@ import { runCase, type CaseResult } from "./run";
 // The tutor eval (plan task 2.4): 40 scripted conversations, deterministic checks on every turn,
 // a model judge when a real key is present, time to first words and estimated cost per turn.
 // Bars (plan §6): ≥ 90% of turns pass every deterministic check on the real model (the mock is the
-// reference and must pass all of them); median time to first words under 1.5 s on the real model.
+// reference and must pass all of them, known issues below aside); median time to first words under
+// 1.5 s on the real model.
 
 const TTFT_BAR_MS = 1500;
 
