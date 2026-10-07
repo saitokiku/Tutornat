@@ -31,7 +31,7 @@ export function ProvedList({ proved, locale }: { proved: Verified["proved"]; loc
   return (
     <details className="group pl-5">
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted hover:text-ink">
-        <span aria-hidden="true" className="transition-transform group-open:rotate-90">
+        <span aria-hidden="true" className="transition-transform group-open:rotate-90 motion-reduce:transition-none">
           ›
         </span>
         {t("lm.proved.summary", { n: proved.length })}

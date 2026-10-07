@@ -106,8 +106,8 @@ export function ChildSettings({ child }: { child: Profile }) {
 function Toggle({ on, onChange, label, body }: { on: boolean; onChange: (v: boolean) => void; label: string; body: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex w-full items-start gap-3 rounded-md border border-border bg-panel px-4 py-3 text-left hover:bg-panel2">
-      <span aria-hidden="true" className={`mt-0.5 flex h-6 w-10 shrink-0 items-center rounded-full p-0.5 transition-colors ${on ? "bg-ink" : "bg-border"}`}>
-        <span className={`size-5 rounded-full bg-panel shadow-soft transition-transform ${on ? "translate-x-4" : ""}`} />
+      <span aria-hidden="true" className={`mt-0.5 flex h-6 w-10 shrink-0 items-center rounded-full p-0.5 transition-colors motion-reduce:transition-none ${on ? "bg-ink" : "bg-border"}`}>
+        <span className={`size-5 rounded-full bg-panel shadow-soft transition-transform motion-reduce:transition-none ${on ? "translate-x-4" : ""}`} />
       </span>
       <span>
         <span className="block text-sm font-medium text-ink">{label}</span>

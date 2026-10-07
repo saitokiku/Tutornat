@@ -33,7 +33,7 @@ export function Threads({ child }: { child: Profile }) {
                     {t(`child.surface.${th.surface}`)} · {shortDate(th.startedAt, child.locale)} {timeLabel(th.startedAt, child.locale)} · {t("child.turns", { n: th.lines.length })}
                   </span>
                   {th.flagged && <span className="text-xs font-semibold text-accent">{t("child.flagged")}</span>}
-                  <span aria-hidden="true" className="ml-auto text-muted transition-transform group-open:rotate-90">
+                  <span aria-hidden="true" className="ml-auto text-muted transition-transform group-open:rotate-90 motion-reduce:transition-none">
                     ›
                   </span>
                 </summary>
