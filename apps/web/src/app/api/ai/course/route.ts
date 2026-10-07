@@ -36,9 +36,14 @@ export async function POST(req: Request) {
   if (hit) return ndjson(hit, req.signal);
   const capped = await spendGate(req, "course", parsed.data.locale);
   if (capped) return capped;
+  // A file's name can hold a family name ("Ada's worksheet.pdf"). Only a browser that took those out
+  // (aiFetch, which also sends the opaque ids) gets its file names to the writer; otherwise the
+  // writer hears that a file of that kind was attached.
+  const scrubbed = req.headers.has("x-kaizen-account") || req.headers.has("x-kaizen-learner");
+  const course = scrubbed ? parsed.data : { ...parsed.data, sources: parsed.data.sources?.map((s) => ({ name: `a ${s.kind} file`, kind: s.kind })) };
   const spent = () => {
     const scope = overSpend(req);
     return scope && { scope, message: capMessage("course", scope, parsed.data.locale) };
   };
-  return ndjson(writeCourse(parsed.data, m, req.signal, spent), req.signal);
+  return ndjson(writeCourse(course, m, req.signal, spent), req.signal);
 }

@@ -20,7 +20,8 @@ export const CourseRequest = z.object({
   working: z.array(z.string().max(60)).max(8).optional(),
   // Given to the writer by name: what a family attached is often the real topic ("Unit 4
   // Photosynthesis study guide.pdf" with "help me study for my test"). A course written from them is
-  // that family's own and is never cached or shared.
+  // that family's own and is never cached or shared. (The course route passes the names on only
+  // when the browser scrubbed them; see app/api/ai/course/route.ts.)
   sources: z.array(z.object({ name: z.string().max(120), kind: z.string().max(10) })).max(30).optional(),
 });
 export type CourseRequest = z.infer<typeof CourseRequest>;

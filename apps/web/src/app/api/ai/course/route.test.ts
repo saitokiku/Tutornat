@@ -30,8 +30,11 @@ const outline = (title: string, count: number) => ({ title, lessons: Array.from(
 /** A writer that must not be reached. */
 const unreachable = () => new MockLanguageModelV4({ doGenerate: async () => Promise.reject(new Error("the writer was called")) });
 
+// Each request from its own address: the course rate limit is six a minute per address.
+let hosts = 0;
+const ip = () => `198.18.9.${++hosts}`;
 const post = (body: CourseRequest, learner = "b".repeat(32)) =>
-  POST(new Request("http://localhost/api/ai/course", { method: "POST", headers: { "content-type": "application/json", "x-kaizen-learner": learner, "x-kaizen-account": "c".repeat(32) }, body: JSON.stringify(body) }));
+  POST(new Request("http://localhost/api/ai/course", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip(), "x-kaizen-learner": learner, "x-kaizen-account": "c".repeat(32) }, body: JSON.stringify(body) }));
 const events = async (res: Response) => (await res.text()).trim().split("\n").map((l) => JSON.parse(l) as { type: string; error?: string; message?: string; lesson?: { title: string }; title?: string });
 
 /** Spends this learner's day, as a model call would. */
@@ -85,6 +88,21 @@ describe("POST /api/ai/course", () => {
     expect((await events(await post(req, learner)))[1].title).toBe("Study skills");
     const withFile = await events(await post({ ...req, sources: [{ name: "Unit 4 Photosynthesis study guide.pdf", kind: "pdf" }] }, learner));
     expect(withFile).toEqual([expect.objectContaining({ type: "error", error: "budget" })]);
+  });
+
+  it("gives the writer attached file names only from a browser that took the family's names out of them", async () => {
+    const req: CourseRequest = { goal: "plants", grade: "5", subject: "science", length: "lesson", locale: "en", sources: [{ name: "Ada's photosynthesis notes.pdf", kind: "pdf" }] };
+    const prompts = async (headers: Record<string, string>) => {
+      const queue: unknown[] = [outline("Plants", 1), lesson];
+      slot.writer = new MockLanguageModelV4({ doGenerate: async () => reply(queue.shift()) });
+      await (await POST(new Request("http://localhost/api/ai/course", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip(), ...headers }, body: JSON.stringify(req) }))).text();
+      return JSON.stringify(slot.writer.doGenerateCalls.map((c) => c.prompt));
+    };
+    // aiFetch sends the ids, and has already scrubbed the body ("[name]'s photosynthesis notes.pdf" in real use).
+    expect(await prompts({ "x-kaizen-learner": "a1".repeat(16) })).toContain("photosynthesis notes.pdf");
+    const plain = await prompts({});
+    expect(plain).not.toContain("Ada");
+    expect(plain).toContain("They attached: a pdf file");
   });
 
   it("stops a course between lessons once the day's cost cap is reached, and says why", async () => {

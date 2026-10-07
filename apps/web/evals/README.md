@@ -124,7 +124,8 @@ disagree, the K–2 reading load, the language) on top of the shared `gateLesson
 A lesson that fails is retried once with the reasons; a second failure is skipped and named to the
 family. Only courses whose every lesson passed are cached for the next family, keyed by the goal
 (normalized, math symbols kept: "x + 5" is not "x - 5"), grade, language, length, subject and
-interests; a course written from a family's attached files is never cached or served from the cache.
+interests. A course written from a family's attached files is never cached or served from the cache,
+and the writer sees the files' names only from a browser that took family names out of them (aiFetch).
 
 1. Run `EVAL_REAL=1 EVAL_SUITE=writer npm run evals` and open `evals/out/writer.md`.
 2. **Outputs the schema refused** should be 0. If not, the model cannot produce the shape: fix the
