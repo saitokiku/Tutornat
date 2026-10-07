@@ -49,6 +49,7 @@ import living from "./science-living";
 import livingEs from "./science-living-es";
 import lightSound from "./science-light-sound";
 import lifeCycles from "./science-life-cycles";
+import lifeCyclesEs from "./science-life-cycles-es";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -101,4 +102,5 @@ export const REGISTRY: CatalogueEntry[] = [
   livingEs,
   lightSound,
   lifeCycles,
+  lifeCyclesEs,
 ];
