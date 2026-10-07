@@ -14,7 +14,7 @@ Rule: a box is ticked only after its check actually ran. Note blockers under the
 - [x] 6. Student shell, Home, magic box
 - [x] 7. Generation flow
 - [x] 8. Courses + course page
-- [ ] 9. Lesson stage
+- [x] 9. Lesson stage
 - [ ] 10. Growth, Family, Settings
 - [ ] 11. Docs, verification, review
 

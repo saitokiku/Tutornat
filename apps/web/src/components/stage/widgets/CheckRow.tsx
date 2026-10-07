@@ -5,11 +5,11 @@ import { Button } from "@/components/ui";
 import { useT } from "@/i18n";
 
 /** Shared "Check my answer" control + result line for widgets that have a target. */
-export function CheckRow({ result, onCheck }: { result: boolean | null; onCheck: () => void }) {
+export function CheckRow({ result, onCheck, disabled }: { result: boolean | null; onCheck: () => void; disabled?: boolean }) {
   const t = useT();
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button variant="primary" onClick={onCheck}>
+      <Button variant="primary" onClick={onCheck} disabled={disabled}>
         {t("w.check")}
       </Button>
       <p role="status" className={`text-sm font-medium ${result === null ? "sr-only" : result ? "text-good" : "text-bad"}`}>

@@ -63,6 +63,13 @@
 
   --animate-fade-up: fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-split: split 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-jiggle: jiggle 0.9s ease-in-out infinite;
+  @keyframes jiggle {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(var(--j, 1px), calc(var(--j, 1px) * -1)); }
+    50% { transform: translate(calc(var(--j, 1px) * -1), calc(var(--j, 1px) * 0.6)); }
+    75% { transform: translate(calc(var(--j, 1px) * 0.5), var(--j, 1px)); }
+  }
   @keyframes split {
     from { opacity: 0.35; transform: scaleY(0.8); }
     to { opacity: 1; transform: scaleY(1); }

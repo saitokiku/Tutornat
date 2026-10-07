@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { IconMinus, IconPlus } from "@/components/icons";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
@@ -26,6 +26,13 @@ export function FractionBar({ widget, onCheck, tint = "var(--color-math)" }: Pro
   const [focus, setFocus] = useState(0);
   const [result, setResult] = useState<boolean | null>(null);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const refocus = useRef(false);
+
+  // Changing the number of parts redraws the bar; keep keyboard focus on the same part.
+  useEffect(() => {
+    if (refocus.current) refs.current[focus]?.focus();
+    refocus.current = false;
+  }, [parts, focus]);
 
   const changeParts = (n: number) => {
     const next = Math.max(MIN, Math.min(MAX, n));
@@ -57,6 +64,7 @@ export function FractionBar({ widget, onCheck, tint = "var(--color-math)" }: Pro
     };
     if (actions[e.key]) {
       e.preventDefault();
+      refocus.current = true;
       actions[e.key]();
     }
   };
