@@ -1,28 +1,26 @@
 # Status
 
-## Final product — queue 3 (2026-10-07, daytime)
+## Queue 3 — Milestone 1 of the 1.0 plan (dashboard, shadow worker, learner model)
 
-Owner: "build a final product. the dashboard. the ultimate tutor, the shadoworker, the visual
-dashboard that makes academic life easy or learning new custom topics creates a course for you …
-feel free to go gung ho on anything removing or adding." Plus: the magic box sorts homework, assignments
-and coursework; the chatbot talks about topics and tutors; calendar and course organization show the
-path; deterministic knowledge from real APIs (OpenStax, fmhy list).
+Plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md) §7 M1. Work top
+to bottom. Tick only after `npm run verify` passed and the work is committed. Preview only. Needs
+nothing from the owner.
 
-Work top to bottom. Tick only after `npm run verify` passed and the work is committed. Preview only.
+In progress: (none) — waiting on the owner's go · check-ins without a commit: 0
 
-Paused 2026-10-07 by the owner: write the final-product plan first (docs/plans/2026-10-07-kaizenedu-1.0-plan.md). Resume here after the owner's go.
-
-- [x] R1. Knowledge layer `src/knowledge/` + `/api/know/*`: Wikipedia summaries (en/es, cited), dictionary (Datamuse defs), rhymes/syllables, books (Open Library, Gutendex, LibriVox), poems (PoetryDB), standards text (Common Standards Project). Server-side, cached, rate-limited, no learner identifiers forwarded. Tests with mocked fetch.
-- [ ] R2. Magic box = universal intake: homework / test / practice / learn, visible choice with a smart default; homework and tests become calendar items with linked skills and prep; practice starts a set; learn builds a course.
-- [ ] R3. Courses from real sources in demo mode: a topic course assembled from Wikipedia + dictionary + matching catalogue lesson + practice + sources, labelled; AI mode unchanged.
-- [ ] R4. Tutor that knows things: demo Talk answers with cited knowledge (wiki, definitions, lesson key points, practice, sources); AI tutor gets `look_up` and `define_word` tools; topic → skill matching fixed (fallacy → e.fallacies).
-- [ ] R5. Learn = the path: per subject, your courses in order with progress and next lesson, the suggested next course, skills line, assigned-by-grown-up first; build at the top.
-- [ ] R6. Calendar = the week's path: each day shows its plan (done / projected), school items; event page for homework/tests (notes, attached text, linked skills, Get help, prep, done).
-- [ ] R7. Today dashboard: status strip (due today, test in N days, checks ready), plan, school, courses in progress, magic box; K–2 version stays picture-first.
-- [ ] R8. Growth on the evidence model (practice + lessons; proved/practicing per subject; week by week).
-- [ ] R9. Interactivity: tap-to-mark dots for counting items; number-line tap input for number-line items; family overview with nudges (overdue check, stuck, test with no prep).
-- [ ] R10. e2e + a11y updated, screenshots, README/STATUS, preview deploy, push, report.
-
+- [x] R1. Knowledge layer `src/knowledge/` + `/api/know/*` (done 2026-10-07).
+- [ ] 1.1 Intake classifier + magic box as universal intake (homework / test / practice / learn, visible choice).
+- [ ] 1.2 School item page (notes, attached text/photo, linked skills + status, Get help, prep set, resources, done).
+- [ ] 1.3 Calendar week shows each day's plan (done / projected).
+- [ ] 1.4 Learn = path per subject + reorder.
+- [ ] 1.5 Today status strip + courses in progress; K–2 variant.
+- [ ] 1.6 Growth on the evidence model.
+- [ ] 1.7 Family nudges (overdue check, stuck, test with no prep, idle 5 days).
+- [ ] 1.8 Interactive inputs: tap-to-mark dots, number-line tap, fraction-bar tap, clock set.
+- [ ] 1.9 Sitting design: clean finishes offer and never auto-start; "I'm done for today"; K–2 10-minute default.
+- [ ] 1.10 Learner model v1 (`learning/profile.ts`) + "How we teach {name}" on the child page.
+- [ ] 1.11 Teaching acts (`learning/outcomes.ts`) + "Is it working?" on the child page.
+- [ ] 1.12 e2e + a11y updated, screenshots, README/STATUS, preview deploy, push, report. Then Milestone 2.
 
 ## Learning fabric — overnight queue 2 (owner asleep 2026-10-07 → morning)
 
