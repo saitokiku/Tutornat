@@ -43,9 +43,12 @@ checking X with little reading, and a parent can see truthfully what happened.
 
 ## Positioning
 
-Not a chatbot (the owner's critique of Oboe: friction, chat-only, no dashboard). A course you can see
-and touch, inside a real dashboard, with a tutor that will join the stage. Honest records instead of
-invented mastery scores.
+Three doors on the front — *Stuck on homework right now? A test coming? Need to keep up in general?* —
+and one engine behind them. Not a chatbot (the owner's critique of Oboe: friction, chat-only, no
+dashboard) and "not just a Claude and rich text": code-checked practice, real cited knowledge, an AI
+tutor with tools, a visual stage and voice, all on one record, connected so learning feels frictionless
+("growth mode", kept on by the shadow worker). Honest records instead of invented mastery scores.
+Claims discipline: the landing promises only what works that day.
 
 ## Operating Context
 
