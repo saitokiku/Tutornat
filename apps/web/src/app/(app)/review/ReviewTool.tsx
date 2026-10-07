@@ -1,23 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IconArrowLeft } from "@/components/icons";
 import { useTitle } from "@/components/LangSync";
-import { Badge, Button, Field, Notice, SubjectDot } from "@/components/ui";
+import { Badge, Button, Field, SubjectDot } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
 import { shortDate } from "@/lib/format";
-import { gradeSpan, NOTE_MAX, previewSkill, reviewHistory, reviewSkill, reviewState, reviewedLines, strands, type ReviewState } from "@/lib/review";
-import { useStore } from "@/lib/store";
+import {
+  countShown,
+  filterQuery,
+  gradeSpan,
+  matchingSkills,
+  nextSkill,
+  NOTE_MAX,
+  previewSkill,
+  readFilters,
+  reviewHistory,
+  reviewSkill,
+  reviewState,
+  reviewedLines,
+  SHOWS,
+  strands,
+  type ReviewFilters,
+  type ReviewState,
+} from "@/lib/review";
+import { useStore, type StoreState } from "@/lib/store";
 import type { Subject } from "@/lib/types";
 import { getSkill, SKILLS } from "@/practice/skills";
 import type { Skill } from "@/practice/types";
 import { ItemPair } from "./ItemPair";
 
-type Filter = "draft" | "flagged" | "approved" | "computed" | "all";
-const FILTERS: Filter[] = ["draft", "flagged", "approved", "computed", "all"];
 const SUBJECTS: Subject[] = ["math", "english", "science"];
 
 const STATE_LABEL: Record<ReviewState, Key> = {
@@ -29,38 +44,38 @@ const STATE_LABEL: Record<ReviewState, Key> = {
 };
 const STATE_TONE: Record<ReviewState, "muted" | "accent" | "good" | "warn"> = { draft: "accent", approved: "good", "in-code": "good", flagged: "warn", computed: "muted" };
 
-const matches = (f: Filter, st: ReviewState) => f === "all" || (f === "approved" ? st === "approved" || st === "in-code" : st === f);
 const STRANDS = strands();
+const statesOf = (s: StoreState) => new Map(SKILLS.map((k) => [k.id, reviewState(s, k)]));
+/** The list's address for these filters; a skill's address keeps them, so its back link returns to the same list. */
+const listHref = (f: ReviewFilters) => (filterQuery(f) ? `/review?${filterQuery(f)}` : "/review");
+const skillHref = (id: string, f: ReviewFilters) => `/review?skill=${encodeURIComponent(id)}${filterQuery(f) ? `&${filterQuery(f)}` : ""}`;
 
 export function ReviewTool() {
   const t = useT();
   useTitle(t("trust.review.title"));
-  const skillId = useSearchParams().get("skill");
+  const params = useSearchParams();
+  const skillId = params.get("skill");
   const skill = skillId ? getSkill(skillId) : undefined;
-  return skill ? <SkillView key={skill.id} skill={skill} /> : <SkillList />;
+  const filters = readFilters(params);
+  return skill ? <SkillView key={skill.id} skill={skill} filters={filters} /> : <SkillList initial={filters} />;
 }
 
-function SkillList() {
+function SkillList({ initial }: { initial: ReviewFilters }) {
   const t = useT();
   const locale = useLocale();
-  const states = useStore((s) => new Map(SKILLS.map((k) => [k.id, reviewState(s, k)])));
+  const router = useRouter();
+  const states = useStore(statesOf);
   const lines = useStore(reviewedLines);
-  const [subject, setSubject] = useState<Subject | "all">("all");
-  const [strand, setStrand] = useState("all");
-  const [filter, setFilter] = useState<Filter>("draft");
-  const [query, setQuery] = useState("");
+  const [f, setF] = useState(initial);
   const [copied, setCopied] = useState<"yes" | "no" | null>(null);
-  const q = query.trim().toLowerCase();
-  const strandOptions = STRANDS.filter((st) => subject === "all" || st.subject === subject);
-  const inStrand = new Set(strandOptions.find((st) => st.key === strand)?.ids ?? []);
-  const shown = SKILLS.filter(
-    (k) =>
-      (subject === "all" || k.subject === subject) &&
-      (!inStrand.size || inStrand.has(k.id)) &&
-      matches(filter, states.get(k.id)!) &&
-      (!q || k.title.en.toLowerCase().includes(q) || k.title.es.toLowerCase().includes(q) || k.id.includes(q)),
-  );
-  const count = (f: Filter) => SKILLS.filter((k) => matches(f, states.get(k.id)!)).length;
+  const set = (change: Partial<ReviewFilters>) => {
+    const next = { ...f, ...change };
+    setF(next);
+    router.replace(listHref(next), { scroll: false });
+  };
+  const strandOptions = STRANDS.filter((st) => f.subject === "all" || st.subject === f.subject);
+  const shown = matchingSkills(states, f);
+  const count = (show: ReviewFilters["show"]) => countShown(states, show);
 
   const copy = async () => {
     try {
@@ -86,7 +101,7 @@ function SkillList() {
           <legend className="mb-2 text-xs font-semibold text-muted">{t("trust.review.subject")}</legend>
           <div className="flex flex-wrap gap-2">
             {(["all", ...SUBJECTS] as const).map((x) => (
-              <button key={x} type="button" aria-pressed={subject === x} onClick={() => (setSubject(x), setStrand("all"))} className="k-chip min-h-11 px-4 text-sm">
+              <button key={x} type="button" aria-pressed={f.subject === x} onClick={() => set({ subject: x, strand: "all" })} className="k-chip min-h-11 px-4 text-sm">
                 {x !== "all" && <SubjectDot subject={x} />}
                 {x === "all" ? t("trust.review.all") : t(`subject.${x}`)}
               </button>
@@ -96,7 +111,7 @@ function SkillList() {
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label={t("trust.review.strand")}>
             {(a) => (
-              <select {...a} className="k-input" value={strand} onChange={(e) => setStrand(e.target.value)}>
+              <select {...a} className="k-input" value={f.strand} onChange={(e) => set({ strand: e.target.value })}>
                 <option value="all">{t("trust.review.allStrands")}</option>
                 {strandOptions.map((st) => (
                   <option key={st.key} value={st.key}>
@@ -108,16 +123,16 @@ function SkillList() {
           </Field>
           <Field label={t("trust.review.status")}>
             {(a) => (
-              <select {...a} className="k-input" value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
-                {FILTERS.map((f) => (
-                  <option key={f} value={f}>
-                    {t(`trust.review.filter.${f}`)} ({count(f)})
+              <select {...a} className="k-input" value={f.show} onChange={(e) => set({ show: e.target.value as ReviewFilters["show"] })}>
+                {SHOWS.map((show) => (
+                  <option key={show} value={show}>
+                    {t(`trust.review.filter.${show}`)} ({count(show)})
                   </option>
                 ))}
               </select>
             )}
           </Field>
-          <Field label={t("trust.review.search")}>{(a) => <input {...a} type="search" className="k-input" value={query} onChange={(e) => setQuery(e.target.value)} />}</Field>
+          <Field label={t("trust.review.search")}>{(a) => <input {...a} type="search" className="k-input" maxLength={80} value={f.q} onChange={(e) => set({ q: e.target.value })} />}</Field>
         </div>
       </div>
 
@@ -129,7 +144,7 @@ function SkillList() {
             const st = states.get(k.id)!;
             return (
               <li key={k.id}>
-                <Link href={`/review?skill=${encodeURIComponent(k.id)}`} className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-panel2/60 sm:px-5">
+                <Link href={skillHref(k.id, f)} className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-panel2/60 sm:px-5">
                   <SubjectDot subject={k.subject} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-ink">{k.title[locale]}</span>
@@ -172,32 +187,44 @@ function SkillList() {
   );
 }
 
-function SkillView({ skill }: { skill: Skill }) {
+function SkillView({ skill, filters }: { skill: Skill; filters: ReviewFilters }) {
   const t = useT();
   const locale = useLocale();
   const heading = useRef<HTMLHeadingElement>(null);
+  const noteBox = useRef<HTMLTextAreaElement>(null);
+  const teacherBox = useRef<HTMLInputElement>(null);
   const state = useStore((s) => reviewState(s, skill));
   const history = useStore((s) => reviewHistory(s, skill.id));
-  const names = useStore((s) => new Map(s.accounts.map((a) => [a.id, a.displayName])));
+  const me = useStore((s) => s.accounts.find((a) => a.id === s.session.accountId)?.displayName ?? "");
+  const next = useStore((s) => nextSkill(statesOf(s), filters, skill.id));
   const levels = useMemo(() => previewSkill(skill), [skill]);
   const [note, setNote] = useState("");
+  const [teacher, setTeacher] = useState(false);
   const [done, setDone] = useState<"approved" | "flagged" | null>(null);
-  const [needNote, setNeedNote] = useState(false);
+  const [need, setNeed] = useState<"note" | "teacher" | null>(null);
   useEffect(() => heading.current?.focus(), []);
 
   const decide = (status: "approved" | "flagged") => {
-    if (status === "flagged" && !note.trim()) return setNeedNote(true);
-    if (!reviewSkill(skill.id, status, note)) return;
+    // A refusal moves focus to what needs fixing, so its error is read out.
+    if (status === "flagged" && !note.trim()) {
+      setNeed("note");
+      return noteBox.current?.focus();
+    }
+    if (status === "approved" && !teacher) {
+      setNeed("teacher");
+      return teacherBox.current?.focus();
+    }
+    if (!reviewSkill(skill.id, status, note, { teacher })) return;
     setNote("");
-    setNeedNote(false);
+    setNeed(null);
     setDone(status);
   };
-  const who = (id: string) => names.get(id) ?? t("trust.review.someone");
   const latest = history[0];
+  const decidedLine = (r: (typeof history)[number]) => t(r.status === "approved" ? "trust.review.approvedBy" : "trust.review.flaggedBy", { date: shortDate(r.at, locale), who: me });
 
   return (
     <div className="space-y-8">
-      <Link href="/review" className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted hover:text-ink">
+      <Link href={listHref(filters)} className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted hover:text-ink">
         <IconArrowLeft size={16} /> {t("trust.review.back")}
       </Link>
 
@@ -218,50 +245,73 @@ function SkillView({ skill }: { skill: Skill }) {
         </p>
       </header>
 
-      <section aria-labelledby="decision" className="space-y-4 rounded-lg border border-border bg-panel p-5 shadow-soft sm:p-6">
-        <h2 id="decision" className="font-brand text-t2 font-semibold text-ink">
+      <section id="decision" aria-labelledby="decision-h" className="scroll-mt-6 space-y-4 rounded-lg border border-border bg-panel p-5 shadow-soft sm:p-6">
+        <h2 id="decision-h" className="font-brand text-t2 font-semibold text-ink">
           {t("trust.review.decision")}
         </h2>
         {skill.content === "computed" ? (
           <p className="max-w-prose text-sm text-ink">{t("trust.review.computedBody")}</p>
         ) : (
           <>
-            <p className="text-sm text-ink">
-              {state === "in-code"
-                ? t("trust.review.inCode")
-                : latest
-                  ? t(latest.status === "approved" ? "trust.review.approvedBy" : "trust.review.flaggedBy", { date: shortDate(latest.at, locale), who: who(latest.by) })
-                  : t("trust.review.never")}
-            </p>
+            <p className="text-sm text-ink">{state === "in-code" ? t("trust.review.inCode") : latest ? decidedLine(latest) : t("trust.review.never")}</p>
             {latest?.note && <p className="whitespace-pre-line rounded-sm bg-panel2 px-4 py-3 text-sm text-ink">{latest.note}</p>}
-            <Field label={t("trust.review.note")} hint={t("trust.review.noteHint")} error={needNote ? t("trust.review.noteNeeded") : undefined}>
+            <Field label={t("trust.review.note")} hint={t("trust.review.noteHint")} error={need === "note" ? t("trust.review.noteNeeded") : undefined}>
               {(a) => (
                 <textarea
                   {...a}
+                  ref={noteBox}
                   rows={3}
                   maxLength={NOTE_MAX}
                   value={note}
-                  onChange={(e) => (setNote(e.target.value), setNeedNote(false), setDone(null))}
+                  onChange={(e) => (setNote(e.target.value), setNeed(null), setDone(null))}
                   className="k-input resize-y text-sm"
                 />
               )}
             </Field>
+            <div className="space-y-1.5">
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm text-ink">
+                <input
+                  ref={teacherBox}
+                  type="checkbox"
+                  checked={teacher}
+                  onChange={(e) => (setTeacher(e.target.checked), setNeed(null))}
+                  aria-invalid={need === "teacher" || undefined}
+                  aria-describedby={need === "teacher" ? "teacher-error" : "teacher-hint"}
+                  className="mt-0.5 size-5 shrink-0 accent-ink"
+                />
+                <span>{t("trust.review.teacher")}</span>
+              </label>
+              {need === "teacher" ? (
+                <p id="teacher-error" className="text-xs font-medium text-bad">
+                  {t("trust.review.teacherNeeded")}
+                </p>
+              ) : (
+                <p id="teacher-hint" className="text-xs text-muted">
+                  {t("trust.review.teacherHint")}
+                </p>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button onClick={() => decide("approved")}>{t("trust.review.approve")}</Button>
               <Button variant="secondary" onClick={() => decide("flagged")}>
                 {t("trust.review.flag")}
               </Button>
             </div>
-            <div role="status" className="min-h-5 text-sm">
-              {done && <Notice tone={done === "approved" ? "good" : "warn"}>{t(done === "approved" ? "trust.review.approved" : "trust.review.flagged")}</Notice>}
+            <div role="status" className="text-sm empty:m-0">
+              {done && (
+                <p className={`rounded-sm border px-4 py-3 text-ink ${done === "approved" ? "border-good/25 bg-good/10" : "border-warn/25 bg-warn/10"}`}>
+                  {t(done === "approved" ? "trust.review.approved" : "trust.review.flagged")}
+                </p>
+              )}
             </div>
+            {done && next && <NextLink skill={next} filters={filters} />}
             {history.length > 1 && (
               <details className="text-sm">
                 <summary className="inline-flex min-h-11 cursor-pointer items-center font-medium text-muted hover:text-ink">{t("trust.review.history", { n: history.length })}</summary>
                 <ul className="mt-2 space-y-2">
                   {history.map((r) => (
                     <li key={r.id} className="rounded-sm bg-panel2 px-4 py-2">
-                      <span className="font-medium text-ink">{t(r.status === "approved" ? "trust.review.approvedBy" : "trust.review.flaggedBy", { date: shortDate(r.at, locale), who: who(r.by) })}</span>
+                      <span className="font-medium text-ink">{decidedLine(r)}</span>
                       {r.note && <span className="block whitespace-pre-line text-muted">{r.note}</span>}
                     </li>
                   ))}
@@ -296,6 +346,26 @@ function SkillView({ skill }: { skill: Skill }) {
           </details>
         ))}
       </div>
+
+      {/* After the last level: back up to the decision without scrolling past every question, or on. */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-6">
+        {skill.content !== "computed" && (
+          <a href="#decision" className="inline-flex min-h-11 items-center text-sm font-medium text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
+            {t("trust.review.toDecision")}
+          </a>
+        )}
+        {next && <NextLink skill={next} filters={filters} />}
+      </div>
     </div>
+  );
+}
+
+function NextLink({ skill, filters }: { skill: Skill; filters: ReviewFilters }) {
+  const t = useT();
+  const locale = useLocale();
+  return (
+    <Link href={skillHref(skill.id, filters)} className="inline-flex min-h-11 items-center text-sm font-medium text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
+      {t("trust.review.next", { skill: skill.title[locale] })}
+    </Link>
   );
 }

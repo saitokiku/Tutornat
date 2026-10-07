@@ -5,13 +5,25 @@ import { REVIEWED } from "@/practice/reviewed";
 import { gradeIndex, makeItem, SKILLS } from "@/practice/skills";
 import type { Choice, Item, Skill } from "@/practice/types";
 import { newId, update, type StoreState } from "./store";
-import type { Grade, Subject } from "./types";
+import type { Grade, Locale, Subject } from "./types";
 
-/** The newest review decision on a skill made on this device (the /review tool). */
-export const reviewOf = (s: StoreState, skillId: string) =>
-  s.reviews.filter((r) => r.skillId === skillId).sort((a, b) => b.at - a.at)[0];
+// Review decisions are the signed-in family's own: on a shared device, one family's approvals never
+// change what another family's learners see, and nobody sees another family's names or notes.
+// Only a teacher approves (AGENTS rule 8: a bank stays a draft until a teacher reviews it); anyone in
+// the Parent view can flag a problem with a note.
 
-/** Computed skills are checked by code; draft banks count as reviewed once a teacher approved them. */
+/** Every decision on a skill made by the signed-in family, newest first. */
+export const reviewHistory = (s: StoreState, skillId: string) =>
+  s.reviews.filter((r) => r.skillId === skillId && r.by === s.session.accountId).sort((a, b) => b.at - a.at);
+
+/** The signed-in family's newest decision on a skill (the /review tool). */
+export const reviewOf = (s: StoreState, skillId: string): SkillReview | undefined => reviewHistory(s, skillId)[0];
+
+/**
+ * Computed skills are checked by code; a draft bank counts as reviewed once it is listed in
+ * practice/reviewed.ts, or a teacher in this family approved it on this device. Every "Draft
+ * questions" badge uses this.
+ */
 export const isReviewed = (s: StoreState, skill: Pick<Skill, "id" | "content">) =>
   skill.content === "computed" || REVIEWED.includes(skill.id) || reviewOf(s, skill.id)?.status === "approved";
 
@@ -19,7 +31,7 @@ export const isReviewed = (s: StoreState, skill: Pick<Skill, "id" | "content">) 
 
 /**
  * computed: answers are calculated, nothing to approve · in-code: listed in practice/reviewed.ts ·
- * approved / flagged: the newest decision made on this device · draft: nobody has looked yet.
+ * approved / flagged: this family's newest decision · draft: nobody here has looked yet.
  */
 export type ReviewState = "computed" | "in-code" | "approved" | "flagged" | "draft";
 
@@ -33,11 +45,14 @@ export const NOTE_MAX = 1000;
 
 /**
  * Records a grown-up's decision on a skill's questions (both languages, every level). A flag needs a
- * note saying what is wrong. Only the Parent view may review; returns null when refused.
+ * note saying what is wrong; an approval needs `teacher` (the grown-up says they are a teacher who
+ * checked every level), so every approval on record is a teacher's. Only the Parent view may review;
+ * returns null when refused.
  */
-export function reviewSkill(skillId: string, status: SkillReview["status"], note?: string): SkillReview | null {
+export function reviewSkill(skillId: string, status: SkillReview["status"], note?: string, who: { teacher?: boolean } = {}): SkillReview | null {
   const clean = note?.replace(/\s+\n/g, "\n").trim().slice(0, NOTE_MAX) || undefined;
   if (status === "flagged" && !clean) return null;
+  if (status === "approved" && !who.teacher) return null;
   const skill = SKILLS.find((k) => k.id === skillId);
   if (!skill || skill.content === "computed") return null;
   let made: SkillReview | null = null;
@@ -71,32 +86,83 @@ export function strands(): Strand[] {
 /** "K–4", "6–7", or one grade: the span in the strand's name. */
 export const gradeSpan = (st: Pick<Strand, "from" | "to">) => (st.from === st.to ? st.from : `${st.from}–${st.to}`);
 
-/** Every decision on a skill, newest first. */
-export const reviewHistory = (s: StoreState, skillId: string) => s.reviews.filter((r) => r.skillId === skillId).sort((a, b) => b.at - a.at);
-
 /**
- * Lines to paste into practice/reviewed.ts: skills approved on this device that the file doesn't list
- * yet, in teaching order.
+ * Lines to paste into practice/reviewed.ts: skills a teacher in this family approved that the file
+ * doesn't list yet, in teaching order.
  */
 export function reviewedLines(s: StoreState): string[] {
   return SKILLS.filter((k) => k.content === "draft" && !REVIEWED.includes(k.id) && reviewOf(s, k.id)?.status === "approved").map((k) => `  "${k.id}",`);
 }
 
+// ----- which skills the list shows (kept in the URL, so Back and "All skills" return to it) -----
+
+export type ReviewShow = "draft" | "flagged" | "approved" | "computed" | "all";
+export const SHOWS: ReviewShow[] = ["draft", "flagged", "approved", "computed", "all"];
+export type ReviewFilters = { subject: Subject | "all"; strand: string; show: ReviewShow; q: string };
+const SUBJECTS: Subject[] = ["math", "english", "science"];
+const DEFAULTS: ReviewFilters = { subject: "all", strand: "all", show: "draft", q: "" };
+
+export function readFilters(p: URLSearchParams): ReviewFilters {
+  const subject = p.get("subject") as Subject;
+  const show = p.get("show") as ReviewShow;
+  return {
+    subject: SUBJECTS.includes(subject) ? subject : "all",
+    strand: p.get("strand") || "all",
+    show: SHOWS.includes(show) ? show : "draft",
+    q: (p.get("q") ?? "").slice(0, 80),
+  };
+}
+
+/** The filters as URL parameters, leaving out defaults ("" for none). */
+export function filterQuery(f: ReviewFilters): string {
+  const p = new URLSearchParams();
+  for (const k of ["subject", "strand", "show", "q"] as const) if (f[k] && f[k] !== DEFAULTS[k]) p.set(k, f[k]);
+  return p.toString();
+}
+
+const showMatches = (show: ReviewShow, st: ReviewState) => show === "all" || (show === "approved" ? st === "approved" || st === "in-code" : st === show);
+
+/** Skills the list shows for these filters, in teaching order. */
+export function matchingSkills(states: ReadonlyMap<string, ReviewState>, f: ReviewFilters, all: readonly Skill[] = SKILLS): Skill[] {
+  const strand = strands().find((st) => st.key === f.strand && (f.subject === "all" || st.subject === f.subject));
+  const inStrand = new Set(strand?.ids ?? []);
+  const q = f.q.trim().toLowerCase();
+  return all.filter(
+    (k) =>
+      (f.subject === "all" || k.subject === f.subject) &&
+      (!inStrand.size || inStrand.has(k.id)) &&
+      showMatches(f.show, states.get(k.id) ?? "draft") &&
+      (!q || k.title.en.toLowerCase().includes(q) || k.title.es.toLowerCase().includes(q) || k.id.includes(q)),
+  );
+}
+
+/** How many skills are in each state. */
+export const countShown = (states: ReadonlyMap<string, ReviewState>, show: ReviewShow) => SKILLS.filter((k) => showMatches(show, states.get(k.id) ?? "draft")).length;
+
+/** The next skill after `skillId` (in teaching order) that the list shows for these filters, if any. */
+export function nextSkill(states: ReadonlyMap<string, ReviewState>, f: ReviewFilters, skillId: string): Skill | undefined {
+  const at = SKILLS.findIndex((k) => k.id === skillId);
+  return matchingSkills(states, f).find((k) => SKILLS.indexOf(k) > at);
+}
+
 // ----- previewing a bank -----
+
+/** What other versions of a question offer that the one shown doesn't. Hints and steps are by sentence. */
+export type Extras = { choices: Choice[]; wrong: { value: string; why: string }[]; hints: string[]; steps: string[] };
 
 export type PreviewPair = {
   seed: number;
   en: Item;
   es: Item;
-  /** How many versions of this question were seen (they differ in their other choices, hints or steps). */
+  /** How many versions of this question were seen (they differ in their other choices, wrong-answer tags, hints or steps). */
   versions: number;
-  /** Wrong choices other versions offer that the one shown doesn't. */
-  others: { en: Choice[]; es: Choice[] };
+  /** Every wrong choice (with its misconception tag), likely wrong answer, hint and step other versions offer that the one shown doesn't. */
+  others: Record<Locale, Extras>;
 };
 export type LevelPreview = {
   level: number;
   pairs: PreviewPair[];
-  /** True when drawing stopped because no new question had turned up for a long run of seeds. */
+  /** True when drawing stopped because nothing new had turned up for a long run of seeds. */
   complete: boolean;
   /** Seeds drawn. */
   drawn: number;
@@ -109,16 +175,48 @@ const question = (item: Item) => JSON.stringify([item.prompt, item.say, item.pic
 const version = (item: Item) =>
   JSON.stringify([question(item), (item.choices ?? []).map((c) => `${c.label}|${c.say ?? ""}|${c.picture ?? ""}|${c.why ?? ""}`).sort(), item.wrong, item.hints, item.steps]);
 
+const choiceKey = (c: Choice) => `${c.label}|${c.why ?? ""}`;
+const wrongKey = (w: { value: string; why: string }) => `${w.value}|${w.why}`;
+
+/** Adds to `extra` what `item` offers beyond `shown` and what is already there. True when anything was new. */
+export function collectExtras(extra: Extras, shown: Item, item: Item): boolean {
+  let added = false;
+  const add = <T>(list: T[], seen: T[], from: T[] | undefined, key: (x: T) => string) => {
+    const known = new Set([...seen, ...list].map(key));
+    for (const x of from ?? []) {
+      if (known.has(key(x))) continue;
+      list.push(x);
+      known.add(key(x));
+      added = true;
+    }
+  };
+  add(extra.choices, shown.choices ?? [], item.choices, choiceKey);
+  add(extra.wrong, shown.wrong ?? [], item.wrong, wrongKey);
+  // Hints and steps by sentence: a hint that lists the choices on screen varies with every set of
+  // choices, but its sentences don't, so each one is shown to the reviewer once.
+  add(extra.hints, sentences(shown.hints), sentences(item.hints), String);
+  add(extra.steps, sentences(shown.steps), sentences(item.steps), String);
+  return added;
+}
+
+const sentences = (list: string[]) =>
+  list
+    .flatMap((x) => x.split(/(?<=[.!?…])\s+/))
+    .map((x) => x.trim())
+    .filter(Boolean);
+
 export const PREVIEW_SEED = (i: number) => (i * 2654435761 + 97) % 2 ** 31;
+
+const none = (): Extras => ({ choices: [], wrong: [], hints: [], steps: [] });
 
 /**
  * Every distinct question a level can produce, paired with the Spanish item from the same seed (the
- * learner on the other language gets that one). A question whose wrong choices are drawn from a pool
- * comes in many versions: one is shown, with every other wrong choice the versions can offer, so a
- * reviewer sees each question and each distractor once. Seeds are drawn until nothing new (question
- * or wrong choice) has appeared for max(400, 12 × found) draws in a row (a missed one is then less
- * likely than 1 in 100,000), or until `cap` draws for generators that make questions from numbers.
- * `samples` stops early, for computed skills, where every question is new.
+ * learner on the other language gets that one). A question that comes in many versions (wrong
+ * choices drawn from a pool, hints or steps that vary) is shown once, with every other wrong choice,
+ * likely wrong answer, hint and step its versions can offer, so a reviewer sees each of them once.
+ * Seeds are drawn until nothing new has appeared for max(400, 12 × found) draws in a row (a missed one
+ * is then less likely than 1 in 100,000), or until `cap` draws for generators that make questions
+ * from numbers. `samples` stops early, for computed skills, where every question is new.
  */
 export function previewLevel(skillId: string, level: number, opts: { cap?: number; samples?: number } = {}): LevelPreview {
   const cap = opts.cap ?? 5000;
@@ -137,22 +235,16 @@ export function previewLevel(skillId: string, level: number, opts: { cap?: numbe
     const full = version(en) + version(es);
     const pair = byQuestion.get(key);
     if (!pair) {
-      byQuestion.set(key, { seed, en, es, versions: 1, others: { en: [], es: [] } });
+      byQuestion.set(key, { seed, en, es, versions: 1, others: { en: none(), es: none() } });
       seen.add(full);
       since = 0;
       if (opts.samples && byQuestion.size >= opts.samples) return done(false);
     } else if (!seen.has(full)) {
       seen.add(full);
       pair.versions++;
-      for (const [side, item] of [["en", en], ["es", es]] as const) {
-        const known = new Set([...(pair[side].choices ?? []), ...pair.others[side]].map((c) => c.label));
-        for (const c of item.choices ?? []) {
-          if (known.has(c.label)) continue;
-          pair.others[side].push(c);
-          known.add(c.label);
-          since = 0;
-        }
-      }
+      const newEn = collectExtras(pair.others.en, pair.en, en);
+      const newEs = collectExtras(pair.others.es, pair.es, es);
+      if (newEn || newEs) since = 0;
     }
     if (since >= Math.max(400, 12 * byQuestion.size)) return done(true);
   }

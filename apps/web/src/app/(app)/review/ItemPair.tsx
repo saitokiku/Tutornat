@@ -6,7 +6,7 @@ import { VisualView } from "@/components/stage/visuals";
 import { SUBJECT_TINT } from "@/components/ui";
 import { useT } from "@/i18n";
 import type { Locale, Subject } from "@/lib/types";
-import type { PreviewPair } from "@/lib/review";
+import type { Extras, PreviewPair } from "@/lib/review";
 import { answerText } from "@/practice/answer";
 import type { Choice, Item } from "@/practice/types";
 
@@ -28,7 +28,7 @@ export function ItemPair({ pair, subject, n }: { pair: PreviewPair; subject: Sub
   );
 }
 
-function Side({ item, others, locale, subject }: { item: Item; others: Choice[]; locale: Locale; subject: Subject }) {
+function Side({ item, others, locale, subject }: { item: Item; others: Extras; locale: Locale; subject: Subject }) {
   const t = useT();
   const id = useId();
   const key = item.answer.kind === "choice" ? item.answer.index : -1;
@@ -87,12 +87,12 @@ function Side({ item, others, locale, subject }: { item: Item; others: Choice[];
           </ul>
         </div>
       )}
-      {others.length > 0 && (
+      {others.choices.length > 0 && (
         <div>
           <h5 className="text-xs font-semibold text-muted">{t("trust.review.otherChoices")}</h5>
           <ul className="mt-1 space-y-1">
-            {others.map((c) => (
-              <li key={c.label} className="flex flex-wrap items-baseline gap-x-2 px-2 py-1">
+            {others.choices.map((c: Choice) => (
+              <li key={`${c.label}|${c.why ?? ""}`} className="flex flex-wrap items-baseline gap-x-2 px-2 py-1">
                 <span lang={locale} className="font-medium text-ink">
                   {c.picture && <span aria-hidden="true">{c.picture} </span>}
                   {c.label}
@@ -112,29 +112,36 @@ function Side({ item, others, locale, subject }: { item: Item; others: Choice[];
           )}
         </Line>
       )}
-      <Line label={t("trust.review.input")}>
-        <span className="font-opmono text-xs">{item.input}</span>
-      </Line>
+      <Line label={t("trust.review.input")}>{t(`trust.review.inputKind.${item.input}`)}</Line>
 
-      {item.wrong && item.wrong.length > 0 && (
-        <div>
-          <h5 className="text-xs font-semibold text-muted">{t("trust.review.wrong")}</h5>
-          <ul className="mt-1 space-y-0.5">
-            {item.wrong.map((w) => (
-              <li key={w.value} className="font-opmono text-xs">
-                <span lang={locale} className="text-ink">
-                  {w.value}
-                </span>{" "}
-                <span className="text-warn">{t("trust.review.why", { why: w.why })}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <WrongList label={t("trust.review.wrong")} items={item.wrong ?? []} lang={locale} />
+      <WrongList label={t("trust.review.otherWrong")} items={others.wrong} lang={locale} />
 
       <Numbered label={t("trust.review.hints")} items={item.hints} lang={locale} />
+      <Numbered label={t("trust.review.otherHints")} items={others.hints} lang={locale} bullets />
       <Numbered label={t("trust.review.steps")} items={item.steps} lang={locale} />
+      <Numbered label={t("trust.review.otherSteps")} items={others.steps} lang={locale} bullets />
       <p className="font-opmono text-xs text-muted">{t("trust.review.pace", { n: item.seconds })}</p>
+    </div>
+  );
+}
+
+function WrongList({ label, items, lang }: { label: string; items: { value: string; why: string }[]; lang: Locale }) {
+  const t = useT();
+  if (!items.length) return null;
+  return (
+    <div>
+      <h5 className="text-xs font-semibold text-muted">{label}</h5>
+      <ul className="mt-1 space-y-0.5">
+        {items.map((w) => (
+          <li key={`${w.value}|${w.why}`} className="font-opmono text-xs">
+            <span lang={lang} className="text-ink">
+              {w.value}
+            </span>{" "}
+            <span className="text-warn">{t("trust.review.why", { why: w.why })}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -150,16 +157,18 @@ function Line({ label, lang, children }: { label: string; lang?: Locale; childre
   );
 }
 
-function Numbered({ label, items, lang }: { label: string; items: string[]; lang: Locale }) {
+/** A numbered list (a version's hints or steps, in order), or bullets for ones gathered from other versions. */
+function Numbered({ label, items, lang, bullets = false }: { label: string; items: string[]; lang: Locale; bullets?: boolean }) {
   if (!items.length) return null;
+  const List = bullets ? "ul" : "ol";
   return (
     <div>
       <h5 className="text-xs font-semibold text-muted">{label}</h5>
-      <ol lang={lang} className="mt-1 list-decimal space-y-0.5 pl-5 text-ink">
+      <List lang={lang} className={`mt-1 space-y-0.5 pl-5 text-ink ${bullets ? "list-disc" : "list-decimal"}`}>
         {items.map((h, i) => (
           <li key={i}>{h}</li>
         ))}
-      </ol>
+      </List>
     </div>
   );
 }
