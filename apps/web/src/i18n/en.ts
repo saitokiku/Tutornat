@@ -1572,6 +1572,12 @@ const en = {
   "spot.hintHere": "The hint is about this part.",
   "spot.again": "Show me again",
   "spot.gone": "That isn't on the screen anymore.",
+  // -- system
+  "ds.ofTotal": "{n} of {total}",
+  "ds.toasts": "Messages",
+  "ds.notFound.title": "This page isn't here",
+  "ds.notFound.body": "The link may be old, or the page moved.",
+  "ds.notFound.home": "Go to KaizenEDU",
 } as const;
 
 export default en;

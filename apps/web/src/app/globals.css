@@ -1,13 +1,15 @@
 @import "tailwindcss";
 
-/* KaizenEDU design system, ported from Kaizen-AI (modules/kaizen-ai/web/app/globals.css +
-   tailwind.config.js). Ink acts, rose marks. Shape lock: inputs 10px, cards 14px, panels 20px,
-   buttons pill. An arbitrary text-[Npx] or rounded-[Npx] in a page is a bug, not a style choice. */
+/* KaizenEDU design system. Authority: DESIGN.md. Ported from Kaizen-AI and pushed for craft.
+   Ink acts, rose marks. Shape lock: inputs 10px, cards 14px, panels 20px, buttons pill.
+   An arbitrary text-[Npx] or rounded-[Npx] in a page is a bug, not a style choice.
+   Every class and token that existed at 55cfb79 keeps its name and meaning; new ones are additive. */
 @theme {
   --color-paper: #fafaf9;
   --color-panel: #ffffff;
   --color-panel2: #f1f1ef;
   --color-border: #e4e3df;
+  --color-border-strong: #cfccc5;
   --color-ink: #1a1917;
   --color-muted: #6b6862;
   --color-accent: #a93b5d;
@@ -53,17 +55,39 @@
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 20px;
+  --radius-key: 6px;
 
-  --shadow-soft: 0 1px 2px rgba(20, 19, 16, 0.04), 0 4px 16px -8px rgba(20, 19, 16, 0.08);
-  --shadow-lift: 0 2px 4px rgba(20, 19, 16, 0.04), 0 12px 32px -12px rgba(20, 19, 16, 0.14);
+  /* Depth means something: soft = sits on the page, lift = the one thing to do next (and overlays),
+     well = a recessed place where a piece goes (answer slots, manipulative trays). Shadows are ink,
+     warm, offset downward; never a colored halo, never a hard offset. */
+  --shadow-soft: 0 1px 1px rgb(26 25 23 / 0.03), 0 1px 3px rgb(26 25 23 / 0.04), 0 6px 16px -10px rgb(26 25 23 / 0.1);
+  --shadow-lift: 0 1px 2px rgb(26 25 23 / 0.04), 0 4px 10px -4px rgb(26 25 23 / 0.06), 0 18px 36px -18px rgb(26 25 23 / 0.2);
+  --inset-shadow-well: inset 0 1px 2px rgb(26 25 23 / 0.07), inset 0 0 0 1px rgb(26 25 23 / 0.035);
 
   --container-prose: 46rem;
   --container-narrow: 34rem;
   --container-wide: 72rem;
 
-  --animate-fade-up: fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-  --animate-split: split 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Rhythm. Tailwind's 4px scale stays the grid; these name the jobs. */
+  --spacing-target: 2.75rem;
+  --spacing-gutter: 1rem;
+  --spacing-section: 2.5rem;
+
+  /* Motion. Arrivals decelerate exponentially; exits accelerate and are shorter; the spring is gentle
+     (1.5% overshoot) and only for things that slide into place. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-exit: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-spring: linear(0, 0.073, 0.23, 0.41, 0.577, 0.717, 0.824, 0.901, 0.953, 0.985, 1.004, 1.012, 1.015, 1.015, 1.012, 1.01, 1.007, 1.005, 1);
+
+  --animate-fade-up: fade-up var(--duration-slow) var(--ease-out-expo) both;
+  --animate-split: split 0.32s var(--ease-out-expo) both;
   --animate-jiggle: jiggle 0.9s ease-in-out infinite;
+  --animate-enter: k-enter var(--duration-slow) var(--ease-out-expo) both;
+  --animate-exit: k-exit var(--duration-quick) var(--ease-exit) both;
+  --animate-draw: k-draw var(--duration-focal) var(--ease-out-expo) both;
+  --animate-shimmer: k-shimmer 1.8s ease-in-out infinite;
+
   @keyframes jiggle {
     0%, 100% { transform: translate(0, 0); }
     25% { transform: translate(var(--j, 1px), calc(var(--j, 1px) * -1)); }
@@ -75,57 +99,481 @@
     to { opacity: 1; transform: scaleY(1); }
   }
   @keyframes fade-up {
-    from { opacity: 0; transform: translateY(6px); }
+    from { opacity: 0; transform: translateY(var(--rise)); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes k-enter {
+    from { opacity: 0; translate: 0 var(--rise); }
+  }
+  @keyframes k-exit {
+    to { opacity: 0; translate: 0 calc(var(--rise) / 2); }
+  }
+  @keyframes k-fade {
+    from { opacity: 0; }
+  }
+  /* Strokes with pathLength="1" draw on like a pen mark. The resting style is fully drawn. */
+  @keyframes k-draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes k-shimmer {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+  }
+  @keyframes k-bloom {
+    from { opacity: 0; scale: 0.3; }
   }
 }
 
-body {
-  background-color: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: 1rem;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-}
+@layer base {
+  :root {
+    color-scheme: light;
+    --duration-instant: 90ms;
+    --duration-quick: 160ms;
+    --duration-base: 240ms;
+    --duration-slow: 380ms;
+    --duration-focal: 560ms;
+    --stagger-step: 40ms;
+    --stagger-max: 280ms;
+    --rise: 6px;
+    --icon-scale: 1;
+    --ring: 2px solid var(--color-accent);
+    --scrollbar: color-mix(in oklab, var(--color-ink) 24%, transparent);
 
-::selection { background: color-mix(in srgb, var(--color-accent) 20%, transparent); }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-/* Headings that receive focus programmatically (page and problem titles) don't need a ring. */
-[tabindex="-1"]:focus-visible { outline: none; }
-button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
-button:disabled { cursor: default; }
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scrollbar-color: var(--scrollbar) transparent;
+    scrollbar-gutter: stable;
+    /* No accidental swipe-back out of a lesson; vertical pull-to-refresh stays. */
+    overscroll-behavior-x: none;
+    accent-color: var(--color-accent);
+  }
+
+  /* K–2 band. The root layout's <BandSync> sets data-band on <html> from the current learner's grade.
+     Bigger type, roomier spacing, 56px targets, larger icons — through tokens, so every screen follows. */
+  :root[data-band="k2"] {
+    --spacing: 0.275rem;
+    --spacing-target: 3.5rem;
+    --spacing-gutter: 1.125rem;
+    --spacing-section: 3rem;
+    --text-body: 1.125rem;
+    --text-body--line-height: 1.55;
+    --text-sm: 1rem;
+    --text-sm--line-height: 1.5;
+    --text-xs: 0.9375rem;
+    --text-xs--line-height: 1.45;
+    --text-micro: 0.75rem;
+    --text-t3: 1.25rem;
+    --text-t3--line-height: 1.3;
+    --text-t3--letter-spacing: -0.012em;
+    --text-t2: 1.625rem;
+    --text-t2--line-height: 1.18;
+    --text-t2--letter-spacing: -0.018em;
+    --text-t1: 2.125rem;
+    --text-t1--line-height: 1.1;
+    --text-t1--letter-spacing: -0.022em;
+    --text-d3: 2.5rem;
+    --text-d3--line-height: 1.06;
+    --text-d2: 3rem;
+    --icon-scale: 1.12;
+  }
+  @media (width < 24rem) {
+    :root[data-band="k2"] { --spacing: 0.25rem; --spacing-gutter: 1rem; }
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-synthesis: style small-caps;
+    font-variant-numeric: lining-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-wrap: break-word;
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  }
+
+  h1, h2, h3, h4 { text-wrap: balance; }
+  p, li, dd, dt, blockquote, figcaption, label, summary { text-wrap: pretty; }
+  /* Prose hyphenates long words in English and Spanish (<html lang> follows the learner).
+     Early readers never see a word split. */
+  p, li, dd, blockquote, figcaption {
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    hyphenate-limit-chars: 10 4 4;
+  }
+  /* Never in data, labels or controls — and early readers never see a word split. */
+  :is(.font-opmono, .k-label, .k-badge, .k-chip, button, a, label, summary, h1, h2, h3, h4),
+  :root[data-band="k2"] :is(p, li, dd, blockquote, figcaption) { hyphens: manual; -webkit-hyphens: manual; }
+
+  /* Figures line up wherever numbers are data. */
+  :where(table, time, data, output, meter, progress, dd, kbd, code, samp), .font-opmono {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  ::selection { background-color: color-mix(in oklab, var(--color-accent) 20%, var(--color-panel)); color: var(--color-ink); }
+  input, textarea, [contenteditable] { caret-color: var(--color-accent); }
+  ::placeholder { color: var(--color-muted); opacity: 1; }
+
+  a { text-underline-offset: 0.22em; text-decoration-thickness: 0.07em; text-decoration-skip-ink: auto; }
+
+  :focus-visible { outline: var(--ring); outline-offset: 2px; }
+  /* Headings that receive focus programmatically (page and problem titles) don't need a ring. */
+  [tabindex="-1"]:focus-visible { outline: none; }
+
+  button, [role="button"], [role="tab"], [role="radio"], summary, label[for] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  a, button, input, select, textarea, label, summary, [role="button"] { touch-action: manipulation; }
+  button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
+  button:disabled { cursor: default; }
+  summary { cursor: pointer; }
+
+  * { scrollbar-width: thin; }
+  @supports not (scrollbar-color: auto) {
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar) padding-box; border: 3px solid transparent; border-radius: 999px; }
+  }
+
+  /* A modal dialog holds the page still behind it. */
+  html:has(dialog[open]:modal) { overflow: hidden; }
+
+  @media (prefers-contrast: more) {
+    :root {
+      --color-muted: #4a4743;
+      --color-border: #aaa69d;
+      --color-border-strong: #78746b;
+      --ring: 3px solid var(--color-accent);
+    }
+  }
+}
 
 @utility k-btn {
-  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold
-    transition-[background-color,border-color,transform] duration-150 active:scale-[0.98]
-    disabled:pointer-events-none disabled:opacity-40;
+  @apply inline-flex min-h-target items-center justify-center gap-2 rounded-full px-5 py-2 text-center text-sm leading-tight font-semibold;
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  transition-duration: var(--duration-quick), var(--duration-quick), var(--duration-quick), var(--duration-quick), var(--duration-instant), var(--duration-quick);
+  transition-timing-function: var(--ease-out-quart);
+  &:active { transform: scale(0.98); }
+  &:disabled { pointer-events: none; }
+  &[aria-busy="true"] { cursor: progress; }
 }
+
+/* View Transition opt-ins (see <PageTransition> in components/kit/motion.tsx). */
+@utility k-vt-rail { view-transition-name: k-rail; }
+@utility k-vt-tabbar { view-transition-name: k-tabbar; }
+@utility k-vt-header { view-transition-name: k-header; }
 
 @layer components {
   .k-card { @apply rounded-md border border-border bg-panel shadow-soft; }
-  .k-well { @apply rounded-sm border border-border bg-panel2; }
-  .k-btn-primary { @apply k-btn bg-ink text-paper hover:bg-ink/90; }
-  .k-btn-secondary { @apply k-btn border border-border bg-panel text-ink hover:border-ink/30; }
-  .k-btn-ghost { @apply k-btn text-muted hover:bg-panel2 hover:text-ink; }
+  .k-well { @apply rounded-sm border border-border bg-panel2 inset-shadow-well; }
+
+  .k-btn-primary {
+    @apply k-btn bg-ink text-paper;
+    box-shadow: 0 1px 2px rgb(26 25 23 / 0.16), inset 0 1px 0 rgb(255 255 255 / 0.09);
+    @media (hover: hover) { &:hover { background-color: color-mix(in oklab, var(--color-ink) 86%, var(--color-panel)); } }
+    &:active { background-color: #0d0c0b; box-shadow: none; }
+    /* Not ready yet: the pill empties. Ink only appears when the action can happen. */
+    &:disabled { background-color: var(--color-panel2); color: var(--color-muted); box-shadow: inset 0 0 0 1px var(--color-border); }
+    /* Loading is working, not unavailable: the pill stays ink. */
+    &[aria-busy="true"]:disabled { background-color: var(--color-ink); color: var(--color-paper); box-shadow: none; }
+  }
+  .k-btn-secondary {
+    @apply k-btn border border-border bg-panel text-ink;
+    box-shadow: 0 1px 1px rgb(26 25 23 / 0.04);
+    @media (hover: hover) { &:hover { border-color: var(--color-border-strong); } }
+    &:active { background-color: var(--color-panel2); box-shadow: none; }
+    &:disabled { color: var(--color-muted); box-shadow: none; opacity: 0.6; }
+    &[aria-busy="true"]:disabled { color: var(--color-ink); opacity: 1; }
+  }
+  .k-btn-ghost {
+    @apply k-btn text-muted;
+    @media (hover: hover) { &:hover { background-color: var(--color-panel2); color: var(--color-ink); } }
+    &:active { background-color: color-mix(in oklab, var(--color-panel2) 80%, var(--color-ink)); color: var(--color-ink); }
+    &:disabled { opacity: 0.45; }
+  }
+  /* Destructive confirm only (ConfirmButton's second step). */
+  .k-btn-danger {
+    @apply k-btn bg-bad text-panel;
+    @media (hover: hover) { &:hover { background-color: color-mix(in oklab, var(--color-bad) 88%, var(--color-ink)); } }
+    &:active { background-color: color-mix(in oklab, var(--color-bad) 76%, var(--color-ink)); }
+  }
+
   .k-chip {
-    @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-panel2 px-3 text-xs
-      font-medium text-muted transition-colors hover:border-ink/25 hover:text-ink;
+    @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-panel2 px-3 text-xs font-medium text-muted pointer-coarse:min-h-11;
+    transition: background-color var(--duration-quick) var(--ease-out-quart), border-color var(--duration-quick) var(--ease-out-quart),
+      color var(--duration-quick) var(--ease-out-quart), transform var(--duration-instant) var(--ease-out-quart);
+    @media (hover: hover) { &:hover { border-color: var(--color-border-strong); color: var(--color-ink); } }
+    &:active { transform: scale(0.97); }
+    &:disabled { opacity: 0.5; pointer-events: none; }
   }
   .k-chip[aria-pressed="true"] { @apply border-ink bg-ink text-paper; }
+
   .k-input {
-    @apply w-full rounded-sm border border-border bg-panel px-4 py-3 text-body text-ink placeholder:text-muted/70
-      transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20;
+    @apply w-full rounded-sm border border-border bg-panel px-4 py-3 text-body text-ink;
+    transition: border-color var(--duration-quick) var(--ease-out-quart), background-color var(--duration-quick) var(--ease-out-quart);
+    @media (hover: hover) { &:hover { border-color: var(--color-border-strong); } }
+    /* Fields carry the ring on their edge so the text never moves. */
+    &:focus-visible { border-color: var(--color-accent); outline: var(--ring); outline-offset: -1px; }
+    &[aria-invalid="true"] { border-color: var(--color-bad); }
+    &:disabled { background-color: var(--color-panel2); color: var(--color-muted); cursor: not-allowed; }
   }
+  select.k-input {
+    appearance: none;
+    padding-right: 2.75rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6862' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5 9.5 12 15l5.5-5.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.875rem center;
+    background-size: 1.125rem;
+  }
+  textarea.k-input { resize: vertical; }
+
   .k-label { @apply font-opmono text-micro font-medium uppercase text-muted; }
   .k-badge {
-    @apply inline-flex items-center rounded-full bg-panel2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink/75;
+    @apply inline-flex items-center gap-1 rounded-full bg-panel2 px-2 py-0.5 font-opmono text-micro leading-none font-medium tracking-[0.06em] text-ink/75 uppercase;
+    min-height: 1.25rem;
+  }
+
+  .k-link {
+    @apply font-medium text-ink underline decoration-border-strong;
+    transition: text-decoration-color var(--duration-quick) var(--ease-out-quart), color var(--duration-quick) var(--ease-out-quart);
+    @media (hover: hover) { &:hover { text-decoration-color: var(--color-accent); } }
+  }
+
+  .k-kbd {
+    @apply inline-flex min-w-5 items-center justify-center rounded-key border border-border bg-panel px-1 font-opmono text-micro leading-none font-medium text-muted;
+    letter-spacing: 0;
+    height: 1.25rem;
+    box-shadow: inset 0 -1px 0 var(--color-border);
+  }
+
+  .k-icon {
+    width: calc(var(--k-icon-size, 1.25rem) * var(--icon-scale));
+    height: calc(var(--k-icon-size, 1.25rem) * var(--icon-scale));
+    flex-shrink: 0;
+  }
+  .k-dot { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  /* Rows over cards: dot · title · mono meta · one action. */
+  .k-rows { @apply divide-y divide-border overflow-hidden rounded-md border border-border bg-panel; }
+
+  /* Calm placeholder while something real loads. */
+  .k-skeleton {
+    @apply block rounded-sm;
+    background-color: var(--color-panel2);
+    background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.65) 50%, transparent 100%);
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: var(--animate-shimmer);
+  }
+
+  /* Enter on mount; children of .k-stagger enter in order, total delay capped. */
+  .k-enter { animation: var(--animate-enter); }
+  .k-stagger > * { animation: var(--animate-enter); animation-delay: min(calc(var(--k-i, 0) * var(--stagger-step)), var(--stagger-max)); }
+  .k-stagger > :nth-child(2) { --k-i: 1; }
+  .k-stagger > :nth-child(3) { --k-i: 2; }
+  .k-stagger > :nth-child(4) { --k-i: 3; }
+  .k-stagger > :nth-child(5) { --k-i: 4; }
+  .k-stagger > :nth-child(6) { --k-i: 5; }
+  .k-stagger > :nth-child(7) { --k-i: 6; }
+  .k-stagger > :nth-child(n + 8) { --k-i: 7; }
+  /* The pen mark: on an svg (or a path) whose strokes have pathLength="1". */
+  .k-draw [pathLength], [pathLength].k-draw { stroke-dasharray: 1 1; animation: var(--animate-draw); }
+
+  /* Brand mark growing: trunk, then branches, then blossoms. */
+  .k-grow .k-mark-stroke[pathLength] { stroke-dasharray: 1 1; animation: k-draw var(--duration-focal) var(--ease-out-expo) both; animation-delay: var(--d, 0ms); }
+  .k-grow .k-mark-bloom { transform-box: fill-box; transform-origin: center; animation: k-bloom var(--duration-slow) var(--ease-out-expo) both; animation-delay: var(--d, 0ms); }
+
+  /* Dialog and sheet on native <dialog>: the platform traps focus, makes the page inert, handles Escape. */
+  .k-dialog, .k-sheet {
+    @apply max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-border bg-panel p-0 text-ink shadow-lift;
+    /* !important: a <Dialog> placed inside a space-y-* stack must not inherit its sibling margins. */
+    margin: auto !important;
+    overscroll-behavior: contain;
+    opacity: 1;
+    translate: 0 0;
+    transition: opacity var(--duration-quick) var(--ease-exit), translate var(--duration-quick) var(--ease-exit),
+      overlay var(--duration-quick) allow-discrete, display var(--duration-quick) allow-discrete;
+    &[open] { transition-duration: var(--duration-slow); transition-timing-function: var(--ease-out-expo); }
+    &:not([open]) { opacity: 0; translate: 0 calc(var(--rise) / 2); }
+    &::backdrop {
+      background-color: rgb(26 25 23 / 0.32);
+      opacity: 1;
+      transition: opacity var(--duration-base) var(--ease-out-quart), overlay var(--duration-base) allow-discrete, display var(--duration-base) allow-discrete;
+    }
+    &:not([open])::backdrop { opacity: 0; }
+  }
+  @starting-style {
+    .k-dialog[open] { opacity: 0; translate: 0 calc(var(--rise) * 2); }
+    .k-dialog[open]::backdrop, .k-sheet[open]::backdrop { opacity: 0; }
+  }
+  /* Phones: a bottom sheet. Wider screens: a panel inset from the right edge. */
+  .k-sheet {
+    @apply w-full max-w-none rounded-b-none border-x-0 border-b-0;
+    margin: auto 0 0 !important;
+    max-height: 88dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    &:not([open]) { translate: 0 100%; opacity: 1; }
+    @media (width >= 40rem) {
+      @apply h-[calc(100dvh-1.5rem)] max-h-none w-[min(28rem,calc(100vw-1.5rem))] rounded-lg border;
+      margin: 0.75rem 0.75rem 0.75rem auto !important;
+      padding-bottom: 0;
+      &:not([open]) { translate: calc(100% + 0.75rem) 0; }
+    }
+  }
+  @starting-style {
+    .k-sheet[open] { translate: 0 100%; }
+  }
+  @media (width >= 40rem) {
+    @starting-style {
+      .k-sheet[open] { translate: calc(100% + 0.75rem) 0; }
+    }
+  }
+
+  /* Tabs: a rose rule slides under the selected tab. Segmented: a raised white thumb slides on a well.
+     Both move on the compositor (transform, clip-path) with the gentle spring; the list measures --x/--w. */
+  .k-tab-rule {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    height: 2px;
+    background-color: var(--color-accent);
+    transform-origin: 0 0;
+    translate: var(--x, 0px) 0;
+    scale: var(--wn, 0) 1;
+    transition: translate var(--duration-slow) var(--ease-spring), scale var(--duration-slow) var(--ease-spring);
+  }
+  .k-seg-thumb {
+    position: absolute;
+    inset: var(--spacing);
+    pointer-events: none;
+    /* The shadow is a filter on the layer, so the clipped thumb keeps its lift. */
+    filter: drop-shadow(0 1px 1px rgb(26 25 23 / 0.06)) drop-shadow(0 3px 6px rgb(26 25 23 / 0.07));
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background-color: var(--color-panel);
+      clip-path: inset(0 calc(100% - var(--x, 0px) - var(--w, 0px) + var(--spacing)) 0 calc(var(--x, 0px) - var(--spacing)) round 999px);
+      transition: clip-path var(--duration-slow) var(--ease-spring);
+    }
+  }
+  /* Until the mark is measured, the selected item marks itself; the mark then appears in place. */
+  :is(.k-tabs, .k-segmented):not([data-ready]) :is(.k-tab-rule, .k-seg-thumb) { opacity: 0; transition: none; }
+  .k-segmented:not([data-ready]) .k-seg-thumb::before { transition: none; }
+  .k-tabs:not([data-ready]) [aria-selected="true"] { box-shadow: inset 0 -2px 0 var(--color-accent); }
+  .k-segmented:not([data-ready]) [aria-checked="true"] { background-color: var(--color-panel); box-shadow: var(--shadow-soft); }
+
+  .k-disclosure > summary { list-style: none; }
+  .k-disclosure > summary::-webkit-details-marker { display: none; }
+  .k-disclosure .k-disclosure-chevron { transition: rotate var(--duration-base) var(--ease-out-expo); }
+  .k-disclosure[open] .k-disclosure-chevron { rotate: 180deg; }
+  @supports (interpolate-size: allow-keywords) {
+    .k-disclosure { interpolate-size: allow-keywords; }
+    .k-disclosure::details-content {
+      block-size: 0;
+      overflow: clip;
+      transition: block-size var(--duration-base) var(--ease-out-expo), content-visibility var(--duration-base) allow-discrete;
+    }
+    .k-disclosure[open]::details-content { block-size: auto; }
+  }
+
+  /* Fills arrive from empty once (the amount is the message), then glide between values. A full-width
+     fill revealed by clip-path keeps its round cap at every amount and never triggers layout. */
+  .k-meter-fill, .k-progress-fill {
+    clip-path: inset(0 calc(100% - var(--v, 0) * 100%) 0 0 round 999px);
+    transition: clip-path var(--duration-focal) var(--ease-out-expo);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  @starting-style {
+    .k-meter-fill, .k-progress-fill { clip-path: inset(0 100% 0 0 round 999px); }
+  }
+
+  .k-toasts {
+    position: fixed;
+    inset-inline: 0;
+    bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+    z-index: 60;
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding-inline: 1rem;
+    pointer-events: none;
+    @media (width >= 64rem) { bottom: 1.5rem; }
+  }
+  .k-toast { pointer-events: auto; animation: var(--animate-enter); }
+  .k-toast[data-leaving] { animation: var(--animate-exit); }
+}
+
+/* View transitions, opt-in per page with <PageTransition>. The old page steps back fast; the new one
+   rises a few pixels and settles. The rail and tab bar (k-vt-rail / k-vt-tabbar) never move. */
+::view-transition { pointer-events: none; }
+::view-transition-old(.k-page) { animation: var(--duration-quick) var(--ease-exit) both k-exit; }
+::view-transition-new(.k-page) { animation: var(--duration-slow) var(--ease-out-expo) var(--duration-instant) both k-enter; }
+::view-transition-group(k-rail), ::view-transition-group(k-tabbar), ::view-transition-group(k-header) { animation: none; z-index: 10; }
+::view-transition-old(k-rail), ::view-transition-old(k-tabbar), ::view-transition-old(k-header) { display: none; }
+::view-transition-new(k-rail), ::view-transition-new(k-tabbar), ::view-transition-new(k-header) { animation: none; }
+
+/* Reduced motion: nothing travels, nothing loops. Colour, opacity and outline changes still play,
+   so a press, a selection and an arrival stay legible. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --rise: 0px; }
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-property: color, background-color, border-color, text-decoration-color, outline-color, opacity, box-shadow, fill, stroke !important;
+  }
+  .k-enter, .k-stagger > *, .k-toast, .animate-fade-up, .k-dialog, .k-sheet {
+    animation-name: k-fade !important;
+    animation-duration: var(--duration-quick) !important;
+  }
+  .k-toast[data-leaving] { animation-name: k-exit !important; }
+  .k-skeleton { animation: none !important; }
+  .k-sheet:not([open]), .k-dialog:not([open]) { translate: 0 0; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+/* Windows High Contrast and other forced palettes: system colours, real borders, visible state. */
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+  .k-btn-primary, .k-btn-secondary, .k-btn-ghost, .k-btn-danger, .k-chip, .k-badge, .k-kbd, .k-toast { border: 1px solid ButtonText; }
+  .k-btn-primary:disabled, .k-chip:disabled { color: GrayText; border-color: GrayText; }
+  .k-chip[aria-pressed="true"], [role="tab"][aria-selected="true"], [role="radio"][aria-checked="true"] {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    color: HighlightText;
   }
+  .k-tab-rule, .k-progress-fill, .k-meter-fill, .k-seg-thumb::before { forced-color-adjust: none; background-color: Highlight; }
+  .k-segmented [aria-checked="true"] { color: HighlightText; }
+  .k-dot { forced-color-adjust: none; background-color: CanvasText; }
+  .k-skeleton { background: Canvas; border: 1px dashed GrayText; }
+  ::selection { background-color: Highlight; color: HighlightText; }
+}
+
+/* Paper. Records print as ink on white: no rail, no tab bar, no buttons, sources spelled out. */
+@media print {
+  @page { margin: 14mm 16mm; }
+  :root { --color-paper: #fff; --color-panel: #fff; --color-panel2: #fff; --color-muted: #444; scrollbar-gutter: auto; }
+  html, body { background: #fff !important; color: #000; font-size: 11pt; }
+  aside, nav, dialog, .k-toasts, .k-no-print, [data-print="hide"], button:not([data-print="show"]),
+  .k-btn-primary, .k-btn-secondary, .k-btn-ghost { display: none !important; }
+  .fixed, .sticky { position: static !important; }
+  main, main > div { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  * { box-shadow: none !important; text-shadow: none !important; }
+  .k-card, .k-well, .k-rows > *, li, tr, figure, dl > div { break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; }
+  p, li { orphans: 3; widows: 3; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #444; overflow-wrap: anywhere; }
 }

@@ -1574,6 +1574,12 @@ const es: Record<Key, string> = {
   "spot.hintHere": "La pista habla de esta parte.",
   "spot.again": "Muéstramelo otra vez",
   "spot.gone": "Eso ya no está en la pantalla.",
+  // -- system
+  "ds.ofTotal": "{n} de {total}",
+  "ds.toasts": "Mensajes",
+  "ds.notFound.title": "Esta página no está aquí",
+  "ds.notFound.body": "Puede que el enlace sea viejo o que la página se haya movido.",
+  "ds.notFound.home": "Ir a KaizenEDU",
 };
 
 export default es;
