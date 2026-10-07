@@ -88,7 +88,10 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
   const fileKey = file ? `file:${file.key}` : null;
   const textKey = `text:${words}`;
   const key = fileKey ?? textKey;
-  const aiNow = aiRead?.key === key ? aiRead.result : null;
+  // A longer typed request is read once typing pauses (short ones are left to the rules). While the
+  // next read is pending, the last one stays on screen so the guess doesn't flicker back and forth.
+  const readText = aiOn && !file && words.length >= 24 && screen(words, locale).kind === "ok" && aiRead?.key !== textKey;
+  const aiNow = aiRead?.key === key || (readText && aiRead?.key.startsWith("text:")) ? (aiRead?.result ?? null) : null;
   const fileTooBig = !!file && file.blob.size > AI_FILE_MAX_BYTES;
   const readingFile = aiOn && !!file && !fileTooBig && aiRead?.key !== fileKey;
   const reading = readingFile || inFlight === textKey;
@@ -113,8 +116,6 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     };
   }, [aiOn, file, today, locale, learner.grade]);
 
-  // A longer typed request is read once typing pauses. Short ones are left to the rules.
-  const readText = aiOn && !file && words.length >= 24 && screen(words, locale).kind === "ok" && aiRead?.key !== textKey;
   useEffect(() => {
     if (!readText) return;
     let live = true;

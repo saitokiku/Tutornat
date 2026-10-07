@@ -234,6 +234,10 @@ describe("MagicBox as the universal intake", () => {
     expect(screen.getByLabelText("Name")).toHaveValue("Unit 2 fractions quiz");
     expect(screen.getByLabelText("Day")).toHaveValue("2026-10-16");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Typing on: the last reading stays until the next one arrives (the rules alone would say homework).
+    fireEvent.change(box(), { target: { value: "Mrs. Lee says there's a short check on fractions on Friday" } });
+    expect(radio("Quiz")).toBeChecked();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 3000 });
   });
 
   it("a crisis gets the fixed reply and a note for the grown-ups, and nothing is made", async () => {
