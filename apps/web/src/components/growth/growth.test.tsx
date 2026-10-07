@@ -221,12 +221,22 @@ describe("Growth page", () => {
 
   it("a K–2 learner hears their path: read-aloud lines, the skills they proved by name, no table, big steps", () => {
     seed("ada", { grade: "1" });
+    // A science lesson this week, and no science skills practiced.
+    update((s) => {
+      s.courses = [{ id: "moon", profileId: "ada", title: "The Moon", goal: "", subject: "science", grade: "1", locale: "en", origin: "catalogue", status: "ready", length: "short", sources: [], lessons: [{ id: "l1", title: "Why the Moon changes", summary: "", minutes: 8, scenes: [] }], template: false, createdAt: 0, updatedAt: 0 }];
+      s.activity = [{ id: "done", profileId: "ada", at: tue(0), type: "lesson_completed", courseId: "moon", lessonId: "l1", seconds: 400 }];
+    });
     render(<GrowthPage />);
+    expect(screen.getByText("This week. Lessons finished: 1. Minutes: 7.")).toBeInTheDocument();
     expect(screen.getByText("What you did, week by week.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Read aloud: What you did, week by week\./ })).toBeInTheDocument();
     expect(screen.getByText("Math. Proved: 1. Ready for a check: 0. Practicing: 0.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Read aloud: Math. Proved: 1. Ready for a check: 0. Practicing: 0." })).toHaveClass("min-h-14");
     expect(screen.getByText("You proved: Add within 5")).toBeInTheDocument();
+    // The week's figures as a sentence too, with its own read-aloud button.
+    const week = screen.getByText("This week. Checks passed: 0. Lessons finished: 0. Minutes: 1.");
+    expect(within(week.closest("p")!).getByRole("button", { name: /^Read aloud: This week\. Checks passed: 0\./ })).toHaveClass("min-h-14");
+    expect(screen.queryByText("No skills on the map practiced yet.")).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.queryByText(/right on own/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous week" })).toHaveClass("size-14");

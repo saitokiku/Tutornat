@@ -1181,6 +1181,8 @@ const en = {
   "fam.ev.reading": "Read “{title}”",
   "fam.ev.readingBy": "Read “{title}” by {author}",
   "fam.ev.readingMeta": "{n} min, logged by a grown-up",
+  "fam.weekYoung": "Lessons finished: {lessons}. Minutes: {minutes}.",
+  "fam.weekYoungChecks": "Checks passed: {checks}. Lessons finished: {lessons}. Minutes: {minutes}.",
 } as const;
 
 export default en;

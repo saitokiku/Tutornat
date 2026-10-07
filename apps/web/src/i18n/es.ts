@@ -1183,6 +1183,8 @@ const es: Record<Key, string> = {
   "fam.ev.reading": "Leyó “{title}”",
   "fam.ev.readingBy": "Leyó “{title}”, de {author}",
   "fam.ev.readingMeta": "{n} min, registrado por un adulto",
+  "fam.weekYoung": "Lecciones terminadas: {lessons}. Minutos: {minutes}.",
+  "fam.weekYoungChecks": "Pruebas aprobadas: {checks}. Lecciones terminadas: {lessons}. Minutos: {minutes}.",
 };
 
 export default es;

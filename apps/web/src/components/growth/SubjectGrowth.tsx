@@ -44,6 +44,7 @@ export function SubjectGrowth({ growth, statuses, practiced, results, detail, yo
   const id = `growth-${subject}`;
   const last = weeks[weeks.length - 1];
   const touched = weeks.some((w) => w.proved + w.ready + w.practicing > 0);
+  const week = current ? t("child.week") : t("growth.weekOf", { date: shortDate(last.start, locale) });
   // Skill columns and the checks figure only where skills were practiced; lessons and time always.
   const skills = subject !== "other" && touched;
   const counts = { from: weeks[0].proved, to: last.proved, ready: last.ready, practicing: last.practicing };
@@ -84,11 +85,11 @@ export function SubjectGrowth({ growth, statuses, practiced, results, detail, yo
             )}
           </div>
         ) : (
-          <p className="text-sm text-muted">{t("fam.noSkills")}</p>
+          !young && <p className="text-sm text-muted">{t("fam.noSkills")}</p>
         ))}
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-muted">{current ? t("child.week") : t("growth.weekOf", { date: shortDate(last.start, locale) })}</h3>
+        <h3 className="text-xs font-semibold text-muted">{week}</h3>
         <dl className="grid grid-cols-3 gap-2">
           {skills && (
             <Figure label={t("fam.checksPassed")}>
@@ -99,6 +100,11 @@ export function SubjectGrowth({ growth, statuses, practiced, results, detail, yo
           <Figure label={t("growth.finished")}>{last.lessons}</Figure>
           <Figure label={t("growth.minutes")}>{last.minutes}</Figure>
         </dl>
+        {young && (
+          <Said
+            text={`${week}. ${skills ? t("fam.weekYoungChecks", { checks: last.checks.passed, lessons: last.lessons, minutes: last.minutes }) : t("fam.weekYoung", { lessons: last.lessons, minutes: last.minutes })}`}
+          />
+        )}
         {!young && (last.lessons > 0 || last.readingMinutes > 0) && (
           <p className="text-xs text-muted">
             {[last.lessons > 0 && t("fam.lessonChecks", last.lessonChecks), last.readingMinutes > 0 && t("fam.reading", { n: last.readingMinutes })].filter(Boolean).join(" · ")}
