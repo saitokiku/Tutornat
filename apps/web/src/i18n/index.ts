@@ -8,7 +8,10 @@ import es from "./es";
 export type { Key };
 const dicts: Record<Locale, Record<Key, string>> = { en, es };
 
+/** Picks `<key>_one` when the count (`n`, else `total`) is 1 and such a key exists. */
 export function t(locale: Locale, key: Key, vars?: Record<string, string | number>): string {
+  const one = `${key}_one` as Key;
+  if (vars && (vars.n ?? vars.total) === 1 && one in en) key = one;
   const s = dicts[locale][key] ?? en[key];
   return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : s;
 }

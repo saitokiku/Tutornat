@@ -42,7 +42,7 @@ export async function signUp(input: { email: string; password: string; displayNa
   };
   update((s) => {
     s.accounts.push(account);
-    s.session = { accountId: account.id, profileId: null };
+    s.session = { accountId: account.id, profileId: null, unlocked: true };
   });
   return { ok: true };
 }
@@ -50,11 +50,17 @@ export async function signUp(input: { email: string; password: string; displayNa
 export async function signIn(email: string, password: string): Promise<Result> {
   const account = findAccount(email);
   if (!account || (await hash(password, account.salt)) !== account.passwordHash) return { ok: false, error: "err.badLogin" };
-  update((s) => void (s.session = { accountId: account.id, profileId: null }));
+  update((s) => void (s.session = { accountId: account.id, profileId: null, unlocked: true }));
   return { ok: true };
 }
 
+/**
+ * Signs out with a full page load: on a shared family device nothing from the last session should
+ * stay in memory, and no route guard can race the navigation.
+ */
 export function signOut() {
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload
+  if (typeof window !== "undefined") window.location.assign("/");
   update((s) => void (s.session = { accountId: null, profileId: null }));
 }
 

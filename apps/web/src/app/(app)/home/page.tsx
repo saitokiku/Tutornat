@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { catalogueFor } from "@/catalogue";
 import { CourseRow } from "@/components/courses/CourseRow";
+import { LangTag } from "@/components/courses/LangTag";
 import { Guard } from "@/components/gate";
 import { IconArrowRight } from "@/components/icons";
 import { MagicBox } from "@/components/magic-box/MagicBox";
@@ -71,9 +72,12 @@ function Home() {
             <div className="min-w-0 max-w-prose">
               <p className="flex items-center gap-2 font-brand text-t2 font-semibold text-ink">
                 <SubjectDot subject={pick.subject} />
-                {pick.title}
+                <span lang={pick.locale}>{pick.title}</span>
+                <LangTag course={pick.locale} learner={learner.locale} />
               </p>
-              <p className="mt-1 text-sm text-muted">{pick.summary}</p>
+              <p className="mt-1 text-sm text-muted" lang={pick.locale}>
+                {pick.summary}
+              </p>
             </div>
             <Button
               onClick={() => {

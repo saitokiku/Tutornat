@@ -56,7 +56,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
 
   const header = (
     <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-panel px-4 py-3 sm:px-6">
-      <Link href={`/courses/${course.id}`} className="inline-flex min-w-0 items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+      <Link href={`/courses/${course.id}`} className="-ml-2 inline-flex min-h-10 min-w-0 items-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink">
         <IconArrowLeft size={16} className="shrink-0" />
         <span className="truncate" lang={course.locale}>
           {course.title}
@@ -128,10 +128,12 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
             type="button"
             aria-expanded={showScenes}
             onClick={() => setShowScenes(!showScenes)}
-            className="flex w-full items-center justify-between rounded-sm border border-border bg-panel px-4 py-2.5 text-sm font-medium text-ink lg:hidden"
+            className="flex min-h-11 w-full items-center justify-between gap-3 rounded-sm border border-border bg-panel px-4 py-2.5 text-sm font-medium text-ink lg:hidden"
           >
-            {t("stage.sceneOf", { n: index + 1, total: lesson.scenes.length })}
-            <span className="text-xs text-muted">{t("stage.openScenes")}</span>
+            <span className="min-w-0 truncate text-left" lang={course.locale}>
+              <span className="font-opmono text-xs text-muted">{index + 1}/{lesson.scenes.length}</span> {scene?.title}
+            </span>
+            <span className="shrink-0 text-xs text-muted">{t("stage.scenes")}</span>
           </button>
           <ol className={`mt-2 space-y-0.5 lg:mt-0 lg:block ${showScenes ? "block" : "hidden"}`}>
             {lesson.scenes.map((s, i) => {

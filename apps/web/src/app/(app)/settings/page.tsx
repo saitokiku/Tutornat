@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Guard } from "@/components/gate";
 import { IconLogout } from "@/components/icons";
@@ -9,7 +8,7 @@ import { Avatar } from "@/components/profiles/Avatar";
 import { Button, Field, btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
 import { signOut } from "@/lib/auth";
-import { currentAccount, learnersOf, renameAccount } from "@/lib/profiles";
+import { currentAccount, currentLearner, learnersOf, renameAccount, updateLearner } from "@/lib/profiles";
 import { clearAll, update, useStore } from "@/lib/store";
 import type { Account } from "@/lib/types";
 
@@ -33,13 +32,45 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Settings() {
   const t = useT();
   const locale = useLocale();
-  const router = useRouter();
   const account = useStore(currentAccount) as Account;
+  const learner = useStore(currentLearner);
   const kids = useStore(learnersOf);
   const prefLocale = useStore((s) => s.prefs.locale);
   const [name, setName] = useState(account.displayName);
   const [saved, setSaved] = useState(false);
   const [confirm, setConfirm] = useState("");
+
+  if (learner)
+    return (
+      <div>
+        <h1 className="mb-6 font-brand text-t1 font-semibold text-ink sm:text-d3">{t("settings.title")}</h1>
+        <Section title={t("settings.learnerLanguage", { name: learner.nickname })}>
+          <div className="flex gap-2">
+            {(["en", "es"] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                lang={l}
+                aria-pressed={learner.locale === l}
+                onClick={() => updateLearner(learner.id, { nickname: learner.nickname, grade: learner.grade, locale: l })}
+                className="k-chip min-h-11 px-5 text-sm"
+              >
+                {t(`lang.${l}` as const)}
+              </button>
+            ))}
+          </div>
+        </Section>
+        <Section title={t("settings.account")}>
+          <p className="text-sm text-muted">{t("settings.grownUps")}</p>
+          <Link href="/profiles" className={btn("secondary", "sm")}>
+            {t("nav.switch")}
+          </Link>
+        </Section>
+        <Section title={t("settings.about")}>
+          <p className="max-w-prose text-sm text-muted">{t("settings.aboutBody")}</p>
+        </Section>
+      </div>
+    );
 
   return (
     <div>
@@ -65,7 +96,7 @@ function Settings() {
             {saved ? t("settings.saved") : ""}
           </span>
         </form>
-        <Button variant="ghost" size="sm" onClick={() => (signOut(), router.push("/"))}>
+        <Button variant="ghost" size="sm" onClick={signOut}>
           <IconLogout size={16} /> {t("nav.signOut")}
         </Button>
       </Section>
@@ -105,7 +136,8 @@ function Settings() {
           onSubmit={(e) => {
             e.preventDefault();
             if (confirm !== "DELETE") return;
-            router.push("/");
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload after wiping data
+            window.location.assign("/");
             clearAll();
           }}
         >

@@ -101,7 +101,7 @@ function Draft() {
 
   return (
     <div className="space-y-8">
-      <Link href="/home" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+      <Link href="/home" className="-ml-2 inline-flex min-h-10 items-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink">
         <IconArrowLeft size={16} /> {t("nav.home")}
       </Link>
 

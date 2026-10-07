@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { LangTag } from "@/components/courses/LangTag";
 import { NotFound } from "@/components/courses/NotFound";
 import { Guard } from "@/components/gate";
 import { IconArrowLeft, IconArrowRight, IconCheck, IconTrash } from "@/components/icons";
@@ -53,7 +54,7 @@ function CourseView() {
 
   return (
     <div className="space-y-10">
-      <Link href="/courses" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+      <Link href="/courses" className="-ml-2 inline-flex min-h-10 items-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink">
         <IconArrowLeft size={16} /> {t("nav.courses")}
       </Link>
 
@@ -63,6 +64,7 @@ function CourseView() {
           {t(`subject.${course.subject}` as const)} · {gradeLabel(learner.locale, course.grade)}
           {course.origin === "catalogue" && <Badge>{t("course.readyMade")}</Badge>}
           {course.template && <Badge tone="warn">{t("gen.template")}</Badge>}
+          <LangTag course={course.locale} learner={learner.locale} />
         </p>
         <h1 lang={course.locale} className="font-brand text-t1 font-semibold text-balance text-ink sm:text-d3">
           {course.title}

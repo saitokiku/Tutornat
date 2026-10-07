@@ -84,7 +84,7 @@ export function MagicBox({ learner, variant = "compact", initialGoal = "" }: { l
               {ex}
             </button>
           ))}
-          <span id={`${id}-count`} className={`ml-auto font-opmono text-xs tabular-nums ${goal.length >= GOAL_MAX ? "text-bad" : "text-muted"}`}>
+          <span id={`${id}-count`} className={`ml-auto font-opmono text-xs tabular-nums ${goal.length >= GOAL_MAX ? "text-bad" : "text-muted"} ${goal.length < GOAL_MAX * 0.8 ? "sr-only" : ""}`}>
             {t("box.counter", { n: goal.length, max: GOAL_MAX })}
           </span>
         </div>
@@ -159,7 +159,8 @@ export function MagicBox({ learner, variant = "compact", initialGoal = "" }: { l
         <Button variant="ghost" size="sm" aria-expanded={showOptions} onClick={() => setShowOptions(!showOptions)}>
           {t("box.options")} <IconChevronDown size={14} className={`transition-transform ${showOptions ? "rotate-180" : ""}`} />
         </Button>
-        <span className="ml-auto hidden font-opmono text-xs text-muted sm:inline">{t("box.shortcut")}</span>
+        {band !== "k2" && <span className="ml-auto hidden font-opmono text-xs text-muted sm:inline">{t("box.shortcut")}</span>}
+        {band === "k2" && <span className="ml-auto" />}
         <Button type="submit" disabled={!ready}>
           {t("box.submit")} <IconArrowRight size={16} />
         </Button>

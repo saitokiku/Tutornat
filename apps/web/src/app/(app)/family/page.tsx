@@ -86,7 +86,25 @@ function ChildCard({ child, now }: { child: Profile; now: number }) {
 
       <div className="grid gap-6 px-5 py-5 sm:px-6 lg:grid-cols-2">
         <section className="space-y-4">
-          <p className="text-sm text-ink">{t("family.week", { finished: w.finished, own: w.own, help: w.help, missed: w.missed })}</p>
+          {w.started + w.finished + w.own + w.help + w.missed === 0 ? (
+            <p className="text-sm text-muted">{t("family.quiet")}</p>
+          ) : (
+            <dl className="grid grid-cols-4 gap-2">
+              {(
+                [
+                  ["growth.finished", w.finished],
+                  ["growth.own", w.own],
+                  ["growth.help", w.help],
+                  ["growth.missed", w.missed],
+                ] as const
+              ).map(([label, n]) => (
+                <div key={label} className="flex flex-col-reverse rounded-sm bg-panel2 px-3 py-2">
+                  <dt className="text-[11px] leading-tight text-muted">{t(label)}</dt>
+                  <dd className="font-opmono text-t2 font-semibold tabular-nums text-ink">{n}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           <div>
             <h3 className="text-xs font-semibold text-muted">{t("family.neededHelp")}</h3>
             {help.length === 0 ? (
@@ -115,7 +133,7 @@ function ChildCard({ child, now }: { child: Profile; now: number }) {
               </label>
               <div className="flex flex-wrap gap-2">
                 <select id={`assign-${child.id}`} className="k-input min-w-0 flex-1 py-2.5 text-sm" value={assignId} onChange={(e) => (setAssignId(e.target.value), setAssigned(false))}>
-                  <option value="">—</option>
+                  <option value="">{t("family.choose")}</option>
                   {options.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.title} ({gradeLabel(locale, c.grade, true)})

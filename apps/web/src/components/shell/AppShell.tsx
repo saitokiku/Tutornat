@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { KaizenLogo } from "@/components/brand";
 import { StoreHealthNotice } from "@/components/gate";
-import { IconBook, IconFamily, IconHome, IconLogout, IconPlus, IconSettings, IconSprout } from "@/components/icons";
+import { IconBook, IconFamily, IconHome, IconPlus, IconSettings, IconSprout } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
 import { btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
@@ -31,7 +31,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const t = useT();
   const locale = useLocale();
   const path = usePathname();
-  const router = useRouter();
   const learner = useStore(currentLearner);
   const account = useStore(currentAccount);
   const tabs = learner ? LEARNER_TABS : PARENT_TABS;
@@ -92,11 +91,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               {t("demo.status")}
             </p>
           )}
-          <div className="flex items-center gap-4 px-2 text-xs">
-            <Link href="/settings" className="text-muted hover:text-accent">
+          <div className="flex items-center gap-1 text-xs">
+            <Link href="/settings" className="inline-flex min-h-10 items-center rounded-sm px-2 text-muted hover:bg-panel/70 hover:text-ink">
               {t("nav.settings")}
             </Link>
-            <button type="button" onClick={() => (signOut(), router.push("/"))} className="text-muted hover:text-bad">
+            <button type="button" onClick={signOut} className="inline-flex min-h-10 items-center rounded-sm px-2 text-muted hover:bg-panel/70 hover:text-bad">
               {t("nav.signOut")}
             </button>
           </div>
@@ -142,15 +141,5 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
     </div>
-  );
-}
-
-export function SignOutButton() {
-  const t = useT();
-  const router = useRouter();
-  return (
-    <button type="button" onClick={() => (signOut(), router.push("/"))} className={btn("ghost", "sm")}>
-      <IconLogout size={16} /> {t("nav.signOut")}
-    </button>
   );
 }

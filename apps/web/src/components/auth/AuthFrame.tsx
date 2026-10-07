@@ -32,7 +32,7 @@ export function AuthCard({ title, body, children, footer }: { title: string; bod
 }
 
 export const TextLink = ({ href, children }: { href: string; children: ReactNode }) => (
-  <Link href={href} className="font-semibold text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
+  <Link href={href} className="inline-flex min-h-10 items-center font-semibold text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
     {children}
   </Link>
 );

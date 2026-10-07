@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { IconChevronRight } from "@/components/icons";
 import { Badge, SubjectDot } from "@/components/ui";
-import { useT } from "@/i18n";
+import { useLocale, useT } from "@/i18n";
+import { LangTag } from "./LangTag";
 import { courseProgress } from "@/lib/activity";
 import type { ActivityEvent, Course } from "@/lib/types";
 
 export function CourseRow({ course, events }: { course: Course; events: ActivityEvent[] }) {
   const t = useT();
+  const locale = useLocale();
   const p = courseProgress(course, events);
   return (
     <li>
@@ -18,6 +20,7 @@ export function CourseRow({ course, events }: { course: Course; events: Activity
           <span className="block truncate text-sm font-semibold text-ink">{course.title}</span>
           <span className="mt-0.5 block font-opmono text-xs tabular-nums text-muted">{t("courses.progress", { done: p.done, total: p.total })}</span>
         </span>
+        <LangTag course={course.locale} learner={locale} />
         {course.status === "outlining" ? (
           <Badge tone="warn">{t("course.unfinishedOutline")}</Badge>
         ) : course.origin === "catalogue" ? (

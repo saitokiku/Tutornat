@@ -17,7 +17,8 @@ export type StoreState = {
   activity: ActivityEvent[];
   notes: ParentNote[];
   resets: { token: string; accountId: string; expires: number }[];
-  session: { accountId: string | null; profileId: string | "parent" | null };
+  /** unlocked: a grown-up proved themselves (signed in, or passed the gate) since a child last took over. */
+  session: { accountId: string | null; profileId: string | "parent" | null; unlocked?: boolean };
   prefs: { locale: Locale };
 };
 

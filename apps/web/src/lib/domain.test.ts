@@ -107,6 +107,7 @@ describe("generateOutline", () => {
     expect(guessSubject("why does the moon change shape")).toBe("science");
     expect(guessSubject("negative numbers")).toBe("math");
     expect(guessSubject("write a persuasive essay")).toBe("english");
+    expect(guessSubject("dinosaurs")).toBe("science");
     expect(guessSubject("knitting")).toBe("other");
   });
 });

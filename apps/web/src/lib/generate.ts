@@ -9,7 +9,7 @@ import type { CourseLength, GenerationEvent, GenerationRequest, Grade, Lesson, L
 const KEYWORDS: Record<Exclude<Subject, "other">, RegExp> = {
   math: /fraction|number|add|subtract|multipl|divi|algebra|equation|geometr|angle|area|slope|function|graph|decimal|percent|ratio|count|math|integer|negativ|probab|statistic|matem|fracci|suma|resta|número/i,
   science:
-    /scien|cell|plant|animal|moon|sun|planet|energy|force|matter|water cycle|weather|volcan|atom|chemi|ecosystem|body|light|sound|electric|magnet|gravity|ciencia|célula|planta|luna|tierra|agua/i,
+    /scien|cell|plant|animal|dinosaur|fossil|insect|\bbugs?\b|bird|ocean|rock|moon|sun|\bstars?\b|space|planet|energy|force|matter|water cycle|weather|climate|earthquake|volcan|atom|chemi|ecosystem|body|bones|germ|light|sound|electric|magnet|gravity|ciencia|célula|planta|animal|dinosaurio|luna|tierra|agua|espacio/i,
   english:
     /read|writ|essay|story|poem|grammar|sentence|paragraph|main idea|argument|speech|rhetoric|vocab|spell|phonic|letter|book|character|author|persua|leer|escrib|cuento|ensayo|lectura/i,
 };

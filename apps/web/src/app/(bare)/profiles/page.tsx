@@ -6,6 +6,7 @@ import { KaizenLogo } from "@/components/brand";
 import { IconFamily, IconLogout, IconPen, IconPlus, IconTrash } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
 import { LearnerForm } from "@/components/profiles/LearnerForm";
+import { ParentGate } from "@/components/profiles/ParentGate";
 import { Button } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
 import { signOut } from "@/lib/auth";
@@ -20,19 +21,30 @@ export default function ProfilesPage() {
   const [mode, setMode] = useState<"pick" | "manage">("pick");
   const [form, setForm] = useState<"add" | string | null>(null); // "add" or a learner id being edited
   const [confirm, setConfirm] = useState<string | null>(null);
-  const showForm = form ?? (learners.length === 0 ? "add" : null);
+  const unlocked = useStore((s) => Boolean(s.session.unlocked));
+  // Parent-only actions wait behind the grown-up gate when a child was the last one using the app.
+  const [gate, setGate] = useState<"parent" | "manage" | "add" | null>(null);
+  const showForm = form ?? (learners.length === 0 && unlocked ? "add" : null);
   const editing = learners.find((l) => l.id === showForm);
+  const pendingGate = gate ?? (learners.length === 0 && !unlocked ? "add" : null);
 
   const open = (id: string | "parent") => {
     selectLearner(id);
     router.push(id === "parent" ? "/family" : "/home");
   };
+  const act = (action: "parent" | "manage" | "add") => {
+    setGate(null);
+    if (action === "parent") open("parent");
+    if (action === "manage") setMode(mode === "pick" ? "manage" : "pick");
+    if (action === "add") setForm("add");
+  };
+  const guarded = (action: "parent" | "manage" | "add") => (unlocked ? act(action) : (setGate(action), setForm(null)));
 
   return (
     <div className="min-h-dvh bg-paper">
       <header className="mx-auto flex max-w-wide items-center justify-between px-5 py-5 sm:px-8">
         <KaizenLogo size={32} href="/" />
-        <Button variant="ghost" size="sm" onClick={() => (signOut(), router.push("/"))}>
+        <Button variant="ghost" size="sm" onClick={signOut}>
           <IconLogout size={16} /> {t("nav.signOut")}
         </Button>
       </header>
@@ -78,7 +90,7 @@ export default function ProfilesPage() {
             ))}
             {mode === "pick" && (
               <li>
-                <Tile onClick={() => open("parent")} label={t("profiles.parent")} sub={t("profiles.parentHint")}>
+                <Tile onClick={() => guarded("parent")} label={t("profiles.parent")} sub={t("profiles.parentHint")}>
                   <span className="grid size-16 place-items-center rounded-full border border-border bg-panel2 text-ink sm:size-20">
                     <IconFamily size={30} />
                   </span>
@@ -86,7 +98,7 @@ export default function ProfilesPage() {
               </li>
             )}
             <li>
-              <Tile onClick={() => setForm("add")} label={t("profiles.add")} dashed>
+              <Tile onClick={() => guarded("add")} label={t("profiles.add")} dashed>
                 <span className="grid size-16 place-items-center rounded-full border border-dashed border-border text-muted sm:size-20">
                   <IconPlus size={28} />
                 </span>
@@ -97,13 +109,19 @@ export default function ProfilesPage() {
 
         {learners.length > 0 && (
           <div className="mt-6 text-center">
-            <Button variant="ghost" size="sm" onClick={() => (setMode(mode === "pick" ? "manage" : "pick"), setConfirm(null))}>
+            <Button variant="ghost" size="sm" onClick={() => (mode === "manage" ? setMode("pick") : guarded("manage"), setConfirm(null))}>
               {mode === "pick" ? t("profiles.manage") : t("profiles.doneManaging")}
             </Button>
           </div>
         )}
 
-        {showForm && (
+        {pendingGate && (
+          <div className="mt-10">
+            <ParentGate onPass={() => act(pendingGate)} onCancel={() => setGate(null)} />
+          </div>
+        )}
+
+        {showForm && !pendingGate && (
           <section className="mx-auto mt-10 max-w-md rounded-lg border border-border bg-panel p-6 shadow-soft animate-fade-up">
             <h2 className="mb-5 font-brand text-t2 font-semibold text-ink">{editing ? t("profiles.edit", { name: editing.nickname }) : t("profiles.add")}</h2>
             <LearnerForm

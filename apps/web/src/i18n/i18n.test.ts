@@ -17,6 +17,12 @@ describe("i18n", () => {
     expect(t("es", "home.hello", { name: "Ada" })).toBe("Hola, Ada");
   });
 
+  it("uses the singular form for one", () => {
+    expect(t("en", "course.lessons", { n: 1 })).toBe("1 lesson");
+    expect(t("en", "course.lessons", { n: 4 })).toBe("4 lessons");
+    expect(t("es", "courses.progress", { done: 0, total: 1 })).toBe("0 de 1 lección terminada");
+  });
+
   it("labels grades", () => {
     expect(gradeLabel("en", "K")).toBe("Kindergarten");
     expect(gradeLabel("en", "4")).toBe("Grade 4");

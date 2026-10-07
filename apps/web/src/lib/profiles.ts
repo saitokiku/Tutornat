@@ -61,7 +61,15 @@ export function removeLearner(id: string) {
 }
 
 export function selectLearner(id: string | "parent" | null) {
-  update((s) => void (s.session.profileId = id));
+  update((s) => {
+    s.session.profileId = id;
+    if (id && id !== "parent") s.session.unlocked = false;
+  });
+}
+
+/** Grown-up gate passed: Parent view, managing learners and account settings are open again. */
+export function unlockParent() {
+  update((s) => void (s.session.unlocked = true));
 }
 
 export function addNote(profileId: string, text: string) {
