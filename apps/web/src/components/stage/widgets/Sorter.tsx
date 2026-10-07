@@ -5,11 +5,18 @@ import { IconCheck } from "@/components/icons";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
 import { Hear, useHear } from "../hear";
+import { Spoken } from "../narration";
 import { CheckRow } from "./CheckRow";
 
 type Props = { widget: Extract<Widget, { kind: "sorter" }>; onCheck?: (correct: boolean) => void; lang?: string };
 
-/** Put each item in a category by tapping it — no dragging needed. After checking, wrong ones are marked. */
+/** A word sort: every item is a word or a short phrase, so the cards sit two to a row. */
+export const isWordSort = (w: Extract<Widget, { kind: "sorter" }>) => w.items.every((i) => i.text.length <= 24);
+
+/**
+ * Put each item in a category by tapping it — no dragging needed. After checking, wrong ones are
+ * marked. Works for sentences (main idea or detail?) and for word sorts (noun or verb?).
+ */
 export function Sorter({ widget, onCheck, lang }: Props) {
   const t = useT();
   const { young } = useHear();
@@ -17,6 +24,7 @@ export function Sorter({ widget, onCheck, lang }: Props) {
   const [checked, setChecked] = useState(false);
   const [result, setResult] = useState<boolean | null>(null);
   const sorted = widget.items.filter((i) => picks[i.id] !== undefined).length;
+  const words = isWordSort(widget);
 
   return (
     <div className="space-y-5">
@@ -25,19 +33,21 @@ export function Sorter({ widget, onCheck, lang }: Props) {
           {widget.categories.map((c) => (
             <span key={c} className="inline-flex items-center gap-1.5 rounded-full bg-panel2 py-1 pl-4 pr-1 text-body font-medium text-ink">
               {c}
-              <Hear text={c} className="size-9" />
+              <Hear text={c} />
             </span>
           ))}
         </div>
       )}
-      <ul className="space-y-3" lang={lang}>
+      <ul className={words ? "grid gap-3 sm:grid-cols-2" : "space-y-3"} lang={lang}>
         {widget.items.map((item) => {
           const pick = picks[item.id];
           const wrong = checked && pick !== item.answer;
           return (
             <li key={item.id} className={`rounded-md border px-4 py-3 ${wrong ? "border-bad/50 bg-bad/5" : "border-border bg-panel"}`}>
               <div className="flex items-start gap-3">
-                <p className={`flex-1 text-ink ${young ? "text-t3" : "text-body"}`}>{item.text}</p>
+                <p className={`flex-1 text-ink ${words ? "font-semibold" : ""} ${young ? "text-t3" : "text-body"}`}>
+                  <Spoken k={`item.${item.id}`} text={item.text} />
+                </p>
                 <Hear text={item.text} />
               </div>
               <div role="group" aria-label={item.text} className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -48,7 +58,7 @@ export function Sorter({ widget, onCheck, lang }: Props) {
                     aria-pressed={pick === ci}
                     aria-label={t("w.sort.put", { item: item.text, category: c })}
                     onClick={() => (setPicks({ ...picks, [item.id]: ci }), setChecked(false), setResult(null))}
-                    className={`k-chip border-border bg-panel px-4 font-semibold text-ink hover:border-ink/40 aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper ${young ? "min-h-12 text-body" : "min-h-10 text-sm"}`}
+                    className={`k-chip border-border bg-panel px-4 font-semibold text-ink hover:border-ink/40 aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper ${young ? "min-h-12 text-body" : "min-h-11 text-sm"}`}
                   >
                     <span aria-hidden="true">{c}</span>
                   </button>

@@ -425,6 +425,13 @@ const negative: CatalogueEntry = {
             "The first player to find all three points wins. Then trade grids and check every point together.",
           ],
         },
+        {
+          id: "s7",
+          kind: "interactive",
+          title: "Plot in two quadrants",
+          prompt: "Plot (−3, 2) and (4, −1). Start at the origin each time: move left or right for x, then up or down for y.",
+          widget: { kind: "coordinate", min: -5, max: 5, targets: [[-3, 2], [4, -1]] },
+        },
       ],
     },
   ],

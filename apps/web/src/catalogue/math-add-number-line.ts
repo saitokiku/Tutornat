@@ -249,6 +249,13 @@ const addNumberLine: CatalogueEntry = {
             "Say it: 10 and 3 make 13. Now try 7 + 6.",
           ],
         },
+        {
+          id: "s7",
+          kind: "interactive",
+          title: "Build 9 + 6 with blocks",
+          prompt: "Find 9 + 6. Fill the 10 first, then add the rest. Show the answer with blocks: a ten rod for the full 10, and ones for the rest.",
+          widget: { kind: "place-value", target: 15 },
+        },
       ],
     },
     {

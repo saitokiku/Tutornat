@@ -4,17 +4,21 @@ import { createContext, useContext, useState } from "react";
 import { IconSpeaker } from "@/components/icons";
 import { useT } from "@/i18n";
 import type { Locale } from "@/lib/types";
+import { claimVoice, langFor, voiceFor } from "./useSpeech";
 
 /** Stage-wide reading support: `hear` shows tap-to-hear buttons, `young` uses larger type (K–2). */
 export const HearContext = createContext<{ hear: boolean; young: boolean; locale: Locale }>({ hear: false, young: false, locale: "en" });
 export const useHear = () => useContext(HearContext);
 
+const noop = () => {};
+
 export function speakText(text: string, locale: Locale, onEnd?: () => void) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+  claimVoice(onEnd ?? noop);
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = locale === "es" ? "es-US" : "en-US";
-  u.voice = speechSynthesis.getVoices().find((v) => v.lang.startsWith(locale)) ?? null;
+  u.lang = langFor(locale);
+  u.voice = voiceFor(locale);
   u.rate = 0.9;
   u.onend = u.onerror = () => onEnd?.();
   speechSynthesis.speak(u);
@@ -26,7 +30,7 @@ export function Hear({ text, className = "" }: { text: string; className?: strin
   const t = useT();
   const { hear, locale } = useHear();
   const [on, setOn] = useState(false);
-  if (!hear) return null;
+  if (!hear || !text) return null;
   return (
     <button
       type="button"
@@ -37,7 +41,7 @@ export function Hear({ text, className = "" }: { text: string; className?: strin
         e.stopPropagation();
         if (speakText(text, locale, () => setOn(false))) setOn(true);
       }}
-      className={`inline-grid size-10 shrink-0 place-items-center rounded-full border transition-colors ${
+      className={`inline-grid size-11 shrink-0 place-items-center rounded-full border transition-colors ${
         on ? "border-accent bg-accent/10 text-accent" : "border-border bg-panel text-muted hover:border-ink/30 hover:text-ink"
       } ${className}`}
     >

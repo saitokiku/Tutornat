@@ -1,15 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { IconCheck, IconLightbulb } from "@/components/icons";
 import { Button, SUBJECT_TINT } from "@/components/ui";
 import { useT } from "@/i18n";
 import type { InteractiveScene, ProjectScene, QuizScene, SlideScene, Subject, Widget } from "@/lib/types";
 import { Hear, useHear } from "./hear";
+import { orderBlocks, quizSpeech, Spoken, useNarrating } from "./narration";
 import { VisualView } from "./visuals";
+import { AreaModel } from "./widgets/AreaModel";
+import { Balance, equationText } from "./widgets/Balance";
+import { ClockWidget } from "./widgets/Clock";
+import { Coordinate } from "./widgets/Coordinate";
 import { FractionBar } from "./widgets/FractionBar";
 import { MoonPhases } from "./widgets/MoonPhases";
 import { NumberLineWidget } from "./widgets/NumberLine";
+import { PlaceValue } from "./widgets/PlaceValue";
+import { SentenceBuilder, bankOrder } from "./widgets/SentenceBuilder";
+import { Sequence, startOrder } from "./widgets/Sequence";
 import { Sorter } from "./widgets/Sorter";
 import { StatesOfMatter } from "./widgets/StatesOfMatter";
 
@@ -26,31 +34,54 @@ function useBody() {
   return young ? "text-t2 font-normal leading-snug" : "text-t3 font-normal leading-relaxed";
 }
 
+/** K–2 primary actions are 56px tall; everyone else gets the standard 44px button. */
+export const bigButton = (young: boolean) => (young ? "min-h-14 px-7 text-body" : "");
+
+function Figure({ k, children, alt }: { k: string; children: ReactNode; alt: string }) {
+  const on = useNarrating(k);
+  return (
+    <figure className={`flex flex-col items-center gap-3 rounded-md bg-panel2 px-4 py-6 ${on ? "ring-2 ring-accent/60" : ""}`}>
+      {children}
+      {/* While the picture is being described aloud, the words show too (the picture keeps its own label). */}
+      {on && (
+        <figcaption aria-hidden="true" className="max-w-prose text-center text-sm text-ink">
+          <Spoken k={k} text={alt} />
+        </figcaption>
+      )}
+      <Hear text={alt} />
+    </figure>
+  );
+}
+
 export function SlideView({ scene, subject }: { scene: SlideScene; subject: Subject }) {
   const body = useBody();
   const { young } = useHear();
   return (
     <div className="space-y-5">
-      {scene.blocks.map((b, i) =>
+      {orderBlocks(scene.blocks, young).map(({ b, i }) =>
         b.type === "text" ? (
           <div key={i} className="flex max-w-prose items-start gap-3">
-            <p className={`max-w-prose text-ink ${body}`}>{b.text}</p>
+            <p className={`max-w-prose text-ink ${body}`}>
+              <Spoken k={`b${i}`} text={b.text} />
+            </p>
             <Hear text={b.text} />
           </div>
         ) : b.type === "points" ? (
           <ul key={i} className="max-w-prose space-y-2">
-            {b.items.map((item) => (
-              <li key={item} className={`flex items-start gap-3 text-ink ${young ? "text-t3" : "text-body"}`}>
+            {b.items.map((item, j) => (
+              <li key={item} className={`flex items-start gap-3 text-ink ${young ? "text-t2" : "text-body"}`}>
                 <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 rounded-full" style={{ background: TINT[subject] }} />
-                <span className="flex-1">{item}</span>
+                <span className="flex-1">
+                  <Spoken k={`b${i}.${j}`} text={item} />
+                </span>
                 <Hear text={item} />
               </li>
             ))}
           </ul>
         ) : (
-          <figure key={i} className="flex justify-center rounded-md bg-panel2 px-4 py-6">
+          <Figure key={i} k={`v${i}`} alt={b.alt}>
             <VisualView visual={b.visual} alt={b.alt} tint={TINT[subject]} />
-          </figure>
+          </Figure>
         ),
       )}
     </div>
@@ -58,17 +89,32 @@ export function SlideView({ scene, subject }: { scene: SlideScene; subject: Subj
 }
 
 export function WidgetView({ widget, subject, onCheck, lang }: { widget: Widget; subject: Subject; onCheck: (ok: boolean) => void; lang: string }) {
+  const tint = TINT[subject];
   switch (widget.kind) {
     case "fraction-bar":
-      return <FractionBar widget={widget} onCheck={onCheck} tint={TINT[subject]} />;
+      return <FractionBar widget={widget} onCheck={onCheck} tint={tint} />;
     case "number-line":
-      return <NumberLineWidget widget={widget} onCheck={onCheck} tint={TINT[subject]} />;
+      return <NumberLineWidget widget={widget} onCheck={onCheck} tint={tint} />;
     case "states-of-matter":
       return <StatesOfMatter widget={widget} onCheck={onCheck} />;
     case "moon-phases":
       return <MoonPhases widget={widget} onCheck={onCheck} />;
     case "sorter":
       return <Sorter widget={widget} onCheck={onCheck} lang={lang} />;
+    case "area-model":
+      return <AreaModel widget={widget} onCheck={onCheck} tint={tint} />;
+    case "place-value":
+      return <PlaceValue widget={widget} onCheck={onCheck} tint={tint} />;
+    case "clock":
+      return <ClockWidget widget={widget} onCheck={onCheck} tint={tint} />;
+    case "balance":
+      return <Balance widget={widget} onCheck={onCheck} tint={tint} />;
+    case "coordinate":
+      return <Coordinate widget={widget} onCheck={onCheck} tint={tint} />;
+    case "sequence":
+      return <Sequence widget={widget} onCheck={onCheck} lang={lang} />;
+    case "sentence-builder":
+      return <SentenceBuilder widget={widget} onCheck={onCheck} lang={lang} />;
   }
 }
 
@@ -77,7 +123,9 @@ export function InteractiveView({ scene, subject, onAnswer, lang }: { scene: Int
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3">
-        <p className={`max-w-prose text-ink ${body}`}>{scene.prompt}</p>
+        <p className={`max-w-prose text-ink ${body}`}>
+          <Spoken k="prompt" text={scene.prompt} />
+        </p>
         <Hear text={scene.prompt} />
       </div>
       <WidgetView widget={scene.widget} subject={subject} lang={lang} onCheck={(correct) => onAnswer({ sceneId: scene.id, correct, assisted: false })} />
@@ -96,9 +144,10 @@ export function QuizView({ scene, onAnswer, onSpeakText, onHelp }: { scene: Quiz
   const [result, setResult] = useState<boolean | null>(null);
   const q = scene.questions[qi];
   const assisted = hint || why;
+  const spoken = quizSpeech(q);
 
   useEffect(() => {
-    onSpeakText(`${q.prompt} ${q.choices.map((c, i) => `${i + 1}. ${c}.`).join(" ")}`);
+    onSpeakText(quizSpeech(q).text);
   }, [q, onSpeakText]);
 
   const check = () => {
@@ -120,7 +169,9 @@ export function QuizView({ scene, onAnswer, onSpeakText, onHelp }: { scene: Quiz
       <p className="font-opmono text-xs tabular-nums text-muted">{t("stage.question", { n: qi + 1, total: scene.questions.length })}</p>
       <fieldset key={q.id} className="space-y-4">
         <legend className="flex items-start gap-3">
-          <span className={`max-w-prose font-semibold text-ink ${young ? "text-t2" : "text-t3"}`}>{q.prompt}</span>
+          <span className={`max-w-prose font-semibold text-ink ${young ? "text-t2" : "text-t3"}`}>
+            <Spoken k="quiz" text={q.prompt} offset={spoken.prompt} />
+          </span>
           <Hear text={q.prompt} />
         </legend>
         <div className="grid gap-2.5 sm:grid-cols-2">
@@ -131,7 +182,7 @@ export function QuizView({ scene, onAnswer, onSpeakText, onHelp }: { scene: Quiz
             return (
               <div key={i} className="flex items-center gap-2">
                 <label
-                  className={`flex min-h-14 flex-1 cursor-pointer items-center gap-3 rounded-md border px-4 py-3 transition-colors ${young ? "text-t3" : "text-body"} ${
+                  className={`flex flex-1 cursor-pointer items-center gap-3 rounded-md border px-4 py-3 transition-colors ${young ? "min-h-16 text-t3" : "min-h-14 text-body"} ${
                     showRight ? "border-good bg-good/10" : showWrong ? "border-bad bg-bad/5" : picked ? "border-ink bg-panel" : "border-border bg-panel hover:border-ink/30"
                   } ${result === true ? "pointer-events-none" : ""}`}
                 >
@@ -143,7 +194,9 @@ export function QuizView({ scene, onAnswer, onSpeakText, onHelp }: { scene: Quiz
                     onChange={() => (setChoice(i), result === false && setResult(null))}
                     className="size-4 shrink-0 accent-[var(--color-ink)]"
                   />
-                  <span className="text-ink">{c}</span>
+                  <span className="text-ink">
+                    <Spoken k="quiz" text={c} offset={spoken.choices[i]} />
+                  </span>
                 </label>
                 <Hear text={c} />
               </div>
@@ -163,7 +216,7 @@ export function QuizView({ scene, onAnswer, onSpeakText, onHelp }: { scene: Quiz
       <div className="flex flex-wrap items-center gap-3">
         {result !== true && (
           <>
-            <Button onClick={check} disabled={choice === null || result !== null}>
+            <Button onClick={check} disabled={choice === null || result !== null} className={bigButton(young)}>
               {t("stage.check")}
             </Button>
             {!hint && (
@@ -173,11 +226,12 @@ export function QuizView({ scene, onAnswer, onSpeakText, onHelp }: { scene: Quiz
             )}
           </>
         )}
-        <p role="status" className={`text-sm font-medium ${result === null ? "sr-only" : result ? "text-good" : "text-bad"}`}>
+        <p role="status" className={`font-medium ${young ? "text-body" : "text-sm"} ${result === null ? "sr-only" : result ? "text-good" : "text-bad"}`}>
           {result === null ? "" : result ? (assisted ? t("stage.correctHelped") : t("stage.correct")) : t("stage.incorrect")}
         </p>
+        {result !== null && <Hear text={result ? (assisted ? t("stage.correctHelped") : t("stage.correct")) : t("stage.incorrect")} />}
         {result === false && !why && (
-          <Button variant="ghost" size="sm" onClick={() => (setWhy(true), onHelp?.(`${scene.id}:${q.id}`))}>
+          <Button variant="ghost" onClick={() => (setWhy(true), onHelp?.(`${scene.id}:${q.id}`))}>
             {t("stage.why")}
           </Button>
         )}
@@ -191,7 +245,7 @@ export function QuizView({ scene, onAnswer, onSpeakText, onHelp }: { scene: Quiz
       )}
 
       {result === true && qi < scene.questions.length - 1 && (
-        <Button variant="secondary" onClick={next}>
+        <Button variant="secondary" onClick={next} className={bigButton(young)}>
           {t("stage.nextQuestion")}
         </Button>
       )}
@@ -206,7 +260,9 @@ export function ProjectView({ scene }: { scene: ProjectScene }) {
   return (
     <div className="space-y-5">
       <div className="flex items-start gap-3">
-        <p className={`max-w-prose text-ink ${body}`}>{scene.brief}</p>
+        <p className={`max-w-prose text-ink ${body}`}>
+          <Spoken k="brief" text={scene.brief} />
+        </p>
         <Hear text={scene.brief} />
       </div>
       <ol className="space-y-2.5">
@@ -224,7 +280,9 @@ export function ProjectView({ scene }: { scene: ProjectScene }) {
                 }}
                 className="mt-1 size-4 shrink-0 accent-[var(--color-ink)]"
               />
-              <span className={`text-body ${done.has(i) ? "text-muted line-through decoration-border" : "text-ink"}`}>{step}</span>
+              <span className={`text-body ${done.has(i) ? "text-muted line-through decoration-border" : "text-ink"}`}>
+                <Spoken k={`step.${i}`} text={step} />
+              </span>
             </label>
             <Hear text={step} />
           </li>
@@ -238,14 +296,34 @@ export function ProjectView({ scene }: { scene: ProjectScene }) {
   );
 }
 
-/** Text the Read aloud button speaks for a scene (quiz text comes from the current question). */
+/**
+ * What is on screen, in words, for the tutor beside the lesson. It describes where a manipulative starts
+ * and never carries its answer key: no target, no right order, no right sentence.
+ */
 export function sceneSpeech(scene: SlideScene | InteractiveScene | ProjectScene): string {
   if (scene.kind === "slide")
     return [scene.title, ...scene.blocks.map((b) => (b.type === "text" ? b.text : b.type === "points" ? b.items.join(". ") : b.alt))].join(". ");
-  if (scene.kind === "interactive") {
-    const w = scene.widget;
-    const items = w.kind === "sorter" ? [`${w.categories.join(", ")}.`, ...w.items.map((it, i) => `${i + 1}. ${it.text}`)] : [];
-    return [scene.title, scene.prompt, ...items].join(". ");
-  }
+  if (scene.kind === "interactive") return [scene.title, scene.prompt, ...widgetWords(scene.widget)].join(". ");
   return [scene.title, scene.brief, ...scene.steps].join(". ");
+}
+
+function widgetWords(w: Widget): string[] {
+  switch (w.kind) {
+    case "sorter":
+      return [`${w.categories.join(", ")}.`, ...w.items.map((it, i) => `${i + 1}. ${it.text}`)];
+    case "balance":
+      return [equationText({ a: w.xCount, l: w.leftUnits, r: w.rightUnits })];
+    case "sequence":
+      return startOrder(w).map((id, i) => `${i + 1}. ${w.items.find((it) => it.id === id)?.text ?? ""}`);
+    case "sentence-builder":
+      return [bankOrder(w).map((i) => w.words[i]).join(" / ")];
+    case "area-model":
+      return [`${w.rows} × ${w.cols}`];
+    case "clock":
+      return [`${w.h}:${String(w.m).padStart(2, "0")}`];
+    case "coordinate":
+      return [`x, y: ${w.min}…${w.max}`];
+    default:
+      return [];
+  }
 }

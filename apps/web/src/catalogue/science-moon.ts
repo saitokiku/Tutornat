@@ -203,6 +203,22 @@ const moon: CatalogueEntry = {
             },
           ],
         },
+        {
+          id: "s4",
+          kind: "interactive",
+          title: "Put the waxing phases in order",
+          prompt: "Start at new moon. Put the phases in the order you would see them as the lit part grows.",
+          widget: {
+            kind: "sequence",
+            items: [
+              { id: "new", text: "New moon" },
+              { id: "waxing-crescent", text: "Waxing crescent" },
+              { id: "first-quarter", text: "First quarter" },
+              { id: "waxing-gibbous", text: "Waxing gibbous" },
+              { id: "full", text: "Full moon" },
+            ],
+          },
+        },
       ],
     },
     {
@@ -330,6 +346,13 @@ const moon: CatalogueEntry = {
             "Each night, compare with the night before. Is the Moon in the same place? Is more or less of it lit?",
             "After five nights, explain to someone why the Moon was in a different place and why its shape changed.",
           ],
+        },
+        {
+          id: "s7",
+          kind: "interactive",
+          title: "Tomorrow's moonrise",
+          prompt: "Tonight the Moon rose at 7:00. It rises about 50 minutes later each day. Set the clock to about when it will rise tomorrow.",
+          widget: { kind: "clock", h: 7, m: 0, target: { h: 7, m: 50 } },
         },
       ],
     },

@@ -2,20 +2,22 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IconArrowLeft, IconArrowRight, IconBoard, IconCheck, IconCheckCircle, IconChat, IconEye, IconHand, IconHome, IconLayers, IconSpeaker, IconStop } from "@/components/icons";
+import { IconArrowLeft, IconArrowRight, IconBoard, IconCheck, IconCheckCircle, IconChat, IconEye, IconHand, IconHome, IconLayers } from "@/components/icons";
 import { Button, EmptyState, Notice, SubjectDot, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { Related } from "@/components/courses/Related";
+import { logAct } from "@/lib/acts";
 import { checkMemory, lessonState, record } from "@/lib/activity";
 import { read } from "@/lib/store";
 import type { Course, Lesson, Profile, Scene } from "@/lib/types";
-import { InteractiveView, ProjectView, QuizView, SlideView, sceneSpeech, type OnAnswer } from "./scenes";
+import { InteractiveView, ProjectView, QuizView, SlideView, bigButton, type OnAnswer } from "./scenes";
 import { useTitle } from "@/components/LangSync";
-import { HearContext } from "./hear";
+import { Finish, type Tally } from "./Finish";
+import { Hear, HearContext } from "./hear";
+import { courseOrigin, lessonHasChecks, lessonRef, ORIGIN_KEY, secondsSince } from "./lesson";
+import { NarrationBar, NarrationContext, repeatSegments, sceneSegments, Spoken } from "./narration";
 import { TutorPanel } from "./TutorPanel";
 import { useSpeech } from "./useSpeech";
-import { ResourceList } from "@/components/resources/ResourceList";
-import { resourcesFor } from "@/resources";
 
 const MAX_SECONDS = 2 * 60 * 60;
 const KIND_ICON: Record<Scene["kind"], typeof IconEye> = { slide: IconEye, interactive: IconHand, quiz: IconCheckCircle, project: IconHome };
@@ -26,7 +28,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
   useTitle(lesson.title);
   const [index, setIndex] = useState(0);
   const [visited, setVisited] = useState<Set<number>>(() => new Set([0]));
-  const [tally, setTally] = useState({ own: 0, help: 0, missed: 0 });
+  const [tally, setTally] = useState<Tally>({ own: 0, help: 0, missed: 0 });
   const [finished, setFinished] = useState<number | null>(null); // seconds spent, once finished
   const [startedAt] = useState(() => Date.now());
   const [showScenes, setShowScenes] = useState(false);
@@ -34,17 +36,28 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
   const [boardNote, setBoardNote] = useState(false);
   const [quizText, setQuizText] = useState("");
   const scene = lesson.scenes[index];
-  const speech = useSpeech(course.locale, `${lesson.id}:${index}`);
+  const speech = useSpeech(course.locale, `${lesson.id}:${index}:${finished !== null}`);
   const base = { profileId: learner.id, courseId: course.id, lessonId: lesson.id };
   const nextLesson = course.lessons[course.lessons.findIndex((l) => l.id === lesson.id) + 1];
+  const origin = courseOrigin(course);
+  const young = isYoung(learner);
 
-  // A lesson counts as started once, the first time it is opened.
+  // A lesson counts as started once, the first time it is opened. Each sitting with checks is a
+  // teaching act whose intent is that its checks come out right on the learner's own (once a day).
   useEffect(() => {
-    if (lesson.scenes.length && lessonState(read().activity, course.id, lesson.id) === "new") record({ ...base, type: "lesson_started" });
+    if (!lesson.scenes.length) return;
+    if (lessonState(read().activity, course.id, lesson.id) === "new") record({ ...base, type: "lesson_started" });
+    if (lessonHasChecks(lesson)) logAct({ profileId: learner.id, kind: "lesson", intent: "lesson-checks-pass", ref: lessonRef(course.id, lesson.id) }, { once: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per lesson
   }, [course.id, lesson.id]);
 
-  const focusTitle = () => requestAnimationFrame(() => document.getElementById("scene-title")?.focus());
+  // Move focus to the new scene's title after it renders (never after the stage has gone away).
+  const raf = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(raf.current), []);
+  const focusTitle = () => {
+    cancelAnimationFrame(raf.current);
+    raf.current = requestAnimationFrame(() => document.getElementById("scene-title")?.focus());
+  };
   const go = (i: number) => {
     focusTitle();
     setIndex(i);
@@ -60,8 +73,9 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     setTally((s) => (correct ? (assisted ? { ...s, help: s.help + 1 } : { ...s, own: s.own + 1 }) : { ...s, missed: s.missed + 1 }));
   };
   const onHelp = useCallback((id: string) => memory.current.help(id), []);
+  // Finishing records the lesson and shows the finish. It never opens the next lesson.
   const finish = () => {
-    const seconds = Math.min(MAX_SECONDS, Math.round((Date.now() - startedAt) / 1000));
+    const seconds = secondsSince(startedAt, MAX_SECONDS);
     record({ ...base, type: "lesson_completed", seconds });
     setFinished(seconds);
     speech.stop();
@@ -74,35 +88,28 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
       <Link
         href={`/courses/${course.id}`}
         aria-label={t("stage.backToCourse")}
-        className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink sm:max-w-64 sm:justify-start"
+        className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink sm:max-w-64 sm:justify-start"
       >
         <IconArrowLeft size={16} className="shrink-0" />
         <span className="hidden truncate sm:inline" lang={course.locale}>
           {course.title}
         </span>
       </Link>
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:justify-center">
-        <SubjectDot subject={course.subject} />
-        <h1 className="truncate font-brand text-t3 font-semibold text-ink" lang={course.locale}>
-          {lesson.title}
-        </h1>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2 sm:justify-center">
+          <SubjectDot subject={course.subject} />
+          <h1 className="truncate font-brand text-t3 font-semibold text-ink" lang={course.locale}>
+            {lesson.title}
+          </h1>
+        </div>
+        {origin && <p className="truncate text-xs text-muted sm:text-center">{t(ORIGIN_KEY[origin])}</p>}
       </div>
-      {lesson.scenes.length > 0 && !finished && (
+      {lesson.scenes.length > 0 && finished === null && (
         <div className="flex shrink-0 items-center gap-1">
-          {speech.supported &&
-            (speech.speaking ? (
-              <Button size="sm" variant="secondary" onClick={speech.stop} aria-label={t("stage.stopReading")}>
-                <IconStop size={14} /> <span className="hidden sm:inline">{t("stage.stopReading")}</span>
-              </Button>
-            ) : (
-              <Button size="sm" variant="secondary" onClick={() => speech.speak(scene.kind === "quiz" ? quizText : sceneSpeech(scene))} aria-label={t("stage.readAloud")}>
-                <IconSpeaker size={16} /> <span className="hidden sm:inline">{t("stage.readAloud")}</span>
-              </Button>
-            ))}
-          <Button size="sm" variant="ghost" onClick={() => setBoardNote(!boardNote)} aria-label={t("stage.whiteboard")}>
+          <Button variant="ghost" className="px-3" onClick={() => setBoardNote(!boardNote)} aria-label={t("stage.whiteboard")}>
             <IconBoard size={16} />
           </Button>
-          <Button size="sm" variant={showTutor ? "secondary" : "ghost"} aria-expanded={showTutor} onClick={() => setShowTutor(!showTutor)} aria-label={showTutor ? t("tutor.hide") : t("tutor.show")}>
+          <Button variant={showTutor ? "secondary" : "ghost"} className="px-3" aria-expanded={showTutor} onClick={() => setShowTutor(!showTutor)} aria-label={showTutor ? t("tutor.hide") : t("tutor.show")}>
             <IconChat size={16} /> <span className="hidden sm:inline">{t("tutor.title")}</span>
           </Button>
         </div>
@@ -138,7 +145,8 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     );
 
   const last = index === lesson.scenes.length - 1;
-  const young = isYoung(learner);
+  const segments = sceneSegments(scene, young, quizText);
+  const repeat = young && scene.kind === "slide" ? repeatSegments(scene, young) : undefined;
 
   return (
     <HearContext.Provider value={{ hear: young, young, locale: course.locale }}>
@@ -167,7 +175,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                     aria-current={on ? "step" : undefined}
                     onClick={() => go(i)}
                     disabled={finished !== null}
-                    className={`relative flex w-full items-center gap-3 rounded-sm py-2 pl-4 pr-2 text-left text-sm transition-colors ${
+                    className={`relative flex min-h-11 w-full items-center gap-3 rounded-sm py-2 pl-4 pr-2 text-left text-sm transition-colors ${
                       on ? "bg-panel font-medium text-ink shadow-soft" : "text-muted hover:bg-panel/70 hover:text-ink"
                     }`}
                   >
@@ -191,42 +199,23 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
         <main className="min-w-0">
           <section aria-labelledby="scene-title" className="rounded-lg border border-border bg-panel shadow-soft">
             {finished !== null ? (
-              <div className="px-5 py-10 text-center sm:px-10">
-                <span className="mx-auto grid size-12 place-items-center rounded-full bg-good text-paper">
-                  <IconCheck size={24} />
-                </span>
-                <h2 id="scene-title" tabIndex={-1} className="mt-4 font-brand text-t1 font-semibold text-ink focus:outline-none">
-                  {t("stage.finished")}
-                </h2>
-                <p className="mt-2 text-sm text-muted">{t("stage.finishedBody")}</p>
-                <p className="mt-5 font-opmono text-sm tabular-nums text-ink">
-                  {tally.own + tally.help + tally.missed ? t("stage.checksSummary", tally) : t("stage.noChecks")}
-                </p>
-                <p className="mt-1 font-opmono text-xs tabular-nums text-muted">{t("stage.minutesSpent", { n: Math.max(1, Math.round(finished / 60)) })}</p>
-                <div className="mt-8 flex flex-wrap justify-center gap-3">
-                  <Link href={`/courses/${course.id}`} className={btn("secondary")}>
-                    {t("stage.backToCourse")}
-                  </Link>
-                  {nextLesson && (
-                    <Link href={`/learn/${course.id}/${nextLesson.id}`} className={btn("primary")}>
-                      {t("stage.nextLesson")} <IconArrowRight size={16} />
-                    </Link>
-                  )}
-                </div>
-                <div className="mx-auto mt-10 max-w-md text-left">
-                  <ResourceList list={resourcesFor({ topic: `${course.title} ${course.goal} ${lesson.title}`, subject: course.subject, grade: course.grade, locale: learner.locale })} locale={learner.locale} />
-                </div>
-              </div>
+              <Finish course={course} lesson={lesson} learner={learner} tally={tally} seconds={finished} next={nextLesson} />
             ) : (
-              <>
-                <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-8">
+              <NarrationContext.Provider value={speech.pos}>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-8">
                   <span className="font-opmono text-[11px] uppercase tracking-wider text-muted">{t(`stage.kind.${scene.kind}` as const)}</span>
-                  <span className="hidden font-opmono text-xs tabular-nums text-muted lg:inline">{t("stage.sceneOf", { n: index + 1, total: lesson.scenes.length })}</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <NarrationBar speech={speech} segments={segments} repeat={repeat} />
+                    <span className="hidden font-opmono text-xs tabular-nums text-muted lg:inline">{t("stage.sceneOf", { n: index + 1, total: lesson.scenes.length })}</span>
+                  </div>
                 </div>
                 <div key={scene.id} className="min-h-[22rem] animate-fade-up space-y-6 px-5 py-7 sm:px-8 sm:py-9" lang={course.locale}>
-                  <h2 id="scene-title" tabIndex={-1} className="font-brand text-t1 font-semibold text-balance text-ink focus:outline-none">
-                    {scene.title}
-                  </h2>
+                  <div className="flex items-start gap-3">
+                    <h2 id="scene-title" tabIndex={-1} className={`font-brand font-semibold text-balance text-ink focus:outline-none ${young ? "text-d3" : "text-t1"}`}>
+                      <Spoken k="title" text={scene.title} />
+                    </h2>
+                    <Hear text={scene.title} />
+                  </div>
                   {boardNote && <Notice>{t("stage.whiteboardOff")}</Notice>}
                   {scene.kind === "slide" && <SlideView scene={scene} subject={course.subject} />}
                   {scene.kind === "interactive" && <InteractiveView scene={scene} subject={course.subject} onAnswer={onAnswer} lang={course.locale} />}
@@ -234,20 +223,20 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                   {scene.kind === "project" && <ProjectView scene={scene} />}
                 </div>
                 <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">
-                  <Button variant="ghost" onClick={() => go(index - 1)} disabled={index === 0}>
+                  <Button variant="ghost" onClick={() => go(index - 1)} disabled={index === 0} className={bigButton(young)}>
                     <IconArrowLeft size={16} /> {t("common.previous")}
                   </Button>
                   {last ? (
-                    <Button onClick={finish}>
+                    <Button onClick={finish} className={bigButton(young)}>
                       {t("stage.finish")} <IconCheck size={16} />
                     </Button>
                   ) : (
-                    <Button onClick={() => go(index + 1)}>
+                    <Button onClick={() => go(index + 1)} className={bigButton(young)}>
                       {t("common.next")} <IconArrowRight size={16} />
                     </Button>
                   )}
                 </div>
-              </>
+              </NarrationContext.Provider>
             )}
           </section>
         </main>

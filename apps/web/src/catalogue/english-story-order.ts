@@ -394,6 +394,13 @@ const storyOrder: CatalogueEntry = {
             "Draw each part on its own page. Read your book to someone.",
           ],
         },
+        {
+          id: "s6",
+          kind: "interactive",
+          title: "Build Nia's first sentence",
+          prompt: "Make the first part of Nia's story. Tap the words in order: Nia flies her kite.",
+          widget: { kind: "sentence-builder", words: ["Nia", "flies", "her", "kite."], answers: [["Nia", "flies", "her", "kite."]] },
+        },
       ],
     },
   ],

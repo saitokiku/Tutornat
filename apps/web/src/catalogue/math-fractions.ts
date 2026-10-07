@@ -191,6 +191,14 @@ const fractions: CatalogueEntry = {
             "Line up the strips. Which is wider: 1/3, 1/6 or 1/8?",
           ],
         },
+        {
+          id: "s7",
+          kind: "interactive",
+          title: "Cut a pan into eighths",
+          prompt:
+            "A pan of cornbread is cut into 2 rows, with 4 equal pieces in each row. Set the rows and columns to match, then count the pieces. One piece is one of that many equal parts of the pan.",
+          widget: { kind: "area-model", rows: 1, cols: 1, target: { rows: 2, cols: 4 } },
+        },
       ],
     },
     {

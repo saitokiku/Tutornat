@@ -270,6 +270,14 @@ const slope: CatalogueEntry = {
             "Write y = mx + b for your data and predict when the battery reaches 100%. Many devices charge more slowly near full, so check your prediction and explain any difference.",
           ],
         },
+        {
+          id: "s7",
+          kind: "interactive",
+          title: "When is the plant 19 cm tall?",
+          prompt:
+            "The plant follows y = 3x + 4. To find the week it reaches 19 cm, solve 3x + 4 = 19 on the balance. Take the same from both sides until one x stands alone.",
+          widget: { kind: "balance", xCount: 3, leftUnits: 4, rightUnits: 19 },
+        },
       ],
     },
     {
