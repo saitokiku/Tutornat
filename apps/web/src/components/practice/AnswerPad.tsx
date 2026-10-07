@@ -222,7 +222,10 @@ export function choiceForKey(choices: Pick<Choice, "label">[], key: string) {
   return i >= 0 && i < choices.length ? i : -1;
 }
 
-/** Tap to answer. Young learners can hear each choice first. Enter and Space press a focused tile. */
+/**
+ * Tap to answer. Young learners can hear each choice first. Enter and Space press a focused tile.
+ * After a right answer the tiles stay, disabled, with the chosen one at full strength.
+ */
 export function ChoiceTiles({ choices, onPick, disabled, young, picked }: { choices: Choice[]; onPick: (i: number) => void; disabled?: boolean; young?: boolean; picked?: number }) {
   const twoUp = choices.length <= 4 && choices.every((c) => c.label.length <= 24);
   useTyping(!disabled, (k) => {
@@ -238,7 +241,7 @@ export function ChoiceTiles({ choices, onPick, disabled, young, picked }: { choi
             disabled={disabled}
             onClick={() => onPick(i)}
             aria-pressed={picked === i}
-            className={`flex w-full items-center justify-center gap-3 rounded-md border-2 border-border bg-panel px-4 text-center text-ink shadow-soft transition-colors hover:border-ink/40 disabled:opacity-60 aria-pressed:border-accent aria-pressed:bg-accent/5 ${
+            className={`flex w-full items-center justify-center gap-3 rounded-md border-2 border-border bg-panel px-4 text-center text-ink shadow-soft transition-colors hover:border-ink/40 aria-pressed:border-accent aria-pressed:bg-accent/5 ${picked === i ? "" : "disabled:opacity-60"} ${
               young ? "min-h-20 text-2xl" : "min-h-16 text-lg"
             } ${c.say ? (young ? "pr-18" : "pr-14") : ""}`}
           >
