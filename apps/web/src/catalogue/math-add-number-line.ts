@@ -72,10 +72,10 @@ const addNumberLine: CatalogueEntry = {
             },
             {
               id: "q2",
-              prompt: "Mia adds 3 + 3. She counts 3, 4, 5. She says 5. Is she right?",
-              choices: ["Yes", "No"],
-              answer: 1,
-              hint: "Does the number you start on count as a jump?",
+              prompt: "Mia adds 3 + 3. She counts 3, 4, 5. She says 5. What went wrong?",
+              choices: ["She counted the 3 she started on.", "She jumped too far."],
+              answer: 0,
+              hint: "Look at the first number Mia said. Was that a jump?",
               explain: "Mia counted the 3 she started on. Start on 3, then jump: 4, 5, 6. So 3 + 3 = 6.",
             },
             {

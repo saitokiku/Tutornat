@@ -132,10 +132,10 @@ const moon: CatalogueEntry = {
           title: "Make the phases with a lamp",
           brief: "Use a lamp, a ball and your own head to model the Sun, the Moon and Earth.",
           steps: [
-            "Ask a grown-up to set a lamp without its shade at one side of a dark room. The lamp is the Sun.",
+            "Ask a grown-up to set a lamp without its shade at one side of a dark room. The lamp is the Sun. Don't touch the bulb; it can get hot.",
             "Push a pencil into a ball or an orange to make a handle. That's the Moon. Your head is Earth.",
             "Face the lamp and hold the Moon at arm's length, a little above your head. The side facing you is dark: that's new moon.",
-            "Turn slowly to your left, keeping the Moon in front of your face. Watch the lit part grow to full, then shrink again. If your head's shadow covers it, you've made an eclipse; raise it a little.",
+            "Turn slowly to your left, keeping the Moon in front of your face. Watch the lit part grow until it is full, then shrink. If your head's shadow covers the Moon, you've made an eclipse, so raise it a little.",
             "Draw what you saw after each quarter turn and label it: new moon, first quarter, full moon, last quarter.",
           ],
         },

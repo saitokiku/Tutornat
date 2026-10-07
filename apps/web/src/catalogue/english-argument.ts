@@ -39,7 +39,7 @@ const argument: CatalogueEntry = {
             { type: "text", text: "Claim: You should wear a helmet every time you ride a bike." },
             {
               type: "text",
-              text: "Evidence: A large review of bike crash studies found that helmets lowered the risk of serious head injury by about two-thirds.",
+              text: "Evidence: A large review of bike crash studies found that riders wearing helmets were much less likely to have a serious head injury — roughly two-thirds less likely.",
             },
             {
               type: "text",

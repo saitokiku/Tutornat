@@ -8,7 +8,7 @@ Rule: a box is ticked only after its check actually ran. Note blockers under the
 
 - [x] 1. Workspace, scaffold, tokens
 - [x] 2. Types, store, i18n
-- [ ] 3. Domain functions + K–9 catalogue
+- [x] 3. Domain functions + K–9 catalogue (12 courses; gap: no grade 9 science course yet)
 - [x] 4. UI primitives, icons, brand
 - [x] 5. Landing, auth, profiles, guards
 - [x] 6. Student shell, Home, magic box

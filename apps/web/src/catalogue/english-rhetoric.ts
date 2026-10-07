@@ -94,7 +94,7 @@ const rhetoric: CatalogueEntry = {
               { id: "nurse", text: "“As a nurse for 20 years, I know what keeps patients safe.”", answer: 0 },
               { id: "brother", text: "“Picture your little brother, alone and scared on his first day.”", answer: 1 },
               { id: "bus", text: "“A bus pass costs $40 a month. Driving the same route costs about $180 in gas and parking.”", answer: 2 },
-              { id: "bakery", text: "“Our family has baked bread in this town since 1952.”", answer: 0 },
+              { id: "mechanic", text: "“I've fixed cars for 25 years, and this is the tire I put on my own car.”", answer: 0 },
               { id: "cold", text: "“Don't let your family be the one left out in the cold this winter.”", answer: 1 },
               { id: "bottle", text: "“This bottle holds 20 ounces and costs the same as a 16-ounce bottle.”", answer: 2 },
             ],
