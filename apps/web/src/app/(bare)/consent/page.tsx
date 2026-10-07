@@ -11,10 +11,10 @@ import { btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { useStore } from "@/lib/store";
 
-/** Where a grown-up gives, reads and revokes consent for the AI tutor and voice. Grown-ups only. */
+/** Where a grown-up gives, reads and revokes consent for AI features and voice. Grown-ups only. */
 export default function ConsentPage() {
   const t = useT();
-  useTitle(t("acct.consent.title"));
+  useTitle(t("acct.consent.title2"));
   const router = useRouter();
   const unlocked = useStore((s) => Boolean(s.session.unlocked));
   return (
@@ -26,8 +26,8 @@ export default function ConsentPage() {
         </Link>
       </header>
       <main className="mx-auto max-w-3xl px-5 pb-20 pt-4 sm:px-8 sm:pt-10">
-        <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("acct.consent.title")}</h1>
-        <p className="mt-3 max-w-prose text-sm text-muted">{t("acct.consent.intro")}</p>
+        <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("acct.consent.title2")}</h1>
+        <p className="mt-3 max-w-prose text-sm text-muted">{t("acct.consent.intro2")}</p>
         <Link href="/privacy" className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
           {t("acct.privacyLink")}
         </Link>

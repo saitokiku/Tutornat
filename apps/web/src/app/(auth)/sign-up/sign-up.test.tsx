@@ -39,7 +39,7 @@ describe("sign-up with accounts on a server (parent-first)", () => {
     const path = String(input);
     if (path === "/api/auth/sign-up")
       return Response.json({ account: { id: "srv-1", email: "maria@example.test", displayName: "Maria", goals: null, createdAt: 1 } });
-    if (path === "/api/sync") return Response.json({ cursor: 1, more: false, changes: {}, conflicts: {}, rejected: 0, flagged: 0 });
+    if (path === "/api/sync") return Response.json({ cursor: 1, more: false, changes: {}, rejected: 0, refused: {}, flagged: 0 });
     throw new Error(`no route for ${path}`);
   });
 
@@ -70,7 +70,7 @@ describe("sign-up with accounts on a server (parent-first)", () => {
     expect(adult).toHaveFocus();
     // Submitting without it says why and sends nothing.
     await user.keyboard("{Enter}");
-    expect(await screen.findByText("Accounts are for parents and guardians 18 or older. Tick the box to continue.")).toBeInTheDocument();
+    expect(await screen.findByText("A parent or guardian needs to create this account.")).toBeInTheDocument();
     expect(adult).toHaveAttribute("aria-invalid", "true");
     expect(fetchMock).not.toHaveBeenCalled();
 

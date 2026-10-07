@@ -3,18 +3,22 @@ import { GET as meRoute } from "@/app/api/auth/me/route";
 import { POST as signInRoute } from "@/app/api/auth/sign-in/route";
 import { POST as signOutRoute } from "@/app/api/auth/sign-out/route";
 import { POST as signUpRoute } from "@/app/api/auth/sign-up/route";
+import { POST as consentRevoke } from "@/app/api/consent/revoke/route";
 import { GET as consentGet, POST as consentPost } from "@/app/api/consent/route";
 import { POST as syncRoute } from "@/app/api/sync/route";
 import { answerText } from "@/practice/answer";
 import { makeItem } from "@/practice/skills";
-import { grantConsent, loadConsent, signIn, signOut, signUp, useConsent } from "./auth";
+import { grantConsent, learnerHeaders, loadConsent, registerConsentFlow, revokeConsent, signIn, signOut, signOutNote, signUp, useConsent } from "./auth";
 import { addFromCatalogue } from "./courses";
 import { recordAnswer, startSet } from "./practice";
-import { addNote, createLearner, removeLearner, updateLearner } from "./profiles";
+import { addNote, createLearner, removeLearner, selectLearner, updateLearner } from "./profiles";
+import { readSession } from "./server/db/auth";
+import type { Db } from "./server/db/client";
+import { CONSENT_METHODS, consentGate } from "./server/db/consent";
 import { testDb } from "./server/db/testing";
-import { emptyState, read, resetMemory, STORE_KEY, type StoreState } from "./store";
+import { emptyState, read, resetMemory, STORE_KEY, update, type StoreState } from "./store";
 import { SYNC_LIMITS } from "./server/db/wire";
-import { buildPush, diff, resetSyncForTests, resume, setServerStatusForTests, syncNow, useSyncState } from "./sync";
+import { buildPush, diff, mergeRemote, resetSyncForTests, resume, setServerStatusForTests, syncNow, useSyncState } from "./sync";
 import type { Profile } from "./types";
 import { renderHook } from "@testing-library/react";
 
@@ -23,8 +27,9 @@ import { renderHook } from "@testing-library/react";
 
 vi.mock("next/server", () => ({ connection: async () => {}, after: (task: () => unknown) => void task() }));
 
+let db: Db;
 let close: () => Promise<void>;
-beforeAll(async () => ({ close } = await testDb()));
+beforeAll(async () => ({ db, close } = await testDb()));
 afterAll(() => close());
 
 type Device = { storage: Record<string, string>; cookies: Map<string, string>; online: boolean };
@@ -39,7 +44,16 @@ const ROUTES: Record<string, (req: Request) => Promise<Response>> = {
   "GET /api/auth/me": meRoute,
   "GET /api/consent": consentGet,
   "/api/consent": consentPost,
+  "/api/consent/revoke": consentRevoke,
 };
+
+/** Holds the next /api/sync answer until released (a slow network). */
+let held: Promise<void> | null = null;
+function holdNextSync() {
+  let release!: () => void;
+  held = new Promise<void>((r) => (release = r));
+  return () => release();
+}
 
 function writeDocumentCookies(d: Device) {
   for (const c of document.cookie.split(";")) {
@@ -76,6 +90,13 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => 
   const handler = ROUTES[method === "GET" ? `GET ${path}` : path];
   if (!handler) throw new Error(`no route for ${method} ${path}`);
   const cookie = [...d.cookies].map(([k, v]) => `${k}=${v}`).join("; ");
+  const aborted = () => new DOMException("The operation was aborted.", "AbortError");
+  if (path === "/api/sync" && held) {
+    const wait = held;
+    held = null;
+    await wait;
+  }
+  if (init?.signal?.aborted) throw aborted();
   const res = await handler(new Request(`http://localhost${path}`, { method, headers: { ...(init?.headers as Record<string, string>), cookie, host: "localhost" }, body: init?.body }));
   for (const c of res.headers.getSetCookie()) {
     const [pair] = c.split(";");
@@ -377,7 +398,7 @@ describe("what goes up first", () => {
 });
 
 describe("consent from the browser", () => {
-  it("keeps AI and voice off for a child until a grown-up consents, and shows the receipt", async () => {
+  it("keeps AI and voice off for a child until a grown-up consents with the account password, and shows the receipt", async () => {
     await newFamily("laptop");
     const leo = learner("Leo", "2");
     await syncNow();
@@ -386,10 +407,53 @@ describe("consent from the browser", () => {
     const options = await loadConsent();
     expect(options?.methods.map((m) => m.id)).toEqual(["dev-not-verified", "parent-confirmed"]);
     // The account holder's own confirmation is not enough for a child under 13.
-    expect(await grantConsent({ profileId: leo.id, scope: ["ai"], method: "parent-confirmed", under13: true })).toEqual({ ok: false, error: "acct.consent.errMethod" });
-    const r = await grantConsent({ profileId: leo.id, scope: ["ai"], method: "dev-not-verified", under13: true });
-    expect(r).toMatchObject({ ok: true, receipt: { method: "dev-not-verified", verified: false, scope: ["ai"], under13: true } });
+    expect(await grantConsent({ profileId: leo.id, scope: ["ai"], method: "parent-confirmed", under13: true, password: PASS })).toEqual({ ok: false, error: "acct.consent.errMethod" });
+    // Whoever holds the device needs the account password.
+    expect(await grantConsent({ profileId: leo.id, scope: ["ai"], method: "dev-not-verified", under13: true, password: "7 x 8" })).toEqual({ ok: false, error: "acct.consent.errPassword" });
+    const r = await grantConsent({ profileId: leo.id, scope: ["ai"], method: "dev-not-verified", under13: true, password: PASS });
+    expect(r).toMatchObject({ ok: true, receipt: { method: "dev-not-verified", verified: false, scope: ["ai"], under13: true, passwordConfirmed: true } });
     expect(gate()).toEqual({ needed: true, ai: true, voice: false });
+    const id = (r as { receipt: { id: string } }).receipt.id;
+    expect(await revokeConsent(id, "guess")).toEqual({ ok: false, error: "acct.consent.errPassword" });
+    expect(await revokeConsent(id, PASS)).toEqual({ ok: true });
+    expect(gate()).toEqual({ needed: true, ai: false, voice: false });
+  });
+
+  it("runs a verified method's own browser flow and hands its proof to the server", async () => {
+    const vendor = { id: "test-vendor", verified: true, forUnder13: true, available: () => true, verify: async ({ proof }: { proof: string | null }) => (proof === "pi_ok" ? { ok: true as const, evidence: proof } : { ok: false as const }) };
+    CONSENT_METHODS.push(vendor);
+    try {
+      await newFamily("laptop");
+      const leo = learner("Leo", "1");
+      await syncNow();
+      registerConsentFlow("test-vendor", async () => null);
+      expect(await grantConsent({ profileId: leo.id, scope: ["voice"], method: "test-vendor", under13: true, password: PASS })).toEqual({ ok: false, error: "acct.consent.errStopped" });
+      registerConsentFlow("test-vendor", async () => "pi_ok");
+      expect(await grantConsent({ profileId: leo.id, scope: ["voice"], method: "test-vendor", under13: true, password: PASS })).toMatchObject({ ok: true, receipt: { method: "test-vendor", verified: true } });
+    } finally {
+      registerConsentFlow("test-vendor", null);
+      CONSENT_METHODS.splice(CONSENT_METHODS.indexOf(vendor), 1);
+    }
+  });
+
+  it("tells the server who is using the device, so the AI routes check that learner", async () => {
+    await newFamily("laptop");
+    const leo = learner("Leo", "3");
+    await syncNow();
+    const tutor = () => consentGate(new Request("http://localhost/api/tutor", { method: "POST", headers: { cookie: `kz_session=${current!.cookies.get("kz_session")}` } }), "ai");
+    // Nobody picked yet, and a child without consent: refused.
+    expect((await tutor())?.status).toBe(403);
+    selectLearner("parent");
+    await syncNow();
+    expect(await tutor()).toBeNull();
+    selectLearner(leo.id);
+    await syncNow();
+    expect(await (await tutor())?.json()).toMatchObject({ error: "consent", reason: "consent" });
+    // The learner header is checked too: a grown-up session can't be used for a child.
+    selectLearner("parent");
+    await syncNow();
+    const named = await consentGate(new Request("http://localhost/api/tutor", { method: "POST", headers: { cookie: `kz_session=${current!.cookies.get("kz_session")}`, ...learnerHeaders(leo.id) } }), "ai");
+    expect(named?.status).toBe(403);
   });
 
   it("changes nothing in browser-only mode", async () => {
@@ -401,5 +465,168 @@ describe("consent from the browser", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(localStorage.getItem(STORE_KEY)).toContain("Leo");
     expect(localStorage.getItem("kaizenedu.sync.v1")).toBeNull();
+  });
+});
+
+describe("what the account won't take", () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-07T18:00:00Z") }));
+
+  it("keeps refused and oversized records on the device, counts them, and keeps the family here on sign-out", async () => {
+    const email = await newFamily("laptop");
+    const leo = learner();
+    // Bigger than the account takes: never sent.
+    const huge = addFromCatalogue("math-fractions", leo.id)!;
+    update((s) => void (s.courses.find((c) => c.id === huge)!.title = "x".repeat(SYNC_LIMITS.recordBytes)));
+    // An id the server refuses.
+    update((s) => void s.notes.push({ id: "n".repeat(301), profileId: leo.id, at: Date.now(), text: "refused" }));
+    addNote(leo.id, "kept");
+    await syncNow();
+    expect(renderHook(() => useSyncState()).result.current).toMatchObject({ phase: "idle", pending: 0, refused: 2 });
+
+    vi.stubGlobal("location", { assign: vi.fn() });
+    await signOut();
+    // Not saved to the account: the family's copy stays, and the sign-in page says why.
+    expect(read().profiles.map((p) => p.nickname)).toEqual(["Leo"]);
+    expect(signOutNote()).toEqual({ reason: "kept", kept: 2, ended: true });
+    expect((location.assign as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe("/sign-in");
+
+    // Changed so the account takes it: no longer refused.
+    await signIn(email, PASS);
+    expect(signOutNote()).toBeNull();
+    tick();
+    update((s) => void (s.courses.find((c) => c.id === huge)!.title = "Fractions"));
+    await syncNow();
+    expect(renderHook(() => useSyncState()).result.current).toMatchObject({ refused: 1 });
+    on("phone");
+    await signIn(email, PASS);
+    expect(read().courses.map((c) => c.title)).toEqual(["Fractions"]);
+    expect(read().notes.map((x) => x.text)).toEqual(["kept"]);
+  });
+
+  it("caps each request by bytes as well as by count", () => {
+    const s = emptyState();
+    s.accounts = [{ id: "A", email: "a@x.co", displayName: "Maria", salt: "", passwordHash: "", createdAt: 1 }];
+    s.profiles = [{ id: "p1", accountId: "A", nickname: "Leo", grade: "3", locale: "en", color: "#000", createdAt: 1 }];
+    // Ten notes of about 400 KB each (three bytes a character).
+    s.notes = Array.from({ length: 10 }, (_, i) => ({ id: `n${i}`, profileId: "p1", at: i, text: "数".repeat(133_000) }));
+    const outbox = { notes: Object.fromEntries(s.notes.map((x) => [x.id, { at: 5 }])) };
+    const { body, rest } = buildPush(s, { cursor: 0, outbox, consent: [], known: ["p1"] }, "A");
+    expect(body.push.notes!.length).toBe(6);
+    expect(new TextEncoder().encode(JSON.stringify(body)).length).toBeLessThanOrEqual(SYNC_LIMITS.pushBytes + 10_000);
+    expect(rest).toBe(true);
+  });
+});
+
+describe("storage running out", () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-07T18:00:00Z") }));
+
+  it("still saves to the account, says so, and never moves the saved cursor past what the store kept", async () => {
+    await newFamily("laptop");
+    const leo = learner();
+    await syncNow();
+    const savedMeta = localStorage.getItem("kaizenedu.sync.v1");
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("full", "QuotaExceededError");
+    });
+    try {
+      tick();
+      addNote(leo.id, "written while full");
+      await syncNow();
+      expect(renderHook(() => useSyncState()).result.current).toMatchObject({ storage: true, pending: 0 });
+    } finally {
+      setItem.mockRestore();
+    }
+    // Nothing of the round was kept on the device, so a reload starts from where the store really was.
+    expect(localStorage.getItem("kaizenedu.sync.v1")).toBe(savedMeta);
+    on("laptop");
+    expect(read().notes).toEqual([]);
+    await syncNow();
+    expect(read().notes.map((x) => x.text)).toEqual(["written while full"]);
+  });
+});
+
+describe("signing out", () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-07T18:00:00Z") }));
+
+  it("drops a round still in flight, so nothing it brings back lands after the family leaves", async () => {
+    await newFamily("laptop");
+    learner();
+    await syncNow();
+    const release = holdNextSync();
+    const round = syncNow();
+    vi.stubGlobal("location", { assign: vi.fn() });
+    await signOut();
+    release();
+    await round;
+    expect(read().profiles).toEqual([]);
+    expect(read().accounts).toEqual([]);
+    expect(JSON.parse(localStorage.getItem("kaizenedu.sync.v1") ?? '{"accounts":{}}').accounts).toEqual({});
+  }, 20_000);
+
+  it("offline: says the sign-out finishes later, and finishes it when the device is back", async () => {
+    await newFamily("laptop");
+    learner();
+    await syncNow();
+    const token = current!.cookies.get("kz_session")!;
+    current!.online = false;
+    vi.stubGlobal("location", { assign: vi.fn() });
+    await signOut();
+    expect(signOutNote()).toEqual({ reason: "offline", ended: false });
+    expect(await readSession(db, token)).not.toBeNull();
+    // The next page load, online again.
+    current!.online = true;
+    on("laptop");
+    await resume();
+    await vi.waitFor(async () => expect(await readSession(db, token)).toBeNull());
+  });
+
+  it("signed out elsewhere: the sign-in page will say so, until someone signs in", async () => {
+    const email = await newFamily("laptop");
+    learner();
+    await syncNow();
+    current!.cookies.delete("kz_session");
+    tick();
+    addNote(read().profiles[0].id, "unsent");
+    await syncNow();
+    expect(signOutNote()).toEqual({ reason: "elsewhere" });
+    await signIn(email, PASS);
+    expect(signOutNote()).toBeNull();
+  });
+});
+
+describe("what comes down", () => {
+  it("keeps a device's caps on lists the server keeps whole", () => {
+    const s = emptyState();
+    const threads = Array.from({ length: 250 }, (_, i) => ({ id: `t${i}`, data: { id: `t${i}`, profileId: "p1", startedAt: i, lines: [] } }));
+    mergeRemote(s, { changes: { threads } }, "A", () => false);
+    expect(s.threads).toHaveLength(200);
+    expect(s.threads[0].id).toBe("t50");
+  });
+
+  it("keeps a class's feed link on the device that added it", async () => {
+    const email = await newFamily("laptop");
+    const leo = learner();
+    update((s) => void s.classes.push({ id: "k1", profileId: leo.id, name: "Math", subject: "math", color: "#000", feedUrl: "https://school.example/feed?token=secret", createdAt: 1 }));
+    await syncNow();
+    on("phone");
+    await signIn(email, PASS);
+    expect(read().classes[0]).not.toHaveProperty("feedUrl");
+    tick();
+    update((s) => void (s.classes[0].name = "Math 4"));
+    await syncNow();
+    on("laptop");
+    await syncNow();
+    expect(read().classes[0]).toMatchObject({ name: "Math 4", feedUrl: "https://school.example/feed?token=secret" });
+  });
+
+  it("says a new device is still getting the family until its first sync is done", async () => {
+    await newFamily("laptop");
+    learner();
+    await syncNow();
+    localStorage.removeItem("kaizenedu.sync.v1");
+    resetSyncForTests();
+    expect(renderHook(() => useSyncState()).result.current).toMatchObject({ firstSync: true });
+    await syncNow();
+    expect(renderHook(() => useSyncState()).result.current).toMatchObject({ firstSync: false });
   });
 });

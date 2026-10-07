@@ -108,6 +108,8 @@ export const SYNC_LIMITS = {
   pullBytes: 3_000_000,
   /** Largest single record (a course with many lessons is the biggest). */
   recordBytes: 512_000,
+  /** Longest record id. */
+  idLength: 300,
   /** Largest request body. */
   bodyBytes: 4_000_000,
 } as const;

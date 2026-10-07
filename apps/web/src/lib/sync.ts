@@ -2,8 +2,23 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import type { ConsentReceipt } from "./server/db/policy";
-import { ACCOUNT_LISTS, idOf, KEEP_ON_SERVER, SYNC_LIMITS, SYNC_LISTS, type PublicAccount, type PushRecord, type RemoteRecord, type SyncList, type SyncRequest, type SyncResponse } from "./server/db/wire";
-import { applyRemote, read, update, type StoreState } from "./store";
+import {
+  ACCOUNT_LISTS,
+  DEVICE_ONLY,
+  forServer,
+  idOf,
+  KEEP_ON_SERVER,
+  SYNC_LIMITS,
+  SYNC_LISTS,
+  utf8Bytes,
+  type PublicAccount,
+  type PushRecord,
+  type RemoteRecord,
+  type SyncList,
+  type SyncRequest,
+  type SyncResponse,
+} from "./server/db/wire";
+import { applyRemote, read, storeHealth, update, type StoreState } from "./store";
 import type { Account } from "./types";
 
 // Server mode in the browser. The store stays the working copy every screen reads; this keeps it in
@@ -14,11 +29,19 @@ import type { Account } from "./types";
 //   - rounds run after changes settle, on reconnect, when the tab is shown or hidden, and every minute.
 // It only runs while this browser is signed in to the server (the kz_acct cookie, set with the
 // session). Without a server — no DATABASE_URL — none of it starts and the app is browser-only.
+//
+// The outbox and cursor are kept only when the store itself could be kept: if this device runs out
+// of storage, both live in memory for the rest of the page (changes still go to the account while
+// online) and the saved pair stays as it was, so a reload pulls again from where it really was.
 
 export type ServerStatus = { mode: "server" | "local"; resetEmail: boolean; production: boolean };
 const LOCAL: ServerStatus = { mode: "local", resetEmail: false, production: true };
 const MODE_KEY = "kaizenedu.mode";
 const META_KEY = "kaizenedu.sync.v1";
+/** Set when this device was signed out with something left behind; the sign-in page explains it. */
+const NOTE_KEY = "kaizenedu.signedout";
+/** Set when a sign-out couldn't reach the server; it is sent again once the device is back. */
+const SIGNOUT_KEY = "kaizenedu.signout";
 const HINT = "kz_acct";
 
 // ---- which kind of deployment this is ----------------------------------------------------------
@@ -90,6 +113,8 @@ type Outbox = Partial<Record<SyncList, Record<string, Pending>>> & { account?: P
 type AccountMeta = {
   cursor: number;
   outbox: Outbox;
+  /** Records the account refused (or too big to send), by list: id → the change time. Kept on this device. */
+  refused?: Partial<Record<SyncList, Record<string, number>>>;
   consent: ConsentReceipt[];
   /** Learners the server has (pushed and accepted, or pulled). */
   known: string[];
@@ -97,25 +122,39 @@ type AccountMeta = {
 };
 type Meta = { v: 1; accounts: Record<string, AccountMeta> };
 
+let metaCache: Meta | null = null;
+/** True once this page can't keep the sync state in storage (the device is full): it lives in memory. */
+let metaInMemory = false;
+
 function loadMeta(): Meta {
+  if (metaInMemory && metaCache) return metaCache;
   try {
     const m = JSON.parse(localStorage.getItem(META_KEY) ?? "null") as Meta | null;
-    if (m && m.v === 1 && typeof m.accounts === "object") return m;
+    if (m && m.v === 1 && typeof m.accounts === "object") return (metaCache = m);
   } catch {}
-  return { v: 1, accounts: {} };
+  return (metaCache = { v: 1, accounts: {} });
 }
 
 function saveMeta(m: Meta) {
-  try {
-    localStorage.setItem(META_KEY, JSON.stringify(m));
-  } catch {}
+  metaCache = m;
+  // Kept only alongside the store: a cursor saved without the records it covers would skip them.
+  if (storeHealth() === "memory") metaInMemory = true;
+  if (!metaInMemory) {
+    try {
+      localStorage.setItem(META_KEY, JSON.stringify(m));
+    } catch {
+      metaInMemory = true;
+    }
+  }
   version++;
   notify();
 }
 
 const metaFor = (m: Meta, id: string): AccountMeta => (m.accounts[id] ??= { cursor: 0, outbox: {}, consent: [], known: [] });
 
-const pendingCount = (o: Outbox) => Object.entries(o).reduce((n, [k, v]) => n + (k === "account" ? (v ? 1 : 0) : Object.keys(v as object).length), 0);
+const pendingCount = (m: AccountMeta) =>
+  Object.entries(m.outbox).reduce((n, [k, v]) => n + (k === "account" ? (v ? 1 : 0) : Object.keys(v as object).length), 0);
+const refusedCount = (m: AccountMeta) => Object.values(m.refused ?? {}).reduce((n, v) => n + Object.keys(v ?? {}).length, 0);
 
 // ---- who is signed in to the server ---------------------------------------------------------------
 
@@ -140,6 +179,20 @@ function clearHint() {
 export function activeAccount(): string | null {
   if (active === undefined) active = hintAccount();
   return active;
+}
+
+function setLocal(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {}
+}
+function getLocal(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 // ---- noticing local changes -----------------------------------------------------------------------
@@ -170,12 +223,13 @@ export function diff(prev: StoreState, next: StoreState, accountId: string): { c
     }
     if (a.length === b.length && JSON.stringify(a) === JSON.stringify(b)) continue;
     const before = new Map<string, string>();
-    for (const r of a) if (owns(list, r)) before.set(idOf(list, r), JSON.stringify(r));
+    for (const r of a) if (owns(list, r)) before.set(idOf(list, r), JSON.stringify(forServer(list, r)));
     for (const r of b) {
       if (!owns(list, r)) continue;
       const id = idOf(list, r);
       const old = before.get(id);
-      if (old === undefined || old !== JSON.stringify(r)) changes.push([list, id, false]);
+      // A change only to a device-only field (a class's feed link) has nothing to send.
+      if (old === undefined || old !== JSON.stringify(forServer(list, r))) changes.push([list, id, false]);
       before.delete(id);
     }
     if (!KEEP_ON_SERVER.includes(list)) for (const id of before.keys()) changes.push([list, id, true]);
@@ -202,6 +256,8 @@ export function captureLocal(prev: StoreState, next: StoreState) {
   if (!accountId) return;
   const { changes, account } = diff(prev, next, accountId);
   enqueue(accountId, changes, account);
+  // Someone else picked up the device: the server hears at once, for the consent gate on AI and voice.
+  if (prev.session.profileId !== next.session.profileId) schedule(0);
 }
 
 // ---- a sync round ------------------------------------------------------------------------------------
@@ -215,14 +271,26 @@ const sentKey = (list: SyncList | "account", id = "") => `${list}\u0000${id}`;
  */
 const PUSH_ORDER: readonly SyncList[] = [...SYNC_LISTS.filter((l) => l !== "attempts"), "attempts"];
 
-/** The next request's worth of the outbox: learners first, so their records find them on the server. */
-export function buildPush(state: StoreState, m: AccountMeta, accountId: string): { body: SyncRequest; sent: Sent; rest: boolean } {
+/**
+ * The next request's worth of the outbox: learners first, so their records find them on the server;
+ * at most `pushRecords` records and `pushBytes` of them. A record bigger than the account takes is
+ * not sent at all (`tooBig`): it is set aside and counted as not saved.
+ */
+export function buildPush(state: StoreState, m: AccountMeta, accountId: string): { body: SyncRequest; sent: Sent; rest: boolean; tooBig: [SyncList, string, number][] } {
   const push: SyncRequest["push"] = {};
   const sent: Sent = new Map();
-  let count = 0;
+  const tooBig: [SyncList, string, number][] = [];
+  let records = 0;
+  let bytes = 0;
   let rest = false;
   const known = new Set(m.known);
-  const add = (list: SyncList, r: PushRecord) => ((push[list] ??= []).push(r), sent.set(sentKey(list, r.id), r.at), count++);
+  const fits = (size: number) => records === 0 || (records < SYNC_LIMITS.pushRecords && bytes + size <= SYNC_LIMITS.pushBytes);
+  const add = (list: SyncList, r: PushRecord, size: number) => {
+    (push[list] ??= []).push(r);
+    sent.set(sentKey(list, r.id), r.at);
+    records++;
+    bytes += size;
+  };
 
   // A learner the server hasn't got (made before this browser synced) goes along with its records.
   const needs = new Set<string>();
@@ -233,20 +301,33 @@ export function buildPush(state: StoreState, m: AccountMeta, accountId: string):
     for (const r of state[list] as unknown as Rec[]) if (entries[idOf(list, r)] && !known.has(r.profileId as string)) needs.add(r.profileId as string);
   }
   for (const p of state.profiles)
-    if (needs.has(p.id) && p.accountId === accountId && !m.outbox.profiles?.[p.id]) add("profiles", { id: p.id, at: p.createdAt, data: p });
+    if (needs.has(p.id) && p.accountId === accountId && !m.outbox.profiles?.[p.id]) {
+      const r = { id: p.id, at: p.createdAt, data: p };
+      add("profiles", r, utf8Bytes(JSON.stringify(r)));
+    }
 
   outer: for (const list of PUSH_ORDER) {
     const entries = m.outbox[list];
     if (!entries) continue;
     const byId = new Map((state[list] as unknown as Rec[]).map((r) => [idOf(list, r), r]));
     for (const [id, p] of Object.entries(entries)) {
-      if (count >= SYNC_LIMITS.pushRecords) {
+      let r: PushRecord;
+      if (p.del) r = { id, at: p.at, deleted: true };
+      else if (byId.has(id)) r = { id, at: p.at, data: forServer(list, byId.get(id)) };
+      else {
+        sent.set(sentKey(list, id), p.at); // gone without a delete (a device trim): nothing to send
+        continue;
+      }
+      const size = utf8Bytes(JSON.stringify(r));
+      if (id.length > SYNC_LIMITS.idLength || (!p.del && size > SYNC_LIMITS.recordBytes)) {
+        tooBig.push([list, id, p.at]);
+        continue;
+      }
+      if (!fits(size)) {
         rest = true;
         break outer;
       }
-      if (p.del) add(list, { id, at: p.at, deleted: true });
-      else if (byId.has(id)) add(list, { id, at: p.at, data: byId.get(id) });
-      else sent.set(sentKey(list, id), p.at); // gone without a delete (a device trim): nothing to send
+      add(list, r, size);
     }
   }
   let account: SyncRequest["account"];
@@ -255,7 +336,8 @@ export function buildPush(state: StoreState, m: AccountMeta, accountId: string):
     account = { displayName: a.displayName, goals: a.goals ?? null, at: m.outbox.account.at };
     sent.set(sentKey("account"), m.outbox.account.at);
   }
-  return { body: { v: 1, since: m.cursor, now: Date.now(), account, push }, sent, rest };
+  const learner = state.session.accountId === accountId ? (state.session.profileId ?? null) : null;
+  return { body: { v: 1, since: m.cursor, now: Date.now(), learner, account, push }, sent, rest, tooBig };
 }
 
 /** Lists kept in time order on the device (the mastery engine reads attempts in order). */
@@ -274,41 +356,45 @@ const TIME_FIELD: Partial<Record<SyncList, string>> = {
   acts: "at",
   reviews: "at",
 };
-const MAX_ACTS = 5000; // the same cap lib/acts.ts keeps per device
+/** The same caps the device keeps for its own writes (lib/acts.ts, lib/tutor.ts); the server keeps everything. */
+const DEVICE_CAP: Partial<Record<SyncList, number>> = { acts: 5000, threads: 200 };
 
 /** Puts the server's records into the store. Ids still waiting in the outbox with a newer change are left alone. */
 export function mergeRemote(s: StoreState, answer: Pick<SyncResponse, "changes" | "account">, accountId: string, skip: (list: SyncList | "account", id: string) => boolean) {
   const purged = new Set<string>();
-  for (const part of [answer.changes]) {
-    for (const list of SYNC_LISTS) {
-      const recs = part[list];
-      if (!recs?.length) continue;
-      const arr = s[list] as unknown as Rec[];
-      const index = new Map(arr.map((r, i) => [idOf(list, r), i]));
-      const removed = new Set<string>();
-      let added = false;
-      for (const r of recs as RemoteRecord[]) {
-        if (skip(list, r.id)) continue;
-        const i = index.get(r.id);
-        if (r.deleted) {
-          if (i !== undefined) removed.add(r.id);
-          if (list === "profiles") purged.add(r.id);
-          continue;
-        }
-        if (!r.data || typeof r.data !== "object") continue;
-        if (i !== undefined) arr[i] = r.data as Rec;
-        else {
-          arr.push(r.data as Rec);
-          index.set(r.id, arr.length - 1);
-          added = true;
-        }
+  for (const list of SYNC_LISTS) {
+    const recs = answer.changes[list];
+    if (!recs?.length) continue;
+    const arr = s[list] as unknown as Rec[];
+    const index = new Map(arr.map((r, i) => [idOf(list, r), i]));
+    const removed = new Set<string>();
+    const keep = DEVICE_ONLY[list] ?? [];
+    let added = false;
+    for (const r of recs as RemoteRecord[]) {
+      if (skip(list, r.id)) continue;
+      const i = index.get(r.id);
+      if (r.deleted) {
+        if (i !== undefined) removed.add(r.id);
+        if (list === "profiles") purged.add(r.id);
+        continue;
       }
-      let out = removed.size ? arr.filter((r) => !removed.has(idOf(list, r))) : arr;
-      const field = TIME_FIELD[list];
-      if (added && field) out = [...out].sort((x, y) => Number(x[field] ?? 0) - Number(y[field] ?? 0));
-      if (list === "acts" && out.length > MAX_ACTS) out = out.slice(out.length - MAX_ACTS);
-      (s[list] as unknown as Rec[]) = out;
+      if (!r.data || typeof r.data !== "object") continue;
+      if (i !== undefined) {
+        // What only this device holds (a class's feed link) stays on it.
+        const own = Object.fromEntries(keep.filter((k) => arr[i][k] !== undefined).map((k) => [k, arr[i][k]]));
+        arr[i] = { ...(r.data as Rec), ...own };
+      } else {
+        arr.push(r.data as Rec);
+        index.set(r.id, arr.length - 1);
+        added = true;
+      }
     }
+    let out = removed.size ? arr.filter((r) => !removed.has(idOf(list, r))) : arr;
+    const field = TIME_FIELD[list];
+    if (added && field) out = [...out].sort((x, y) => Number(x[field] ?? 0) - Number(y[field] ?? 0));
+    const cap = DEVICE_CAP[list];
+    if (cap && out.length > cap) out = out.slice(out.length - cap);
+    (s[list] as unknown as Rec[]) = out;
   }
   if (purged.size) {
     // A learner removed on another device: their record goes here too.
@@ -328,7 +414,8 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let failures = 0;
 let started = false;
 let version = 0;
-let phase: "idle" | "syncing" | "offline" | "error" = "idle";
+let phase: SyncState["phase"] = "idle";
+let inflight: AbortController | null = null;
 
 function schedule(delay = 1500) {
   if (!started || typeof window === "undefined") return;
@@ -370,33 +457,54 @@ export function syncNow(): Promise<void> {
   return running;
 }
 
+/** Records the account won't take, or too big to send: out of the outbox, into the refused bucket. */
+function setAside(accountId: string, list: [SyncList, string, number][]) {
+  const meta = loadMeta();
+  const m = metaFor(meta, accountId);
+  for (const [l, id, at] of list) {
+    if (m.outbox[l]?.[id]?.at === at) delete m.outbox[l]![id];
+    (((m.refused ??= {})[l] ??= {}) as Record<string, number>)[id] = at;
+  }
+  saveMeta(meta);
+}
+
 async function rounds(accountId: string) {
+  // Whoever signs out (or is signed out) while a round is in flight: nothing from it may land.
+  const gone = () => activeAccount() !== accountId;
   for (let round = 0; round < 50; round++) {
-    if (activeAccount() !== accountId) return;
-    const { body, sent, rest } = buildPush(read(), metaFor(loadMeta(), accountId), accountId);
-    setPhase("syncing");
+    if (gone()) return;
+    const { body, sent, rest, tooBig } = buildPush(read(), metaFor(loadMeta(), accountId), accountId);
+    if (tooBig.length) setAside(accountId, tooBig);
+    // "Saving" only while something is going up; pulling alone changes nothing on screen.
+    if (sent.size) setPhase("syncing");
+    const ctl = new AbortController();
+    inflight = ctl;
     let res: Response;
-    try {
-      res = await fetch("/api/sync", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    } catch {
-      // Couldn't reach the server at all: for the family that is "offline", whatever the cause.
-      return failed("offline");
-    }
-    if (res.status === 401) return signedOutElsewhere(accountId);
-    // This deployment no longer has a server: stop syncing and keep working from this browser.
-    if (res.status === 404) return stopSyncing();
-    if (!res.ok) return failed("error");
     let answer: SyncResponse;
     try {
-      answer = (await res.json()) as SyncResponse;
+      res = await fetch("/api/sync", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: ctl.signal });
+      if (gone()) return;
+      if (res.status === 401) return signedOutElsewhere(accountId);
+      // This deployment no longer has a server: stop syncing and keep working from this browser.
+      if (res.status === 404) return stopSyncing();
+      if (!res.ok) return failed("error");
+      try {
+        answer = (await res.json()) as SyncResponse;
+      } catch {
+        return gone() ? undefined : failed("error");
+      }
     } catch {
-      return failed("error");
+      // Couldn't reach the server at all: for the family that is "offline", whatever the cause.
+      return gone() ? undefined : failed("offline");
+    } finally {
+      if (inflight === ctl) inflight = null;
     }
+    if (gone()) return;
     settle(accountId, answer, sent);
     failures = 0;
     if (!answer.more && !rest) break;
   }
-  setPhase("idle");
+  if (!gone()) setPhase("idle");
 }
 
 function failed(p: "offline" | "error") {
@@ -408,6 +516,7 @@ function failed(p: "offline" | "error") {
 
 /** Applies one answer: the server's records into the store, the cursor forward, sent entries out of the outbox. */
 export function settle(accountId: string, answer: SyncResponse, sent: Sent) {
+  if (activeAccount() !== accountId) return;
   const before = metaFor(loadMeta(), accountId);
   const newer = (list: SyncList | "account", id: string) => {
     const p = list === "account" ? before.outbox.account : before.outbox[list]?.[id];
@@ -419,15 +528,25 @@ export function settle(accountId: string, answer: SyncResponse, sent: Sent) {
 
   const meta = loadMeta();
   const m = metaFor(meta, accountId);
+  const refused = new Set<string>();
+  for (const list of SYNC_LISTS) for (const id of answer.refused?.[list] ?? []) refused.add(sentKey(list, id));
   for (const [key, at] of sent) {
     const [list, id] = key.split("\u0000") as [SyncList | "account", string];
     if (list === "account") {
       if (m.outbox.account?.at === at) delete m.outbox.account;
-    } else if (m.outbox[list]?.[id]?.at === at) delete m.outbox[list]![id];
+      continue;
+    }
+    if (m.outbox[list]?.[id]?.at === at) delete m.outbox[list]![id];
+    // Refused: kept on this device and counted as not saved. Taken: no longer refused.
+    if (refused.has(key)) ((m.refused ??= {})[list] ??= {})[id] = at;
+    else if (m.refused?.[list]?.[id] !== undefined) delete m.refused[list]![id];
   }
-  for (const list of SYNC_LISTS) if (m.outbox[list] && !Object.keys(m.outbox[list]!).length) delete m.outbox[list];
+  for (const list of SYNC_LISTS) {
+    if (m.outbox[list] && !Object.keys(m.outbox[list]!).length) delete m.outbox[list];
+    if (m.refused?.[list] && !Object.keys(m.refused[list]!).length) delete m.refused[list];
+  }
   const known = new Set(m.known);
-  for (const [key] of sent) if (key.startsWith("profiles\u0000")) known.add(key.slice("profiles\u0000".length));
+  for (const [key] of sent) if (key.startsWith("profiles\u0000") && !refused.has(key)) known.add(key.slice("profiles\u0000".length));
   for (const r of answer.changes.profiles ?? []) {
     if (r.deleted) known.delete(r.id);
     else known.add(r.id);
@@ -449,7 +568,8 @@ function stopSyncing() {
 function signedOutElsewhere(accountId: string) {
   active = null;
   clearHint();
-  // The outbox stays: signing in again sends it.
+  // The outbox stays: signing in again sends it. The sign-in page says what happened.
+  setLocal(NOTE_KEY, JSON.stringify({ reason: "elsewhere" } satisfies SignOutNote));
   applyRemote((s) => {
     if (s.session.accountId === accountId) s.session = { accountId: null, profileId: null };
   });
@@ -476,6 +596,8 @@ const serverAccount = (a: PublicAccount): Account => ({
  */
 export async function signedIn(account: PublicAccount, opts: { adopt?: string | null; unlocked: boolean }) {
   active = account.id;
+  setLocal(NOTE_KEY, null);
+  setLocal(SIGNOUT_KEY, null);
   applyRemote((s) => {
     const i = s.accounts.findIndex((x) => x.id === account.id);
     if (i >= 0) s.accounts[i] = { ...s.accounts[i], ...serverAccount(account) };
@@ -510,23 +632,63 @@ const withTimeout = (p: Promise<void>, ms: number) =>
     void p.finally(() => (clearTimeout(t), resolve()));
   });
 
+/** What a sign-out left behind, for the sign-in page to say. */
+export type SignOutNote = { reason: "elsewhere" } | { reason: "kept"; kept: number; ended: boolean } | { reason: "offline"; ended: false };
+
+async function endServerSession(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/auth/sign-out", { method: "POST", signal: AbortSignal.timeout(5000) });
+    // 404: the deployment is browser-only now, so there is no session to end.
+    return res.ok || res.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Signing out of a server account: send what's waiting, end the session, then take the family's
- * copy off this device (the server has it). If something could not be sent, the copy stays so
- * nothing is lost, and goes up the next time this account signs in here.
+ * copy off this device (the server has it). Anything the server hasn't got (unsent, or refused)
+ * keeps the copy here, so nothing is lost; it goes up the next time this account signs in here.
+ * A sign-out that couldn't reach the server is sent again when the device is back online.
+ * Returns what the sign-in page should say, or null when everything is done.
  */
-export async function signedOut() {
+export async function signedOut(): Promise<SignOutNote | null> {
   const accountId = activeAccount();
-  if (!accountId) return;
+  if (!accountId) return null;
   await withTimeout(syncNow(), 3000);
-  await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => {});
+  // A round still in flight is dropped here, and nothing it brings back may land after this.
   active = null;
+  inflight?.abort();
   clearHint();
+  setPhase("idle");
+  const ended = await endServerSession();
+  if (!ended) setLocal(SIGNOUT_KEY, "1");
   const meta = loadMeta();
-  if (pendingCount(metaFor(meta, accountId).outbox) === 0) {
+  const m = metaFor(meta, accountId);
+  const kept = pendingCount(m) + refusedCount(m);
+  if (kept === 0) {
     delete meta.accounts[accountId];
     saveMeta(meta);
     forgetAccount(accountId);
+  }
+  const note: SignOutNote | null = kept ? { reason: "kept", kept, ended } : ended ? null : { reason: "offline", ended: false };
+  setLocal(NOTE_KEY, note ? JSON.stringify(note) : null);
+  return note;
+}
+
+/** A sign-out that didn't reach the server: tried again on the next load and when back online. */
+async function retrySignOut() {
+  if (getLocal(SIGNOUT_KEY) !== "1" || hintAccount()) return;
+  if (await endServerSession()) setLocal(SIGNOUT_KEY, null);
+}
+
+/** What the last sign-out on this device left behind, until someone signs in. */
+export function signOutNote(): SignOutNote | null {
+  try {
+    const n = JSON.parse(getLocal(NOTE_KEY) ?? "null") as SignOutNote | null;
+    return n && typeof n === "object" && "reason" in n ? n : null;
+  } catch {
+    return null;
   }
 }
 
@@ -544,11 +706,15 @@ function forgetAccount(accountId: string) {
 export function forgetDevice() {
   if (!activeAccount()) return;
   active = null;
+  inflight?.abort();
   clearHint();
-  try {
-    localStorage.removeItem(META_KEY);
-  } catch {}
-  void fetch("/api/auth/sign-out", { method: "POST", keepalive: true }).catch(() => {});
+  setLocal(META_KEY, null);
+  metaCache = null;
+  // The page is leaving; if this request doesn't make it, the next load sends it again.
+  setLocal(SIGNOUT_KEY, "1");
+  void fetch("/api/auth/sign-out", { method: "POST", keepalive: true })
+    .then((r) => r.ok && setLocal(SIGNOUT_KEY, null))
+    .catch(() => {});
   version++;
   notify();
 }
@@ -559,7 +725,7 @@ export function forgetDevice() {
 export function ensureStarted() {
   if (started || typeof window === "undefined" || process.env.NODE_ENV === "test") return;
   started = true;
-  window.addEventListener("online", () => void syncNow());
+  window.addEventListener("online", () => void (retrySignOut(), syncNow()));
   document.addEventListener("visibilitychange", () => void syncNow());
   setInterval(() => {
     if (document.visibilityState === "visible") void syncNow();
@@ -572,11 +738,15 @@ export async function resume() {
   const hint = hintAccount();
   const s = read();
   if (!hint) {
+    void retrySignOut();
     // The server session lapsed (30 days unused) while the copy here still says signed in. Without a
     // session nothing would be saved to the account, so the grown-up signs in again; anything this
     // device hadn't sent stays in its outbox and goes up then.
     const a = s.accounts.find((x) => x.id === s.session.accountId);
-    if (a && !a.passwordHash) applyRemote((d) => void (d.session = { accountId: null, profileId: null }));
+    if (a && !a.passwordHash) {
+      setLocal(NOTE_KEY, JSON.stringify({ reason: "elsewhere" } satisfies SignOutNote));
+      applyRemote((d) => void (d.session = { accountId: null, profileId: null }));
+    }
     return;
   }
   if (s.session.accountId === hint && s.accounts.some((a) => a.id === hint)) {
@@ -606,15 +776,37 @@ export function subscribeSync(fn: () => void) {
   return () => void listeners.delete(fn);
 }
 
-export type SyncState = { phase: "idle" | "syncing" | "offline" | "error"; pending: number; lastSyncAt?: number };
-let snap: { v: number; a: string | null; s: SyncState | null } = { v: -1, a: null, s: null };
+export type SyncState = {
+  phase: "idle" | "syncing" | "offline" | "error";
+  /** Changes on this device the account doesn't have yet. */
+  pending: number;
+  /** Changes the account refused or couldn't take (too big). They stay on this device. */
+  refused: number;
+  /** This device couldn't keep KaizenEDU's data (out of space): changes live in memory and go to the account while online. */
+  storage: boolean;
+  /** This device hasn't finished its first sync with the account yet (and isn't offline or failing). */
+  firstSync: boolean;
+  lastSyncAt?: number;
+};
+let snap: { v: number; a: string | null; h: string; s: SyncState | null } = { v: -1, a: null, h: "", s: null };
 
 function syncState(): SyncState | null {
   const a = activeAccount();
-  if (snap.v === version && snap.a === a) return snap.s;
+  const health = storeHealth();
+  if (snap.v === version && snap.a === a && snap.h === health) return snap.s;
   const m = a ? loadMeta().accounts[a] : undefined;
-  snap = { v: version, a, s: a ? { phase, pending: m ? pendingCount(m.outbox) : 0, lastSyncAt: m?.lastSyncAt } : null };
-  return snap.s;
+  const s: SyncState | null = a
+    ? {
+        phase,
+        pending: m ? pendingCount(m) : 0,
+        refused: m ? refusedCount(m) : 0,
+        storage: metaInMemory || health === "memory",
+        firstSync: !m?.lastSyncAt && phase !== "offline" && phase !== "error",
+        lastSyncAt: m?.lastSyncAt,
+      }
+    : null;
+  snap = { v: version, a, h: health, s };
+  return s;
 }
 
 /** null when this browser isn't syncing with a server (browser-only mode, or signed out). */
@@ -650,6 +842,9 @@ export function resetSyncForTests() {
   again = false;
   failures = 0;
   phase = "idle";
+  inflight = null;
+  metaCache = null;
+  metaInMemory = false;
   if (timer) clearTimeout(timer);
   timer = null;
   version++;

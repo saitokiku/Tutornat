@@ -33,10 +33,9 @@ export default function ForgotPasswordPage() {
       <AuthCard title={t("auth.forgotTitle")} body={t("auth.forgotBody")} footer={<TextLink href="/sign-in">{t("auth.signIn")}</TextLink>}>
         {done ? (
           <div className="space-y-4">
+            {/* With email set up the answer is always "sent", whoever asks, so it can't say who has an account. */}
             {done.delivery === "sent" || !server ? (
               <Notice tone="good">{t("auth.linkSent", { email: email.trim() })}</Notice>
-            ) : done.delivery === "failed" ? (
-              <Notice tone="bad">{t("acct.reset.failed")}</Notice>
             ) : (
               !done.link && <Notice tone="warn">{t("acct.reset.noEmail")}</Notice>
             )}

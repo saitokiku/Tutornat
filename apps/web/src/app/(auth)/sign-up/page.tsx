@@ -44,7 +44,7 @@ export default function SignUpPage() {
         footer={<>{t("auth.haveAccount")} <TextLink href="/sign-in">{t("auth.signIn")}</TextLink></>}
       >
         <form onSubmit={submit} className="space-y-5" noValidate>
-          {failure?.error && failure.error !== "acct.err.adult" && <Notice tone="bad">{t(failure.error, { minutes: failure.retryMinutes ?? 1 })}</Notice>}
+          {failure?.error && failure.error !== "acct.err.adultWho" && <Notice tone="bad">{t(failure.error, { minutes: failure.retryMinutes ?? 1 })}</Notice>}
           <Field label={t("auth.name")} hint={t("auth.nameHint")} error={err("displayName")}>
             {(a) => <input {...a} autoComplete="name" className="k-input" value={form.displayName} onChange={set("displayName")} />}
           </Field>
@@ -63,15 +63,15 @@ export default function SignUpPage() {
                   type="checkbox"
                   checked={adult}
                   onChange={(e) => (setAdult(e.target.checked), setFailure(null))}
-                  aria-describedby={failure?.error === "acct.err.adult" ? `${adultId}-error` : undefined}
-                  aria-invalid={failure?.error === "acct.err.adult" || undefined}
+                  aria-describedby={failure?.error === "acct.err.adultWho" ? `${adultId}-error` : undefined}
+                  aria-invalid={failure?.error === "acct.err.adultWho" || undefined}
                   className="mt-0.5 size-5 shrink-0 accent-ink"
                 />
-                <span>{t("acct.signup.adult")}</span>
+                <span>{t("acct.signup.adultConfirm")}</span>
               </label>
-              {failure?.error === "acct.err.adult" && (
+              {failure?.error === "acct.err.adultWho" && (
                 <p id={`${adultId}-error`} className="text-xs font-medium text-bad">
-                  {t("acct.err.adult")}
+                  {t("acct.err.adultWho")}
                 </p>
               )}
             </div>

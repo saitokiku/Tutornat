@@ -21,7 +21,7 @@ import { ACCOUNT_LISTS, forServer, idOf, KEEP_ON_SERVER, SYNC_LIMITS, SYNC_LISTS
 // learner it doesn't have, or one Postgres refuses) is refused on its own and reported by id, and
 // never costs the rest of the batch.
 
-const Push = z.object({ id: z.string().min(1).max(300), at: z.number().finite(), data: z.unknown().optional(), deleted: z.literal(true).optional() });
+const Push = z.object({ id: z.string().min(1).max(SYNC_LIMITS.idLength), at: z.number().finite(), data: z.unknown().optional(), deleted: z.literal(true).optional() });
 const AccountPush = z.object({ displayName: z.string(), goals: z.array(z.string()).max(10).nullable().optional(), at: z.number().finite() });
 
 export const SyncBody = z.object({
@@ -121,7 +121,8 @@ function readPush(push: Record<string, unknown[]>, out: Out): Partial<Record<Syn
       const p = Push.safeParse(r);
       // An id goes into SQL as text, so it must be text Postgres can hold (no NUL, no half pair).
       if (known && p.success && p.data.id === cleanText(p.data.id)) (lists[name as SyncList] ??= []).push(p.data as PushRecord);
-      else refuse(out, name as SyncList, isObj(r) && typeof r.id === "string" ? r.id.slice(0, 300) : null);
+      // The id goes back whole (the device matches it to its outbox), unless it is absurd.
+      else refuse(out, name as SyncList, isObj(r) && typeof r.id === "string" && r.id.length <= 1000 ? r.id : null);
     }
   }
   for (const list of Object.keys(lists) as SyncList[]) lists[list] = latest(lists[list]!);

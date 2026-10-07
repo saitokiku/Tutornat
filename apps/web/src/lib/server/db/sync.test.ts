@@ -202,7 +202,8 @@ describe("sync", () => {
     const acct = await family();
     const klass = { id: "k1", profileId: "p1", name: "Math", subject: "math", color: "#000", feedUrl: "https://school.example/feed?token=secret", createdAt: 1 };
     const res = await device(acct).sync({ profiles: [put(profile("p1"))], classes: [put(klass)] });
-    const { feedUrl: _, ...rest } = klass;
+    const rest: Partial<typeof klass> = { ...klass };
+    delete rest.feedUrl;
     expect(res.changes.classes).toEqual([{ id: "k1", data: rest }]);
     expect(JSON.stringify(await db.select().from(classes))).not.toContain("secret");
   });

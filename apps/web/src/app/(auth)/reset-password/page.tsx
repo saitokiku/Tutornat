@@ -8,12 +8,13 @@ import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { Button, Field, Notice, btn } from "@/components/ui";
 import { useT } from "@/i18n";
-import { checkResetToken, resetPassword } from "@/lib/auth";
+import { checkResetToken, resetPassword, useServerStatus } from "@/lib/auth";
 
 export default function ResetPasswordPage() {
   const t = useT();
   useTitle(t("auth.resetTitle"));
   const token = useSearchParams().get("token") ?? "";
+  const server = useServerStatus()?.mode === "server";
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -62,6 +63,8 @@ export default function ResetPasswordPage() {
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-5" noValidate>
+            {/* Told before, not after: a child's tablet signed out mid-practice shouldn't be a surprise. */}
+            {server && <p className="text-sm text-muted">{t("acct.reset.othersOut")}</p>}
             <Field label={t("auth.newPassword")} hint={t("auth.passwordHint")} error={error ?? undefined}>
               {(a) => <input {...a} type="password" autoComplete="new-password" className="k-input" value={password} onChange={(e) => setPassword(e.target.value)} />}
             </Field>

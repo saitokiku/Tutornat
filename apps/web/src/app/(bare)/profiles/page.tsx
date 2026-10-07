@@ -31,14 +31,18 @@ export default function ProfilesPage() {
   const unlocked = useStore((s) => Boolean(s.session.unlocked));
   const goals = useStore(goalsOf);
   // Signed in to an account on a server (null in the browser-only version).
-  const server = useSyncState() !== null;
+  const sync = useSyncState();
+  const server = sync !== null;
+  // A new device still getting the family: nothing is empty yet, and nobody should add a learner twice.
+  const fetching = Boolean(sync?.firstSync) && learners.length === 0;
+  const [leaving, setLeaving] = useState(false);
   // Parent-only actions wait behind the grown-up gate when a child was the last one using the app.
   const [gate, setGate] = useState<"parent" | "manage" | "add" | null>(null);
   // Forms and manage mode are grown-up only; a kept-alive page must not reopen them for a child.
-  const showForm = unlocked ? (form ?? (learners.length === 0 ? "add" : null)) : null;
+  const showForm = unlocked ? (form ?? (learners.length === 0 && !fetching ? "add" : null)) : null;
   const managing = unlocked && mode === "manage";
   const editing = learners.find((l) => l.id === showForm);
-  const pendingGate = gate ?? (learners.length === 0 && !unlocked ? "add" : null);
+  const pendingGate = gate ?? (learners.length === 0 && !unlocked && !fetching ? "add" : null);
 
   // The picker belongs to the family, not to whoever used the app last.
   useEffect(() => {
@@ -65,7 +69,7 @@ export default function ProfilesPage() {
     <div className="min-h-dvh bg-paper">
       <header className="mx-auto flex max-w-wide items-center justify-between px-5 py-5 sm:px-8">
         <KaizenLogo size={32} href="/" />
-        <Button variant="ghost" size="sm" onClick={signOut}>
+        <Button variant="ghost" size="sm" loading={leaving} onClick={() => (setLeaving(true), void signOut())}>
           <IconLogout size={16} /> {t("nav.signOut")}
         </Button>
       </header>
@@ -73,7 +77,7 @@ export default function ProfilesPage() {
       <main className="mx-auto max-w-3xl px-5 pb-20 pt-6 sm:px-8 sm:pt-12">
         <h1 className="text-center font-brand text-t1 font-semibold text-ink sm:text-d3">{t("profiles.title")}</h1>
         <SyncStatus className="mt-2 justify-center" />
-        {learners.length === 0 && <p className="mt-3 text-center text-sm text-muted">{t("profiles.empty")}</p>}
+        {learners.length === 0 && <p className="mt-3 text-center text-sm text-muted">{t(fetching ? "acct.sync.firstSync" : "profiles.empty")}</p>}
         {unlocked && goals === undefined && learners.length > 0 && (
           <div className="mt-8">
             <GoalsPicker />
@@ -143,13 +147,13 @@ export default function ProfilesPage() {
         )}
 
         {unlocked && !managing && !showForm && server && learners.some((l) => needsConsent(l.grade)) && (
-          // Parent-first: the AI tutor and voice stay off for children until a grown-up consents.
+          // Parent-first: AI features and voice stay off for children until a grown-up consents.
           <section aria-labelledby="consent-card" className="mx-auto mt-10 flex max-w-xl flex-wrap items-center gap-4 rounded-lg border border-border bg-panel p-5 shadow-soft">
             <div className="min-w-0 flex-1 basis-60">
               <h2 id="consent-card" className="font-brand text-t3 font-semibold text-ink">
-                {t("acct.consent.title")}
+                {t("acct.consent.title2")}
               </h2>
-              <p className="mt-1 text-sm text-muted">{t("acct.consent.cardBody")}</p>
+              <p className="mt-1 text-sm text-muted">{t("acct.consent.cardBody2")}</p>
             </div>
             <Link href="/consent" className={btn("secondary")}>
               {t("acct.consent.review")}

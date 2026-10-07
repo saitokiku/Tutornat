@@ -8,7 +8,7 @@ import { useTitle } from "@/components/LangSync";
 import { Button, Field, Notice } from "@/components/ui";
 import { useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
-import { signIn } from "@/lib/auth";
+import { signIn, signOutNote } from "@/lib/auth";
 
 /** Only follow a ?next= that stays on this site (blocks //evil and /\\evil tricks). */
 function sameSite(next: string | null) {
@@ -30,6 +30,8 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<{ key: Key; minutes?: number } | null>(null);
   const [busy, setBusy] = useState(false);
+  // What the last sign-out on this device left behind (it clears once someone signs in).
+  const [note] = useState(signOutNote);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +46,18 @@ export default function SignInPage() {
     <Guard need="guest">
       <AuthCard title={t("auth.signInTitle")} footer={<>{t("auth.noAccount")} <TextLink href="/sign-up">{t("auth.signUp")}</TextLink></>}>
         <form onSubmit={submit} className="space-y-5" noValidate>
+          {note && !error && (
+            <Notice tone="warn">
+              {note.reason === "elsewhere" ? (
+                t("acct.signedOut.elsewhere")
+              ) : (
+                <>
+                  {note.reason === "kept" && <span className="block">{t("acct.signedOut.kept", { n: note.kept })}</span>}
+                  {!note.ended && <span className="block">{t("acct.signedOut.offline")}</span>}
+                </>
+              )}
+            </Notice>
+          )}
           {error && <Notice tone="bad">{t(error.key, { minutes: error.minutes ?? 1 })}</Notice>}
           <Field label={t("auth.email")}>
             {(a) => <input {...a} type="email" autoComplete="email" required className="k-input" value={email} onChange={(e) => setEmail(e.target.value)} />}
