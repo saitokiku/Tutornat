@@ -31,6 +31,7 @@ import pythagorean from "./math-pythagorean";
 import pythagoreanEs from "./math-pythagorean-es";
 import rhymesSyllables from "./english-rhymes-syllables";
 import rhymesSyllablesEs from "./english-rhymes-syllables-es";
+import shortWords from "./english-short-words";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -65,4 +66,5 @@ export const REGISTRY: CatalogueEntry[] = [
   pythagoreanEs,
   rhymesSyllables,
   rhymesSyllablesEs,
+  shortWords,
 ];
