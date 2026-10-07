@@ -213,8 +213,8 @@ const addNumberLine: CatalogueEntry = {
             {
               id: "q1",
               prompt: "You are on 7. How many jumps to get to 10?",
-              choices: ["2", "3", "4"],
-              answer: 1,
+              choices: ["3", "4", "10"],
+              answer: 0,
               hint: "Put your finger on 7. Count each jump until you reach 10.",
               explain: "From 7, the jumps land on 8, 9, 10. That is 3 jumps.",
             },

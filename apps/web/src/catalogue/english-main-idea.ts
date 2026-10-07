@@ -248,7 +248,11 @@ const mainIdea: CatalogueEntry = {
             {
               id: "q3",
               prompt: "How can you check that you found the main idea?",
-              choices: ["See if all the other sentences tell more about it.", "Pick the longest sentence.", "Pick the first sentence every time."],
+              choices: [
+                "See if all the other sentences tell more about it.",
+                "Pick the longest sentence.",
+                "Pick the first sentence every time.",
+              ],
               answer: 0,
               hint: "The main idea is connected to every detail.",
               explain: "Every detail should tell more about the main idea. It isn't always the first sentence or the longest one.",
@@ -328,16 +332,16 @@ const mainIdea: CatalogueEntry = {
               id: "q1",
               prompt:
                 "Read: “Grandpa's hands shook as he opened the letter. He read it twice. Then he laughed out loud and called everyone into the kitchen.” What is this paragraph mostly about?",
-              choices: ["Grandpa got good news in a letter.", "Grandpa's kitchen is big.", "Grandpa can't read well."],
-              answer: 0,
+              choices: ["Grandpa's kitchen is big.", "Grandpa got good news in a letter.", "Grandpa can't read well."],
+              answer: 1,
               hint: "Put the clues together. How does Grandpa act after he reads the letter?",
               explain: "He laughs and calls everyone in to hear. The details add up to good news, even though no sentence says so.",
             },
             {
               id: "q2",
               prompt: "Read: “The bread has blue fuzz on it. The milk smells sour. The bananas are brown and mushy.” What is the main idea?",
-              choices: ["The food in the kitchen has gone bad.", "Bananas are yellow.", "Someone went shopping today."],
-              answer: 0,
+              choices: ["Bananas are yellow.", "Someone went shopping today.", "The food in the kitchen has gone bad."],
+              answer: 2,
               hint: "What do the bread, the milk and the bananas have in common?",
               explain: "Fuzzy bread, sour milk and mushy bananas are all food that has gone bad.",
             },
@@ -444,8 +448,12 @@ const mainIdea: CatalogueEntry = {
             {
               id: "q1",
               prompt: "What is the beaver article mostly about?",
-              choices: ["Beavers have strong teeth.", "Beavers build dams that change a stream and help other animals.", "Ducks like ponds."],
-              answer: 1,
+              choices: [
+                "Beavers build dams that change a stream and help other animals.",
+                "Beavers have strong teeth.",
+                "Ducks like ponds.",
+              ],
+              answer: 0,
               hint: "Pick the choice that covers all three parts of the article.",
               explain:
                 "Strong teeth and ducks are each details from one part. The whole article is about how a beaver dam changes a stream and helps other animals.",
@@ -453,8 +461,12 @@ const mainIdea: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Why are headings useful?",
-              choices: ["They tell what each part is about.", "They are always the main idea of the whole article.", "They show where the article ends."],
-              answer: 0,
+              choices: [
+                "They are always the main idea of the whole article.",
+                "They tell what each part is about.",
+                "They show where the article ends.",
+              ],
+              answer: 1,
               hint: "Look back at the beaver headings. What did each one tell you?",
               explain: "A heading names the topic of its part. Put the headings together to find the main idea of the whole article.",
             },
@@ -462,8 +474,8 @@ const mainIdea: CatalogueEntry = {
               id: "q3",
               prompt:
                 "An article has three headings: “Seeds ride the wind,” “Seeds float on water” and “Seeds hitch rides on animals.” What is it mostly about?",
-              choices: ["How seeds travel to new places", "How wind blows", "Animals with fur"],
-              answer: 0,
+              choices: ["How wind blows", "Animals with fur", "How seeds travel to new places"],
+              answer: 2,
               hint: "What do all three headings have in common?",
               explain: "Every heading names a way seeds travel. So the article is about how seeds get to new places.",
             },

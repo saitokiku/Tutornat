@@ -298,11 +298,11 @@ const moon: CatalogueEntry = {
               id: "q2",
               prompt: "Why does the Moon rise later each day?",
               choices: [
-                "The Moon moves along its path, so Earth has to turn a little extra to face it again.",
                 "Earth spins more slowly each day.",
                 "The Moon gets farther from Earth each day.",
+                "The Moon moves along its path, so Earth has to turn a little extra to face it again.",
               ],
-              answer: 0,
+              answer: 2,
               hint: "Two things are moving: Earth is spinning, and the Moon is traveling around Earth.",
               explain:
                 "Earth's spin stays the same. The Moon moves ahead on its path each day, so Earth needs about 50 extra minutes to bring it back into view.",
@@ -424,8 +424,8 @@ const moon: CatalogueEntry = {
             {
               id: "q1",
               prompt: "During a lunar eclipse, whose shadow falls on the Moon?",
-              choices: ["The Moon's own shadow", "Earth's shadow", "A cloud's shadow", "The Sun's shadow"],
-              answer: 1,
+              choices: ["Earth's shadow", "The Moon's own shadow", "A cloud's shadow", "The Sun's shadow"],
+              answer: 0,
               hint: "Which one moves between the Sun and the Moon?",
               explain: "In a lunar eclipse, Earth is directly between the Sun and the Moon, so Earth's shadow falls on the Moon.",
             },
@@ -433,11 +433,11 @@ const moon: CatalogueEntry = {
               id: "q2",
               prompt: "Why isn't there a lunar eclipse at every full moon?",
               choices: [
-                "The Moon's path is tilted, so it usually passes above or below Earth's shadow.",
                 "The Sun is too far away most months.",
                 "Earth only has a shadow in winter.",
+                "The Moon's path is tilted, so it usually passes above or below Earth's shadow.",
               ],
-              answer: 0,
+              answer: 2,
               hint: "Picture the Moon's path around Earth. Does it line up exactly with the Sun and Earth every month?",
               explain:
                 "The Moon's path is tilted by about 5 degrees. Most months, the full moon slips past just above or below Earth's shadow.",

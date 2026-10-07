@@ -133,7 +133,7 @@ const fraccionesEs: CatalogueEntry = {
           kind: "slide",
           title: "Más partes, partes más pequeñas",
           blocks: [
-            { type: "text", text: "Mientras más partes iguales cortes en un entero, más pequeña es cada parte." },
+            { type: "text", text: "Si cortas un entero en más partes iguales, cada parte es más pequeña." },
             { type: "visual", visual: { kind: "fraction", parts: 3, shaded: 1 }, alt: "Una barra cortada en 3 partes iguales. 1 parte está sombreada." },
             {
               type: "visual",

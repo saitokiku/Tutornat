@@ -243,8 +243,8 @@ const matter: CatalogueEntry = {
             {
               id: "q1",
               prompt: "You put a cup of water in the freezer. What happens?",
-              choices: ["It turns into ice.", "It turns into a gas.", "It stays a liquid."],
-              answer: 0,
+              choices: ["It turns into a gas.", "It stays a liquid.", "It turns into ice."],
+              answer: 2,
               hint: "A freezer is very cold. What does cold do to water?",
               explain: "A freezer is colder than 0 °C. The water freezes into ice.",
             },
@@ -350,8 +350,8 @@ const matter: CatalogueEntry = {
             {
               id: "q1",
               prompt: "What makes butter melt?",
-              choices: ["Heat", "Cold", "Water"],
-              answer: 0,
+              choices: ["Cold", "Heat", "Water"],
+              answer: 1,
               hint: "Where does butter melt faster: in the fridge or in a pan?",
               explain: "Heat melts butter. That is why it melts in a warm pan.",
             },

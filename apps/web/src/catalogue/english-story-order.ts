@@ -284,8 +284,8 @@ const storyOrder: CatalogueEntry = {
             {
               id: "q3",
               prompt: "Tia tells it back: “Max puts on boots. Then Dad washes off the mud.” What did Tia leave out?",
-              choices: ["Max jumps in a puddle.", "Max eats lunch.", "Dad reads a book."],
-              answer: 0,
+              choices: ["Max eats lunch.", "Dad reads a book.", "Max jumps in a puddle."],
+              answer: 2,
               hint: "What did Max do between the boots and the washing?",
               explain: "Tia left out the middle. Max jumps in a puddle and gets muddy.",
             },
@@ -358,8 +358,8 @@ const storyOrder: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Which is the best first part for a story?",
-              choices: ["Then they all went home.", "Pip the puppy lived on a busy farm.", "So the problem was fixed."],
-              answer: 1,
+              choices: ["Then they all went home.", "So the problem was fixed.", "Pip the puppy lived on a busy farm."],
+              answer: 2,
               hint: "A first part tells who the story is about.",
               explain: "“Pip the puppy lived on a busy farm” tells who and where. The other two sound like endings.",
             },

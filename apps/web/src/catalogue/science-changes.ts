@@ -208,7 +208,7 @@ const changes: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Test the gas: a small flame held in the gas from baking soda and vinegar goes out. Ordinary air keeps it burning, so the gas is something new: carbon dioxide.",
+                "Test the gas: a small flame held in the gas from baking soda and vinegar goes out. Ordinary air keeps a flame burning, so this gas is something different. It is carbon dioxide, made by the reaction.",
                 "Compare before and after: sugar is white, sweet and dissolves in water. Heated too long, it becomes a black solid that is none of those. That solid is mostly carbon.",
                 "Try to reverse it: melted ice freezes back into ice, but burnt sugar never turns back into sugar. This is another clue, not a rule.",
               ],
@@ -243,11 +243,11 @@ const changes: CatalogueEntry = {
               id: "q1",
               prompt: "A student drops a fizzing tablet into water and sees bubbles. What should she do before calling it a chemical change?",
               choices: [
-                "Nothing. Bubbles prove a chemical change.",
                 "Test the gas, or compare properties, to see whether a new substance formed.",
+                "Nothing. Bubbles prove a chemical change.",
                 "Stir the water faster.",
               ],
-              answer: 1,
+              answer: 0,
               hint: "An opened soda bubbles too, and that isn't a chemical change. What would tell the two apart?",
               explain:
                 "Bubbles are only a clue, so she needs evidence of a new substance. Here she'd find it: the tablet's acid and baking soda react in water to make carbon dioxide.",
@@ -377,8 +377,12 @@ const changes: CatalogueEntry = {
             {
               id: "q1",
               prompt: "An iron nail rusts, and the rusty nail weighs more than the clean nail did. Where did the extra mass come from?",
-              choices: ["Atoms from oxygen and water in the air joined the iron.", "Rusting creates new atoms.", "Rust is lighter, so the scale must be wrong."],
-              answer: 0,
+              choices: [
+                "Rusting creates new atoms.",
+                "Rust is lighter, so the scale must be wrong.",
+                "Atoms from oxygen and water in the air joined the iron.",
+              ],
+              answer: 2,
               hint: "Rust forms from iron, oxygen and water. Where were the oxygen and water before?",
               explain:
                 "Rust contains oxygen and hydrogen atoms that came from the air and moisture. The nail gained exactly the mass of those atoms; none were created.",
@@ -503,16 +507,20 @@ const changes: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Why does a cake rise in the oven?",
-              choices: ["Heat makes the flour grow.", "Baking powder reacts and makes bubbles of carbon dioxide.", "The eggs melt."],
-              answer: 1,
+              choices: ["Baking powder reacts and makes bubbles of carbon dioxide.", "Heat makes the flour grow.", "The eggs melt."],
+              answer: 0,
               hint: "Look for the choice that makes a gas.",
               explain: "Baking powder reacts when it gets wet and hot, making carbon dioxide. The gas bubbles get trapped in the batter and make it rise.",
             },
             {
               id: "q2",
               prompt: "Why does painting an iron fence help keep it from rusting?",
-              choices: ["Paint keeps water and oxygen away from the iron.", "Paint turns iron into a different metal.", "Paint makes the fence colder."],
-              answer: 0,
+              choices: [
+                "Paint turns iron into a different metal.",
+                "Paint makes the fence colder.",
+                "Paint keeps water and oxygen away from the iron.",
+              ],
+              answer: 2,
               hint: "Rusting needs iron plus two other things from the air around it.",
               explain: "Rusting needs iron, oxygen and water. Paint keeps water and oxygen from touching the iron, which slows the reaction.",
             },
@@ -520,11 +528,11 @@ const changes: CatalogueEntry = {
               id: "q3",
               prompt: "Which part of digestion is a physical change?",
               choices: [
-                "Teeth chewing food into smaller pieces",
                 "Saliva breaking starch into sugar",
+                "Teeth chewing food into smaller pieces",
                 "Stomach acid and enzymes breaking down proteins",
               ],
-              answer: 0,
+              answer: 1,
               hint: "Which one changes only the size of the food, not the substances in it?",
               explain:
                 "Chewing makes smaller pieces of the same food, so it's a physical change. Breaking starch and proteins into new, smaller molecules are chemical changes.",

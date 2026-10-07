@@ -244,11 +244,11 @@ const rhetoric: CatalogueEntry = {
               id: "q1",
               prompt: "Why does Dana introduce herself before giving any numbers?",
               choices: [
-                "To establish ethos, so the board trusts what follows",
                 "To make the board feel sorry for her",
                 "Because numbers are always weak evidence",
+                "To establish ethos, so the board trusts what follows",
               ],
-              answer: 0,
+              answer: 2,
               hint: "What does her introduction tell the board about her?",
               explain:
                 "By showing that she rides the bus and helps run a club, Dana shows she knows the issue firsthand. That makes the board more likely to trust her facts.",
@@ -256,8 +256,8 @@ const rhetoric: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Dana ends: “It's a small cost for keeping 140 students connected to their school.” Which appeals does this sentence combine?",
-              choices: ["Logos and pathos", "Ethos only", "Pathos only"],
-              answer: 0,
+              choices: ["Ethos only", "Logos and pathos", "Pathos only"],
+              answer: 1,
               hint: "Look for a number, and for words meant to make the board care.",
               explain:
                 "The number 140 and the idea of a small cost are logos. “Connected to their school” asks the board to care about those students, which is pathos.",
@@ -382,11 +382,11 @@ const rhetoric: CatalogueEntry = {
               id: "q1",
               prompt: "An ad says, “A famous chef says this mattress gives the best sleep.” What's the flaw?",
               choices: [
-                "False authority: a chef isn't an expert on sleep or mattresses.",
                 "Scare tactics: it uses fear.",
+                "False authority: a chef isn't an expert on sleep or mattresses.",
                 "Nothing. Chefs are experts.",
               ],
-              answer: 0,
+              answer: 1,
               hint: "Ask what the speaker actually knows about.",
               explain: "A chef's expertise is cooking. On mattresses, the chef's opinion is worth no more than anyone else's, so citing it is false authority.",
             },
@@ -394,11 +394,11 @@ const rhetoric: CatalogueEntry = {
               id: "q2",
               prompt: "A headline reads, “Shark sightings doubled at Sandy Beach this year!” Which question best tests this statistic?",
               choices: [
-                "How many sightings were there last year, and how many this year?",
                 "Are sharks dangerous?",
                 "Is the beach popular?",
+                "How many sightings were there last year, and how many this year?",
               ],
-              answer: 0,
+              answer: 2,
               hint: "“Doubled” compares two numbers. What do you need to know about them?",
               explain: "Doubling from 1 to 2 is very different from doubling from 50 to 100. Without the actual numbers, “doubled” tells you very little.",
             },
@@ -516,11 +516,11 @@ const rhetoric: CatalogueEntry = {
               id: "q1",
               prompt: "You're asking the city council for a crosswalk near your school. Which opening builds the most ethos?",
               choices: [
-                "“I walk this street every school day, and last week I counted 40 cars in the five minutes before the bell.”",
                 "“Everyone knows this street is dangerous.”",
                 "“You'll regret it if someone gets hurt.”",
+                "“I walk this street every school day, and last week I counted 40 cars in the five minutes before the bell.”",
               ],
-              answer: 0,
+              answer: 2,
               hint: "Ethos comes from the speaker's own knowledge or experience.",
               explain:
                 "Walking the street daily and counting the cars shows firsthand knowledge. That makes the council more likely to trust the rest of your argument.",

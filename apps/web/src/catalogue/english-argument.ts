@@ -247,8 +247,8 @@ const argument: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Which source is most trustworthy for evidence about how much sleep teens need?",
-              choices: ["A mattress company's ad", "A report from a national group of sleep doctors", "A post from an anonymous account"],
-              answer: 1,
+              choices: ["A mattress company's ad", "A post from an anonymous account", "A report from a national group of sleep doctors"],
+              answer: 2,
               hint: "Ask who knows the subject, and who gains if you believe them.",
               explain: "Sleep doctors study the subject. A mattress company profits if you buy, and an anonymous post can't be checked.",
             },
@@ -256,11 +256,11 @@ const argument: CatalogueEntry = {
               id: "q3",
               prompt: "Claim: Our park needs more trash cans. Evidence: “It's really messy.” How could you make this evidence stronger?",
               choices: [
-                "Say it louder, with an exclamation point.",
                 "Count the litter along one path on three different days and report the numbers.",
+                "Say it louder, with an exclamation point.",
                 "Add that parks are important.",
               ],
-              answer: 1,
+              answer: 0,
               hint: "Strong evidence is something a reader can check.",
               explain: "Counting the litter turns a vague impression into numbers a reader could check. The other choices add feeling, not evidence.",
             },
@@ -370,14 +370,14 @@ const argument: CatalogueEntry = {
               prompt:
                 "Claim: The cafeteria should offer a vegetarian main dish every day. Evidence: In a survey, 1 in 5 students said they don't eat meat. Which is the strongest reasoning?",
               choices: [
-                "Every student should be able to eat a school lunch, and right now 1 in 5 can't eat the main dish.",
                 "1 in 5 students don't eat meat.",
                 "Vegetables are colorful.",
+                "Every student should be able to eat a school lunch, and right now 1 in 5 can't eat the main dish.",
               ],
-              answer: 0,
+              answer: 2,
               hint: "Look for the choice that explains why the number matters.",
               explain:
-                "The first choice uses a rule most readers accept, that every student should be able to eat lunch, and links it to the survey. The second only repeats the evidence.",
+                "The strongest reasoning uses a rule most readers accept, that every student should be able to eat lunch, and links it to the survey. “1 in 5 students don't eat meat” only repeats the evidence.",
             },
             {
               id: "q2",
@@ -391,12 +391,8 @@ const argument: CatalogueEntry = {
             {
               id: "q3",
               prompt: "A student writes to the principal: “Recess is fun, so it should be longer.” Why might this reasoning fail?",
-              choices: [
-                "The principal may not accept “fun” as a reason to change the schedule.",
-                "It is too long.",
-                "It uses evidence.",
-              ],
-              answer: 0,
+              choices: ["It is too long.", "The principal may not accept “fun” as a reason to change the schedule.", "It uses evidence."],
+              answer: 1,
               hint: "Who is the reader, and what do they care about?",
               explain:
                 "Reasoning works only if the reader accepts the rule behind it. A principal cares about learning and health, so a reason about how breaks help students focus would land better.",
@@ -514,35 +510,35 @@ const argument: CatalogueEntry = {
               prompt: "A student argues that her class should get a classroom pet. Which sentence states a counterclaim?",
               choices: [
                 "Our class should get a classroom pet.",
-                "Some students say a pet would be distracting during lessons.",
                 "Caring for a pet teaches responsibility.",
+                "Some students say a pet would be distracting during lessons.",
               ],
-              answer: 1,
+              answer: 2,
               hint: "A counterclaim argues against the writer's claim.",
-              explain: "“A pet would be distracting” is the opposing view. The first sentence is the claim, and the third supports it.",
+              explain: "“A pet would be distracting” is the opposing view. “Our class should get a classroom pet” is the claim, and the sentence about responsibility supports it.",
             },
             {
               id: "q2",
               prompt:
                 "Counterclaim: “Homework helps students practice what they learned.” Which is the strongest rebuttal for a writer who wants less homework?",
               choices: [
-                "Homework is boring.",
                 "Practice does help, but our survey found most students spend over two hours a night, more than twice the school's own one-hour guideline.",
+                "Homework is boring.",
                 "People who like homework are wrong.",
               ],
-              answer: 1,
+              answer: 0,
               hint: "A strong rebuttal deals with the other side's reason and uses evidence.",
-              explain: "The second choice admits the other side's point, then answers it with evidence. The other two dodge the point or attack people.",
+              explain: "This rebuttal admits the other side's point, then answers it with evidence. The other two dodge the point or attack people.",
             },
             {
               id: "q3",
               prompt: "Why include a counterclaim at all?",
               choices: [
-                "It shows you've considered other views, which makes your argument more convincing.",
                 "It makes the essay longer.",
                 "It proves the other side is right.",
+                "It shows you've considered other views, which makes your argument more convincing.",
               ],
-              answer: 0,
+              answer: 2,
               hint: "Think about a reader who disagrees with you. What would they want to see?",
               explain: "Readers who disagree trust an argument more when it takes their concern seriously and answers it.",
             },
