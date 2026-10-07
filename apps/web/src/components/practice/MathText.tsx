@@ -22,7 +22,7 @@ export function MathText({ parts, blank }: { parts: MathPart[]; blank?: React.Re
             </span>
           );
         return (
-          <span key={i} className="inline-flex min-w-12 items-center justify-center rounded-md border-2 border-dashed border-accent/60 px-2 py-0.5 text-accent">
+          <span key={i} className={`inline-flex min-w-12 items-center justify-center rounded-md border-2 px-2 py-0.5 ${blank ? "border-good/60" : "border-dashed border-accent/60 text-accent"}`}>
             {blank ?? <span className="sr-only">blank</span>}
             {!blank && <span aria-hidden="true">?</span>}
           </span>

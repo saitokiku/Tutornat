@@ -16,6 +16,22 @@ export type Account = {
   salt: string;
   passwordHash: string;
   createdAt: number;
+  goals?: Goal[];
+};
+
+/** What a family wants from KaizenEDU, asked once at setup. Changes emphasis, never access. */
+export type Goal = "help" | "daily" | "homeschool" | "organized";
+export const GOALS: Goal[] = ["help", "daily", "homeschool", "organized"];
+
+export type LearnerSettings = {
+  /** Daily practice budget the plan fills. */
+  dailyMinutes: number;
+  /** Subjects that get a daily set. */
+  subjects: Subject[];
+  /** Show time against pace at the end of a set. */
+  timer: boolean;
+  /** A grown-up allowed talking to the tutor with the microphone (browser speech recognition). */
+  voiceInput: boolean;
 };
 
 export type Profile = {
@@ -26,6 +42,11 @@ export type Profile = {
   locale: Locale;
   color: string;
   createdAt: number;
+  settings?: Partial<LearnerSettings>;
+  /** Where each subject's map starts (from placement, or a grown-up's choice). */
+  start?: Partial<Record<Subject, string>>;
+  /** Things the learner likes, used to theme generated lessons and word problems. Never sent with the name. */
+  interests?: string[];
 };
 
 export type SourceItem = { id: string; name: string; kind: "pdf" | "image" | "doc" | "text"; size: number };

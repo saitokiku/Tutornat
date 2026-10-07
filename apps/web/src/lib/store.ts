@@ -1,6 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import type { Attempt, PracticeSet } from "@/learning/types";
+import type { Feedback, PlanDone, ReadingEntry, SchoolClass, SchoolEvent, SchoolResult, TutorThread } from "@/planner/types";
 import type { Account, ActivityEvent, Course, Locale, ParentNote, Profile } from "./types";
 
 // One versioned document in localStorage. Stand-in for the backend: lib/* functions are the only
@@ -17,6 +19,15 @@ export type StoreState = {
   activity: ActivityEvent[];
   notes: ParentNote[];
   resets: { token: string; accountId: string; expires: number }[];
+  attempts: Attempt[];
+  sets: PracticeSet[];
+  events: SchoolEvent[];
+  classes: SchoolClass[];
+  feedback: Feedback[];
+  results: SchoolResult[];
+  planDone: PlanDone[];
+  reading: ReadingEntry[];
+  threads: TutorThread[];
   /** unlocked: a grown-up proved themselves (signed in, or passed the gate) since a child last took over. */
   session: { accountId: string | null; profileId: string | "parent" | null; unlocked?: boolean };
   prefs: { locale: Locale };
@@ -32,6 +43,15 @@ export const emptyState = (): StoreState => ({
   activity: [],
   notes: [],
   resets: [],
+  attempts: [],
+  sets: [],
+  events: [],
+  classes: [],
+  feedback: [],
+  results: [],
+  planDone: [],
+  reading: [],
+  threads: [],
   session: { accountId: null, profileId: null },
   prefs: { locale: "en" },
 });
@@ -60,7 +80,10 @@ function load(): StoreState {
   }
 }
 
-const LISTS = ["accounts", "profiles", "courses", "activity", "notes", "resets"] as const;
+const LISTS = [
+  "accounts", "profiles", "courses", "activity", "notes", "resets",
+  "attempts", "sets", "events", "classes", "feedback", "results", "planDone", "reading", "threads",
+] as const;
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** Everything a screen reads must be the right kind of value, or the whole document is reset. */

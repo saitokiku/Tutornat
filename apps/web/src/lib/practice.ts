@@ -1,0 +1,184 @@
+import {
+  allStatuses,
+  buildCheckSlots,
+  buildMixedSlots,
+  buildPracticeSlots,
+  buildReviewSlots,
+  defaultStart,
+  nextSkill,
+  placementNext,
+  type Statuses,
+} from "@/learning/engine";
+import type { Attempt, Mode, PracticeSet, SetKind, Slot } from "@/learning/types";
+import { randomSeed } from "@/practice/rng";
+import { getSkill } from "@/practice/skills";
+import { newId, update, type StoreState } from "./store";
+import type { Grade, LearnerSettings, Profile, Subject } from "./types";
+
+// Practice actions screens call. Backend-shaped: when accounts move to a server, these bodies become
+// API calls and the screens stay as they are.
+
+const BAND_MINUTES: Record<string, number> = { K: 10, "1": 10, "2": 10, "3": 15, "4": 15, "5": 15 };
+
+export function settingsOf(p: Pick<Profile, "grade" | "settings">): LearnerSettings {
+  const young = ["K", "1", "2"].includes(p.grade);
+  return {
+    dailyMinutes: BAND_MINUTES[p.grade] ?? 20,
+    subjects: ["math", "english"],
+    timer: !young,
+    voiceInput: false,
+    ...p.settings,
+  };
+}
+
+export function updateSettings(profileId: string, patch: Partial<LearnerSettings>) {
+  update((s) => {
+    const p = s.profiles.find((x) => x.id === profileId && x.accountId === s.session.accountId);
+    if (p) p.settings = { ...p.settings, ...patch };
+  });
+}
+
+export function setStart(profileId: string, subject: Subject, skillId: string) {
+  update((s) => {
+    const p = s.profiles.find((x) => x.id === profileId);
+    if (p) p.start = { ...p.start, [subject]: skillId };
+  });
+}
+
+export function setInterests(profileId: string, interests: string[]) {
+  const clean = interests.map((i) => i.trim().slice(0, 40)).filter(Boolean).slice(0, 8);
+  update((s) => {
+    const p = s.profiles.find((x) => x.id === profileId && x.accountId === s.session.accountId);
+    if (p) p.interests = clean;
+  });
+}
+
+export const attemptsOf = (s: StoreState, profileId: string) => s.attempts.filter((a) => a.profileId === profileId);
+export const setsOf = (s: StoreState, profileId: string) => s.sets.filter((x) => x.profileId === profileId);
+export const getSet = (s: StoreState, setId: string, profileId: string) => s.sets.find((x) => x.id === setId && x.profileId === profileId);
+
+// Memoized by reference: the store hands out a new attempts array on every write, so this recomputes
+// exactly when evidence changed. ponytail: one-entry cache; enough for one learner on screen.
+let memo: { attempts: Attempt[]; profileId: string; hour: number; out: Statuses } | null = null;
+export function statusesOf(s: StoreState, profileId: string, now: number): Statuses {
+  const hour = Math.floor(now / 3600_000);
+  if (memo && memo.attempts === s.attempts && memo.profileId === profileId && memo.hour === hour) return memo.out;
+  const out = allStatuses(attemptsOf(s, profileId), now);
+  memo = { attempts: s.attempts, profileId, hour, out };
+  return out;
+}
+
+export const startOf = (p: Profile, subject: Subject) => p.start?.[subject] ?? defaultStart(subject, p.grade);
+
+export function nextSkillFor(s: StoreState, p: Profile, subject: Subject, now: number) {
+  return nextSkill(subject, statusesOf(s, p.id, now), startOf(p, subject));
+}
+
+/** Skills practiced in the last 14 days, most recent first — interleaved into new sets. */
+export function recentSkills(s: StoreState, profileId: string, now: number, subject?: Subject) {
+  const out: string[] = [];
+  for (const a of [...attemptsOf(s, profileId)].sort((x, y) => y.at - x.at)) {
+    if (now - a.at > 14 * 24 * 3600_000) break;
+    if (!out.includes(a.skillId) && (!subject || getSkill(a.skillId)?.subject === subject)) out.push(a.skillId);
+  }
+  return out;
+}
+
+const MODE: Record<SetKind, Mode> = {
+  daily: "practice",
+  pick: "practice",
+  review: "review",
+  check: "check",
+  placement: "placement",
+  prep: "prep",
+  feedback: "prep",
+};
+
+type StartOpts = {
+  profile: Profile;
+  kind: SetKind;
+  /** The skill for daily/pick/check sets, or the skills for prep/feedback/review sets. */
+  skillIds: string[];
+  planKey?: string;
+  eventId?: string;
+  now: number;
+};
+
+/** Creates a set and returns its id. Reuses an unfinished set for the same plan line. */
+export function startSet(state: StoreState, opts: StartOpts): string | null {
+  const { profile, kind, skillIds, now } = opts;
+  const first = skillIds.find((id) => getSkill(id));
+  if (!first) return null;
+  if (opts.planKey) {
+    const open = state.sets.find((x) => x.profileId === profile.id && x.planKey === opts.planKey && !x.finishedAt);
+    if (open) return open.id;
+  }
+  const statuses = statusesOf(state, profile.id, now);
+  const seed = () => randomSeed();
+  const grade: Grade = profile.grade;
+  let slots: Slot[];
+  if (kind === "placement") {
+    const step = placementNext(getSkill(first)!.subject, grade, []);
+    slots = "done" in step ? [] : [{ skillId: step.skillId, seed: seed(), role: "placement", level: getSkill(step.skillId)!.levels }];
+  } else if (kind === "check") slots = buildCheckSlots(first, seed);
+  else if (kind === "review") slots = buildReviewSlots(skillIds, statuses, seed);
+  else if (kind === "prep" || kind === "feedback") slots = buildMixedSlots(skillIds, statuses, grade, seed);
+  else slots = buildPracticeSlots({ skillId: first, grade, statuses, now, seed, recent: recentSkills(state, profile.id, now, getSkill(first)!.subject) });
+  const set: PracticeSet = {
+    id: newId(),
+    profileId: profile.id,
+    createdAt: now,
+    kind,
+    subject: getSkill(first)!.subject,
+    skillId: first,
+    slots,
+    planKey: opts.planKey,
+    eventId: opts.eventId,
+  };
+  update((s) => void s.sets.push(set));
+  return set.id;
+}
+
+export type AnswerRecord = { slot: number; level: number; correct: boolean; assisted: boolean; seconds: number; response?: string };
+
+export function recordAnswer(setId: string, a: AnswerRecord) {
+  update((s) => {
+    const set = s.sets.find((x) => x.id === setId);
+    if (!set || set.finishedAt) return;
+    const slot = set.slots[a.slot];
+    if (!slot) return;
+    slot.level ??= a.level;
+    set.startedAt ??= Date.now();
+    s.attempts.push({
+      id: newId(),
+      profileId: set.profileId,
+      at: Date.now(),
+      skillId: slot.skillId,
+      level: a.level,
+      seed: slot.seed,
+      setId,
+      mode: slot.role === "review" ? "review" : MODE[set.kind],
+      correct: a.correct,
+      // Nothing in a check can be helped; the runner hides help there, and this keeps the record honest anyway.
+      assisted: set.kind === "check" ? false : a.assisted,
+      seconds: Math.min(Math.max(0, Math.round(a.seconds)), 3600),
+      response: a.response?.slice(0, 80),
+    });
+  });
+}
+
+/** Help from the tutor on a skill outside a set still counts as help (it restarts the check clock). */
+export function recordTutorHelp(profileId: string, skillId: string, seed: number, level: number) {
+  if (!getSkill(skillId)) return;
+  update((s) => void s.attempts.push({ id: newId(), profileId, at: Date.now(), skillId, level, seed, mode: "tutor", correct: false, assisted: true, seconds: 0 }));
+}
+
+export function finishSet(setId: string) {
+  update((s) => {
+    const set = s.sets.find((x) => x.id === setId);
+    if (set && !set.finishedAt) set.finishedAt = Date.now();
+  });
+}
+
+/** Answers given in one set, in order. */
+export const answersIn = (s: StoreState, setId: string) => s.attempts.filter((a) => a.setId === setId).sort((a, b) => a.at - b.at);
