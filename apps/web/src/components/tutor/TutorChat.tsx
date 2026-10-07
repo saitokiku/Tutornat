@@ -247,7 +247,11 @@ function ChatView({
   // once; record that the conversation turned to a skill.
   useEffect(() => {
     const last = entries.at(-1);
-    if (last?.role === "tutor") speak.feed(last.id, last.text, !last.streaming);
+    if (last?.role === "tutor") {
+      // Sentence by sentence, so a young listener hears short pieces and can cut in between them.
+      if (!last.streaming) for (const m of last.text.matchAll(/[.?!](?=\s)/g)) speak.feed(last.id, last.text.slice(0, m.index + 2), false);
+      speak.feed(last.id, last.text, !last.streaming);
+    }
     const still = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     end.current?.scrollIntoView?.({ block: "end", behavior: still ? "auto" : "smooth" });
     for (const e of entries) {

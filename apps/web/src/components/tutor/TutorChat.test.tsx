@@ -76,13 +76,19 @@ describe("Talk with the demo tutor", () => {
     expect(read().sets.at(-1)).toMatchObject({ skillId: "e.fallacies", profileId: "p1" });
   });
 
-  it("the board folds away on a phone and opens again", async () => {
+  it("the board folds away on a phone and opens again from the conversation", async () => {
     const user = userEvent.setup();
     render(<TutorChat board setup={{ learner: learner(), surface: "talk", title: "Talk" }} />);
-    const toggle = await screen.findByRole("button", { name: "Board (0)" });
+    expect(await screen.findByText("Pictures, worked examples and practice the tutor shares show up here.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Board/ })).not.toBeInTheDocument(); // nothing to fold yet
+    await user.type(screen.getByRole("textbox"), "what is a logical fallacy{Enter}");
+    const toggle = await screen.findByRole("button", { name: "Board (4)" });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     await user.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(document.getElementById("board-cards")).toHaveClass("hidden");
+    await user.click(screen.getByRole("button", { name: /^On the board:/ }));
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
   it("“What does … mean?” fills the box with the cursor in the gap", async () => {

@@ -358,24 +358,28 @@ export function Board({ items, learner, open, onToggle }: { items: BoardItem[]; 
           {t("talk.board")}
         </h2>
         {items.length > 0 && <span className="text-xs text-muted">· {t("tut.board.latest")}</span>}
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          aria-controls="board-cards"
-          className="ml-auto inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-medium text-muted hover:bg-panel2 hover:text-ink lg:hidden"
-        >
-          {t("tut.board.toggle", { n: items.length })}
-          {open ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
-        </button>
-      </div>
-      <div id="board-cards" className={`${open ? "block" : "hidden"} max-h-[38dvh] min-h-0 space-y-3 overflow-y-auto pb-3 lg:block lg:max-h-none lg:flex-1`}>
-        {shown.length === 0 ? (
-          <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted">{t("talk.boardEmpty")}</p>
-        ) : (
-          shown.map((x) => <CardView key={x.key} id={`card-${x.key}`} card={x.card} learner={learner} />)
+        {items.length > 0 && (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            aria-controls="board-cards"
+            className="ml-auto inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-medium text-muted hover:bg-panel2 hover:text-ink lg:hidden"
+          >
+            {t("tut.board.toggle", { n: items.length })}
+            {open ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+          </button>
         )}
       </div>
+      {shown.length === 0 ? (
+        <p className="pb-2 text-xs text-muted lg:rounded-md lg:border lg:border-dashed lg:border-border lg:px-4 lg:py-6 lg:text-center lg:text-sm">{t("talk.boardEmpty")}</p>
+      ) : (
+        <div id="board-cards" className={`${open ? "block" : "hidden"} max-h-[38dvh] min-h-0 space-y-3 overflow-y-auto pb-3 lg:block lg:max-h-none lg:flex-1`}>
+          {shown.map((x) => (
+            <CardView key={x.key} id={`card-${x.key}`} card={x.card} learner={learner} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
