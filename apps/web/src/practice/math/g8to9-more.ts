@@ -276,11 +276,15 @@ function rootTenth(r: Rng, locale: Locale): ItemBody {
   const lowSq = dec(A * A, 2), highSq = dec((A + 1) ** 2, 2);
   const answer: Answer = { kind: "number", value: t / 10 };
   const d = n - k * k;
+  // Typed on the keypad for now; when the number-line pad renders, this becomes a tap on the line
+  // (input "number-line", pad { min: k, max: k + 1, step: 0.1 }).
   return {
-    prompt: [tr(locale, `√${n} is between ${k} and ${k + 1}. Tap where it goes on the number line, to the nearest tenth.`, `√${n} está entre ${k} y ${k + 1}. Toca dónde va en la recta numérica, a la décima más cercana.`)],
-    say: tr(locale, `The square root of ${n} is between ${k} and ${k + 1}. Tap where it goes on the number line, to the nearest tenth.`, `La raíz cuadrada de ${n} está entre ${k} y ${k + 1}. Toca dónde va en la recta numérica, a la décima más cercana.`),
-    input: "number-line",
-    pad: { kind: "number-line", min: k, max: k + 1, step: 0.1 },
+    prompt: [tr(locale, `√${n} is between ${k} and ${k + 1}. Estimate √${n} to the nearest tenth.`, `√${n} está entre ${k} y ${k + 1}. Estima √${n} a la décima más cercana.`)],
+    say: tr(locale, `The square root of ${n} is between ${k} and ${k + 1}. Estimate the square root of ${n} to the nearest tenth.`, `La raíz cuadrada de ${n} está entre ${k} y ${k + 1}. Estima la raíz cuadrada de ${n} a la décima más cercana.`),
+    visual: { kind: "number-line", min: k, max: k + 1, marks: Array.from({ length: 11 }, (_, i) => (10 * k + i) / 10) },
+    alt: tr(locale, `A number line from ${k} to ${k + 1}, marked in tenths.`, `Una recta numérica de ${k} a ${k + 1}, marcada en décimas.`),
+    input: "keypad",
+    keys: ["."],
     answer,
     wrong: wrongs(answer, [
       [decTyped(t === A ? A + 1 : A, 1), "rounded-to-wrong-tenth"],
@@ -289,7 +293,7 @@ function rootTenth(r: Rng, locale: Locale): ItemBody {
     hints: [
       tr(locale, `${k}² = ${k * k} and ${k + 1}² = ${(k + 1) ** 2}. Is ${n} nearer the start or the end of that gap?`, `${k}² = ${k * k} y ${k + 1}² = ${(k + 1) ** 2}. ¿${n} está más cerca del principio o del final de ese tramo?`),
       tr(locale, `Square tenths such as ${k}.1, ${k}.2 and so on until you pass ${n}. Then pick the tenth whose square is closer to ${n}.`, `Eleva al cuadrado décimas como ${k}.1, ${k}.2 y así hasta pasar ${n}. Luego elige la décima cuyo cuadrado está más cerca de ${n}.`),
-      tr(locale, `${low}² = ${lowSq} and ${high}² = ${highSq}.`, `${low}² = ${lowSq} y ${high}² = ${highSq}.`),
+      tr(locale, `${low}² = ${lowSq}, which is less than ${n}.`, `${low}² = ${lowSq}, que es menor que ${n}.`),
     ],
     steps: [
       tr(locale, `${low}² = ${lowSq} and ${high}² = ${highSq}`, `${low}² = ${lowSq} y ${high}² = ${highSq}`),
@@ -381,8 +385,8 @@ function transform(r: Rng, level: number, locale: Locale): ItemBody {
     half: tr(locale, "A 180° rotation is a half turn: the point ends up on the opposite side of the origin.", "Una rotación de 180° es media vuelta: el punto queda del lado opuesto del origen."),
   }[move];
   const how = {
-    "refl-x": tr(locale, "x stays the same and y changes sign.", "x queda igual y y cambia de signo."),
-    "refl-y": tr(locale, "x changes sign and y stays the same.", "x cambia de signo y y queda igual."),
+    "refl-x": tr(locale, "x stays the same and y changes sign.", "La coordenada x queda igual y la coordenada y cambia de signo."),
+    "refl-y": tr(locale, "x changes sign and y stays the same.", "La coordenada x cambia de signo y la coordenada y queda igual."),
     ccw: tr(locale, "Swap the coordinates, then change the sign of the new first coordinate.", "Intercambia las coordenadas y luego cambia el signo de la nueva primera coordenada."),
     cw: tr(locale, "Swap the coordinates, then change the sign of the new second coordinate.", "Intercambia las coordenadas y luego cambia el signo de la nueva segunda coordenada."),
     half: tr(locale, "Change the sign of both coordinates.", "Cambia el signo de las dos coordenadas."),
@@ -510,6 +514,7 @@ function triangleAngles(r: Rng, level: number, locale: Locale): ItemBody {
       wrong: wrongs(answer, [
         ...(Number.isInteger(as360) ? [[String(as360), "used-360-degrees"] as [string, string]] : []),
         ...(Number.isInteger(flipped) && K !== 0 ? [[String(flipped), "moved-constant-without-changing-sign"] as [string, string]] : []),
+        ...[c1 * x + k1, c2 * x + k2, c3 * x + k3].map((g): [string, string] => [String(g), "gave-an-angle-not-x"]),
       ]),
       hints: [
         tr(locale, "The three angles add up to 180°, so write an equation.", "Los tres ángulos suman 180°, así que escribe una ecuación."),
@@ -543,7 +548,11 @@ function triangleAngles(r: Rng, level: number, locale: Locale): ItemBody {
     input: "keypad",
     keys: ["-"],
     answer,
-    wrong: wrongs(answer, [[String(-x), "moved-constant-without-changing-sign"], ...(Number.isInteger(asInterior) ? [[String(asInterior), "treated-exterior-as-interior"] as [string, string]] : [])]),
+    wrong: wrongs(answer, [
+      [String(-x), "moved-constant-without-changing-sign"],
+      ...(Number.isInteger(asInterior) ? [[String(asInterior), "treated-exterior-as-interior"] as [string, string]] : []),
+      [String(c3 * x + k3), "gave-an-angle-not-x"],
+    ]),
     hints: [extRule, tr(locale, "Write that as an equation, combine like terms and solve for x.", "Escríbelo como una ecuación, combina términos semejantes y resuelve para x."), eq],
     steps: [eq, `${lin(c3, k3)} = ${lin(c1 + c2, k1 + k2)}`, ...(g === 1 ? [] : [`${lin(g, 0)} = ${rhs}`]), `x = ${x}`],
     seconds: 70,
@@ -552,12 +561,13 @@ function triangleAngles(r: Rng, level: number, locale: Locale): ItemBody {
 
 // ---------------------------------------------------------------- volume of cylinders, cones and spheres
 
-type Unit3 = { en: string; es: string; word: [string, string]; cubic: [string, string] };
+/** `cube` is the volume unit in worked steps: cm³ and m³ in both languages, the words for US units in Spanish. */
+type Unit3 = { en: string; es: string; word: [string, string]; cubic: [string, string]; cube: [string, string] };
 const UNITS3: Unit3[] = [
-  { en: "cm", es: "cm", word: ["centimeters", "centímetros"], cubic: ["cubic centimeters", "centímetros cúbicos"] },
-  { en: "m", es: "m", word: ["meters", "metros"], cubic: ["cubic meters", "metros cúbicos"] },
-  { en: "in", es: "pulg", word: ["inches", "pulgadas"], cubic: ["cubic inches", "pulgadas cúbicas"] },
-  { en: "ft", es: "pies", word: ["feet", "pies"], cubic: ["cubic feet", "pies cúbicos"] },
+  { en: "cm", es: "cm", word: ["centimeters", "centímetros"], cubic: ["cubic centimeters", "centímetros cúbicos"], cube: ["cm³", "cm³"] },
+  { en: "m", es: "m", word: ["meters", "metros"], cubic: ["cubic meters", "metros cúbicos"], cube: ["m³", "m³"] },
+  { en: "in", es: "pulg", word: ["inches", "pulgadas"], cubic: ["cubic inches", "pulgadas cúbicas"], cube: ["in³", "pulgadas cúbicas"] },
+  { en: "ft", es: "pies", word: ["feet", "pies"], cubic: ["cubic feet", "pies cúbicos"], cube: ["ft³", "pies cúbicos"] },
 ];
 type Solid = "cylinder" | "cone" | "sphere";
 /** An everyday object of each shape, with sizes that make sense for it: [unit, r min, r max, h min, h max]. */
@@ -612,13 +622,22 @@ function volume(r: Rng, level: number, locale: Locale): ItemBody {
   const exact = solid !== "sphere" || (1256 * r3) % 3 === 0;
   const answer: Answer = { kind: "number", value: N / 100, tolerance: 0.05 };
   const halve = byD ? [`r = ${d} ÷ 2 = ${rad} ${ab}`] : [];
-  const out = `${dec(N)} ${ab}³`;
+  const out = `${dec(N)} ${tr(locale, unit.cube[0], unit.cube[1])}`;
+  // A calculator's π key instead of 3.14, rounded to the hundredth (only a likely wrong value, never a key).
+  const piKey = Math.round((solid === "cylinder" ? Math.PI * r2 * h : solid === "cone" ? (Math.PI * r2 * h) / 3 : (4 / 3) * Math.PI * r3) * 100);
   const mistakes: [string, string][] =
     solid === "cylinder"
       ? [[decTyped(314 * rad * h), "forgot-to-square-radius"], ...(byD ? [[decTyped(314 * d * d * h), "used-diameter-as-radius"] as [string, string]] : []), [decTyped(314 * d * h), "used-circumference-times-height"]]
       : solid === "cone"
         ? [[decTyped(314 * r2 * h), "forgot-one-third"], ...(byD ? [[decTyped((314 * d * d * h) / 3), "used-diameter-as-radius"] as [string, string]] : []), [decTyped(roundDiv(314 * rad * h, 3)), "forgot-to-square-radius"]]
-        : [[decTyped(roundDiv(1256 * r2, 3)), "squared-instead-of-cubed"], [decTyped(314 * r3), "forgot-four-thirds"], ...(byD ? [[decTyped(roundDiv(1256 * d ** 3, 3)), "used-diameter-as-radius"] as [string, string]] : [])];
+        : [
+            [decTyped(roundDiv(1256 * r2, 3)), "squared-instead-of-cubed"],
+            [decTyped(314 * r3), "forgot-four-thirds"],
+            ...(byD ? [[decTyped(roundDiv(1256 * d ** 3, 3)), "used-diameter-as-radius"] as [string, string]] : []),
+            // 4/3 rounded to 1.33 first: 1.33 × 3.14 × r³, in hundredths.
+            [decTyped(roundDiv(133 * 314 * r3, 100)), "rounded-four-thirds-early"],
+          ];
+  mistakes.push([decTyped(piKey), "used-pi-key-not-3-14"]);
   const formula = { cylinder: "V = π × r² × h", cone: "V = 1/3 × π × r² × h", sphere: "V = 4/3 × π × r³" }[solid];
   const nudge = {
     cylinder: tr(locale, "The volume of a cylinder is the area of its circular base times its height.", "El volumen de un cilindro es el área de su base circular por su altura."),
@@ -698,8 +717,8 @@ function funcIdentify(r: Rng, level: number, locale: Locale): ItemBody {
       prompt: [tr(locale, "Is y a function of x?", "¿Es y una función de x?"), `   x: ${xs}   y: ${ys}`],
       say: tr(
         locale,
-        `Is y a function of x? The table pairs ${pairs.map(([x, y]) => `x ${sayNum(x, "en")} with y ${sayNum(y, "en")}`).join(", ")}.`,
-        `¿Es y una función de x? La tabla empareja ${pairs.map(([x, y]) => `x ${sayNum(x, "es")} con y ${sayNum(y, "es")}`).join(", ")}.`,
+        `Is y a function of x? The pairs are: ${pairs.map(([x, y]) => `x ${sayNum(x, "en")} with y ${sayNum(y, "en")}`).join(", ")}.`,
+        `¿Es y una función de x? Los pares son: ${pairs.map(([x, y]) => `x ${sayNum(x, "es")} con y ${sayNum(y, "es")}`).join(", ")}.`,
       ),
       choices,
       input: "choices",
@@ -838,7 +857,12 @@ function linearCompare(r: Rng, level: number, locale: Locale): ItemBody {
   const amt = (n: number, said: boolean) => (story?.money ? (said ? `${n} ${tr(locale, "dollars", "dólares")}` : `$${n}`) : String(n));
   const xw = story ? tr(locale, story.x[0], story.x[1]) : "x", yw = story ? tr(locale, story.y[0], story.y[1]) : "y";
   const per = story ? tr(locale, story.per[0], story.per[1]) : "";
-  const q = story ? tr(locale, ...(askRate ? story.rateQ : story.startQ)) : askRate ? tr(locale, "Which function has the greater rate of change?", "¿Qué función tiene la mayor tasa de cambio?") : tr(locale, "Which function has the greater initial value (y-intercept)?", "¿Qué función tiene el mayor valor inicial (la intersección con el eje y)?");
+  // "Greater rate" means the greater signed number (2 beats −5), so the question says "number", not "faster".
+  const q = story
+    ? tr(locale, ...(askRate ? story.rateQ : story.startQ))
+    : askRate
+      ? tr(locale, "Which function's rate of change is the greater number?", "¿Qué función tiene la tasa de cambio con el mayor valor?")
+      : tr(locale, "Which function has the greater initial value (y-intercept)?", "¿Qué función tiene el mayor valor inicial (la intersección con el eje y)?");
   const qSaid = story || askRate ? q : tr(locale, "Which function has the greater initial value, its y-intercept?", "¿Qué función tiene el mayor valor inicial, su intersección con el eje y?");
   const tableText = story
     ? `${story.title(nameB, locale)} — ${xw}: ${xs.join(", ")}; ${yw}: ${ys.join(", ")}.`
@@ -896,31 +920,39 @@ function linearCompare(r: Rng, level: number, locale: Locale): ItemBody {
 
 type FitStory = {
   intro: [string, string];
+  /** The least sensible starting value: a puppy never weighs 0 pounds. */
+  minB: number;
   rate: (m: string, l: Locale) => string;
   start: (m: string, l: Locale) => string;
   reversed: (m: string, l: Locale) => string;
 };
+// The number put into these sentences is never exactly 1 (meaning items use slopes other than 1 and
+// starting values of 2 or 3), so the plural units always read right.
 const FIT_STORIES: FitStory[] = [
   {
     intro: ["The scatter plot shows the height of a bean plant in centimeters (y) after a number of weeks (x).", "El diagrama de dispersión muestra la altura de una planta de frijol en centímetros (y) después de cierto número de semanas (x)."],
+    minB: 0,
     rate: (m, l) => tr(l, `The plant grows about ${m} cm each week.`, `La planta crece aproximadamente ${m} cm cada semana.`),
     start: (m, l) => tr(l, `The plant was about ${m} cm tall at week 0.`, `La planta medía aproximadamente ${m} cm en la semana 0.`),
     reversed: (m, l) => tr(l, `The plant takes about ${m} weeks to grow 1 cm.`, `La planta tarda aproximadamente ${m} semanas en crecer 1 cm.`),
   },
   {
     intro: ["The scatter plot shows a puppy's weight in pounds (y) at different ages in months (x).", "El diagrama de dispersión muestra el peso de un cachorro en libras (y) a distintas edades en meses (x)."],
-    rate: (m, l) => tr(l, `The puppy gains about ${m} pounds each month.`, `El cachorro aumenta aproximadamente ${m} libras cada mes.`),
+    minB: 1,
+    rate: (m, l) => tr(l, `The puppy gains about ${m} pounds each month.`, `El cachorro gana aproximadamente ${m} libras cada mes.`),
     start: (m, l) => tr(l, `The puppy weighed about ${m} pounds at month 0.`, `El cachorro pesaba aproximadamente ${m} libras en el mes 0.`),
-    reversed: (m, l) => tr(l, `The puppy takes about ${m} months to gain 1 pound.`, `El cachorro tarda aproximadamente ${m} meses en aumentar 1 libra.`),
+    reversed: (m, l) => tr(l, `The puppy takes about ${m} months to gain 1 pound.`, `El cachorro tarda aproximadamente ${m} meses en ganar 1 libra.`),
   },
   {
     intro: ["The scatter plot shows the depth of snow on the ground in inches (y) after a number of hours of a storm (x).", "El diagrama de dispersión muestra la profundidad de la nieve en el suelo en pulgadas (y) después de cierto número de horas de una tormenta (x)."],
+    minB: 0,
     rate: (m, l) => tr(l, `About ${m} inches of snow fall each hour.`, `Caen aproximadamente ${m} pulgadas de nieve cada hora.`),
     start: (m, l) => tr(l, `There were about ${m} inches of snow on the ground at hour 0.`, `Había aproximadamente ${m} pulgadas de nieve en el suelo en la hora 0.`),
-    reversed: (m, l) => tr(l, `It takes about ${m} hours for 1 inch of snow to fall.`, `Tardan aproximadamente ${m} horas en caer 1 pulgada de nieve.`),
+    reversed: (m, l) => tr(l, `It takes about ${m} hours for 1 inch of snow to fall.`, `Se necesitan aproximadamente ${m} horas para que caiga 1 pulgada de nieve.`),
   },
   {
     intro: ["The scatter plot shows how many songs students in a music class can play (y) after a number of weeks of lessons (x).", "El diagrama de dispersión muestra cuántas canciones saben tocar los estudiantes de una clase de música (y) después de cierto número de semanas de clases (x)."],
+    minB: 0,
     rate: (m, l) => tr(l, `A student learns about ${m} songs each week.`, `Un estudiante aprende aproximadamente ${m} canciones cada semana.`),
     start: (m, l) => tr(l, `A student could play about ${m} songs at week 0.`, `Un estudiante sabía tocar aproximadamente ${m} canciones en la semana 0.`),
     reversed: (m, l) => tr(l, `A student takes about ${m} weeks to learn 1 song.`, `Un estudiante tarda aproximadamente ${m} semanas en aprender 1 canción.`),
@@ -935,7 +967,7 @@ function bestFit(r: Rng, level: number, locale: Locale): ItemBody {
   let n = 1, q = 1, b = 0, xmax = 0, x1 = 0, x2 = 0, data: [number, number][] = [];
   for (;;) {
     [n, q] = r.pick(FIT_SLOPES);
-    b = r.int(kind === "meaning" ? 1 : 0, 3);
+    b = r.int(kind === "meaning" ? 2 : story.minB, 3);
     // For "what does the slope mean", the slope must differ from 1 (or reading it backward gives the same number) and from b.
     if (kind === "meaning" && (n === q || b * q === n)) continue;
     xmax = Math.min(9, Math.floor(((12 - b) * q) / n));
@@ -970,15 +1002,17 @@ function bestFit(r: Rng, level: number, locale: Locale): ItemBody {
 
   if (kind === "slope") {
     const answer: Answer = { kind: "fraction", n, d: q, simplest: true };
+    const ask = tr(locale, "What is the slope of the line of best fit? Write it as a whole number or a fraction in simplest form.", "¿Cuál es la pendiente de la recta de mejor ajuste? Escríbela como número entero o como fracción en su mínima expresión.");
     return {
       ...base,
-      prompt: [`${intro} ${through} ${tr(locale, "What is the slope of the line of best fit? Write it in simplest form.", "¿Cuál es la pendiente de la recta de mejor ajuste? Escríbela en su mínima expresión.")}`],
-      say: `${intro} ${throughSaid} ${tr(locale, "What is the slope of the line of best fit? Write it in simplest form.", "¿Cuál es la pendiente de la recta de mejor ajuste? Escríbela en su mínima expresión.")}`,
-      input: "fraction",
+      prompt: [`${intro} ${through} ${ask}`],
+      say: `${intro} ${throughSaid} ${ask}`,
+      // Typed, not the fraction pad: the pad cannot send a whole number yet, and half these slopes are whole.
+      input: "text",
       answer,
       wrong: wrongs(answer, [[fracTyped(dx, dy), "inverted-rise-over-run"], [String(dy), "forgot-to-divide-by-run"]]),
       hints: [
-        tr(locale, "Use the line, not the dots, to find the slope.", "Usa la recta, no los puntos sueltos, para hallar la pendiente."),
+        tr(locale, "Use the two points the line passes through, not the other data points.", "Usa los dos puntos por los que pasa la recta, no los demás datos."),
         tr(locale, "Slope = change in y ÷ change in x between the two points on the line.", "Pendiente = cambio en y ÷ cambio en x entre los dos puntos de la recta."),
         tr(locale, `From ${P1} to ${P2}, y changes by ${dy}.`, `De ${P1} a ${P2}, y cambia ${dy}.`),
       ],
@@ -1112,6 +1146,8 @@ function eqSolutions(r: Rng, level: number, locale: Locale): ItemBody {
   const order: Count[] = ["one", "none", "infinite"];
   const choices: Choice[] = order.map((c) => ({ label: labels[c], ...(c === count ? {} : { why: why[count][c] }) }));
   const simplified = `${lin(A, B)} = ${lin(C, D)}`;
+  // A grouped right side ends in a spoken pause (", plus 6,"); the sentence ends there instead.
+  rightSaid = rightSaid.replace(/,$/, "");
   const steps =
     count === "one"
       ? [simplified, `${lin(A - C, 0)} = ${show(D - B)}`, `${labels.one}: x = ${show(x0)}`]
@@ -1167,8 +1203,9 @@ function absEquation(r: Rng, level: number, locale: Locale): ItemBody {
   if (level === 3) {
     const kind = q > 0 ? "two" : q === 0 ? "one" : "none";
     const labels = { two: tr(locale, "Two solutions", "Dos soluciones"), one: tr(locale, "One solution", "Una solución"), none: tr(locale, "No solution", "Ninguna solución") };
+    // "Saw a negative" only fits when a negative number is on screen.
     const why: Record<string, Record<string, string>> = {
-      two: { one: "only-solved-the-positive-case", none: "saw-a-negative-and-said-no-solution" },
+      two: { one: "only-solved-the-positive-case", none: c < 0 || d < 0 ? "saw-a-negative-and-said-no-solution" : "thought-it-has-no-solution" },
       one: { two: "expected-two-solutions-always", none: "thought-zero-means-no-solution" },
       none: { two: "forgot-absolute-value-is-never-negative", one: "forgot-absolute-value-is-never-negative" },
     };
@@ -1216,7 +1253,13 @@ function absEquation(r: Rng, level: number, locale: Locale): ItemBody {
             tr(locale, `So ${inner} can be ${q} or −${q}. Write two equations and solve each one.`, `Entonces ${inner} puede ser ${q} o −${q}. Escribe dos ecuaciones y resuelve cada una.`),
             two,
           ]
-        : [getAlone, tr(locale, "Undo the adding or subtracting, then the multiplying. Then write two equations, one for each sign.", "Deshaz la suma o la resta y luego la multiplicación. Después escribe dos ecuaciones, una para cada signo."), isolate[0]],
+        : [
+            getAlone,
+            q === 0
+              ? tr(locale, "Undo the adding or subtracting, then the multiplying. If the absolute value equals 0, what is inside it equals 0.", "Deshaz la suma o la resta y luego la multiplicación. Si el valor absoluto es igual a 0, lo que está adentro es igual a 0.")
+              : tr(locale, "Undo the adding or subtracting, then the multiplying. Then write two equations, one for each sign.", "Deshaz la suma o la resta y luego la multiplicación. Después escribe dos ecuaciones, una para cada signo."),
+            isolate[0],
+          ],
     steps: [...isolate, ...(q === 0 ? [] : [two]), last].slice(-4),
     seconds: level === 1 ? 30 : 50,
   };
