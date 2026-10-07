@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SKILLS } from "@/practice/skills";
-import { matchSkills, stem, tokens } from "./skillmatch";
+import { matchSkills, sameWord, stem, tokens } from "./skillmatch";
 
 describe("stem and tokens", () => {
   it("lets singular and plural meet in both languages", () => {
@@ -17,6 +17,17 @@ describe("stem and tokens", () => {
     expect(tokens("What is a logical fallacy?")).toEqual(["logical", "fallacy"]);
     expect(tokens("¿Qué es una falacia?")).toEqual(["falacia"]);
     expect(tokens("Las fases de la Luna")).toEqual(["fas", "luna"]);
+  });
+});
+
+describe("sameWord", () => {
+  it("matches a word to itself across case, accents and plurals, and nothing else", () => {
+    expect(sameWord("Fallacies", "fallacy")).toBe(true);
+    expect(sameWord("logical fallacy", "Logical fallacies")).toBe(true);
+    expect(sameWord("fracción", "fracciones")).toBe(true);
+    expect(sameWord("denominator", "denomination")).toBe(false);
+    expect(sameWord("logical", "logical fallacy")).toBe(false);
+    expect(sameWord("", "")).toBe(false);
   });
 });
 

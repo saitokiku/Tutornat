@@ -6,7 +6,7 @@ import type { Grade } from "@/lib/types";
 import { check } from "@/practice/answer";
 import { randomSeed } from "@/practice/rng";
 import { getSkill, makeItem } from "@/practice/skills";
-import { matchSkills } from "@/planner/skillmatch";
+import { matchSkills, sameWord } from "@/planner/skillmatch";
 import { linkOf, resourcesFor } from "@/resources";
 import type { TutorContext } from "./context";
 
@@ -167,7 +167,8 @@ export function knowledgeTools(ctx: TutorContext) {
         const q = cleanQuery(word, 40);
         if (!q) return notFound;
         return attempt(async () => {
-          const defs = await define(q);
+          // Only senses of the word asked about, not of one the dictionary thought was spelled like it.
+          const defs = (await define(q)).filter((d) => sameWord(d.word, q));
           if (!defs.length) return notFound;
           return {
             found: true as const,

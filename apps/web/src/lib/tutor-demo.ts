@@ -3,7 +3,7 @@ import { t } from "@/i18n";
 import type { Book, Definition, Poem, WikiSummary } from "@/knowledge";
 import { addDays, fromLocalDate } from "@/planner/dates";
 import { readSchoolText } from "@/planner/intake";
-import { matchSkills, tokens } from "@/planner/skillmatch";
+import { matchSkills, sameWord, tokens } from "@/planner/skillmatch";
 import type { EventKind } from "@/planner/types";
 import { getSkill, makeItem, SKILLS } from "@/practice/skills";
 import type { Item } from "@/practice/types";
@@ -314,6 +314,9 @@ const safe = async <T>(p: () => Promise<T>, fallback: T): Promise<T> => {
   }
 };
 
+/** Dictionary senses for exactly this word or phrase: a dictionary may answer with one spelled like it. */
+const sensesOf = async (fetchers: DemoFetchers, word: string) => (await safe(() => fetchers.define(word), [])).filter((d) => sameWord(d.word, word));
+
 const factCard = (w: WikiSummary): BoardCard => ({ type: "fact", title: w.title, extract: w.extract, url: w.url, lang: w.lang });
 const definitionCard = (word: string, defs: Definition[]): BoardCard => ({
   type: "definition",
@@ -358,7 +361,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
     case "thanks":
       return { text: say("tut.demo.thanks"), cards: [], state };
     case "define": {
-      const defs = l === "en" ? await safe(() => fetchers.define(ask.word), []) : [];
+      const defs = l === "en" ? await sensesOf(fetchers, ask.word) : [];
       if (defs.length) return { text: say("tut.demo.define", { word: ask.word }), cards: [definitionCard(ask.word, defs)], state: next({}, ["definition"]) };
       const wiki = await safe(() => fetchers.wiki(ask.word, l), null);
       if (wiki) return { text: say("tut.demo.defineWiki", { word: ask.word }), cards: [factCard(wiki)], state };
@@ -469,7 +472,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       const lesson = topic ? lessonFor(topic, ctx.grade, l) : null;
       if (lesson && !shown("lesson")) return { text: say("tut.demo.lesson", { lesson: lesson.lessonTitle }), cards: [lesson], state: next({}, ["lesson"]) };
       if (topic && l === "en" && !shown("definition") && topic.split(" ").length <= 2) {
-        const defs = await safe(() => fetchers.define(topic), []);
+        const defs = await sensesOf(fetchers, topic);
         if (defs.length) return { text: say("tut.demo.define", { word: topic }), cards: [definitionCard(topic, defs)], state: next({}, ["definition"]) };
       }
       if (state.skillId && !shown("similar")) return { text: say("tutor.demo.similar"), cards: [workedCard(state.skillId, ctx)], state: next({}, ["similar"]) };
@@ -481,10 +484,11 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
   const topic = ask.kind === "topic" && ask.topic ? ask.topic : clip(text).slice(0, 80);
   const about = ctx.homework ? `${text} ${ctx.homework.title}` : text;
   const skills = matchSkills(about, undefined, 2, ctx.grade);
-  const oneWord = topic.split(" ").length === 1;
+  // A word or a two-word term ("photosynthesis", "logical fallacy") also gets its dictionary sense.
+  const term = topic.split(" ").length <= 2;
   const [wiki, defs] = await Promise.all([
     safe(() => fetchers.wiki(topic, l), null),
-    l === "en" && oneWord ? safe(() => fetchers.define(topic), []) : Promise.resolve([] as Definition[]),
+    l === "en" && term ? sensesOf(fetchers, topic) : Promise.resolve([] as Definition[]),
   ]);
   const lesson = lessonFor(topic, ctx.grade, l);
   const knowledge: BoardCard[] = [...(wiki ? [factCard(wiki)] : []), ...(defs.length ? [definitionCard(topic, defs)] : []), ...(lesson ? [lesson] : [])];

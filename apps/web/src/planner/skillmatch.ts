@@ -201,6 +201,16 @@ export function tokens(text: string): string[] {
     .map(stem);
 }
 
+/**
+ * True when two words or short phrases are the same once case, accents and plurals are set aside:
+ * "Fallacies" and "fallacy", "logical fallacy" and "Logical fallacies". A dictionary that answers with a
+ * different word than the one asked about ("spelled like") is not an answer.
+ */
+export function sameWord(a: string, b: string): boolean {
+  const words = (s: string) => norm(s).split(" ").filter(Boolean).map(stem).join(" ");
+  return !!words(a) && words(a) === words(b);
+}
+
 /** True when `part` appears in `whole` as consecutive words. */
 function contains(whole: string[], part: string[]): boolean {
   if (!part.length || part.length > whole.length) return false;

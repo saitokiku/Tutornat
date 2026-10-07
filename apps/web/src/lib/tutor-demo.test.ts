@@ -141,6 +141,19 @@ describe("the demo tutor on a topic", () => {
     expect(r.text).not.toMatch(/demo tutor/); // said once, in the opening
   });
 
+  it("adds the dictionary sense of a two-word term, but never of a word only spelled like it", async () => {
+    const f = fakes({
+      define: vi.fn(async (word: string): Promise<Definition[]> =>
+        word === "logical fallacy" ? [{ word: "logical fallacy", partOfSpeech: "noun", text: "An error in reasoning that makes an argument invalid." }] : [{ word: "denominator", partOfSpeech: "noun", text: "The number below the line." }],
+      ),
+    });
+    const r = await demoAnswer("what is a logical fallacy", ctx(), fresh(), f);
+    expect(types(r.cards)).toEqual(["fact", "definition", "lesson", "practice", "resources"]);
+    expect(r.cards[1]).toMatchObject({ word: "logical fallacy", url: "https://en.wiktionary.org/wiki/logical_fallacy" });
+    const typo = await demoAnswer("what does denominater mean", ctx(), fresh(), f);
+    expect(typo.cards.some((c) => c.type === "definition")).toBe(false);
+  });
+
   it("works in Spanish with the Spanish Wikipedia and no English dictionary", async () => {
     const f = fakes();
     const r = await demoAnswer("¿Qué es una falacia?", ctx({ locale: "es" }), fresh(), f);

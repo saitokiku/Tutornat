@@ -95,6 +95,14 @@ describe("knowledge tools, through the tutor turn, onto the board", () => {
     expect(cards).toEqual([{ type: "definition", word: "denominator", senses: [{ partOfSpeech: "noun", text: "The number below the line in a fraction." }], url: "https://en.wiktionary.org/wiki/denominator" }]);
   });
 
+  it("define_word: a word the dictionary only thinks is spelled like it is not an answer", async () => {
+    answers.set(/api\.datamuse\.com\/words\?sp=denominater&md=d/, [{ word: "denominator", defs: ["n\tThe number below the line in a fraction."] }]);
+    stubFetch();
+    const { cards, prompts } = await run("define_word", { word: "denominater" });
+    expect(cards).toEqual([]);
+    expect(JSON.stringify(prompts[1])).toMatch(/Nothing found/);
+  });
+
   it("find_book: books from Open Library, audiobooks from LibriVox", async () => {
     answers.set(/openlibrary\.org\/search\.json/, { docs: [{ key: "/works/OL483391W", title: "Charlotte's Web", author_name: ["E. B. White"], first_publish_year: 1952 }] });
     answers.set(/librivox\.org/, { books: [{ id: "1", title: "The Secret Garden", url_librivox: "https://librivox.org/the-secret-garden", authors: [{ first_name: "Frances Hodgson", last_name: "Burnett" }] }] });
