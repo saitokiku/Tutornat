@@ -47,6 +47,8 @@ describe("reading the learner's ask", () => {
     expect(skillTitled("detectar falacias")).toBe("e.fallacies");
     expect(skillTitled("Contar hasta 10.")).toBe("m.count.10");
     expect(skillTitled("spot a fallacy")).toBeNull();
+    expect(skillTitled("¿Cuál es más?")).toBe("m.compare.10"); // a title that is a question, tapped as a chip
+    expect(skillTitled("Which is more?")).toBe("m.compare.10");
     expect(askOf("Count up to 10", false)).toEqual({ kind: "skill", skillId: "m.count.10" });
     expect(askOf("Count up to 10", true).kind).not.toBe("skill"); // beside a problem, words are about it
   });

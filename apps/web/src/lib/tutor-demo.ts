@@ -119,7 +119,7 @@ const plain = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{Diacri
 let titles: Map<string, string> | null = null;
 /** The skill whose title is exactly this text, in either language, ignoring case, accents and end marks. */
 export function skillTitled(text: string): string | null {
-  titles ??= new Map(SKILLS.flatMap((s) => [[plain(s.title.en), s.id] as const, [plain(s.title.es), s.id] as const]));
+  titles ??= new Map(SKILLS.flatMap((s) => [[plain(clip(s.title.en)), s.id] as const, [plain(clip(s.title.es)), s.id] as const]));
   return titles.get(plain(clip(text))) ?? null;
 }
 
