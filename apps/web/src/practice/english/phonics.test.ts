@@ -15,9 +15,14 @@ const TABLE: [id: string, grade: string, standard: string, prereqs: string[], le
   ["e.word.families", "K", "RF.K.2a", ["e.rhyme"], 2],
   ["e.blend.onset", "K", "RF.K.2c", ["e.word.families"], 2],
   ["e.sound.swap", "K", "RF.K.2e", ["e.blend.onset"], 2],
+  ["e.sight.preprimer", "K", "RF.K.3c", ["e.sight.words"], 2],
+  ["e.sight.primer", "K", "RF.K.3c", ["e.sight.preprimer"], 2],
   ["e.segment.sounds", "1", "RF.1.2d", ["e.sound.swap"], 1],
+  ["e.sight.grade1", "1", "RF.1.3g", ["e.sight.primer"], 2],
+  ["e.sight.grade2", "2", "RF.2.3f", ["e.sight.grade1"], 2],
 ];
 
+const SIGHT = ["e.sight.preprimer", "e.sight.primer", "e.sight.grade1", "e.sight.grade2"];
 /** Levels a pre-reader answers by listening: every choice is a spoken picture. */
 const LISTENING: [string, number][] = [
   ["e.first.sound", 1], ["e.final.sound", 1], ["e.middle.vowel", 1], ["e.word.families", 1], ["e.blend.onset", 1], ["e.sound.swap", 1],
@@ -25,6 +30,7 @@ const LISTENING: [string, number][] = [
 /** Levels where reading the choices (or finding a letter shape) is the skill: choices are not read aloud. */
 const SILENT: [string, number][] = [
   ["e.letter.names", 1], ["e.letter.names", 2], ["e.word.families", 2], ["e.blend.onset", 2], ["e.sound.swap", 2],
+  ...SIGHT.flatMap((id): [string, number][] => [[id, 1], [id, 2]]),
 ];
 
 const LOCALES = ["en", "es"] as const;
@@ -144,7 +150,8 @@ describe("audio scripts", () => {
       for (const locale of LOCALES)
         for (const q of lv(id, level, locale)) {
           expect(q.choices.some((c) => c.say), `${id} L${level} ${q.say}`).toBe(false);
-          if (id !== "e.letter.names") expect(norm(q.say).split(/[^\p{L}]+/u), `${id} ${q.say}`).not.toContain(norm(key(q)));
+          // Letter names and sight-word level 1 say the target on purpose: finding its written form is the task.
+          if (id !== "e.letter.names" && !(SIGHT.includes(id) && level === 1)) expect(norm(q.say).split(/[^\p{L}]+/u), `${id} ${q.say}`).not.toContain(norm(key(q)));
         }
   });
 });
@@ -318,5 +325,56 @@ describe("answer keys, checked another way (grade 1)", () => {
         expect(Number(key(q)), q.prompt).toBe(n);
         for (const c of q.choices.slice(1)) expect(c.why === "counted-letters", `${w} ${c.label}`).toBe(Number(c.label) === w.length);
       }
+  });
+});
+
+describe("answer keys, checked another way (sight words)", () => {
+  // The Dolch lists, typed here separately from the banks.
+  const DOLCH: Record<string, string> = {
+    "e.sight.preprimer": "a and away big blue can come down find for funny go help here I in is it jump little look make me my not one play red run said see the three to two up we where yellow you",
+    "e.sight.primer": "all am are at ate be black brown but came did do eat four get good have he into like must new no now on our out please pretty ran ride saw say she so soon that there they this too under want was well went what white who will with yes",
+    "e.sight.grade1": "after again an any as ask by could every fly from give going had has her him his how just know let live may of old once open over put round some stop take thank them then think walk were when",
+    "e.sight.grade2": "always around because been before best both buy call cold does don't fast first five found gave goes green its made many off or pull read right sing sit sleep tell their these those upon us use very wash which why wish work would write your",
+  };
+  const HOMOPHONES = [["to", "two", "too"], ["by", "buy", "bye"], ["one", "won"], ["for", "four"], ["see", "sea"], ["no", "know"], ["new", "knew"], ["our", "hour"], ["right", "write"], ["their", "there"], ["would", "wood"], ["which", "witch"], ["blue", "blew"], ["red", "read"], ["tu", "tú"], ["si", "sí"], ["el", "él"], ["mas", "más"], ["que", "qué"], ["se", "sé"], ["te", "té"], ["hay", "ay", "ahí"]];
+  const soundsAlike = (a: string, b: string) => HOMOPHONES.some((h) => h.includes(a.toLowerCase()) && h.includes(b.toLowerCase()));
+  const tagOf = (w: string, d: string) => {
+    const [a, b] = [norm(w), norm(d)];
+    if (a === b) return "accent-mixup";
+    if (a === b.split("").reverse().join("")) return "reversed-letters";
+    if (a.split("").sort().join() === b.split("").sort().join()) return "mixed-up-letters";
+    return a[0] === b[0] && a[1] === b[1] ? "same-start" : "look-alike-word";
+  };
+
+  it("English keys come from the right Dolch list; Spanish bands do not repeat a key", () => {
+    for (const id of SIGHT) for (const q of qs(id, "en")) expect(DOLCH[id].split(" "), `${id} ${key(q)}`).toContain(key(q).replace(/^\p{Lu}(?!$)/u, (c) => c.toLowerCase()));
+    const seen = new Map<string, string>();
+    for (const id of SIGHT)
+      for (const k of new Set(qs(id, "es").map((q) => norm(key(q))))) {
+        expect(seen.get(k) ?? id, `${k} is in ${seen.get(k)} and ${id}`).toBe(id);
+        seen.set(k, id);
+      }
+  });
+
+  it("level 1 says the word and shows none; level 2 has one blank and no sound-alike choices", () => {
+    for (const id of SIGHT)
+      for (const locale of LOCALES) {
+        for (const q of lv(id, 1, locale)) {
+          expect(q.say.endsWith(`: ${key(q)}.`), q.say).toBe(true);
+          const shown = norm(q.prompt).split(/[\s.,]+/);
+          for (const c of q.choices) expect(shown, `${q.prompt} shows ${c.label}`).not.toContain(norm(c.label));
+          for (const c of q.choices.slice(1)) expect(soundsAlike(key(q), c.label), `${q.say} ${c.label}`).toBe(false);
+        }
+        for (const q of lv(id, 2, locale)) {
+          expect(q.prompt.split("___").length, q.prompt).toBe(2);
+          expect(q.steps[0], q.prompt).toBe(q.prompt.replace("___", key(q)));
+        }
+      }
+  });
+
+  it("every look-alike's tag says how it differs from the key", () => {
+    for (const id of SIGHT)
+      for (const locale of LOCALES)
+        for (const q of qs(id, locale)) for (const c of q.choices.slice(1)) expect(c.why, `${key(q)} / ${c.label}`).toBe(tagOf(key(q), c.label));
   });
 });
