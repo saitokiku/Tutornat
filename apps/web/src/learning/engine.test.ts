@@ -87,6 +87,24 @@ describe("skill status", () => {
     expect(skillStatus("m.add.5", restored, T0 + 24 * D).state).toBe("proved");
   });
 
+  it("second_refresh_failure_requires_new_restoration", () => {
+    const proved = [...run("m.add.5", T0, 10), ...check("m.add.5", T0 + 3 * D, 5), ...check("m.add.5", T0 + 10 * D, 5)];
+    const restored = [...proved,
+      at("m.add.5", T0 + 20 * D, false, { mode: "review" }),
+      at("m.add.5", T0 + 20 * D + 1, false, { mode: "review" }),
+      ...check("m.add.5", T0 + 23 * D, 5),
+    ];
+    expect(skillStatus("m.add.5", restored, T0 + 24 * D).state).toBe("proved");
+    const laterMisses = [
+      at("m.add.5", T0 + 30 * D, false, { mode: "review" }),
+      at("m.add.5", T0 + 30 * D + 1, false, { mode: "review" }),
+    ];
+    const status = skillStatus("m.add.5", [...restored, ...laterMisses], T0 + 31 * D);
+    expect(status.state).toBe("refresh");
+    expect(status.checkOpensAt).toBe(T0 + 30 * D + 1 + RULES.practiceQuietMs);
+    expect(skillStatus("m.add.5", [...restored, ...laterMisses, ...check("m.add.5", T0 + 33 * D, 5)], T0 + 34 * D).state).toBe("proved");
+  });
+
   it("flags stuck after three sets under 60% on your own", () => {
     const set = (t: number) => [at("m.add.5", t, true, { setId: `x${t}` }), at("m.add.5", t + 1, false, { setId: `x${t}` }), at("m.add.5", t + 2, false, { setId: `x${t}` })];
     expect(skillStatus("m.add.5", [...set(T0), ...set(T0 + D), ...set(T0 + 2 * D)], T0 + 3 * D).stuck).toBe(true);

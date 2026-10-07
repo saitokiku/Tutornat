@@ -26,9 +26,10 @@ import { Act } from "./widgets/Stepper";
 export const TINT: Record<Subject, string> = SUBJECT_TINT;
 
 /** Everything a learner checks reports here: right or not, and whether help was used. */
-export type OnAnswer = (a: { sceneId: string; correct: boolean; assisted: boolean }) => void;
+export type OnAnswer = (a: { sceneId: string; correct: boolean; assisted: boolean; response?: string }) => boolean | void;
 /** Reports that help was shown for a check (a hint), so a later answer counts as helped. */
-export type OnHelp = (sceneId: string) => void;
+export type OnHelp = (sceneId: string, kind?: "hint" | "explanation") => boolean | void;
+export type QuizProgress = Record<string, { hint: boolean; why: boolean; result: boolean | null; choice: number | null; assisted: boolean }>;
 /** Reports what the scene body has on screen for narration, as it changes (see sceneSegments). */
 export type OnSay = (segments: Segment[]) => void;
 
@@ -89,7 +90,7 @@ export function SlideView({ scene, subject }: { scene: SlideScene; subject: Subj
   );
 }
 
-export function WidgetView({ widget, subject, onCheck, onSay, lang }: { widget: Widget; subject: Subject; onCheck: (ok: boolean) => void; onSay?: OnSay; lang: string }) {
+export function WidgetView({ widget, subject, onCheck, onSay, lang }: { widget: Widget; subject: Subject; onCheck: (ok: boolean) => boolean | void; onSay?: OnSay; lang: string }) {
   const tint = TINT[subject];
   switch (widget.kind) {
     case "fraction-bar":
@@ -140,24 +141,30 @@ export function InteractiveView({ scene, subject, onAnswer, onSay, lang }: { sce
  * Focus never drops to the page: Check stays in place (dimmed until a new choice), a hint or an
  * explanation takes focus when it opens, and the next question's prompt takes focus when it comes.
  */
-export function QuizView({ scene, onAnswer, onSay, onHelp, helped = false }: { scene: QuizScene; onAnswer: OnAnswer; onSay?: OnSay; onHelp?: OnHelp; helped?: boolean }) {
+export function QuizView({ scene, onAnswer, onSay, onHelp, onPresent, saved = {}, helped = false }: { scene: QuizScene; onAnswer: OnAnswer; onSay?: OnSay; onHelp?: OnHelp; onPresent?: (id: string) => void; saved?: QuizProgress; helped?: boolean }) {
   const t = useT();
   const { young } = useHear();
   const [qi, setQi] = useState(0);
-  const [choice, setChoice] = useState<number | null>(null);
+  const [choice, setChoice] = useState<number | null>(() => saved[`${scene.id}:${scene.questions[0].id}`]?.choice ?? null);
   const [hint, setHint] = useState(false);
   const [why, setWhy] = useState(false);
-  const [result, setResult] = useState<boolean | null>(null);
+  const [result, setResult] = useState<boolean | null | undefined>();
+  const [missed, setMissed] = useState(false);
   const prompt = useRef<HTMLSpanElement>(null);
   const hintBox = useRef<HTMLDivElement>(null);
   const whyBox = useRef<HTMLDivElement>(null);
   const q = scene.questions[qi];
-  const assisted = hint || why || helped;
+  const previous = saved[`${scene.id}:${q.id}`];
+  const showedHint = hint || previous?.hint;
+  const showedWhy = why || previous?.why;
+  const verdictResult = result === undefined ? previous?.result ?? null : result;
+  const assisted = hint || why || missed || helped || !!previous?.assisted;
   const spoken = quizSpeech(q);
 
   useEffect(() => {
     onSay?.([{ key: "quiz", text: quizSpeech(q).text }]);
   }, [q, onSay]);
+  useEffect(() => { onPresent?.(`${scene.id}:${q.id}`); }, [scene.id, q.id, onPresent]);
   useEffect(() => {
     if (qi > 0) prompt.current?.focus();
   }, [qi]);
@@ -171,17 +178,19 @@ export function QuizView({ scene, onAnswer, onSay, onHelp, helped = false }: { s
   const check = () => {
     if (choice === null) return;
     const correct = choice === q.answer;
+    if (onAnswer({ sceneId: `${scene.id}:${q.id}`, correct, assisted, response: q.choices[choice] }) === false) return;
     setResult(correct);
-    onAnswer({ sceneId: `${scene.id}:${q.id}`, correct, assisted });
+    if (!correct) setMissed(true);
   };
   const next = () => {
     setQi(qi + 1);
     setChoice(null);
     setHint(false);
     setWhy(false);
-    setResult(null);
+    setResult(undefined);
+    setMissed(false);
   };
-  const verdict = result === null ? "" : result ? (assisted ? t("stg.rightHelped") : t("stage.correct")) : t("stage.incorrect");
+  const verdict = verdictResult === null ? "" : verdictResult ? (assisted ? t("stg.rightHelped") : t("stage.correct")) : t("stage.incorrect");
 
   return (
     <div className="space-y-5">
@@ -196,21 +205,21 @@ export function QuizView({ scene, onAnswer, onSay, onHelp, helped = false }: { s
         <div className="grid gap-2.5 sm:grid-cols-2">
           {q.choices.map((c, i) => {
             const picked = choice === i;
-            const showRight = result === true && i === q.answer;
-            const showWrong = result === false && picked;
+            const showRight = verdictResult === true && i === q.answer;
+            const showWrong = verdictResult === false && picked;
             return (
               <div key={i} className="flex items-center gap-2">
                 <label
                   className={`flex flex-1 cursor-pointer items-center gap-3 rounded-md border px-4 py-3 transition-colors ${young ? "min-h-16 text-t3" : "min-h-14 text-body"} ${
                     showRight ? "border-good bg-good/10" : showWrong ? "border-bad bg-bad/5" : picked ? "border-ink bg-panel" : "border-border bg-panel hover:border-ink/30"
-                  } ${result === true ? "pointer-events-none" : ""}`}
+                  } ${verdictResult === true ? "pointer-events-none" : ""}`}
                 >
                   <input
                     type="radio"
                     name={q.id}
                     checked={picked}
-                    disabled={result === true}
-                    onChange={() => (setChoice(i), result === false && setResult(null))}
+                    disabled={verdictResult === true}
+                    onChange={() => (setChoice(i), verdictResult === false && setResult(null))}
                     className={`shrink-0 accent-[var(--color-ink)] ${young ? "size-5" : "size-4"}`}
                   />
                   <span className="text-ink">
@@ -224,7 +233,7 @@ export function QuizView({ scene, onAnswer, onSay, onHelp, helped = false }: { s
         </div>
       </fieldset>
 
-      {hint && (
+      {showedHint && (
         <div ref={hintBox} tabIndex={-1} className="flex max-w-prose items-start gap-2.5 rounded-sm bg-warn/10 px-4 py-3 text-sm text-ink focus:outline-none">
           <IconLightbulb size={18} className="mt-0.5 shrink-0 text-warn" />
           <p className={`flex-1 ${young ? "text-body" : ""}`}>{q.hint}</p>
@@ -233,33 +242,33 @@ export function QuizView({ scene, onAnswer, onSay, onHelp, helped = false }: { s
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Act variant="primary" onClick={check} off={choice === null || result !== null}>
+        <Act variant="primary" onClick={check} off={choice === null || verdictResult !== null}>
           {t("stage.check")}
         </Act>
-        {result !== true && !hint && (
-          <Button variant="ghost" onClick={() => (setHint(true), onHelp?.(`${scene.id}:${q.id}`))} className={bigButton(young)}>
+        {verdictResult !== true && !showedHint && (
+          <Button variant="ghost" onClick={() => { if (onHelp?.(`${scene.id}:${q.id}`, "hint") !== false) setHint(true); }} className={bigButton(young)}>
             <IconLightbulb size={16} /> {t("stage.hint")}
           </Button>
         )}
-        <p role="status" className={`font-medium ${young ? "text-body" : "text-sm"} ${result === null ? "sr-only" : result ? "text-good" : "text-bad"}`}>
+        <p role="status" className={`font-medium ${young ? "text-body" : "text-sm"} ${verdictResult === null ? "sr-only" : verdictResult ? "text-good" : "text-bad"}`}>
           {verdict}
         </p>
         {verdict && <Hear text={verdict} />}
-        {result === false && !why && (
-          <Button variant="ghost" onClick={() => (setWhy(true), onHelp?.(`${scene.id}:${q.id}`))} className={bigButton(young)}>
+        {verdictResult === false && !showedWhy && (
+          <Button variant="ghost" onClick={() => { if (onHelp?.(`${scene.id}:${q.id}`, "explanation") !== false) setWhy(true); }} className={bigButton(young)}>
             {t("stage.why")}
           </Button>
         )}
       </div>
 
-      {(why || result === true) && (
+      {(showedWhy || verdictResult === true) && (
         <div ref={whyBox} tabIndex={-1} className="flex max-w-prose items-start gap-3 rounded-sm bg-panel2 px-4 py-3 text-sm text-ink focus:outline-none">
           <p className={`flex-1 ${young ? "text-body" : ""}`}>{q.explain}</p>
           <Hear text={q.explain} />
         </div>
       )}
 
-      {result === true && qi < scene.questions.length - 1 && (
+      {verdictResult === true && qi < scene.questions.length - 1 && (
         <Button variant="secondary" onClick={next} className={bigButton(young)}>
           {t("stage.nextQuestion")}
         </Button>

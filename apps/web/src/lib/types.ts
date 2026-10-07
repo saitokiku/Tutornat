@@ -168,6 +168,8 @@ export type ActivityEvent = {
   correct?: boolean;
   assisted?: boolean;
   seconds?: number;
+  attemptId?: string;
+  response?: string;
 };
 
 /** A note for the learner's grown-ups: written by a grown-up, or left by the tutor (`from: "tutor"`). */

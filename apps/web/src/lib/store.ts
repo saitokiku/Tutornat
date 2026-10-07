@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import type { Attempt, PracticeSet, SkillReview, TeachingAct } from "@/learning/types";
+import type { Attempt, AttemptIdentity, HelpExposure, PracticeSet, ResponseEvent, SkillReview, TeachingAct } from "@/learning/types";
 import type { Feedback, PlanDone, ReadingEntry, SchoolClass, SchoolEvent, SchoolResult, TutorThread } from "@/planner/types";
 import { captureLocal, ensureStarted, forgetDevice } from "./sync";
 import type { Account, ActivityEvent, Course, Locale, ParentNote, Profile } from "./types";
@@ -24,6 +24,9 @@ export type StoreState = {
   notes: ParentNote[];
   resets: { token: string; accountId: string; expires: number }[];
   attempts: Attempt[];
+  attemptContexts: AttemptIdentity[];
+  helpExposures: HelpExposure[];
+  responseEvents: ResponseEvent[];
   sets: PracticeSet[];
   events: SchoolEvent[];
   classes: SchoolClass[];
@@ -50,6 +53,9 @@ export const emptyState = (): StoreState => ({
   notes: [],
   resets: [],
   attempts: [],
+  attemptContexts: [],
+  helpExposures: [],
+  responseEvents: [],
   sets: [],
   events: [],
   classes: [],
@@ -81,7 +87,10 @@ function load(): StoreState {
   try {
     const parsed = JSON.parse(raw) as StoreState;
     if (!validShape(parsed)) throw new Error("shape");
-    return { ...emptyState(), ...parsed };
+    const loaded = { ...emptyState(), ...parsed };
+    loaded.attempts = loaded.attempts.map((a) => ({ ...a, provenance: a.provenance ?? "legacy-local" }));
+    mergeEvidenceJournal(loaded);
+    return loaded;
   } catch {
     health = "reset";
     return emptyState();
@@ -90,7 +99,7 @@ function load(): StoreState {
 
 const LISTS = [
   "accounts", "profiles", "courses", "activity", "notes", "resets",
-  "attempts", "sets", "events", "classes", "feedback", "results", "planDone", "reading", "threads", "acts", "reviews",
+  "attempts", "attemptContexts", "helpExposures", "responseEvents", "sets", "events", "classes", "feedback", "results", "planDone", "reading", "threads", "acts", "reviews",
 ] as const;
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -112,7 +121,7 @@ export function read(): StoreState {
 // Another tab changed the document: drop the cached copy so the next read sees it.
 if (typeof window !== "undefined")
   window.addEventListener("storage", (e) => {
-    if (e.key !== STORE_KEY && e.key !== null) return;
+    if (e.key !== STORE_KEY && e.key !== null && !e.key.startsWith(EVIDENCE_PREFIX)) return;
     state = null;
     listeners.forEach((fn) => fn());
   });
@@ -123,9 +132,16 @@ function write(change: (draft: StoreState) => void, remote: boolean): StoreState
   const prev = read();
   const draft = structuredClone(prev);
   change(draft);
+  const removed = new Set(prev.profiles.filter((p) => !draft.profiles.some((n) => n.id === p.id)).map((p) => p.id));
+  if (removed.size) for (const list of EVIDENCE_LISTS) {
+    (draft[list] as EvidenceLists[EvidenceList][]) = (draft[list] as EvidenceLists[EvidenceList][]).filter((r) => !removed.has(r.profileId));
+  }
+  draft.attempts = draft.attempts.map((a) => ({ ...a, provenance: a.provenance ?? "legacy-local" }));
   state = draft;
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(draft));
+    if (remote) reconcileRemoteJournal(prev, draft);
+    removeDeletedEvidence(prev, draft);
   } catch {
     health = "memory";
   }
@@ -157,6 +173,7 @@ export function clearAll() {
   forgetDevice();
   try {
     localStorage.removeItem(STORE_KEY);
+    for (const key of journalKeys()) localStorage.removeItem(key);
   } catch {}
   state = emptyState();
   listeners.forEach((fn) => fn());
@@ -174,3 +191,83 @@ export function useStore<T>(select: (s: StoreState) => T): T {
 }
 
 export const newId = () => crypto.randomUUID();
+
+// Evidence uses immutable per-record keys as a write-ahead journal. A whole-document save from a
+// stale tab cannot overwrite them. Lists in the main document remain the export/domain boundary.
+const EVIDENCE_PREFIX = "kaizenedu.evidence.v1.";
+type EvidenceLists = { attemptContexts: AttemptIdentity; helpExposures: HelpExposure; responseEvents: ResponseEvent; attempts: Attempt; activity: ActivityEvent };
+type EvidenceList = keyof EvidenceLists;
+const EVIDENCE_LISTS: EvidenceList[] = ["attemptContexts", "helpExposures", "responseEvents", "attempts", "activity"];
+const journalKey = (list: EvidenceList, id: string) => `${EVIDENCE_PREFIX}${list}:${encodeURIComponent(id)}`;
+function journalKeys() {
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(EVIDENCE_PREFIX)) keys.push(key);
+  }
+  return keys;
+}
+
+function mergeEvidenceJournal(s: StoreState) {
+  const profiles = new Set(s.profiles.map((p) => p.id));
+  for (const key of journalKeys()) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) ?? "null") as { list: EvidenceList; record: EvidenceLists[EvidenceList]; canonical?: boolean };
+      if (!saved || !EVIDENCE_LISTS.includes(saved.list) || !saved.record || !profiles.has(saved.record.profileId)) continue;
+      const rows = s[saved.list] as EvidenceLists[EvidenceList][];
+      const i = rows.findIndex((r) => r.id === saved.record.id);
+      if (i < 0) rows.push(saved.record);
+      // A saved main row beats a provisional journal copy, including a server correction whose
+      // journal update failed. Successfully reconciled canonical journals also beat stale tab saves.
+      else if (saved.canonical) rows[i] = saved.record;
+    } catch { /* A malformed journal entry never resets the family's main document. */ }
+  }
+}
+
+function removeDeletedEvidence(prev: StoreState, next: StoreState) {
+  const removed = new Set(prev.profiles.filter((p) => !next.profiles.some((n) => n.id === p.id)).map((p) => p.id));
+  if (!removed.size) return;
+  for (const key of journalKeys()) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) ?? "null");
+      if (removed.has(saved?.record?.profileId)) localStorage.removeItem(key);
+    } catch {}
+  }
+}
+
+/** Server corrections/deletions replace provisional rows in the recovery journal as well. */
+function reconcileRemoteJournal(prev: StoreState, next: StoreState) {
+  for (const list of EVIDENCE_LISTS) for (const before of prev[list]) {
+    const key = journalKey(list, before.id);
+    if (!localStorage.getItem(key)) continue;
+    const after = next[list].find((r) => r.id === before.id);
+    if (!after) localStorage.removeItem(key);
+    else if (JSON.stringify(before) !== JSON.stringify(after)) localStorage.setItem(key, JSON.stringify({ list, record: after, canonical: true }));
+  }
+}
+
+/** A successful return means the evidence is durable; callers may then release help/feedback. */
+export function appendEvidence<L extends EvidenceList>(list: L, record: EvidenceLists[L]): EvidenceLists[L] {
+  // Always reload before admission: a cached tab cannot write for a deleted learner.
+  const fresh = load();
+  if (!state || JSON.stringify(state) !== JSON.stringify(fresh)) state = fresh;
+  const s = read();
+  if (!s.profiles.some((p) => p.id === record.profileId && p.accountId === s.session.accountId)) throw new Error("Unknown learner");
+  const existing = s[list].find((r) => r.id === record.id) as EvidenceLists[L] | undefined;
+  if (existing) {
+    if (existing.profileId !== record.profileId || ("attemptId" in existing && "attemptId" in record && existing.attemptId !== record.attemptId)) throw new Error("Evidence ID belongs to another attempt");
+    return existing;
+  }
+  try {
+    localStorage.setItem(journalKey(list, record.id), JSON.stringify({ list, record }));
+  } catch {
+    throw new Error("Could not save learning evidence");
+  }
+  const saved = update((draft) => {
+    const rows = draft[list] as EvidenceLists[L][];
+    if (!rows.some((r) => r.id === record.id)) rows.push(record);
+  });
+  // load() overlays the journal before update's diff; compare with the pre-journal snapshot too.
+  captureLocal(s, saved);
+  return record;
+}

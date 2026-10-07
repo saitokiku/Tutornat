@@ -8,7 +8,7 @@ import { ClockVisual } from "../visuals-practice";
 import { CheckRow } from "./CheckRow";
 import { Stepper } from "./Stepper";
 
-type Props = { widget: Extract<Widget, { kind: "clock" }>; onCheck?: (correct: boolean) => void; tint?: string };
+type Props = { widget: Extract<Widget, { kind: "clock" }>; onCheck?: (correct: boolean) => boolean | void; tint?: string };
 
 const DAY = 12 * 60;
 
@@ -93,8 +93,8 @@ export function ClockWidget({ widget, onCheck, tint = "var(--color-math)" }: Pro
           result={result}
           onCheck={() => {
             const ok = toMinutes(h, m) === toMinutes(widget.target!.h, widget.target!.m);
+            if (onCheck?.(ok) === false) return;
             setResult(ok);
-            onCheck?.(ok);
           }}
         />
       )}

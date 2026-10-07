@@ -10,12 +10,13 @@ import {
   type Statuses,
 } from "@/learning/engine";
 import type { Standard } from "@/knowledge";
-import type { AiQuestion, Attempt, Mode, PracticeSet, SetKind, Slot } from "@/learning/types";
+import type { AiQuestion, AttemptSource, Mode, PracticeSet, SetKind, Slot } from "@/learning/types";
 import { logAct, type ActInput } from "./acts";
 import { guessSubject } from "./generate";
 import { randomSeed } from "@/practice/rng";
 import { getSkill } from "@/practice/skills";
-import { newId, update, type StoreState } from "./store";
+import { appendEvidence, newId, read, update, type StoreState } from "./store";
+import { assistanceFor, openOrResumeAttempt } from "./evidence";
 import type { Grade, LearnerSettings, Profile, Subject } from "./types";
 
 // Practice actions screens call. Backend-shaped: when accounts move to a server, these bodies become
@@ -62,12 +63,15 @@ export const getSet = (s: StoreState, setId: string, profileId: string) => s.set
 
 // Memoized by reference: the store hands out a new attempts array on every write, so this recomputes
 // exactly when evidence changed. ponytail: one-entry cache; enough for one learner on screen.
-let memo: { attempts: Attempt[]; profileId: string; hour: number; out: Statuses } | null = null;
+let memo: { state: StoreState; profileId: string; hour: number; out: Statuses } | null = null;
 export function statusesOf(s: StoreState, profileId: string, now: number): Statuses {
   const hour = Math.floor(now / 3600_000);
-  if (memo && memo.attempts === s.attempts && memo.profileId === profileId && memo.hour === hour) return memo.out;
-  const out = allStatuses(attemptsOf(s, profileId), now);
-  memo = { attempts: s.attempts, profileId, hour, out };
+  if (memo && memo.state === s && memo.profileId === profileId && memo.hour === hour) return memo.out;
+  const out = allStatuses(attemptsOf(s, profileId), now, undefined, {
+    help: s.helpExposures.filter((h) => h.profileId === profileId),
+    responses: s.responseEvents.filter((r) => r.profileId === profileId),
+  });
+  memo = { state: s, profileId, hour, out };
   return out;
 }
 
@@ -161,32 +165,43 @@ export function paceOf(seconds: number, standard: number): Pace {
   return ratio < 0.75 ? "quicker" : ratio <= 1.35 ? "usual" : "slower";
 }
 
-export type AnswerRecord = { slot: number; level: number; correct: boolean; assisted: boolean; seconds: number; response?: string; why?: string };
+export type AnswerRecord = { slot: number; level: number; correct: boolean; assisted: boolean; seconds: number; response?: string; why?: string; attemptId?: string };
+
+export function practiceSource(set: PracticeSet, index: number, level: number): AttemptSource {
+  const slot = set.slots[index];
+  return { kind: "set-slot", profileId: set.profileId, skillId: slot.skillId, setId: set.id, slotId: String(index), itemFingerprint: `${slot.skillId}:${level}:${slot.seed}`, contentVersion: "legacy" };
+}
+
+/** Pin the difficulty when shown; an unfinished question does not change on reload. */
+export function openPracticeAttempt(setId: string, index: number, level: number) {
+  const set = read().sets.find((s) => s.id === setId);
+  if (!set?.slots[index]) throw new Error("Unknown practice slot");
+  if (set.slots[index].level === undefined) update((s) => { s.sets.find((x) => x.id === setId)!.slots[index].level ??= level; });
+  const pinned = read().sets.find((s) => s.id === setId)!;
+  return openOrResumeAttempt(practiceSource(pinned, index, pinned.slots[index].level!));
+}
 
 export function recordAnswer(setId: string, a: AnswerRecord) {
+  const set = read().sets.find((x) => x.id === setId);
+  if (!set || set.finishedAt || !set.slots[a.slot]) return;
+  const context = openPracticeAttempt(setId, a.slot, a.level);
+  if ((a.attemptId && a.attemptId !== context.id) || read().sets.find((s) => s.id === setId)!.slots[a.slot].level !== a.level) throw new Error("Stale practice attempt");
+  const slot = set.slots[a.slot];
+  const evidence = assistanceFor(context.id);
+  // The current first miss is an independent wrong answer; a later correction is helped.
+  const assisted = a.assisted || evidence.exposureIds.length > 0 || (a.correct && evidence.assisted);
+  appendEvidence("attempts", {
+    // Set slots are pinned above. Keep the final row compatible with the existing server ID limit.
+    id: `${setId}:${a.slot}`, attemptId: context.id, profileId: set.profileId, at: Date.now(),
+    skillId: slot.skillId, level: a.level, seed: slot.seed, setId, slotId: String(a.slot),
+    mode: set.kind === "check" && assisted ? "practice" : slot.role === "review" ? "review" : MODE[set.kind],
+    correct: a.correct, assisted, seconds: Math.min(Math.max(0, Math.round(a.seconds)), 3600),
+    response: a.response?.slice(0, 80), why: a.correct ? undefined : a.why?.slice(0, 40),
+    provenance: "local-recorded", contentVersion: context.source.contentVersion, itemFingerprint: context.source.itemFingerprint,
+  });
   update((s) => {
-    const set = s.sets.find((x) => x.id === setId);
-    if (!set || set.finishedAt) return;
-    const slot = set.slots[a.slot];
-    if (!slot) return;
-    slot.level ??= a.level;
-    set.startedAt ??= Date.now();
-    s.attempts.push({
-      id: newId(),
-      profileId: set.profileId,
-      at: Date.now(),
-      skillId: slot.skillId,
-      level: a.level,
-      seed: slot.seed,
-      setId,
-      mode: slot.role === "review" ? "review" : MODE[set.kind],
-      correct: a.correct,
-      // Nothing in a check can be helped; the runner hides help there, and this keeps the record honest anyway.
-      assisted: set.kind === "check" ? false : a.assisted,
-      seconds: Math.min(Math.max(0, Math.round(a.seconds)), 3600),
-      response: a.response?.slice(0, 80),
-      why: a.correct ? undefined : a.why?.slice(0, 40),
-    });
+    const live = s.sets.find((x) => x.id === setId);
+    if (live) live.startedAt ??= Date.now();
   });
 }
 

@@ -7,7 +7,7 @@ import { Hear } from "../hear";
 import { CheckRow } from "./CheckRow";
 import { Stepper } from "./Stepper";
 
-type Props = { widget: Extract<Widget, { kind: "area-model" }>; onCheck?: (correct: boolean) => void; tint?: string };
+type Props = { widget: Extract<Widget, { kind: "area-model" }>; onCheck?: (correct: boolean) => boolean | void; tint?: string };
 
 export const AREA_MAX = 12;
 const clamp = (n: number) => Math.max(1, Math.min(AREA_MAX, Math.round(n)));
@@ -111,8 +111,8 @@ export function AreaModel({ widget, onCheck, tint = "var(--color-math)" }: Props
           result={result}
           onCheck={() => {
             const ok = rows === widget.target!.rows && cols === widget.target!.cols;
+            if (onCheck?.(ok) === false) return;
             setResult(ok);
-            onCheck?.(ok);
           }}
         />
       )}

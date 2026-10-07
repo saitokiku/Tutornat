@@ -435,6 +435,7 @@ const en = {
   "practice.right": "Right.",
   "practice.rightHelped": "Right, with help.",
   "practice.notYet": "Not yet. Try again, or take a hint.",
+  "practice.evidenceSaveFailed": "Your work couldn't be saved. Free some space or enable browser storage, then try again.",
   "practice.notYetSteps": "Not yet. You can see how it's done, then answer.",
   "practice.hints": "Hints",
   "practice.howTitle": "How it's done",

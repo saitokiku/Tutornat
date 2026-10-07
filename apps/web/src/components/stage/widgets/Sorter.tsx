@@ -8,7 +8,7 @@ import { Hear, sentences, useHear } from "../hear";
 import { Spoken } from "../narration";
 import { CheckRow } from "./CheckRow";
 
-type Props = { widget: Extract<Widget, { kind: "sorter" }>; onCheck?: (correct: boolean) => void; lang?: string };
+type Props = { widget: Extract<Widget, { kind: "sorter" }>; onCheck?: (correct: boolean) => boolean | void; lang?: string };
 
 /** A word sort: every item is a word or a short phrase, so the cards sit two to a row. */
 export const isWordSort = (w: Extract<Widget, { kind: "sorter" }>) => w.items.every((i) => i.text.length <= 24);
@@ -90,9 +90,9 @@ export function Sorter({ widget, onCheck, lang }: Props) {
         result={result}
         onCheck={() => {
           const ok = widget.items.every((i) => picks[i.id] === i.answer);
+          if (onCheck?.(ok) === false) return;
           setChecked(true);
           setResult(ok);
-          onCheck?.(ok);
         }}
       />
     </div>

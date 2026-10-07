@@ -8,7 +8,7 @@ import { CheckRow } from "./CheckRow";
 import { StepButtons } from "./Slider";
 
 type State = "solid" | "liquid" | "gas";
-type Props = { widget: Extract<Widget, { kind: "states-of-matter" }>; onCheck?: (correct: boolean) => void };
+type Props = { widget: Extract<Widget, { kind: "states-of-matter" }>; onCheck?: (correct: boolean) => boolean | void };
 
 const MIN = -30, STEP = 10, COUNT = 17; // −30 … 130 °C
 export const stateAt = (c: number): State => (c <= 0 ? "solid" : c < 100 ? "liquid" : "gas");
@@ -107,8 +107,8 @@ export function StatesOfMatter({ widget, onCheck }: Props) {
           result={result}
           onCheck={() => {
             const ok = state === widget.target;
+            if (onCheck?.(ok) === false) return;
             setResult(ok);
-            onCheck?.(ok);
           }}
         />
       )}

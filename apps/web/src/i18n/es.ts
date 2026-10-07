@@ -437,6 +437,7 @@ const es: Record<Key, string> = {
   "practice.right": "Correcto.",
   "practice.rightHelped": "Correcto, con ayuda.",
   "practice.notYet": "Todavía no. Inténtalo otra vez o pide una pista.",
+  "practice.evidenceSaveFailed": "No se pudo guardar tu trabajo. Libera espacio o permite el almacenamiento del navegador y vuelve a intentarlo.",
   "practice.notYetSteps": "Todavía no. Puedes ver cómo se hace y luego responder.",
   "practice.hints": "Pistas",
   "practice.howTitle": "Cómo se hace",

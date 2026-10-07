@@ -9,7 +9,7 @@ import { CheckRow } from "./CheckRow";
 import { Act, roundButton } from "./Stepper";
 import { signed } from "./order";
 
-type Props = { widget: Extract<Widget, { kind: "coordinate" }>; onCheck?: (correct: boolean) => void; tint?: string };
+type Props = { widget: Extract<Widget, { kind: "coordinate" }>; onCheck?: (correct: boolean) => boolean | void; tint?: string };
 type Pt = [number, number];
 
 export const pointText = ([x, y]: Pt) => `(${signed(x)}, ${signed(y)})`;
@@ -158,9 +158,9 @@ export function Coordinate({ widget, onCheck, tint = "var(--color-math)" }: Prop
         result={result}
         onCheck={() => {
           const ok = samePoints(points, widget.targets);
+          if (onCheck?.(ok) === false) return;
           setResult(ok);
           setChecked(true);
-          onCheck?.(ok);
         }}
       />
     </div>
