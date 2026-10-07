@@ -23,9 +23,12 @@ quests. Each stage starts only when the stage before it is merged and `npm run v
    as a grown-up, a K learner and an older learner; findings in [dogfood/](dogfood/) and fixed before the
    next batch. Pass 1: [dogfood/2026-10-07.md](dogfood/2026-10-07.md) (13 findings, 1 blocker).
 4. [ ] **Integration** (sequential, each one package with review):
-   a. Voice conversation — the M6 "natural conversation" table: loop, tap-to-talk + hands-free,
-      turn-taking, spoken math, answering by voice, K–2, fallbacks, privacy.
-   b. Spotlight wiring — `data-spot` ids on every screen, `point_at` in the AI tutor, demo-tutor hint pointing.
+   a+b. **Live tutor** (one package: voice conversation + spotlight wiring + the tutor cursor) — the M6
+      "natural conversation" table including "not uncanny" and "moving attention": the conversation loop,
+      tap-to-talk + hands-free, turn-taking, spoken math, answering by voice, K–2, fallbacks, privacy;
+      `data-spot` ids on every screen, `point_at` in the AI tutor, demo-tutor hint pointing, the glow and
+      cursor moving in time with speech. Starts with a critics' audit of the existing voice layer and
+      spotlight; ends with a hands-on pass.
    c. Content backfill — misconception tags on the 134 original skills; switch skills to the touch pads;
       new widgets used in the catalogue; writing responses (practice-only).
    d. Design polish per screen against the new system (Today, practice, stage, Talk, calendar, item page,
