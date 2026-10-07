@@ -78,8 +78,29 @@ describe("school item page", () => {
     await user.keyboard("{Enter}");
     expect(read().events[0].done).toBe(true);
     expect(screen.getByText("Done")).toBeInTheDocument();
+    // Due tomorrow, so it is on Today's plan: marked done the way Today marks it.
+    expect(read().planDone).toMatchObject([{ profileId: "p1", date: today, key: "due:e2" }]);
     await user.keyboard("{Enter}");
     expect(read().events[0].done).toBe(false);
+    expect(read().planDone).toHaveLength(0);
+  });
+
+  it("an item not on today's plan is marked done on its own", async () => {
+    family("p1", false, [item({ id: "e12", kind: "homework", date: addDays(today, 9) })]);
+    render(<SchoolItem eventId="e12" />);
+    await userEvent.click(screen.getByRole("button", { name: /Mark done/ }));
+    expect(read().events[0].done).toBe(true);
+    expect(read().planDone).toHaveLength(0);
+  });
+
+  it("for a K-2 learner, every action is the bigger target and the lines can be read aloud", () => {
+    family("p1", false, [item({ id: "e13", profileId: "p2", title: "Spelling test", skillIds: ["m.frac.unit"] })]);
+    update((s) => void (s.session.profileId = "p2"));
+    render(<SchoolItem eventId="e13" />);
+    expect(screen.getByRole("button", { name: /^Read aloud: Spelling test/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Read aloud: Name the fraction/ })).toBeInTheDocument();
+    for (const name of [/Prep for this test/, /Mark done/, /Edit/, /Delete/]) expect(screen.getByRole("button", { name })).toHaveClass("min-h-14");
+    expect(screen.getByRole("link", { name: /Get help/ })).toHaveClass("min-h-14");
   });
 
   it("shows what came with it: the text, and the file when this device has it", async () => {
@@ -93,6 +114,9 @@ describe("school item page", () => {
     const open = await screen.findByRole("link", { name: /Open the PDF/ });
     expect(open).toHaveAttribute("target", "_blank");
     expect(open.getAttribute("href")).toMatch(/^blob:/);
+    expect(screen.getByText(/^PDF · sheet\.pdf · /)).toBeInTheDocument();
+    // jsdom has no IndexedDB: the file is only in memory, and the page says so.
+    expect(screen.getByText("This browser won't keep the file after the page closes.")).toBeInTheDocument();
     unmount();
     render(<SchoolItem eventId="e4" />);
     expect(await screen.findByText("The file isn't saved on this device.")).toBeInTheDocument();
@@ -115,12 +139,26 @@ describe("school item page", () => {
     await user.type(screen.getByLabelText("What is 6 × 6?"), "36");
     await user.keyboard("{Enter}");
     expect(screen.getByText("Delete “Fractions test”? Its file goes too. This can't be undone.")).toBeInTheDocument();
-    // The confirm button takes focus, so Enter deletes.
-    expect(screen.getByRole("button", { name: "Yes, delete" })).toHaveFocus();
+    // Focus lands on Cancel, so a second Enter never deletes; the delete button carries the question.
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    const yes = screen.getByRole("button", { name: "Yes, delete" });
+    expect(yes).toHaveAccessibleDescription("Delete “Fractions test”? Its file goes too. This can't be undone.");
+    await user.tab();
+    expect(yes).toHaveFocus();
     await user.keyboard("{Enter}");
     expect(push).toHaveBeenCalledWith("/calendar");
     expect(read().events).toHaveLength(0);
     vi.restoreAllMocks();
+  });
+
+  it("backing out of the delete step puts focus back on Delete", async () => {
+    const user = userEvent.setup();
+    family("p1", true, [item({ id: "e14" })]);
+    render(<SchoolItem eventId="e14" />);
+    await user.click(screen.getByRole("button", { name: /Delete/ }));
+    await user.keyboard("{Enter}"); // Cancel has focus
+    expect(screen.getByRole("button", { name: /Delete/ })).toHaveFocus();
+    expect(read().events).toHaveLength(1);
   });
 
   it("a grown-up already trusted goes straight to the confirm step", async () => {
@@ -159,9 +197,26 @@ describe("school item page", () => {
     expect(screen.getByRole("button", { name: /Mark done/ })).toBeInTheDocument();
   });
 
-  it("edits through the calendar's form, and leaves when the form deletes the item", async () => {
-    family("p1", true, [item({ id: "e10" })]);
+  it("a learner on their own can't reach the edit form's delete: Edit asks a grown-up first", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0); // the gate asks 6 × 6
+    const user = userEvent.setup();
+    family("p1", false, [item({ id: "e10" })]);
     render(<SchoolItem eventId="e10" />);
+    await user.click(screen.getByRole("button", { name: /Edit/ }));
+    expect(screen.getByText("Ask a grown-up")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Edit" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: /Edit/ })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: /Edit/ }));
+    await user.type(screen.getByLabelText("What is 6 × 6?"), "36");
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("heading", { name: "Edit" })).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
+
+  it("a trusted grown-up edits through the calendar's form, and the page leaves when the form deletes the item", async () => {
+    family("p1", true, [item({ id: "e15" })]);
+    render(<SchoolItem eventId="e15" />);
     await userEvent.click(screen.getByRole("button", { name: /Edit/ }));
     expect(screen.getByRole("heading", { name: "Edit" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));

@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { btn } from "@/components/ui";
 import { useT } from "@/i18n";
-import { getBlob } from "@/lib/blobs";
-import { sizeLabel } from "@/lib/files";
+import { getBlob, type StoredFile } from "@/lib/blobs";
+import { KIND_TAG, sizeLabel } from "@/lib/files";
 
-type Loaded = { state: "loading" } | { state: "missing" } | { state: "ready"; url: string; type: string; size: number; name: string };
+type Loaded = { state: "loading" } | { state: "missing" } | { state: "ready"; url: string; type: string; size: number; name: string; where: StoredFile["where"] };
 
 /** The photo or PDF kept with a school item, read from this device's file store. */
 export function AttachedFile({ blobId, name, title }: { blobId: string; name?: string; title: string }) {
@@ -20,7 +20,7 @@ export function AttachedFile({ blobId, name, title }: { blobId: string; name?: s
       if (!live) return;
       if (!f) return setFile({ state: "missing", id: blobId });
       url = URL.createObjectURL(f.blob);
-      setFile({ state: "ready", id: blobId, url, type: f.type, size: f.size, name: name || f.name });
+      setFile({ state: "ready", id: blobId, url, type: f.type, size: f.size, name: name || f.name, where: f.where });
     });
     return () => {
       live = false;
@@ -39,12 +39,14 @@ export function AttachedFile({ blobId, name, title }: { blobId: string; name?: s
       )}
       <div className="flex flex-wrap items-center gap-3">
         <span className="min-w-0 flex-1 truncate font-opmono text-xs text-muted">
-          {image ? "IMG" : "PDF"} · {file.name} · {sizeLabel(file.size)}
+          {KIND_TAG[image ? "image" : "pdf"]} · {file.name} · {sizeLabel(file.size)}
         </span>
         <a href={file.url} target="_blank" rel="noopener noreferrer" className={btn("secondary", "md")}>
           {t(image ? "intake.item.openPhoto" : "intake.item.openPdf")} <span className="sr-only">{t("intake.item.newTab")}</span>
         </a>
       </div>
+      {/* The browser couldn't keep it on the device (storage full, a private window): say so while it's still here. */}
+      {file.where === "memory" && <p className="text-xs text-muted">{t("intake.fileMemory")}</p>}
     </div>
   );
 }
