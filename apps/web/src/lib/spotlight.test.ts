@@ -99,6 +99,30 @@ describe("visibleSpots", () => {
     expect(JSON.stringify(visibleSpots())).not.toMatch(/secret|typed/);
   });
 
+  it("never reads what was typed into a field inside its own label, or into a select, or an editable part", () => {
+    // React mirrors a controlled textarea's value into a child text node, like this.
+    page(`
+      <label>Notes <textarea>Ada lives at 12 Oak St</textarea></label>
+      <label>Pet <select><option>Rex the dog</option></select></label>
+      <button aria-labelledby="l">x</button><span id="l">Draft <span contenteditable="true">my diary</span></span>
+    `);
+    expect(visibleSpots()).toEqual([
+      { id: "auto.textbox.notes", name: "Notes" },
+      { id: "auto.combobox.pet", name: "Pet" },
+      { id: "auto.button.draft", name: "Draft" },
+    ]);
+  });
+
+  it("lights a visually hidden field through its label, and skips one with nothing to show", () => {
+    page(`
+      <label data-rect="10 10 80 40"><input type="radio" name="l" class="peer sr-only" data-rect="10 10 1 1" /><span>Español</span></label>
+      <input type="file" aria-label="Choose a file" data-rect="0 0 1 1" />
+      <h2 data-rect="0 0 1 1">Only for screen readers</h2>
+    `);
+    expect(visibleSpots()).toEqual([{ id: "auto.radio.espanol", name: "Español" }]);
+    expect(resolveSpot("auto.radio.espanol")).toBe(document.querySelector("label"));
+  });
+
   it("trims names to 60 characters and puts what is on screen first, capped", () => {
     page(`<button data-rect="10 2000 100 40">Below the fold</button><button>${"Long label ".repeat(10)}</button>`);
     const spots = visibleSpots();
@@ -121,6 +145,30 @@ describe("visibleSpots", () => {
     ]);
     expect(JSON.stringify(spots)).not.toContain("Ada'");
     expect(resolveSpot("auto.heading.hi-name")).toBe(document.querySelector("h1"));
+  });
+
+  it("scrubs a name that markup glues to its neighbours (the app rail's profile link)", () => {
+    // AppShell's rail renders exactly this: JSX keeps no space between the spans.
+    page(`<a href="/profiles"><span aria-hidden="true" class="grid size-8">A</span><span class="min-w-0"><span class="block truncate">Ada</span><span class="block">Grade 3</span></span><span class="ml-auto">Switch</span></a>`);
+    setSpotScrub(scrubNames(["Ada"]));
+    const spots = visibleSpots();
+    expect(spots).toEqual([{ id: "auto.link.name-grade-3-switch", name: "[name] Grade 3 Switch" }]);
+    expect(JSON.stringify(spots).toLowerCase()).not.toContain("ada");
+    expect(resolveSpot(spots[0].id)).toBe(document.querySelector("a"));
+  });
+
+  it("scrubs each word of a grown-up's name, ignoring case and accents, and names glued on in camel case or to digits", () => {
+    const scrub = scrubNames(["Ada", "María López", null, " "]);
+    expect(scrub("Hola, Maria. The Lopez family; MARÍA LÓPEZ")).toBe("Hola, [name]. The [name] family; [name]");
+    expect(scrub("AdaGrade 3 · GradeAda · Ada3 · 3Ada · Ada's")).toBe("[name]Grade 3 · Grade[name] · [name]3 · 3[name] · [name]'s");
+    // Inside another word it is a different word.
+    expect(scrub("Adam's book · Canada · Mariana")).toBe("Adam's book · Canada · Mariana");
+  });
+
+  it("leaves out a control whose name still carries a learner's name the scrub could not see", () => {
+    page(`<button><b>Ma</b>ria's page</button><button>Next</button>`);
+    setSpotScrub(scrubNames(["Maria"]));
+    expect(visibleSpots()).toEqual([{ id: "auto.button.next", name: "Next" }]);
   });
 
   it("resolveSpot finds every listed id again, and nothing for unknown or unsafe ids", () => {

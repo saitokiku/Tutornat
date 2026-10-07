@@ -24,17 +24,22 @@ validated before it touches the DOM; nothing from outside (the model, a URL) eve
   `auto.<role>.<slug of its accessible name>`, `-2`, `-3` for duplicates in page order (e.g.
   `auto.button.check`, `auto.heading.coming-up`, `auto.link.calendar-2`). Auto ids are stable while
   the page is; marked ids are stable across pages, so mark what tutors point at often.
-- **Skipped:** hidden, `inert`, `aria-hidden`, zero-size, invisible, unnamed elements, a control nested
-  in another control, and auto targets inside `[data-spot-ignore]` (marked targets there still count).
+- **Skipped:** hidden, `inert`, `aria-hidden`, zero-size, visually hidden (`sr-only`), invisible,
+  unnamed elements, a control nested in another control, and auto targets inside `[data-spot-ignore]`
+  (marked targets there still count). A visually hidden field with a shown label (a styled radio, a
+  file input inside its label) is lit through that label.
 - **Names** are the accessible name (aria-labelledby, aria-label, a field's labels, text, title),
-  whitespace-collapsed, at most 60 characters. **A field's value is never read** — what a child typed
-  stays theirs; entry fields (and contenteditable) are named by their labels only.
+  whitespace-collapsed, at most 60 characters; every element's text is its own run of words, so
+  `<span>Ada</span><span>Grade 3</span>` reads "Ada Grade 3". **A field's value is never read** — what a
+  child typed stays theirs: inputs, textareas, selects and editable parts are skipped wherever they sit,
+  even inside the label that names them. A control whose own label carries a value ("Numerator: 3")
+  gets a `data-spot-label` ("Numerator") when it is marked, so its name and id don't change per keystroke.
 
 | Function | Does |
 |---|---|
 | `visibleSpots({ cap = 60, scrub })` | `{ id, name }[]` the tutor may point at now: marked targets first, then auto targets; within each, what is on screen first. |
 | `resolveSpot(id)` | The element, by exactly the same rules, or `null`. |
-| `setSpotScrub(fn)` / `scrubNames(names)` | The scrub every list and lookup uses. Auto ids are built from scrubbed names, so the learner's name never leaves the device, not even inside an id ("Hi, Ada" → `auto.heading.hi-name`, name `Hi, [name]`). |
+| `setSpotScrub(fn)` / `scrubNames(names)` | The scrub every list and lookup uses. Auto ids are built from scrubbed names, so the learner's name never leaves the device, not even inside an id ("Hi, Ada" → `auto.heading.hi-name`, name `Hi, [name]`). `scrubNames` scrubs each name whole and word by word ("María López" also scrubs "Maria" and "Lopez"), ignoring case and accents, as a whole word or glued on in camel case or to digits ("AdaGrade", "Ada3"), never inside another word ("Adam"). Backstop: a control whose name still carries a name of 4+ letters once slugged (split by markup, odd punctuation) is left out of the list. |
 
 ### The engine (client store, like `lib/store.ts`)
 

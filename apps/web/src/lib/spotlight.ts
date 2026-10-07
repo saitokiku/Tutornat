@@ -28,7 +28,8 @@ export function spotAttr(id: string, label?: string): { "data-spot"?: string; "d
 /* ------------------------------------------------------------------ names */
 
 const NAME_MAX = 60;
-export type Scrub = (text: string) => string;
+/** Rewrites text before it leaves the device. `names` (slugged) lets the lists drop anything a name still hides in. */
+export type Scrub = ((text: string) => string) & { names?: readonly string[] };
 
 let defaultScrub: Scrub | null = null;
 
@@ -38,18 +39,47 @@ export function setSpotScrub(fn: Scrub | null) {
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "");
 
-/** A scrub that replaces these names (the learner's, a grown-up's) wherever they appear as whole words. */
-export function scrubNames(names: (string | null | undefined)[], replacement = "[name]"): Scrub {
-  const list = [...new Set(names.map((n) => n?.trim() ?? "").filter((n) => n.length >= 2))].sort((a, b) => b.length - a.length);
-  if (!list.length) return (s) => s;
-  const re = new RegExp(`(?<![\\p{L}\\p{N}])(?:${list.map(escapeRe).join("|")})(?![\\p{L}\\p{N}])`, "giu");
-  return (s) => s.replace(re, replacement);
+/** One character of a name as a pattern over decomposed text: either case, any accents after it. */
+function letter(c: string, upperOnly = false): string {
+  const lo = c.toLowerCase(), up = c.toUpperCase();
+  if (lo === up || lo.length !== 1 || up.length !== 1) return `${escapeRe(c)}\\p{M}*`;
+  return `${upperOnly ? up : `[${lo}${up}]`}\\p{M}*`;
 }
 
-const BREAK = /^(address|article|aside|blockquote|br|dd|div|dl|dt|figcaption|figure|footer|form|h[1-6]|header|hr|label|li|main|nav|ol|p|section|table|td|text|th|title|tr|tspan|ul)$/;
+/**
+ * A scrub that replaces these names (the learner's nickname, a grown-up's display name) wherever they
+ * appear: each name whole and each word of it ("Maria Lopez" also scrubs "Maria"), ignoring case and
+ * accents, as a whole word or glued on in camel case or to digits ("AdaGrade", "Ada3") — but not inside
+ * another word ("Adam" stays).
+ */
+export function scrubNames(names: (string | null | undefined)[], replacement = "[name]"): Scrub {
+  const words = names.flatMap((n) => {
+    const whole = fold(n?.normalize("NFC").trim() ?? "");
+    return [whole, ...whole.split(/[\s\-‐]+/)];
+  });
+  const list = [...new Set(words.filter((w) => w.length >= 2))].sort((a, b) => b.length - a.length);
+  if (!list.length) return (s) => s;
+  const any = list.map((w) => [...w].map((c) => letter(c)).join("")).join("|");
+  const camel = list.map((w) => { const [first, ...rest] = [...w]; return letter(first, true) + rest.map((c) => letter(c)).join(""); }).join("|");
+  // Starts at a word boundary, or a lower-to-upper (or digit-to-letter) seam; ends at one.
+  const re = new RegExp(`(?:(?<![\\p{L}\\p{M}])(?:${any})|(?<=[\\p{Ll}\\p{N}]\\p{M}*)(?:${camel}))(?:(?![\\p{L}\\p{M}])|(?<=\\p{Ll}\\p{M}*)(?=\\p{Lu}))`, "gu");
+  const fn: Scrub = (s) => s.normalize("NFD").replace(re, replacement).normalize("NFC");
+  fn.names = list.map((w) => slug(w, 64)).filter((w) => w.length >= 4);
+  return fn;
+}
 
-/** Visible text of a subtree as assistive tech reads it: skips aria-hidden parts, uses a part's aria-label in place of its text. */
+// Never read for a name: what is typed in a field is the learner's.
+const NO_TEXT = /^(script|style|template|input|textarea|select|option|datalist)$/;
+const ENTRY_ROLE = /^(textbox|searchbox|combobox|spinbutton)$/;
+const isEditable = (e: Element) => (e as HTMLElement).isContentEditable === true || /^(|true|plaintext-only)$/.test(e.getAttribute("contenteditable") ?? "-");
+
+/**
+ * Visible text of a subtree as assistive tech reads it: skips aria-hidden parts and form fields, uses a
+ * part's aria-label in place of its text. Every element is its own run of words: JSX drops the spaces
+ * between <span>Ada</span><span>Grade 3</span>, and a name glued to its neighbour would slip past the scrub.
+ */
 function textOf(el: Element): string {
   let out = "";
   const walk = (node: Node) => {
@@ -57,11 +87,12 @@ function textOf(el: Element): string {
       if (c.nodeType === 3) out += c.nodeValue ?? "";
       else if (c.nodeType === 1) {
         const e = c as Element;
-        if (e.getAttribute("aria-hidden") === "true" || e.hasAttribute("hidden") || /^(script|style|template)$/.test(e.localName)) continue;
+        if (e.getAttribute("aria-hidden") === "true" || e.hasAttribute("hidden") || NO_TEXT.test(e.localName) || isEditable(e) || ENTRY_ROLE.test(e.getAttribute("role") ?? "")) continue;
         const label = e.getAttribute("aria-label");
-        if (label) out += ` ${label} `;
+        out += " ";
+        if (label) out += label;
         else walk(e);
-        if (BREAK.test(e.localName)) out += " ";
+        out += " ";
       }
     }
   };
@@ -70,7 +101,6 @@ function textOf(el: Element): string {
 }
 
 const FIELD = "input, select, textarea";
-const ENTRY_ROLE = /^(textbox|searchbox|combobox|spinbutton)$/;
 
 /** Accessible name, simplified: labelledby, aria-label, a field's labels, text, title. Never a field's value. */
 function accessibleName(el: Element): string {
@@ -96,7 +126,7 @@ function accessibleName(el: Element): string {
     if (placeholder) return placeholder;
   }
   // What someone typed is theirs: entry fields are named by their labels only.
-  const entry = field || (el as HTMLElement).isContentEditable || ENTRY_ROLE.test(el.getAttribute("role") ?? "");
+  const entry = field || isEditable(el) || ENTRY_ROLE.test(el.getAttribute("role") ?? "");
   if (!entry) {
     const text = textOf(el).trim();
     if (text) return text;
@@ -112,10 +142,15 @@ function clip(s: string): string {
 
 /** What a spot is called in the list the tutor sees: data-spot-label, else its accessible name; scrubbed, at most 60 characters. */
 export function spotName(el: Element, scrub: Scrub | null = defaultScrub): string {
-  let s = (el.getAttribute("data-spot-label") || accessibleName(el)).replace(/\s+/g, " ").trim();
-  if (scrub) s = scrub(s);
+  // A visually hidden field lit through its label (see litElement) is named as the field.
+  const named = el instanceof HTMLLabelElement && el.control && !el.hasAttribute("data-spot") ? el.control : el;
+  let s = (named.getAttribute("data-spot-label") || accessibleName(named)).replace(/\s+/g, " ").trim();
+  if (scrub) s = scrub(s).replace(/\s+/g, " ").trim();
   return clip(s);
 }
+
+/** Backstop: a name the scrub missed but whose letters still show in the text (e.g. split by markup). */
+const leaks = (name: string, scrub: Scrub | null) => !!scrub?.names?.some((n) => slug(name, 200).replace(/-/g, "").includes(n.replace(/-/g, "")));
 
 /* ------------------------------------------------------------------ targets */
 
@@ -125,14 +160,26 @@ const HEADING = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
 type VisibilityOptions = { opacityProperty?: boolean; visibilityProperty?: boolean; checkOpacity?: boolean; checkVisibilityCSS?: boolean };
 
-/** On the page and perceivable: connected, not hidden/inert/aria-hidden, not zero-size, not invisible. */
+/**
+ * On the page and perceivable: connected, not hidden/inert/aria-hidden, not invisible, and with something
+ * to see — not zero-size, not visually hidden (Tailwind's sr-only: 1×1 and clipped). A 0-wide tick line
+ * still counts: it has height.
+ */
 export function isShown(el: Element): boolean {
   if (!el.isConnected || el.closest(SKIP)) return false;
   const r = el.getBoundingClientRect();
-  if (r.width <= 0 && r.height <= 0) return false;
+  if (r.width <= 1 && r.height <= 1) return false;
   const check = (el as Element & { checkVisibility?: (o: VisibilityOptions) => boolean }).checkVisibility;
   if (typeof check === "function" && !check.call(el, { opacityProperty: true, visibilityProperty: true, checkOpacity: true, checkVisibilityCSS: true })) return false;
-  return getComputedStyle(el).visibility !== "hidden";
+  const cs = getComputedStyle(el);
+  return cs.visibility !== "hidden" && !/^rect\(0(px)?,? 0(px)?,? 0(px)?,? 0(px)?\)$/.test(cs.clip) && cs.clipPath !== "inset(50%)";
+}
+
+/** What to light for a target: itself when shown; for a visually hidden field (a styled radio, a file input), its shown label. */
+function litElement(el: Element): Element | null {
+  if (isShown(el)) return el;
+  if (!el.isConnected || el.closest(SKIP) || !el.matches(FIELD)) return null;
+  return Array.from((el as HTMLInputElement).labels ?? []).find(isShown) ?? null;
 }
 
 function roleOf(el: Element): string {
@@ -172,9 +219,12 @@ function explicitTargets(scrub: Scrub | null): Found[] {
   const out: Found[] = [];
   for (const el of Array.from(document.querySelectorAll("[data-spot]"))) {
     const id = el.getAttribute("data-spot") ?? "";
-    if (!isSpotId(id) || id.startsWith("auto.") || seen.has(id) || !isShown(el)) continue;
+    if (!isSpotId(id) || id.startsWith("auto.") || seen.has(id)) continue;
+    const lit = litElement(el);
+    if (!lit) continue;
     seen.add(id);
-    out.push({ id, el, name: spotName(el, scrub) });
+    const name = spotName(el, scrub);
+    out.push({ id, el: lit, name: leaks(name, scrub) ? "" : name });
   }
   return out;
 }
@@ -188,15 +238,17 @@ function autoTargets(scrub: Scrub | null): Found[] {
     if (!el.matches(CONTROL) && !el.matches(HEADING) && !(Number(el.getAttribute("tabindex")) >= 0)) continue;
     // A heading inside a link, a span inside a button: the outer control is the thing to point at.
     if (el.parentElement?.closest(CONTROL)) continue;
-    if (!isShown(el)) continue;
+    const lit = litElement(el);
+    if (!lit) continue;
     const name = spotName(el, scrub);
-    if (!name) continue;
+    // The id is built from the scrubbed name, so it is as clean as the name; a name that still leaks is left out.
+    if (!name || leaks(name, scrub)) continue;
     const prefix = `auto.${roleOf(el)}.`;
     const base = prefix + (slug(name, 64 - prefix.length - 4) || "item");
     let id = base;
     for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
     used.add(id);
-    out.push({ id, el, name });
+    out.push({ id, el: lit, name });
   }
   return out;
 }
@@ -227,7 +279,11 @@ export function resolveSpot(id: string, opts: { scrub?: Scrub | null } = {}): El
   if (typeof document === "undefined" || !isSpotId(id)) return null;
   if (id.startsWith("auto.")) return autoTargets(opts.scrub === undefined ? defaultScrub : opts.scrub).find((f) => f.id === id)?.el ?? null;
   // Safe as a selector: SPOT_ID allows only [a-z0-9.-].
-  return Array.from(document.querySelectorAll(`[data-spot="${id}"]`)).find(isShown) ?? null;
+  for (const el of Array.from(document.querySelectorAll(`[data-spot="${id}"]`))) {
+    const lit = litElement(el);
+    if (lit) return lit;
+  }
+  return null;
 }
 
 /* ------------------------------------------------------------------ honesty guard */
@@ -237,7 +293,7 @@ const guards = new Set<readonly string[]>();
 function guardedBy(el: Element): boolean {
   for (const list of guards)
     for (const id of list) {
-      const hits = id.startsWith("auto.") ? [resolveSpot(id)] : Array.from(document.querySelectorAll(`[data-spot="${id}"]`));
+      const hits = id.startsWith("auto.") ? [resolveSpot(id)] : Array.from(document.querySelectorAll(`[data-spot="${id}"]`)).flatMap((e) => [e, litElement(e)]);
       if (hits.some((g) => g && (g === el || g.contains(el)))) return true;
     }
   return false;
