@@ -2,7 +2,8 @@ import { wrapLanguageModel } from "ai";
 import { describe, expect, it } from "vitest";
 import { cachedCourse, writeCourse, type CourseEvent, type CourseRequest } from "@/lib/ai/build";
 import { metered } from "@/lib/ai/config";
-import { LessonSchema } from "@/lib/ai/schemas";
+import { LessonSchema, WidgetSchema, type LessonOut } from "@/lib/ai/schemas";
+import { VisualInput } from "@/lib/ai/tools";
 import { costUsd } from "@/lib/server/budget";
 import { mockWriter, type Sample } from "./mock-writer";
 import { realModel, REAL, runs } from "./models";
@@ -63,6 +64,22 @@ const parsed = (text: string) => {
   }
 };
 
+// Every picture and interactive kind the schema lets the writer use; the sample must pass the gates
+// with each of them, or a gate is refusing something the schema allows.
+const kindsOf = (u: { options: readonly { shape: { kind: { value: string } } }[] }) => u.options.map((o) => o.shape.kind.value).sort();
+const VISUALS = kindsOf(VisualInput);
+const WIDGETS = kindsOf(WidgetSchema);
+
+function kindsUsed(lessons: LessonOut[]) {
+  const visuals = new Set<string>();
+  const widgets = new Set<string>();
+  for (const sc of lessons.flatMap((l) => l.scenes)) {
+    if (sc.kind === "slide") for (const b of sc.blocks) if (b.type === "visual") visuals.add(b.visual.kind);
+    if (sc.kind === "interactive") widgets.add(sc.widget.kind);
+  }
+  return { visuals: [...visuals].sort(), widgets: [...widgets].sort() };
+}
+
 const promptText = (prompt: { content: unknown }[]) =>
   prompt.map((m) => (typeof m.content === "string" ? m.content : (m.content as { text?: string }[]).map((p) => p.text ?? "").join(" "))).join("\n");
 
@@ -93,6 +110,7 @@ describe.skipIf(!runs("writer"))("course writer sample", () => {
     );
 
     const rows: Row[] = [];
+    const passedLessons: LessonOut[] = [];
     for (const s of SAMPLES)
       for (const b of BANDS) {
         const req: CourseRequest = { goal: s.goal, grade: b.grade, subject: s.subject, length: "lesson", locale: s.locale };
@@ -105,7 +123,11 @@ describe.skipIf(!runs("writer"))("course writer sample", () => {
         } catch (err) {
           schemaError = (err as Error).message.slice(0, 200);
         }
-        for (const e of events) if (e.type === "lesson") expect(LessonSchema.safeParse(e.lesson).success).toBe(true);
+        for (const e of events)
+          if (e.type === "lesson") {
+            expect(LessonSchema.safeParse(e.lesson).success).toBe(true);
+            passedLessons.push(e.lesson);
+          }
         const before = calls;
         const t0 = performance.now();
         const hit = cachedCourse(req);
@@ -131,6 +153,8 @@ describe.skipIf(!runs("writer"))("course writer sample", () => {
     const passed = attempted.filter((r) => r.lessons === 1).length / attempted.length;
     const reasons: Record<string, number> = {};
     for (const r of rows) for (const why of r.reasons) reasons[why.replace(/".*"/, '"…"')] = (reasons[why.replace(/".*"/, '"…"')] ?? 0) + 1;
+    const used = kindsUsed(passedLessons);
+    const notUsed = (all: string[], seen: string[]) => all.filter((k) => !seen.includes(k));
     const summary = {
       mode: real ? `real model (${real.modelId})` : "mock writer (priced as claude-opus-5-5)",
       courses: rows.length,
@@ -143,6 +167,8 @@ describe.skipIf(!runs("writer"))("course writer sample", () => {
       modelCalls: calls,
       costTotalUsd: cost,
       rejections: reasons,
+      pictureKindsPassed: used.visuals,
+      interactiveKindsPassed: used.widgets,
     };
     const md = [
       `# Course writer sample — ${summary.mode}`,
@@ -154,6 +180,7 @@ describe.skipIf(!runs("writer"))("course writer sample", () => {
       `- Outputs the schema refused: ${summary.schemaFailures}`,
       `- Courses served from the cache on the second request: ${summary.cachedAfterwards} / ${rows.length}, slowest ${summary.slowestCacheHitMs.toFixed(2)} ms, no model calls`,
       `- Model calls: ${calls}; estimated cost ${usd(cost)}`,
+      `- Picture kinds in passing lessons: ${used.visuals.length} / ${VISUALS.length}${notUsed(VISUALS, used.visuals).length ? ` (never passed: ${notUsed(VISUALS, used.visuals).join(", ")})` : ""}; interactive kinds: ${used.widgets.length} / ${WIDGETS.length}${notUsed(WIDGETS, used.widgets).length ? ` (never passed: ${notUsed(WIDGETS, used.widgets).join(", ")})` : ""}`,
       "",
       "## Why first drafts were rejected",
       "",
@@ -177,6 +204,9 @@ describe.skipIf(!runs("writer"))("course writer sample", () => {
       expect(passed).toBe(1);
       expect(summary.cachedAfterwards).toBe(90);
       expect(summary.slowestCacheHitMs).toBeLessThan(50);
+      // Every kind the schema allows passed the gates somewhere in the sample.
+      expect(used.visuals).toEqual(VISUALS);
+      expect(used.widgets).toEqual(WIDGETS);
       expect(Object.keys(reasons).sort()).toEqual(['does not start by showing the idea', 'exclamation mark', 'hint gives the answer in "…"', "no quiz to check it"]);
     }
   });

@@ -74,6 +74,10 @@ family. Only courses whose every lesson passed are cached for the next family.
 1. Run `EVAL_REAL=1 EVAL_SUITE=writer npm run evals` and open `evals/out/writer.md`.
 2. **Outputs the schema refused** should be 0. If not, the model cannot produce the shape: fix the
    schema or its field descriptions in `lib/ai/schemas.ts` (with its owner), not the prompt.
+   **Picture and interactive kinds in passing lessons** shows which of the kinds the schema allows
+   made it through the gates. The mock run uses all of them (12 pictures, 5 interactives), so a
+   gate never refuses a kind the schema accepts; on a real model a kind that never appears either
+   isn't being chosen (say in `WRITER` when it fits) or keeps failing a gate (read those drafts).
 3. **Why first drafts were rejected** is the tuning list, most frequent first. For the top reason,
    read three rejected drafts (in `writer.json`) and decide which side is wrong:
    - the draft broke a rule the model was given → make that line of `WRITER` say it the way the
