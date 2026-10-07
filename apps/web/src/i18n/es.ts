@@ -1774,6 +1774,27 @@ const es: Record<Key, string> = {
   "land.terms.s6.b": "Las funciones van a cambiar mientras se construye, y puede que haya que reiniciar los datos de demostración. Cuando cambien estos términos, también cambiará la fecha de arriba.",
   "land.terms.s7.t": "Sin garantías",
   "land.terms.s7.b": "Se ofrece tal como está, sin garantías, en la medida en que la ley lo permita.",
+  // -- voice
+  "voice.selfTest.start": "Probar el micrófono",
+  "voice.selfTest.again": "Probar de nuevo",
+  "voice.selfTest.prompt": "Di unas palabras en voz alta, por ejemplo, qué desayunaste.",
+  "voice.selfTest.listening": "Escuchando durante {n} segundos…",
+  "voice.selfTest.ok": "El micrófono funciona. Te escuchamos bien.",
+  "voice.selfTest.quiet": "Escuchamos algo, pero muy bajito. Acércate al micrófono o habla un poco más fuerte.",
+  "voice.selfTest.silent": "No escuchamos nada. Revisa que el micrófono esté conectado y que no esté silenciado.",
+  "voice.level": "Nivel del micrófono: {n} de 10",
+  "voice.error.unsupported": "Este navegador no puede usar el micrófono aquí. Siempre puedes escribir.",
+  "voice.error.denied": "El navegador no permite usar el micrófono. Un adulto puede permitirlo en la configuración del sitio en el navegador. Siempre puedes escribir.",
+  "voice.error.noDevice": "No encontramos un micrófono. Siempre puedes escribir.",
+  "voice.error.busy": "Otra aplicación está usando el micrófono. Ciérrala e inténtalo de nuevo, o escribe.",
+  "voice.error.network": "Se cortó la conexión mientras escuchábamos. Inténtalo de nuevo o escribe.",
+  "voice.error.consent": "Primero un adulto tiene que activar la voz para este estudiante. Siempre puedes escribir.",
+  "voice.error.unavailable": "La voz no está disponible en este momento. Siempre puedes escribir.",
+  "voice.error.speak": "No pudimos leer la respuesta en voz alta. Sigue en la pantalla.",
+  "voice.source.deepgram": "Deepgram convierte el habla en texto. El audio les llega solo mientras el micrófono está encendido y nunca les enviamos el nombre de un estudiante.",
+  "voice.source.elevenlabs": "ElevenLabs lee las respuestas en voz alta. Solo les enviamos el texto de la respuesta, nunca el nombre de un estudiante.",
+  "voice.source.browser": "Este navegador convierte el habla en texto y puede enviar el audio a Apple o Google.",
+  "voice.source.readOnly": "Las respuestas se leen en voz alta con la voz de este navegador. El micrófono sigue apagado hasta que un adulto lo permita.",
 };
 
 export default es;

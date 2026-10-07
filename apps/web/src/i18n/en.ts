@@ -1772,6 +1772,27 @@ const en = {
   "land.terms.s6.b": "Features will change while it's being built, and demo data may need to be reset. When these terms change, the date at the top changes too.",
   "land.terms.s7.t": "No guarantees",
   "land.terms.s7.b": "It's offered as it is, without warranties, to the extent the law allows.",
+  // -- voice
+  "voice.selfTest.start": "Test the microphone",
+  "voice.selfTest.again": "Test again",
+  "voice.selfTest.prompt": "Say a few words out loud, like what you had for breakfast.",
+  "voice.selfTest.listening": "Listening for {n} seconds…",
+  "voice.selfTest.ok": "The microphone works. We heard you clearly.",
+  "voice.selfTest.quiet": "We heard something, but it was very quiet. Move closer to the microphone or speak a little louder.",
+  "voice.selfTest.silent": "We didn't hear anything. Check that the microphone is plugged in and not muted.",
+  "voice.level": "Microphone level: {n} out of 10",
+  "voice.error.unsupported": "This browser can't use the microphone here. Typing always works.",
+  "voice.error.denied": "The browser isn't allowing the microphone. A grown-up can allow it in the browser's site settings. Typing always works.",
+  "voice.error.noDevice": "No microphone was found. Typing always works.",
+  "voice.error.busy": "Another app is using the microphone. Close it and try again, or type instead.",
+  "voice.error.network": "The connection dropped while listening. Try again, or type instead.",
+  "voice.error.consent": "A grown-up needs to turn on voice for this learner first. Typing always works.",
+  "voice.error.unavailable": "Voice isn't available right now. Typing always works.",
+  "voice.error.speak": "The reply couldn't be read aloud. It's still on the screen.",
+  "voice.source.deepgram": "Speech is turned into text by Deepgram. Audio goes to them only while the microphone is on, and we never send a learner's name.",
+  "voice.source.elevenlabs": "Replies are read aloud by ElevenLabs. We send them the reply text only, never a learner's name.",
+  "voice.source.browser": "Speech is turned into text by this browser, which may send audio to Apple or Google.",
+  "voice.source.readOnly": "Replies are read aloud by this browser's voice. The microphone stays off until a grown-up allows it.",
 } as const;
 
 export default en;
