@@ -11,6 +11,8 @@ async function openChild(page: Page, name: string) {
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
+const teach = (page: Page, name = "Ada") => page.getByRole("region", { name: `How we teach ${name}` });
+
 /**
  * Yesterday, one set on "Add within 20" with three hints: after two of them the next problem was
  * right on their own, after one it was missed. Written straight into this browser's record.
@@ -41,7 +43,7 @@ test("editing “prefer pictures” persists across a reload and shows it was se
   const errors = collectErrors(page);
   await family(page, "teach", [["Ada", "4"]]);
   await openChild(page, "Ada");
-  const section = page.getByRole("region", { name: "How we teach Ada" });
+  const section = teach(page);
   await expect(section.getByText("Not enough yet").first()).toBeVisible();
   await expect(section.getByText("Set by a grown-up")).toHaveCount(0);
 
@@ -51,33 +53,47 @@ test("editing “prefer pictures” persists across a reload and shows it was se
   await expect(section.getByText("Set by a grown-up")).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("region", { name: "How we teach Ada" }).getByRole("group", { name: "Pictures that help" }).getByRole("radio", { name: "Pictures" })).toBeChecked();
-  await expect(page.getByRole("region", { name: "How we teach Ada" }).getByText("Set by a grown-up")).toBeVisible();
+  await expect(teach(page).getByRole("group", { name: "Pictures that help" }).getByRole("radio", { name: "Pictures" })).toBeChecked();
+  await expect(teach(page).getByText("Set by a grown-up")).toBeVisible();
   await noOverflow(page);
 
-  // Clearing the edits sits behind a confirm, and the record decides again.
-  await page.getByRole("button", { name: "Clear my edits" }).click();
-  await page.getByRole("button", { name: "Yes, clear" }).click();
-  await expect(page.getByRole("region", { name: "How we teach Ada" }).getByText("Set by a grown-up")).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "Pictures that help" }).getByRole("radio", { name: "Follow the record" })).toBeChecked();
+  // Clearing the edits sits behind a confirm, and practice decides again.
+  await teach(page).getByRole("button", { name: "Clear my edits" }).click();
+  await teach(page).getByRole("button", { name: "Yes, clear" }).click();
+  await expect(teach(page).getByText("Set by a grown-up")).toHaveCount(0);
+  await expect(teach(page).getByRole("group", { name: "Pictures that help" }).getByRole("radio", { name: "Decide from practice" })).toBeChecked();
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
 test("a choice and a note by keyboard alone", async ({ page }) => {
   await family(page, "keys", [["Ada", "4"]]);
   await openChild(page, "Ada");
-  const lead = page.getByRole("group", { name: "When stuck, start with" });
-  await lead.getByRole("radio", { name: "Follow the record" }).focus();
+  const lead = teach(page).getByRole("group", { name: "When stuck, start with" });
+  await lead.getByRole("radio", { name: "Decide from practice" }).focus();
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
   await expect(lead.getByRole("radio", { name: "A worked example" })).toBeChecked();
-  await page.getByLabel("Note for the tutor").fill("Likes drawing. Ada does better without a rush.");
-  await page.getByRole("button", { name: "Save" }).focus();
+  await teach(page).getByLabel("Note for the tutor").fill("Likes drawing. Ada does better without a rush.");
+  await teach(page).getByRole("button", { name: "Save note" }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+  await expect(teach(page).getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("Note for the tutor")).toHaveValue("Likes drawing. Ada does better without a rush.");
-  await expect(page.getByRole("group", { name: "When stuck, start with" }).getByRole("radio", { name: "A worked example" })).toBeChecked();
+  await expect(teach(page).getByLabel("Note for the tutor")).toHaveValue("Likes drawing. Ada does better without a rush.");
+  await expect(teach(page).getByRole("group", { name: "When stuck, start with" }).getByRole("radio", { name: "A worked example" })).toBeChecked();
+});
+
+test("turning the teaching profile off deletes the edits and stays off after a reload", async ({ page }) => {
+  await family(page, "off", [["Ada", "4"]]);
+  await openChild(page, "Ada");
+  await teach(page).getByRole("group", { name: "Pictures that help" }).getByText("Words", { exact: true }).click();
+  await teach(page).getByRole("button", { name: "Turn off and delete" }).click();
+  await teach(page).getByRole("button", { name: "Yes, turn off" }).click();
+  await expect(teach(page).getByText(/^Turned off\./)).toBeVisible();
+  await page.reload();
+  await expect(teach(page).getByText(/^Turned off\./)).toBeVisible();
+  await expect(teach(page).getByRole("group", { name: "Pictures that help" })).toHaveCount(0);
+  await teach(page).getByRole("button", { name: "Turn back on" }).click();
+  await expect(teach(page).getByRole("group", { name: "Pictures that help" }).getByRole("radio", { name: "Decide from practice" })).toBeChecked();
 });
 
 test("a seeded history shows an “Is it working?” sentence on the child page", async ({ page }) => {
@@ -99,8 +115,10 @@ test.describe("accessibility", () => {
     await family(page, "a11y-child", [["Ada", "4"]]);
     await seedHints(page, "Ada");
     await openChild(page, "Ada");
-    await page.getByRole("group", { name: "Pictures that help" }).getByText("Number line", { exact: true }).click();
-    await expect(page.getByText("Set by a grown-up")).toBeVisible();
+    await teach(page).getByRole("group", { name: "Pictures that help" }).getByText("Number line", { exact: true }).click();
+    await expect(teach(page).getByText("Set by a grown-up")).toBeVisible();
+    await teach(page).getByText("What each one needs").click();
+    await page.getByText("The whole map", { exact: false }).first().click();
     const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
     const bad = r.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
     expect(bad.map((v) => `${v.id} — ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")}`)).toEqual([]);

@@ -42,7 +42,7 @@ export function ProvedList({ proved, locale }: { proved: Verified["proved"]; loc
             <span className="font-medium text-ink">{getSkill(p.skillId)?.title[locale] ?? p.skillId}</span>
             {p.standard && (
               <span className="font-opmono text-muted">
-                <span className="sr-only">{t("lm.proved.standard", { code: p.standard })}</span>
+                <span className="sr-only">{t("lm.proved.code", { code: p.standard })}</span>
                 <span aria-hidden="true">{p.standard}</span>
               </span>
             )}

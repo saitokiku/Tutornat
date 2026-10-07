@@ -5,6 +5,20 @@ import { newId, update, type StoreState } from "./store";
 // Teaching acts: what we did to help and what it was meant to do. Outcomes are derived later from
 // the evidence (learning/outcomes.ts), never written by the code that did the helping.
 
+/**
+ * What each kind of act carries. Outcomes read these fields, so an act logged differently stays pending.
+ *
+ * - hint · steps · similar (practice Runner), intent "next-try-right": `setId`, `skillId`, `ref` = the
+ *   slot's index in set.slots as a string ("0", "1", …, the index recordAnswer gets); a hint's `detail`
+ *   is the rung just shown, "1" | "2" | "3".
+ * - tutor, intent "next-try-right", once: `ref` = the thread id, `skillId` when known. Beside a problem
+ *   (the drawer) also `setId` and `detail` = String(item.seed), so the helped problem is skipped and the
+ *   next one decides.
+ * - set "skill-moves" · check "check-decides": `setId`, `skillId`. prep "test-goes-well": `ref` = event id.
+ * - plan "plan-line-done", once: `ref` = "<date>:<plan item key>". lesson "lesson-checks-pass", once:
+ *   `ref` = "<courseId>/<lessonId>", before the first quiz answer. course "course-finished": `ref` = course id.
+ * - nudge "parent-acts", once: `ref` = nudgeKey(kind, id) from learning/outcomes, `detail` = the kind.
+ */
 export type ActInput = Omit<TeachingAct, "id" | "at" | "outcome" | "resolvedAt">;
 
 /**

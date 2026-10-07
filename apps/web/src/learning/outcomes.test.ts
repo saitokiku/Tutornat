@@ -60,21 +60,36 @@ describe("next-try-right", () => {
     expect(one(hint, { sets: [set], attempts: [ans("s1", 11, 2, { assisted: true })] }, T0 + 10 * MIN).status).toBe("pending");
   });
 
-  it("help on the last problem of a set is decided by the next answer on the skill within a week", () => {
+  it("help on the last problem on the skill in a set has nothing in that set to show it: void once the set ends", () => {
     const last = act({ kind: "steps", intent: "next-try-right", skillId: S, setId: "s1", ref: "2" }, 2);
-    const done = { ...set, finishedAt: T0 + 4 * MIN };
     const helped = ans("s1", 12, 3, { assisted: true });
-    expect(one(last, { sets: [done], attempts: [helped, ans("s2", 20, 60 * 24)] }, T0 + 2 * DAY)).toMatchObject({ status: "met", resolvedAt: T0 + DAY });
-    expect(one(last, { sets: [done], attempts: [helped, ans("s2", 20, 60 * 24, { correct: false })] }, T0 + 2 * DAY).status).toBe("missed");
-    expect(one(last, { sets: [done], attempts: [helped, ans("s2", 20, 60 * 24 * 8)] }, T0 + 9 * DAY).status).toBe("pending");
+    // A later set doesn't decide it: the intent is the next try in this set.
+    expect(one(last, { sets: [{ ...set, finishedAt: T0 + 4 * MIN }], attempts: [helped, ans("s2", 20, 60 * 24)] }, T0 + 2 * DAY).status).toBe("void");
+    expect(one(last, { sets: [set], attempts: [helped] }, T0 + 5 * MIN).status).toBe("pending");
+    // Left partway, no answer for half a day: closed.
+    expect(one(last, { sets: [set], attempts: [helped] }, T0 + 13 * HOUR).status).toBe("void");
+    // Never answered at all, a week on.
+    expect(one(last, { sets: [set], attempts: [] }, T0 + 8 * DAY).status).toBe("void");
   });
 
   it("a tutor conversation is judged by the next answer on its skill within a day", () => {
     const talk = act({ kind: "tutor", intent: "next-try-right", skillId: S, ref: "thread-1" });
     expect(one(talk, { attempts: [ans(undefined, 1, 30, { mode: "tutor", correct: false, assisted: true }), ans("s9", 2, 40)] }).status).toBe("met");
     expect(one(talk, { attempts: [ans("s9", 2, 40, { correct: false })] }).status).toBe("missed");
-    expect(one(talk, { attempts: [ans("s9", 2, 25 * 60)] }, T0 + 2 * DAY).status).toBe("pending");
+    expect(one(talk, { attempts: [ans("s9", 2, 40)] }, T0 + 30 * MIN).status).toBe("met");
+    expect(one(talk, { attempts: [] }, T0 + 2 * HOUR).status).toBe("pending");
+    expect(one(talk, { attempts: [ans("s9", 2, 25 * 60)] }, T0 + 2 * DAY).status).toBe("void");
     expect(one({ ...talk, skillId: undefined }, { attempts: [ans("s9", 2, 40)] }).status).toBe("pending");
+  });
+
+  it("a talk beside a problem skips that problem's own (helped) answer: the next problem decides", () => {
+    // The drawer opened on seed 5 in set s1: a tutor help row, the talk, then the helped answer and the next problem.
+    const drawer = act({ kind: "tutor", intent: "next-try-right", skillId: S, setId: "s1", ref: "thread-2", detail: "5" }, 1);
+    const help = ans(undefined, 5, 0.5, { mode: "tutor", correct: false, assisted: true });
+    const helped = ans("s1", 5, 3, { assisted: true });
+    expect(one(drawer, { sets: [practiceSet("s1", [5, 6])], attempts: [help, helped, ans("s1", 6, 4)] })).toMatchObject({ status: "met", resolvedAt: T0 + 4 * MIN });
+    expect(one(drawer, { sets: [practiceSet("s1", [5, 6])], attempts: [help, helped, ans("s1", 6, 4, { correct: false })] }).status).toBe("missed");
+    expect(one(drawer, { sets: [practiceSet("s1", [5, 6])], attempts: [help, helped] }).status).toBe("pending");
   });
 
   it("keeps an outcome already on the act", () => {
@@ -100,6 +115,14 @@ describe("skill-moves", () => {
   it("is pending until three sets have happened", () => {
     expect(one(start, { sets: [practiceSet("s1", [], { finishedAt: T0 + DAY })], attempts: alternating("s1", 10) }, T0 + 2 * DAY).status).toBe("pending");
   });
+
+  it("a set on a skill that was already ready or proved has nothing to move: void, never met", () => {
+    // Five right at level 1 step up to level 2; ten right at the top level make it ready for a check.
+    const ready = [...[0, 1, 2, 3, 4].map((i) => ans("p0", i, -100 + i)), ...Array.from({ length: 10 }, (_, i) => ans("p0", 10 + i, -90 + i, { level: 2 }))];
+    const review = act({ kind: "set", intent: "skill-moves", skillId: S, setId: "r1" });
+    const after = [0, 1, 2].map((i) => ans("r1", 50 + i, 1 + i, { level: 2, assisted: i === 2 }));
+    expect(one(review, { sets: [practiceSet("r1", [50, 51, 52], { kind: "review", finishedAt: T0 + 5 * MIN })], attempts: [...ready, ...after] }, T0 + DAY).status).toBe("void");
+  });
 });
 
 describe("check-decides", () => {
@@ -113,6 +136,13 @@ describe("check-decides", () => {
 
   it("is pending until all five are answered", () => {
     expect(one(check, { attempts: answers(3, 3) }).status).toBe("pending");
+  });
+
+  it("a check left partway is not passed; one opened and never answered is left out", () => {
+    expect(one(check, { attempts: answers(3, 3) }, T0 + 13 * HOUR)).toMatchObject({ status: "missed", score: { n: 3, of: 3 } });
+    expect(one(check, { sets: [practiceSet("c1", [1, 2, 3, 4, 5], { kind: "check", finishedAt: T0 + 5 * MIN })], attempts: answers(2, 2) })).toMatchObject({ status: "missed", score: { n: 2, of: 2 } });
+    expect(one(check, { attempts: [] }, T0 + 13 * HOUR).status).toBe("void");
+    expect(one(check, { attempts: [] }, T0 + HOUR).status).toBe("pending");
   });
 });
 
@@ -206,13 +236,27 @@ describe("parent-acts", () => {
   const event: SchoolEvent = { id: "e1", profileId: P, title: "Quiz", kind: "quiz", date: "2026-10-09", skillIds: [S], source: "typed", createdAt: T0 };
   const nudge = (ref: string) => act({ kind: "nudge", intent: "parent-acts", ref });
 
-  it("reads suggestion keys tolerantly", () => {
+  it("reads suggestion keys tolerantly, the kind from the act's detail when it names one", () => {
     expect(parseNudge(nudgeKey("check", S))).toEqual({ kind: "check", skillId: S });
     expect(parseNudge(`overdue:${S}`)).toEqual({ kind: "check", skillId: S });
     expect(parseNudge(`stuck:${S}`)).toEqual({ kind: "stuck", skillId: S });
     expect(parseNudge("noprep:e1", [event])).toEqual({ kind: "prep", eventId: "e1" });
     expect(parseNudge("idle")).toEqual({ kind: "idle" });
     expect(parseNudge("idle:2026-10-05")).toEqual({ kind: "idle" });
+    expect(parseNudge("x:2026-10-05", [], "idle")).toEqual({ kind: "idle" });
+    expect(parseNudge("waiting", [], "check", S)).toEqual({ kind: "check", skillId: S });
+  });
+
+  it("can't tell what a suggestion was about when its skill or test is not on the record", () => {
+    expect(parseNudge("check:no.such.skill")).toBeNull();
+    expect(parseNudge("gone:e9")).toBeNull();
+    expect(parseNudge("prep:e9", [], "prep")).toEqual({ kind: "prep", eventId: "e9" });
+    // A test deleted before any prep: whether the suggestion was acted on can't be known, so it isn't counted.
+    expect(one({ ...nudge("prep:e9"), detail: "prep" }, {}, T0 + 8 * DAY).status).toBe("void");
+    expect(one(nudge("check:no.such.skill"), {}, T0 + 8 * DAY).status).toBe("void");
+    // Prep done before the test was deleted still counts.
+    const prepped = { sets: [practiceSet("p1", [1], { kind: "prep" as const, eventId: "e9" })], attempts: [ans("p1", 1, 90)] };
+    expect(one({ ...nudge("prep:e9"), detail: "prep" }, prepped, T0 + 8 * DAY).status).toBe("met");
   });
 
   it("is met when the suggested action happens within a week", () => {
@@ -281,11 +325,21 @@ describe("isItWorking", () => {
     expect(words(isItWorking(resolved, empty, now))).toEqual(["After a hint, the next problem was right on their own 2 of 3 times; after a worked example, 2 of 2."]);
   });
 
-  it("says what the tutor does with it, and when the tutor that reads it isn't connected", () => {
+  it("says what to start with when they're stuck, and whose choice that is", () => {
     const resolved = [helped("hint", "met", 0)];
     const set = teachingProfile({ attempts: [], acts: [], sets: [], prefs: { leadWith: "example" } }, now);
-    expect(words(isItWorking(resolved, set, now))[1]).toBe("The tutor leads with a worked example, as a grown-up chose.");
-    expect(words(isItWorking(resolved, set, now, { ai: false }))[1]).toBe("When the AI tutor is connected, it will lead with a worked example.");
+    expect(words(isItWorking(resolved, set, now))[1]).toBe("When they're stuck, start with a worked example, as you chose.");
+    const examplesWork = [...[0, 1, 2].map((i) => helped("hint", "missed", i)), ...[3, 4, 5].map((i) => helped("steps", "met", i))];
+    const derived = teachingProfile({ attempts: [], acts: [], sets: [], resolved: examplesWork }, now);
+    expect(words(isItWorking(examplesWork, derived, now))).toEqual([
+      "After a hint, the next problem was right on their own 0 of 3 times; after a worked example, 3 of 3.",
+      "So when they're stuck, start with a worked example.",
+    ]);
+  });
+
+  it("leaves out acts that could never be decided", () => {
+    const resolved = [helped("hint", "void", 0), r({ kind: "set", intent: "skill-moves", status: "void", skillId: S }, 1), r({ kind: "set", intent: "skill-moves", status: "met", skillId: S }, 1)];
+    expect(words(isItWorking(resolved, empty, now))).toEqual(["1 of 1 practice sets moved their skill forward within three sets: a level up, or ready for a check."]);
   });
 
   it("notices hints landing less often than the week before", () => {

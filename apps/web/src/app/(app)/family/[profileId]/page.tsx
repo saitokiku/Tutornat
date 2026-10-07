@@ -10,6 +10,7 @@ import { CoachNote } from "@/components/family/CoachNote";
 import { HowWeTeach } from "@/components/family/HowWeTeach";
 import { IsItWorking } from "@/components/family/IsItWorking";
 import { ReadingLog } from "@/components/family/ReadingLog";
+import { SkillMap } from "@/components/family/SkillMap";
 import { Threads } from "@/components/family/Threads";
 import { CourseRecord, DraftMark, ProvedList, SchoolResults } from "@/components/family/Verified";
 import { Guard } from "@/components/gate";
@@ -22,7 +23,7 @@ import { itemTitle } from "@/components/today/TodayPlan";
 import { Button, SubjectDot, btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
 import { verifiedEducation } from "@/learning/profile";
-import { scrubName } from "@/lib/ai/context";
+import { familyNames, scrubFamily } from "@/lib/ai/context";
 import { subjectProgress, weekFacts } from "@/lib/family";
 import { todayPlan } from "@/lib/plan";
 import { statusesOf } from "@/lib/practice";
@@ -62,6 +63,7 @@ function ChildView({ child, now, locale, onOpenAs, t }: { child: Profile; now: n
   const statuses = useStore((s) => statusesOf(s, child.id, now));
   const school = useStore((s) => comingUp(s.events.filter((e) => e.profileId === child.id), localDate(now), 14));
   const classes = useStore((s) => classesOf(s, child.id));
+  const others = useStore((s) => familyNames(s, child));
   const verified = useStore((s) =>
     verifiedEducation({ statuses, activity: s.activity.filter((e) => e.profileId === child.id), courses: s.courses.filter((c) => c.profileId === child.id), results: resultsOf(s, child.id) }),
   );
@@ -72,7 +74,7 @@ function ChildView({ child, now, locale, onOpenAs, t }: { child: Profile; now: n
 
   return (
     <div className="space-y-10">
-      <Link href="/family" className="inline-flex min-h-10 items-center gap-1.5 text-sm text-muted hover:text-ink">
+      <Link href="/family" className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted hover:text-ink">
         <IconArrowLeft size={16} /> {t("family.title")}
       </Link>
       <header className="flex flex-wrap items-center gap-4">
@@ -136,8 +138,8 @@ function ChildView({ child, now, locale, onOpenAs, t }: { child: Profile; now: n
           {facts.stuck.length > 0 && <Fact label={t("child.stuck")} value={list(facts.stuck)} warn />}
           <Fact label={t("child.helpOn")} value={facts.helpOn.length ? list(facts.helpOn) : t("child.none")} />
         </ul>
-        {/* School titles are free text and can carry the child's name; it never goes to a model. */}
-        <CoachNote facts={facts} locale={child.locale} comingUp={school.map((e) => scrubName(`${e.title} (${e.date})`, child.nickname))} />
+        {/* School titles are free text and can carry the child's name or a sibling's; names never go to a model. */}
+        <CoachNote facts={facts} locale={child.locale} comingUp={school.map((e) => scrubFamily(`${e.title} (${e.date})`, child.nickname, others, child.locale))} />
         <p className="text-xs text-muted">{t("child.honest")}</p>
       </section>
 
@@ -165,6 +167,7 @@ function ChildView({ child, now, locale, onOpenAs, t }: { child: Profile; now: n
                   </p>
                 ))}
                 <ProvedList proved={verified.proved.filter((x) => getSkill(x.skillId)?.subject === subject)} locale={child.locale} />
+                <SkillMap subject={subject} statuses={statuses} locale={child.locale} now={now} />
               </li>
             );
           })}

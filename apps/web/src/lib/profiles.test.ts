@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { logAct, resolvedActsOf } from "./acts";
 import { signUp } from "./auth";
-import { createLearner, setTeaching, teachingOf, TEACHING_NOTE_MAX } from "./profiles";
+import { createLearner, setTeaching, teachingOf, TEACHING_NOTE_MAX, updateLearner } from "./profiles";
 import { read, resetMemory, update } from "./store";
 import type { Profile } from "./types";
 
@@ -37,11 +37,36 @@ describe("setTeaching", () => {
     expect(read().profiles[0]).not.toHaveProperty("teaching");
   });
 
+  it("turns the profile off, deleting choices and note, and back on", async () => {
+    const a = await kid();
+    setTeaching(a.id, { representation: "pictures", note: "likes drawing" });
+    setTeaching(a.id, { off: true, representation: "words", note: "kept?" });
+    expect(teachingOfAda()).toEqual({ off: true });
+    const off = teachingOf(read(), read().profiles[0], Date.now());
+    expect(off.off).toBe(true);
+    expect(off.note).toBeUndefined();
+    setTeaching(a.id, {});
+    expect(read().profiles[0]).not.toHaveProperty("teaching");
+  });
+
   it("only changes a learner in the signed-in family", async () => {
     const a = await kid();
     await signUp({ email: "other@example.com", password: "longenough", displayName: "Lee" });
     setTeaching(a.id, { representation: "pictures" });
     expect(read().profiles.find((p) => p.id === a.id)).not.toHaveProperty("teaching");
+  });
+});
+
+describe("renaming a learner", () => {
+  it("carries the new name into the note for the tutor, so the old one can't slip past the scrub", async () => {
+    await signUp({ email: "p@example.com", password: "longenough", displayName: "Sam" });
+    const kid = createLearner({ nickname: "Isabella", grade: "3", locale: "en" }) as Profile;
+    setTeaching(kid.id, { note: "Isabella gets anxious with timers; isabella's sister helps" });
+    expect(updateLearner(kid.id, { nickname: "Bella", grade: "3", locale: "en" })).toBeNull();
+    expect(read().profiles[0]).toMatchObject({ nickname: "Bella", teaching: { note: "Bella gets anxious with timers; Bella's sister helps" } });
+    // Same name: the note is left exactly as written.
+    updateLearner(kid.id, { nickname: "Bella", grade: "4", locale: "en" });
+    expect(read().profiles[0].teaching?.note).toBe("Bella gets anxious with timers; Bella's sister helps");
   });
 });
 

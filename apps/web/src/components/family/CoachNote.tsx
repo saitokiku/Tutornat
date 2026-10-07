@@ -53,7 +53,7 @@ export function CoachNote({ facts, locale, comingUp }: { facts: WeekFacts; local
       ) : (
         <div className="flex flex-wrap items-center gap-3">
           <p className="min-w-0 flex-1 text-sm text-muted">{failed ? t("child.coachFailed") : t("child.coachOffer")}</p>
-          <Button size="sm" variant="secondary" loading={busy} onClick={write}>
+          <Button variant="secondary" loading={busy} onClick={write}>
             {t("child.coachWrite")}
           </Button>
         </div>

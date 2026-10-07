@@ -17,8 +17,8 @@ const DAY = 24 * HOUR;
 export const OUTCOME_RULES = {
   /** A tutor conversation is judged by the learner's next answer on its skill within this long. */
   tutorMs: DAY,
-  /** A set with no later problem on the skill hands the decision to the next answer on it within this long. */
-  laterMs: 7 * DAY,
+  /** An act still waiting for the evidence that would decide it after this long is left out. */
+  staleMs: 7 * DAY,
   /** An unfinished set with no answer for this long is closed (left, not paused). */
   closedMs: 12 * HOUR,
   /** A practice set moves its skill when the level rises or the skill is ready within this many sets. */
@@ -33,7 +33,12 @@ export const OUTCOME_RULES = {
   lessonPass: RULES.checkPass / RULES.checkSize,
 };
 
-export type Status = "met" | "missed" | "pending";
+/**
+ * met / missed: the evidence decided it. pending: the evidence isn't in yet. void: the evidence that
+ * would decide it can no longer come (help on the last problem of a set, a practice set on a skill
+ * that was already ready, a suggestion about a test that was deleted); left out of every count.
+ */
+export type Status = "met" | "missed" | "pending" | "void";
 
 export type ResolvedAct = TeachingAct & {
   status: Status;
@@ -45,6 +50,9 @@ export type ResolvedAct = TeachingAct & {
   /** The test, lesson or course title, for sentences. */
   about?: string;
 };
+
+/** Decided either way: the only acts any count reads. */
+export const decided = (a: Pick<ResolvedAct, "status">) => a.status === "met" || a.status === "missed";
 
 /** The parts of the record outcomes read. StoreState fits it. */
 export type OutcomeRecord = {
@@ -62,6 +70,7 @@ type Index = ReturnType<typeof indexOf>;
 type Judged = Pick<ResolvedAct, "status" | "resolvedAt" | "score" | "school" | "about">;
 
 const PENDING: Judged = { status: "pending" };
+const VOID: Judged = { status: "void" };
 const byTime = <T extends { at: number }>(list: T[]) => [...list].sort((a, b) => a.at - b.at);
 const push = <K, V>(m: Map<K, V[]>, k: K, v: V) => (m.get(k) ?? m.set(k, []).get(k)!).push(v);
 const ownRight = (a: Attempt) => a.correct && !a.assisted;
@@ -85,7 +94,7 @@ function indexOf(r: OutcomeRecord) {
   return { r, answersBySkill, allBySkill, bySet, sets: new Map(r.sets.map((s) => [s.id, s])) };
 }
 
-/** Each act with its outcome: met, missed, or pending while the evidence isn't in yet. */
+/** Each act with its outcome: met, missed, pending while the evidence isn't in yet, or void. */
 export function resolveActs(acts: TeachingAct[], record: OutcomeRecord, now: number): ResolvedAct[] {
   const ix = indexOf(record);
   return acts.map((act) => {
@@ -102,7 +111,7 @@ function resolve(act: TeachingAct, ix: Index, now: number): Judged {
     case "skill-moves":
       return skillMoves(act, ix, now);
     case "check-decides":
-      return checkDecides(act, ix);
+      return checkDecides(act, ix, now);
     case "test-goes-well":
       return testGoesWell(act, ix, now);
     case "lesson-checks-pass":
@@ -122,39 +131,49 @@ const setClosed = (set: PracticeSet | undefined, answers: Attempt[], now: number
   !!set?.finishedAt || (answers.length > 0 && now - answers.at(-1)!.at > OUTCOME_RULES.closedMs);
 
 /**
- * Hint, worked steps, similar problem, tutor turn → the next answer on that skill is right on the
- * learner's own. For help on a problem in a set, "next" means the next problem on that skill after
- * the helped one (the helped answer itself is marked helped, so it can't show this); if the set had
- * none, the next answer on the skill anywhere within a week. A tutor conversation: within a day.
+ * Hint, worked steps, similar problem → the next problem on that skill in that set is right on the
+ * learner's own. The helped problem itself is marked helped, so the one after it decides; help on the
+ * last problem on the skill in a set has nothing to show it and is left out (void).
+ *
+ * A tutor conversation → the learner's next answer on its skill within a day. A talk beside a problem
+ * names that problem (setId, and its seed in `detail`); the problem's own answer is helped by the
+ * talk, so it is skipped and the next one decides.
  */
 function nextTryRight(act: TeachingAct, ix: Index, now: number): Judged {
   const set = act.setId ? ix.sets.get(act.setId) : undefined;
-  const slot = set && act.ref !== undefined && /^\d+$/.test(act.ref) ? set.slots[Number(act.ref)] : undefined;
+  const slot = act.kind !== "tutor" && set && act.ref !== undefined && /^\d+$/.test(act.ref) ? set.slots[Number(act.ref)] : undefined;
   const skillId = act.skillId ?? slot?.skillId;
   if (!skillId) return PENDING;
   const answers = ix.answersBySkill.get(`${act.profileId}|${skillId}`) ?? [];
 
   if (act.kind === "tutor" || !act.setId) {
-    const next = answers.find((a) => a.at > act.at);
-    return next && next.at - act.at <= OUTCOME_RULES.tutorMs ? judged(next) : PENDING;
+    const seed = act.kind === "tutor" && /^\d+$/.test(act.detail ?? "") ? Number(act.detail) : undefined;
+    const helped = (a: Attempt) => seed !== undefined && a.seed === seed && (!act.setId || a.setId === act.setId);
+    const until = act.at + OUTCOME_RULES.tutorMs;
+    const next = answers.find((a) => a.at > act.at && a.at <= until && !helped(a));
+    if (next) return judged(next);
+    return now > until ? VOID : PENDING;
   }
 
   const inSet = ix.bySet.get(`${act.profileId}|${act.setId}`) ?? [];
+  const closed = setClosed(set, inSet, now) || now - act.at > OUTCOME_RULES.staleMs;
   const helped = slot ? inSet.find((a) => a.seed === slot.seed && a.skillId === slot.skillId) : inSet.find((a) => a.skillId === skillId && a.at >= act.at);
-  if (!helped) return PENDING;
+  if (!helped) return closed ? VOID : PENDING;
   const later = inSet.slice(inSet.indexOf(helped) + 1).find((a) => a.skillId === skillId);
   if (later) return judged(later);
-  if (!setClosed(set, inSet, now)) return PENDING;
-  const next = answers.find((a) => a.at > helped.at && a.setId !== act.setId);
-  return next && next.at - helped.at <= OUTCOME_RULES.laterMs ? judged(next) : PENDING;
+  return closed ? VOID : PENDING;
 }
 
-/** Practice set → the skill's level rises, or it is ready for a check, within the next three sets on it. */
+/**
+ * Practice set → the skill's level rises, or it becomes ready for a check, within the next three sets
+ * on it. A set on a skill that was already ready or proved (a review) has nothing to move: void.
+ */
 function skillMoves(act: TeachingAct, ix: Index, now: number): Judged {
   const skillId = act.skillId ?? (act.setId ? ix.sets.get(act.setId)?.skillId : undefined);
   if (!skillId || !getSkill(skillId)) return PENDING;
   const mine = ix.allBySkill.get(`${act.profileId}|${skillId}`) ?? [];
   const before = skillStatus(skillId, mine.filter((a) => a.at < act.at), act.at);
+  if (isSecure(before)) return VOID;
   const order: string[] = [];
   for (const a of mine) if (a.mode !== "tutor" && a.setId && a.at >= act.at && !order.includes(a.setId)) order.push(a.setId);
   for (const [i, setId] of order.slice(0, OUTCOME_RULES.moveSets).entries()) {
@@ -166,12 +185,17 @@ function skillMoves(act: TeachingAct, ix: Index, now: number): Judged {
   return PENDING;
 }
 
-/** Check → passed (met) or not yet (missed), once all its problems are answered. */
-function checkDecides(act: TeachingAct, ix: Index): Judged {
+/**
+ * Check → passed (met) or not yet (missed) once all its problems are answered. A check left partway
+ * is not passed (missed, scored on what was answered); one opened and never answered is void.
+ */
+function checkDecides(act: TeachingAct, ix: Index, now: number): Judged {
   const answers = act.setId ? (ix.bySet.get(`${act.profileId}|${act.setId}`) ?? []) : [];
-  if (answers.length < RULES.checkSize) return PENDING;
   const own = answers.filter(ownRight).length;
-  return { status: own >= RULES.checkPass ? "met" : "missed", resolvedAt: answers.at(-1)!.at, score: { n: own, of: answers.length } };
+  if (answers.length >= RULES.checkSize) return { status: own >= RULES.checkPass ? "met" : "missed", resolvedAt: answers.at(-1)!.at, score: { n: own, of: answers.length } };
+  if (answers.length && setClosed(act.setId ? ix.sets.get(act.setId) : undefined, answers, now)) return { status: "missed", resolvedAt: answers.at(-1)!.at, score: { n: own, of: answers.length } };
+  if (!answers.length && now - act.at > OUTCOME_RULES.closedMs) return VOID;
+  return PENDING;
 }
 
 /** Prep before a school test → every linked skill secure (ready or better) going into the test day. */
@@ -234,26 +258,36 @@ function planLineDone(act: TeachingAct, ix: Index, now: number): Judged {
 // ----- suggestions to a grown-up -----
 
 export type NudgeKind = "check" | "stuck" | "prep" | "idle";
+const NUDGE_KINDS: NudgeKind[] = ["check", "stuck", "prep", "idle"];
+export type NudgeRef = { kind: NudgeKind; skillId?: string; eventId?: string };
 
 /** The key a suggestion to a grown-up is logged under, e.g. "check:m.round", "prep:<event id>", "idle". */
 export const nudgeKey = (kind: NudgeKind, id?: string) => (id ? `${kind}:${id}` : kind);
 
-/** Reads a suggestion's key. Tolerant: the kind word may vary, and the skill or event id can sit anywhere. */
-export function parseNudge(ref: string, events: SchoolEvent[] = []): { kind: NudgeKind; skillId?: string; eventId?: string } {
+/**
+ * Reads a suggestion's key. The kind comes from the act's `detail` when it names one (lib/nudges.ts
+ * logs it there); otherwise from the key's first word, tolerantly. null: the skill or test it is about
+ * is not on the record (deleted, or never was), so whether it was acted on can't be known.
+ */
+export function parseNudge(ref: string, events: SchoolEvent[] = [], kind?: string, skillId?: string): NudgeRef | null {
   const parts = ref.split(/[:/|]/);
   const head = parts[0].toLowerCase();
-  const skillId = parts.find((p) => getSkill(p));
-  const eventId = parts.find((p) => events.some((e) => e.id === p));
-  if (/stuck|hard/.test(head) && skillId) return { kind: "stuck", skillId };
-  if (/check|overdue|waiting|ready/.test(head) && skillId) return { kind: "check", skillId };
-  if (eventId) return { kind: "prep", eventId };
-  if (skillId) return { kind: "check", skillId };
-  return { kind: "idle" };
+  const skill = (skillId && getSkill(skillId) ? skillId : undefined) ?? parts.find((p) => getSkill(p));
+  const known = parts.find((p) => events.some((e) => e.id === p));
+  const k = NUDGE_KINDS.find((x) => x === kind) ?? (/stuck|hard/.test(head) ? "stuck" : /check|overdue|waiting|ready/.test(head) ? "check" : /prep|test|quiz/.test(head) ? "prep" : /idle|quiet|nothing/.test(head) ? "idle" : undefined);
+  if (k === "stuck" || k === "check") return skill ? { kind: k, skillId: skill } : null;
+  // A prep suggestion keeps its event id even after the test is deleted: prep done before that still counts.
+  if (k === "prep") return known || parts[1] ? { kind: "prep", eventId: known ?? parts[1] } : null;
+  if (k === "idle") return { kind: "idle" };
+  if (known) return { kind: "prep", eventId: known };
+  if (skill) return { kind: "check", skillId: skill };
+  return null;
 }
 
 /** Suggestion to a grown-up → its action happened within a week. */
 function parentActs(act: TeachingAct, ix: Index, now: number): Judged {
-  const n = parseNudge(act.ref ?? "", ix.r.events);
+  const n = parseNudge(act.ref ?? "", ix.r.events, act.detail, act.skillId);
+  if (!n) return VOID;
   const until = act.at + OUTCOME_RULES.nudgeMs;
   const inWindow = (t: number) => t > act.at && t <= until;
   const first = (times: number[]) => times.filter(inWindow).sort((a, b) => a - b)[0];
@@ -274,6 +308,7 @@ function parentActs(act: TeachingAct, ix: Index, now: number): Judged {
   } else if (n.kind === "prep") {
     const prepSets = new Set(ix.r.sets.filter((s) => s.profileId === act.profileId && s.eventId === n.eventId).map((s) => s.id));
     at = first([...prepSets].flatMap((id) => (ix.bySet.get(`${act.profileId}|${id}`) ?? []).map((a) => a.at)));
+    if (at === undefined && !ix.r.events?.some((e) => e.id === n.eventId && e.profileId === act.profileId)) return VOID;
   } else {
     const day = localDate(act.at);
     const reading = (ix.r.reading ?? []).filter((r) => r.profileId === act.profileId && r.date >= day && r.date <= localDate(until));
@@ -302,14 +337,18 @@ function courseFinished(act: TeachingAct, ix: Index, now: number): Judged {
 
 // ----- "Is it working?" -----
 
-/** A sentence for a grown-up: an i18n key and its values. A value can itself be a key to translate. */
-export type Sentence = { key: Key; vars?: Record<string, string | number | { key: Key }> };
+/**
+ * A sentence for a grown-up: an i18n key and its values. A value can be a key to translate, a
+ * misconception tag, skill ids (titles in the reader's language), or a list of sentences to join.
+ */
+export type Sentence = { key: Key; vars?: Record<string, SentenceVar> };
+export type SentenceVar = string | number | { key: Key } | { tag: string } | { skills: string[] } | { list: Sentence[] };
 
 /** The window "Is it working?" reads, and the half-window the hint trend compares. */
 export const WORKING_DAYS = 14;
 
 type Count = { n: number; of: number };
-const count = (list: ResolvedAct[]): Count => ({ n: list.filter((a) => a.status === "met").length, of: list.filter((a) => a.status !== "pending").length });
+const count = (list: ResolvedAct[]): Count => ({ n: list.filter((a) => a.status === "met").length, of: list.filter(decided).length });
 
 /** Help on one problem in a set, whatever mix of hints and examples it took; "example" if any was a worked example. */
 export function helpedProblems(resolved: ResolvedAct[]) {
@@ -320,8 +359,8 @@ export function helpedProblems(resolved: ResolvedAct[]) {
     const prev = by.get(key);
     const kind = a.kind === "hint" && prev?.kind !== "example" ? "hint" : "example";
     const rung = Math.max(prev?.rung ?? 0, a.kind === "hint" ? Number(a.detail) || 1 : 0);
-    // Every act on one problem shares its outcome; keep a resolved one.
-    by.set(key, { kind, rung, act: prev && prev.act.status !== "pending" ? prev.act : a });
+    // Every act on one problem shares its outcome; keep a decided one.
+    by.set(key, { kind, rung, act: prev && decided(prev.act) ? prev.act : a });
   }
   return [...by.values()];
 }
@@ -336,13 +375,12 @@ const latestPer = (list: ResolvedAct[]) => {
 };
 
 /**
- * "Is it working?" in plain sentences, from outcomes resolved in the last two weeks. Each sentence is
- * a count from the record; the last says what the tutor does with it. `ai` false: the tutor that
- * reads this isn't connected, and the sentence says so.
+ * "Is it working?" in plain sentences, from outcomes decided in the last two weeks. Each sentence is
+ * a count from the record; after the help counts, what to start with when they're stuck.
  */
-export function isItWorking(resolved: ResolvedAct[], profile: TeachingProfile, now: number, opts: { ai?: boolean } = {}): Sentence[] {
+export function isItWorking(resolved: ResolvedAct[], profile: TeachingProfile, now: number): Sentence[] {
   const from = now - WORKING_DAYS * DAY, mid = now - (WORKING_DAYS / 2) * DAY;
-  const recent = resolved.filter((a) => a.status !== "pending" && (a.resolvedAt ?? 0) >= from && (a.resolvedAt ?? 0) <= now);
+  const recent = resolved.filter((a) => decided(a) && (a.resolvedAt ?? 0) >= from && (a.resolvedAt ?? 0) <= now);
   const out: Sentence[] = [];
   const of = (intent: TeachingAct["intent"]) => recent.filter((a) => a.intent === intent);
 
@@ -362,7 +400,7 @@ export function isItWorking(resolved: ResolvedAct[], profile: TeachingProfile, n
   const lead = profile.leadWith.value;
   if (lead && (hint.of || example.of)) {
     const what = { key: lead === "example" ? "lm.lead.example" : "lm.lead.hint" } as const;
-    out.push({ key: opts.ai === false ? "lm.work.lead.demo" : profile.leadWith.source === "grown-up" ? "lm.work.lead.set" : "lm.work.lead", vars: { what } });
+    out.push({ key: profile.leadWith.source === "grown-up" ? "lm.work.start.set" : "lm.work.start", vars: { what } });
   }
 
   const tutor = count(of("next-try-right").filter((a) => a.kind === "tutor"));

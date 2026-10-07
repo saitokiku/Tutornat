@@ -3,16 +3,23 @@ import type { SchoolResult } from "@/planner/types";
 import { getSkill, makeItem } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import type { Statuses } from "./engine";
-import { helpedProblems, OUTCOME_RULES, resolveActs, type ResolvedAct, type Sentence } from "./outcomes";
+import { decided, helpedProblems, OUTCOME_RULES, resolveActs, type ResolvedAct, type Sentence } from "./outcomes";
 import type { Attempt, PracticeSet, TeachingAct } from "./types";
 
 // The learner model: what this learner has verifiably learned, and how they learn — each teaching
 // fact computed from their own record with the evidence count behind it. A grown-up's choice
-// (Profile.teaching) overrides a derived value and says so. Pure: record and `now` in, facts out.
-// Used to teach (the tutor, the parent's page); never for engagement, ranking or anyone else.
+// (Profile.teaching) overrides a derived value and says so, and a grown-up can turn the whole
+// teaching profile off. Pure: record and `now` in, facts out. Used to teach (the tutor, the parent's
+// page); never for engagement, ranking or anyone else.
 
 export type Representation = NonNullable<TeachingPrefs["representation"]>;
 export const REPRESENTATIONS: Representation[] = ["pictures", "number-line", "blocks", "words"];
+
+/**
+ * A grown-up's edits to the teaching profile. `off`: they turned it off, so nothing is worked out
+ * and nothing goes to the tutor. (Stored in Profile.teaching; lib/types.ts TeachingPrefs gains `off`.)
+ */
+export type TeachingEdits = TeachingPrefs & { off?: true };
 
 export type Fact<V> = {
   /** null: not enough evidence yet, or no clear answer in it (and no grown-up's choice). */
@@ -30,13 +37,16 @@ export type Fact<V> = {
 
 export type Misconception = { tag: string; count: number; sets: number; skillIds: string[]; example?: string };
 export type TimeOfDay = "morning" | "afternoon" | "evening";
+export type Rung = 1 | 2 | 3;
 
 export type TeachingProfile = {
-  /** The hint rung (1 nudge · 2 strategy · 3 first step) that usually unlocks them. */
-  hintRung: Fact<1 | 2 | 3>;
+  /** A grown-up turned the teaching profile off: every fact is empty and the tutor gets none of it. */
+  off?: boolean;
+  /** The hint rung (1 nudge · 2 strategy · 3 first step) to start at. `solved`: problems solved after hints, by the last rung they needed. */
+  hintRung: Fact<Rung> & { solved: [number, number, number] };
   /** Whether a worked example or a hint more often leads to the next problem right on their own. */
   leadWith: Fact<"hint" | "example">;
-  /** The kind of picture they miss least with, at the first level of a skill. */
+  /** The kind of picture that lands best (right on their own most often) at the first level of a skill. */
   representation: Fact<Representation>;
   pace: Fact<"quicker" | "usual" | "slower">;
   sessions: Fact<"finishes" | "stops-early">;
@@ -46,13 +56,15 @@ export type TeachingProfile = {
   /** 0 = Sunday … 6 = Saturday. */
   weekday: Fact<number>;
   language: Fact<{ locale: Locale; readAloud: boolean; mic: boolean }>;
-  /** A grown-up's note for the tutor. Goes to a model only with the learner's name scrubbed. */
+  /** A grown-up's note for the tutor. Goes to a model only with names scrubbed. */
   note?: string;
 };
 
 /** Minimum evidence before a fact says anything, and the margins that count as a real difference. */
 export const PROFILE_RULES = {
   hintProblems: 4,
+  /** Hints start at the highest rung that at most this share of solved problems needed less than. */
+  hintBelow: 0.25,
   leadEach: 3,
   leadMargin: 0.15,
   reprEach: 5,
@@ -60,8 +72,9 @@ export const PROFILE_RULES = {
   reprRecent: 300,
   pace: 10,
   paceRecent: 40,
+  /** The same bounds as a finished set's pace words (lib/practice paceOf), so the two never disagree. */
   paceQuick: 0.75,
-  paceSlow: 1.5,
+  paceSlow: 1.35,
   sessions: 4,
   stopsShare: 0.3,
   shortSet: 6,
@@ -77,13 +90,17 @@ export type ProfileInput = {
   attempts: Attempt[];
   acts: TeachingAct[];
   sets: PracticeSet[];
-  prefs?: TeachingPrefs;
+  prefs?: TeachingEdits;
   learner?: Pick<Profile, "locale" | "grade" | "settings">;
   /** Outcomes already resolved for `acts`, to avoid resolving twice. */
   resolved?: ResolvedAct[];
 };
 
-const answersOf = (attempts: Attempt[]) => attempts.filter((a) => a.mode !== "tutor").sort((a, b) => a.at - b.at);
+/**
+ * Answers that show how they learn: not tutor help rows, and not placement, which goes on until a
+ * miss by design and so would make whatever it showed look harder than it is.
+ */
+const answersOf = (attempts: Attempt[]) => attempts.filter((a) => a.mode !== "tutor" && a.mode !== "placement").sort((a, b) => a.at - b.at);
 const ownRight = (a: Attempt) => a.correct && !a.assisted;
 const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -92,24 +109,41 @@ const median = (xs: number[]) => {
 };
 const item = (a: Pick<Attempt, "skillId" | "level" | "seed">, locale: Locale): Item | null => (getSkill(a.skillId) ? makeItem(a.skillId, a.level, a.seed, locale) : null);
 const notYet = <V>(key: Sentence["key"], n: number, min: number, evidence = n): Fact<V> => ({ value: null, enough: false, evidence, source: "record", says: [{ key, vars: { n, min } }] });
+const empty = <V>(): Fact<V> => ({ value: null, enough: false, evidence: 0, source: "record", says: [] });
 
 /** How this learner learns, from their record, with a grown-up's choices on top. */
 export function teachingProfile(input: ProfileInput, now: number): TeachingProfile {
+  const prefs = input.prefs ?? {};
+  if (prefs.off) return offProfile();
   const locale = input.learner?.locale ?? "en";
   const answers = answersOf(input.attempts);
   const resolved = input.resolved ?? resolveActs(input.acts, { attempts: input.attempts, sets: input.sets }, now);
-  const prefs = input.prefs ?? {};
   return {
     hintRung: hintRung(resolved, input.sets, answers),
     leadWith: override(leadWith(resolved), prefs.leadWith),
     representation: override(representation(answers, locale), prefs.representation),
     pace: pace(answers, locale),
     sessions: sessions(input.sets, answers, now),
-    misconceptions: misconceptions(answers, locale),
+    misconceptions: misconceptions(answers),
     timeOfDay: timeOfDay(answers),
     weekday: weekday(answers),
     language: language(input.learner),
     note: prefs.note?.trim() || undefined,
+  };
+}
+
+function offProfile(): TeachingProfile {
+  return {
+    off: true,
+    hintRung: { ...empty<Rung>(), solved: [0, 0, 0] },
+    leadWith: empty(),
+    representation: empty(),
+    pace: empty(),
+    sessions: empty(),
+    misconceptions: empty(),
+    timeOfDay: empty(),
+    weekday: empty(),
+    language: empty(),
   };
 }
 
@@ -118,29 +152,33 @@ function override<V>(fact: Fact<V>, pref: V | undefined): Fact<V> {
   return { ...fact, value: pref, enough: true, source: "grown-up", derived: fact.value };
 }
 
-/** Hint acts followed by a right answer on the same problem: which rung was the last one needed. */
-function hintRung(resolved: ResolvedAct[], sets: PracticeSet[], answers: Attempt[]): Fact<1 | 2 | 3> {
+/**
+ * Hint acts followed by a right answer on the same problem, by the last rung that problem needed.
+ * Hints start at the highest rung that few solved problems (at most a quarter) needed less than:
+ * starting higher would hand over a step the learner could have found themselves.
+ */
+function hintRung(resolved: ResolvedAct[], sets: PracticeSet[], answers: Attempt[]): TeachingProfile["hintRung"] {
   const byId = new Map(sets.map((s) => [s.id, s]));
   const bySlot = new Map(answers.filter((a) => a.setId).map((a) => [`${a.setId}|${a.skillId}|${a.seed}`, a]));
-  const unlocked = { 1: 0, 2: 0, 3: 0 };
-  let solved = 0;
+  const solved: [number, number, number] = [0, 0, 0];
   for (const p of helpedProblems(resolved)) {
     if (p.kind !== "hint" || !p.act.setId || !/^\d+$/.test(p.act.ref ?? "")) continue;
     const slot = byId.get(p.act.setId)?.slots[Number(p.act.ref)];
     const answer = slot && bySlot.get(`${p.act.setId}|${slot.skillId}|${slot.seed}`);
     if (!answer?.correct) continue;
-    unlocked[Math.min(3, Math.max(1, p.rung)) as 1 | 2 | 3]++;
-    solved++;
+    solved[Math.min(3, Math.max(1, p.rung)) - 1]++;
   }
-  if (solved < PROFILE_RULES.hintProblems) return notYet("lm.fact.rung.notYet", solved, PROFILE_RULES.hintProblems);
-  const rung = ([1, 2, 3] as const).reduce((best, r) => (unlocked[r] > unlocked[best] ? r : best), 1 as 1 | 2 | 3);
-  return { value: rung, enough: true, evidence: solved, source: "record", says: [{ key: "lm.fact.rung.says", vars: { n: unlocked[rung], total: solved, rung: { key: `lm.rung.${rung}` } } }] };
+  const total = solved[0] + solved[1] + solved[2];
+  if (total < PROFILE_RULES.hintProblems) return { ...notYet<Rung>("lm.fact.rung.notYet", total, PROFILE_RULES.hintProblems), solved };
+  const below = (r: Rung) => solved.slice(0, r - 1).reduce((n, x) => n + x, 0) / total;
+  const rung = ([3, 2, 1] as const).find((r) => below(r) <= PROFILE_RULES.hintBelow)!;
+  return { value: rung, enough: true, evidence: total, source: "record", solved, says: [{ key: "lm.fact.rung.counts", vars: { total, a: solved[0], b: solved[1], c: solved[2] } }] };
 }
 
 /** After help on a problem, was the next problem right on their own — for hints, and for worked examples. */
 function leadWith(resolved: ResolvedAct[]): Fact<"hint" | "example"> {
   const tally = (kind: "hint" | "example") => {
-    const list = helpedProblems(resolved).filter((p) => p.kind === kind && p.act.status !== "pending");
+    const list = helpedProblems(resolved).filter((p) => p.kind === kind && decided(p.act));
     return { n: list.filter((p) => p.act.status === "met").length, of: list.length };
   };
   const h = tally("hint"), e = tally("example");
@@ -164,15 +202,19 @@ export function representationOf(it: Pick<Item, "visual" | "picture" | "input">)
   return "words";
 }
 
-/** Miss rates by representation at level 1, where the picture is doing the most work. */
+/**
+ * How often a problem did not land (needed help, or missed) by representation, at level 1 where the
+ * picture is doing the most work. A problem solved after hints is recorded as right but helped, so
+ * "right on their own" is the measure, not "right". Checks are left out: they allow no help.
+ */
 function representation(answers: Attempt[], locale: Locale): Fact<Representation> {
   const stats = new Map<Representation, { n: number; missed: number }>();
   let total = 0;
-  for (const a of answers.filter((x) => x.level === 1 && getSkill(x.skillId)).slice(-PROFILE_RULES.reprRecent)) {
+  for (const a of answers.filter((x) => x.level === 1 && x.mode !== "check" && getSkill(x.skillId)).slice(-PROFILE_RULES.reprRecent)) {
     const rep = representationOf(item(a, locale)!);
     const s = stats.get(rep) ?? { n: 0, missed: 0 };
     s.n++;
-    if (!a.correct) s.missed++;
+    if (!ownRight(a)) s.missed++;
     stats.set(rep, s);
     total++;
   }
@@ -187,7 +229,7 @@ function representation(answers: Attempt[], locale: Locale): Fact<Representation
     enough: true,
     evidence: ranked.reduce((n, [, s]) => n + s.n, 0),
     source: "record",
-    says: [{ key: "lm.fact.repr.says", vars: { a: best[1].missed, an: best[1].n, best: { key: `lm.repr.with.${best[0]}` }, b: worst[1].missed, bn: worst[1].n, worst: { key: `lm.repr.with.${worst[0]}` } } }],
+    says: [{ key: "lm.fact.repr.landed", vars: { a: best[1].missed, an: best[1].n, best: { key: `lm.repr.with.${best[0]}` }, b: worst[1].missed, bn: worst[1].n, worst: { key: `lm.repr.with.${worst[0]}` } } }],
   };
 }
 
@@ -240,7 +282,7 @@ function sessions(sets: PracticeSet[], answers: Attempt[], now: number): Fact<"f
 export const tagLabel = (tag: string) => tag.replace(/[-_]+/g, " ").trim();
 
 /** Tagged wrong answers that came back across more than one set. */
-function misconceptions(answers: Attempt[], locale: Locale): Fact<Misconception[]> {
+function misconceptions(answers: Attempt[]): Fact<Misconception[]> {
   const by = new Map<string, { count: number; sets: Set<string>; skills: Set<string>; example?: string }>();
   for (const a of answers) {
     if (a.correct || !a.why) continue;
@@ -259,15 +301,14 @@ function misconceptions(answers: Attempt[], locale: Locale): Fact<Misconception[
     .slice(0, 3)
     .map(([tag, m]) => ({ tag, count: m.count, sets: m.sets.size, skillIds: [...m.skills], example: m.example }));
   if (!list.length) return { value: null, enough: true, evidence: total, source: "record", says: [{ key: "lm.fact.why.none", vars: { n: total } }] };
-  const titles = (ids: string[]) => new Intl.ListFormat(locale === "es" ? "es" : "en", { type: "conjunction" }).format(ids.map((id) => getSkill(id)?.title[locale] ?? id));
   return {
     value: list,
     enough: true,
     evidence: total,
     source: "record",
     says: list.map((m) => ({
-      key: m.example ? "lm.fact.why.rowExample" : "lm.fact.why.row",
-      vars: { tag: tagLabel(m.tag), n: m.count, sets: m.sets, skill: titles(m.skillIds), example: m.example ?? "" },
+      key: m.example ? "lm.fact.why.tagExample" : "lm.fact.why.tagRow",
+      vars: { tag: { tag: m.tag }, n: m.count, sets: m.sets, skill: { skills: m.skillIds }, example: m.example ?? "" },
     })),
   };
 }
@@ -277,7 +318,10 @@ const timeOf = (at: number): TimeOfDay => {
   return h >= 5 && h < 12 ? "morning" : h >= 12 && h < 17 ? "afternoon" : "evening";
 };
 
-/** Right-on-own rate by bucket; a best bucket only when two buckets have enough answers and differ clearly. */
+/**
+ * Right-on-own rate by bucket, best first, over buckets with enough answers. A best bucket only
+ * when it beats the next best clearly: a tie at the top is no answer, however poor the rest.
+ */
 function bestBucket<B extends string | number>(answers: Attempt[], bucket: (a: Attempt) => B, min: number) {
   const stats = new Map<B, { own: number; n: number }>();
   for (const a of answers) {
@@ -288,26 +332,31 @@ function bestBucket<B extends string | number>(answers: Attempt[], bucket: (a: A
   }
   const ranked = [...stats.entries()].filter(([, s]) => s.n >= min).sort(([, a], [, b]) => b.own / b.n - a.own / a.n || b.n - a.n);
   if (ranked.length < 2) return null;
-  const [best, worst] = [ranked[0], ranked.at(-1)!];
-  return { best, worst, clear: best[1].own / best[1].n - worst[1].own / worst[1].n >= PROFILE_RULES.timeMargin, evidence: ranked.reduce((n, [, s]) => n + s.n, 0) };
+  const [best, second] = ranked;
+  return { ranked, clear: best[1].own / best[1].n - second[1].own / second[1].n >= PROFILE_RULES.timeMargin, evidence: ranked.reduce((n, [, s]) => n + s.n, 0) };
+}
+
+function bucketFact<B extends string | number>(r: NonNullable<ReturnType<typeof bestBucket<B>>>, when: (b: B) => Sentence["key"]): Fact<B> {
+  const list = r.ranked.map(([b, s]): Sentence => ({ key: "lm.fact.when.item", vars: { a: s.own, an: s.n, when: { key: when(b) } } }));
+  return { value: r.clear ? r.ranked[0][0] : null, enough: true, evidence: r.evidence, source: "record", says: [{ key: "lm.fact.when.says", vars: { list: { list } } }] };
 }
 
 function timeOfDay(answers: Attempt[]): Fact<TimeOfDay> {
   const r = bestBucket(answers, (a) => timeOf(a.at), PROFILE_RULES.timeEach);
   if (!r) return notYet("lm.fact.time.notYet", answers.length, PROFILE_RULES.timeEach);
-  const vars = { a: r.best[1].own, an: r.best[1].n, best: { key: `lm.time.${r.best[0]}` as const }, b: r.worst[1].own, bn: r.worst[1].n, worst: { key: `lm.time.${r.worst[0]}` as const } };
-  return { value: r.clear ? r.best[0] : null, enough: true, evidence: r.evidence, source: "record", says: [{ key: "lm.fact.time.says", vars }] };
+  return bucketFact(r, (b) => `lm.time.${b}`);
 }
 
 function weekday(answers: Attempt[]): Fact<number> {
   const r = bestBucket(answers, (a) => new Date(a.at).getDay(), PROFILE_RULES.dayEach);
   if (!r) return notYet("lm.fact.day.notYet", answers.length, PROFILE_RULES.dayEach);
-  const day = (d: number) => ({ key: `lm.day.${d as 0 | 1 | 2 | 3 | 4 | 5 | 6}` as const });
-  const vars = { a: r.best[1].own, an: r.best[1].n, best: day(r.best[0]), b: r.worst[1].own, bn: r.worst[1].n, worst: day(r.worst[0]) };
-  return { value: r.clear ? r.best[0] : null, enough: true, evidence: r.evidence, source: "record", says: [{ key: "lm.fact.day.says", vars }] };
+  return bucketFact(r, (d) => `lm.day.${d as 0 | 1 | 2 | 3 | 4 | 5 | 6}`);
 }
 
-/** Language and voice come from settings: the learner's language, read-aloud (on by default for K–2), the microphone. */
+/**
+ * Language and voice, from settings: the learner's language, read-aloud (on by default for K–2),
+ * the microphone. Nothing records when read-aloud or the microphone is used yet, so use isn't counted.
+ */
 function language(learner: ProfileInput["learner"]): TeachingProfile["language"] {
   const locale = learner?.locale ?? "en";
   const readAloud = ["K", "1", "2"].includes(learner?.grade ?? "");

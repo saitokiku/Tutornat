@@ -1,8 +1,9 @@
 import type { Key } from "@/i18n/en";
-import { REPRESENTATIONS, teachingProfile, type TeachingProfile } from "@/learning/profile";
+import { REPRESENTATIONS, teachingProfile, type TeachingEdits, type TeachingProfile } from "@/learning/profile";
 import { actsOf, resolvedActsOf } from "./acts";
+import { scrubName } from "./ai/context";
 import { newId, update, type StoreState } from "./store";
-import { GRADES, type Grade, type Locale, type Profile, type TeachingPrefs } from "./types";
+import { GRADES, type Grade, type Locale, type Profile } from "./types";
 
 const COLORS = ["#A93B5D", "#3E6E8E", "#4F7A5B", "#8A6412", "#6B4E8E", "#B4643A"];
 
@@ -46,7 +47,12 @@ export function updateLearner(id: string, input: Input): Key | null {
   if (error) return error;
   update((s) => {
     const p = s.profiles.find((x) => x.id === id && x.accountId === s.session.accountId);
-    if (p) Object.assign(p, { nickname: input.nickname.trim(), grade: input.grade, locale: input.locale });
+    if (!p) return;
+    const nickname = input.nickname.trim();
+    // The note for the tutor is scrubbed by the current name when it is sent; a renamed learner's old
+    // name in it ("Isabella" → "Bella") would slip past, so the note takes the new name now.
+    if (p.teaching?.note && nickname !== p.nickname) p.teaching.note = scrubName(p.teaching.note, p.nickname, nickname);
+    Object.assign(p, { nickname, grade: input.grade, locale: input.locale });
   });
   return null;
 }
@@ -99,22 +105,30 @@ export function renameAccount(displayName: string) {
 
 export const TEACHING_NOTE_MAX = 400;
 
-/**
- * A grown-up's corrections to the derived teaching profile. Replaces what was there: pass the whole
- * set of choices; a missing field goes back to what the record shows, and `{}` clears every edit.
- */
-export function setTeaching(profileId: string, prefs: TeachingPrefs) {
-  const clean: TeachingPrefs = {};
-  if (prefs.representation && REPRESENTATIONS.includes(prefs.representation)) clean.representation = prefs.representation;
-  if (prefs.leadWith === "hint" || prefs.leadWith === "example") clean.leadWith = prefs.leadWith;
-  const note = prefs.note
-    ?.replace(/[^\S\n]+/g, " ")
+/** A note as it is stored: spaces collapsed, at most one blank line in a row, trimmed to the limit. */
+export const cleanNote = (note: string) =>
+  note
+    .replace(/[^\S\n]+/g, " ")
     .replace(/ ?\n ?/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
     .slice(0, TEACHING_NOTE_MAX)
     .trim();
-  if (note) clean.note = note;
+
+/**
+ * A grown-up's corrections to the derived teaching profile. Replaces what was there: pass the whole
+ * set of choices; a missing field goes back to what the record shows, and `{}` clears every edit.
+ * `{ off: true }` turns the profile off: choices and note are deleted, nothing is worked out from the
+ * record and nothing goes to the tutor, until `{}` turns it back on.
+ */
+export function setTeaching(profileId: string, prefs: TeachingEdits) {
+  const clean: TeachingEdits = prefs.off ? { off: true } : {};
+  if (!prefs.off) {
+    if (prefs.representation && REPRESENTATIONS.includes(prefs.representation)) clean.representation = prefs.representation;
+    if (prefs.leadWith === "hint" || prefs.leadWith === "example") clean.leadWith = prefs.leadWith;
+    const note = cleanNote(prefs.note ?? "");
+    if (note) clean.note = note;
+  }
   update((s) => {
     const p = s.profiles.find((x) => x.id === profileId && x.accountId === s.session.accountId);
     if (!p) return;

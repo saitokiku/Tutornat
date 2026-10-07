@@ -3,72 +3,121 @@
 import { useId, useRef, useState, type ReactNode } from "react";
 import { IconCheck } from "@/components/icons";
 import { Button, btn } from "@/components/ui";
-import { useT } from "@/i18n";
-import { REPRESENTATIONS, type Fact } from "@/learning/profile";
-import { useAiMode } from "@/lib/ai/client";
-import { setTeaching, teachingOf, TEACHING_NOTE_MAX } from "@/lib/profiles";
+import { useLocale, useT } from "@/i18n";
+import { REPRESENTATIONS, type Fact, type TeachingEdits } from "@/learning/profile";
+import { cleanNote, setTeaching, teachingOf, TEACHING_NOTE_MAX } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
-import type { Profile, TeachingPrefs } from "@/lib/types";
+import type { Profile } from "@/lib/types";
 import { useSay } from "./say";
 
 /**
  * "How we teach {name}": the teaching profile with the evidence behind each fact. A grown-up can set
- * the pictures that help and hint-or-example first, leave a note for the tutor, and clear their edits.
+ * the pictures that help and hint-or-example first, leave a note for the tutor, clear their edits, and
+ * turn the whole profile off (which deletes their edits and stops working anything out).
  */
 export function HowWeTeach({ child, now }: { child: Profile; now: number }) {
   const t = useT();
-  const ai = useAiMode();
+  const locale = useLocale();
+  const say = useSay();
   const profile = useStore((s) => teachingOf(s, child, now));
-  const prefs = child.teaching ?? {};
-  const edit = (patch: Partial<TeachingPrefs>) => setTeaching(child.id, { ...prefs, ...patch });
+  const prefs: TeachingEdits = child.teaching ?? {};
+  const edit = (patch: Partial<TeachingEdits>) => setTeaching(child.id, { ...prefs, ...patch });
   const id = `teach-${child.id}`;
+  const name = child.nickname;
+  const toHeading = () => requestAnimationFrame(() => document.getElementById(id)?.focus());
+
+  // Facts with nothing to say yet fold into one line, so a new learner's page stays short; the two a
+  // grown-up can set always show.
+  const row = <V,>(label: string, fact: Fact<V>, show: (v: V) => string): Row => ({ label, fact, node: <FactRow key={label} label={label} fact={fact} show={show} /> });
+  const rung = row(t("lm.fact.rung"), profile.hintRung, (v) => t(`lm.rungValue.${v}`));
+  const rest = [
+    row(t("lm.fact.pace"), profile.pace, (v) => t(`lm.pace.${v}`)),
+    row(t("lm.fact.sessions"), profile.sessions, (v) => t(`lm.sessions.${v}`)),
+    row(t("lm.fact.why"), profile.misconceptions, (v) => t("lm.why.value", { n: v.length })),
+    row(t("lm.fact.time"), profile.timeOfDay, (v) => t(`lm.time.${v}`)),
+    row(t("lm.fact.day"), profile.weekday, (v) => t(`lm.day.${v as 0 | 1 | 2 | 3 | 4 | 5 | 6}`)),
+    row(t("lm.fact.lang"), profile.language, (v) => t(`lang.${v.locale}`)),
+  ];
+  const ready = (r: Row) => r.fact.enough || r.fact.source !== "record";
+  const waiting = [rung, ...rest].filter((r) => !ready(r));
+  const lower = (label: string) => label.charAt(0).toLocaleLowerCase(locale) + label.slice(1);
+
   return (
     <section aria-labelledby={id} className="space-y-4">
       <div>
         <h2 id={id} tabIndex={-1} className="font-brand text-t2 font-semibold text-ink outline-none">
-          {t("lm.how.title", { name: child.nickname })}
+          {t("lm.how.title", { name })}
         </h2>
-        <p className="mt-1 max-w-prose text-sm text-muted">{t("lm.how.body", { name: child.nickname })}</p>
+        {!profile.off && <p className="mt-1 max-w-prose text-sm text-muted">{t("lm.how.intro", { name })}</p>}
       </div>
-      <ul className="divide-y divide-border rounded-lg border border-border bg-panel">
-        <FactRow label={t("lm.fact.rung")} fact={profile.hintRung} show={(v) => t(`lm.rungValue.${v}`)} />
-        <FactRow label={t("lm.fact.lead")} fact={profile.leadWith} show={(v) => t(`lm.leadValue.${v}`)}>
-          <Choice
-            label={t("lm.fact.lead")}
-            value={prefs.leadWith}
-            options={(["hint", "example"] as const).map((v) => ({ value: v, label: t(`lm.leadValue.${v}`) }))}
-            onChange={(leadWith) => edit({ leadWith })}
-          />
-        </FactRow>
-        <FactRow label={t("lm.fact.repr")} fact={profile.representation} show={(v) => t(`lm.repr.${v}`)}>
-          <Choice
-            label={t("lm.fact.repr")}
-            value={prefs.representation}
-            options={REPRESENTATIONS.map((v) => ({ value: v, label: t(`lm.repr.${v}`) }))}
-            onChange={(representation) => edit({ representation })}
-            hint={t("lm.how.reprHint")}
-          />
-        </FactRow>
-        <FactRow label={t("lm.fact.pace")} fact={profile.pace} show={(v) => t(`lm.pace.${v}`)} />
-        <FactRow label={t("lm.fact.sessions")} fact={profile.sessions} show={(v) => t(`lm.sessions.${v}`)} />
-        <FactRow label={t("lm.fact.why")} fact={profile.misconceptions} show={(v) => t("lm.why.value", { n: v.length })} />
-        <FactRow label={t("lm.fact.time")} fact={profile.timeOfDay} show={(v) => t(`lm.time.${v}`)} />
-        <FactRow label={t("lm.fact.day")} fact={profile.weekday} show={(v) => t(`lm.day.${v as 0 | 1 | 2 | 3 | 4 | 5 | 6}`)} />
-        <FactRow label={t("lm.fact.lang")} fact={profile.language} show={(v) => t(`lang.${v.locale}`)} />
-        <NoteRow child={child} saved={prefs.note ?? ""} onSave={(note) => edit({ note })} />
-      </ul>
-      {ai && <p className="text-xs text-muted">{ai === "demo" ? t("lm.how.demo") : t("lm.how.ai")}</p>}
-      {child.teaching && (
-        <ClearEdits
-          onClear={() => {
-            setTeaching(child.id, {});
-            requestAnimationFrame(() => document.getElementById(id)?.focus());
-          }}
-        />
+      {profile.off ? (
+        <div className="space-y-3 rounded-lg border border-dashed border-border px-5 py-4">
+          <p className="max-w-prose text-sm text-muted">{t("lm.how.offBody", { name })}</p>
+          <Button variant="secondary" onClick={() => (setTeaching(child.id, {}), toHeading())}>
+            {t("lm.how.on")}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <ul className="divide-y divide-border rounded-lg border border-border bg-panel">
+            {ready(rung) && rung.node}
+            <FactRow label={t("lm.fact.lead")} fact={profile.leadWith} show={(v) => t(`lm.leadValue.${v}`)}>
+              <Choice
+                label={t("lm.fact.lead")}
+                value={prefs.leadWith}
+                options={(["hint", "example"] as const).map((v) => ({ value: v, label: t(`lm.leadValue.${v}`) }))}
+                onChange={(leadWith) => edit({ leadWith })}
+              />
+            </FactRow>
+            <FactRow label={t("lm.fact.repr")} fact={profile.representation} show={(v) => t(`lm.repr.${v}`)}>
+              <Choice
+                label={t("lm.fact.repr")}
+                value={prefs.representation}
+                options={REPRESENTATIONS.map((v) => ({ value: v, label: t(`lm.repr.${v}`) }))}
+                onChange={(representation) => edit({ representation })}
+                hint={t("lm.how.reprHint")}
+              />
+            </FactRow>
+            {rest.filter(ready).map((r) => r.node)}
+            {waiting.length > 0 && (
+              <li className="space-y-1 px-4 py-3.5 sm:px-5">
+                <p className="max-w-prose text-sm text-muted">
+                  {t("lm.how.waiting", { list: new Intl.ListFormat(locale, { type: "conjunction" }).format(waiting.map((r) => lower(r.label))), name })}
+                </p>
+                <details className="group">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted hover:text-ink">
+                    <span aria-hidden="true" className="transition-transform group-open:rotate-90 motion-reduce:transition-none">
+                      ›
+                    </span>
+                    {t("lm.how.waitingWhat")}
+                  </summary>
+                  <ul className="max-w-prose space-y-1.5 pb-1 text-xs text-muted">
+                    {waiting.map((r) => (
+                      <li key={r.label}>
+                        <span className="font-medium text-ink">{r.label}: </span>
+                        {r.fact.says.map(say).join(" ")}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </li>
+            )}
+            <NoteRow child={child} saved={prefs.note ?? ""} onSave={(note) => edit({ note })} />
+          </ul>
+          {(prefs.leadWith || prefs.representation || prefs.note) && (
+            <Confirm label={t("lm.how.clear")} ask={t("lm.how.clearAsk2")} yes={t("lm.how.clearYes")} onYes={() => (setTeaching(child.id, {}), toHeading())} />
+          )}
+          <div className="space-y-2 border-t border-border pt-4">
+            <p className="max-w-prose text-xs text-muted">{t("lm.how.offOffer", { name })}</p>
+            <Confirm label={t("lm.how.off")} ask={t("lm.how.offAsk", { name })} yes={t("lm.how.offYes")} onYes={() => (setTeaching(child.id, { off: true }), toHeading())} />
+          </div>
+        </>
       )}
     </section>
   );
 }
+
+type Row = { label: string; fact: Pick<Fact<unknown>, "enough" | "source" | "says">; node: ReactNode };
 
 function FactRow<V>({ label, fact, show, children }: { label: string; fact: Fact<V>; show: (v: V) => string; children?: ReactNode }) {
   const t = useT();
@@ -82,20 +131,20 @@ function FactRow<V>({ label, fact, show, children }: { label: string; fact: Fact
         {fact.source === "grown-up" && <p className="text-xs font-semibold text-accent">{t("lm.how.set")}</p>}
         {fact.source === "settings" && <p className="text-xs text-muted">{t("lm.how.settings")}</p>}
       </div>
-      <p className="max-w-prose text-xs text-muted">{fact.says.map(say).join(" ")}</p>
+      {fact.says.length > 0 && <p className="max-w-prose text-xs text-muted">{fact.says.map(say).join(" ")}</p>}
       {fact.source === "grown-up" && (
-        <p className="text-xs text-muted">{fact.derived != null ? t("lm.how.derived", { what: show(fact.derived) }) : t("lm.how.derivedNone")}</p>
+        <p className="text-xs text-muted">{fact.derived != null ? t("lm.how.derivedPractice", { what: show(fact.derived) }) : t("lm.how.derivedNonePractice")}</p>
       )}
       {children}
     </li>
   );
 }
 
-/** One choice among a few, or "follow the record". Native radios: arrow keys move, tap or Space picks. */
+/** One choice among a few, or "decide from practice". Native radios: arrow keys move, tap or Space picks. */
 function Choice<T extends string>({ label, value, options, onChange, hint }: { label: string; value: T | undefined; options: { value: T; label: string }[]; onChange: (v: T | undefined) => void; hint?: string }) {
   const t = useT();
   const name = useId();
-  const all: { value: T | undefined; label: string }[] = [{ value: undefined, label: t("lm.how.fromRecord") }, ...options];
+  const all: { value: T | undefined; label: string }[] = [{ value: undefined, label: t("lm.how.fromPractice") }, ...options];
   return (
     <fieldset className="pt-1">
       <legend className="sr-only">{label}</legend>
@@ -126,14 +175,15 @@ function NoteRow({ child, saved, onSave }: { child: Profile; saved: string; onSa
   const id = useId();
   const [draft, setDraft] = useState(saved);
   const [done, setDone] = useState(false);
-  // The saved note changed: from this Save (keep "Saved"), or from elsewhere, like clearing edits.
+  // The saved note changed. From this Save, it matches the draft: keep both. From elsewhere (clearing
+  // edits, turning the profile off, a rename), show what is saved now.
   const [synced, setSynced] = useState(saved);
-  const [saving, setSaving] = useState(false);
   if (saved !== synced) {
     setSynced(saved);
-    setDraft(saved);
-    setDone(saving);
-    setSaving(false);
+    if (saved !== cleanNote(draft)) {
+      setDraft(saved);
+      setDone(false);
+    }
   }
   return (
     <li className="space-y-2 px-4 py-3.5 sm:px-5">
@@ -145,18 +195,18 @@ function NoteRow({ child, saved, onSave }: { child: Profile; saved: string; onSa
         rows={3}
         maxLength={TEACHING_NOTE_MAX}
         value={draft}
-        onChange={(e) => (setDraft(e.target.value), setDone(false), setSaving(false))}
+        onChange={(e) => (setDraft(e.target.value), setDone(false))}
         placeholder={t("lm.how.notePlaceholder")}
         aria-describedby={`${id}-hint`}
         className="k-input resize-y text-sm"
       />
-      <p id={`${id}-hint`} className="text-xs text-muted">
-        {t("lm.how.noteHint", { name: child.nickname })}
+      <p id={`${id}-hint`} className="max-w-prose text-xs text-muted">
+        {t("lm.how.noteHelp", { name: child.nickname })}
       </p>
       <div className="flex items-center gap-3">
         {/* Never disabled after saving: a focused button that disables itself drops keyboard focus. */}
-        <Button variant="secondary" onClick={() => (setSaving(true), setDone(true), onSave(draft))}>
-          {t("common.save")}
+        <Button variant="secondary" onClick={() => (onSave(draft), setDone(true))}>
+          {t("lm.how.saveNote")}
         </Button>
         <span role="status" className="text-xs text-good">
           {done ? t("child.saved") : ""}
@@ -166,25 +216,31 @@ function NoteRow({ child, saved, onSave }: { child: Profile; saved: string; onSa
   );
 }
 
-/** Clearing is behind a confirm step. Focus follows: onto the confirm, back to the button on cancel. */
-function ClearEdits({ onClear }: { onClear: () => void }) {
+/**
+ * A button whose action sits behind a confirm step. Focus follows: onto the confirm (which is tied to
+ * its question), back to the button on cancel; after confirming, `onYes` decides where it goes.
+ */
+function Confirm({ label, ask, yes, onYes }: { label: string; ask: string; yes: string; onYes: () => void }) {
   const t = useT();
+  const id = useId();
   const [asking, setAsking] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
   if (!asking)
     return (
       <button ref={opener} type="button" className={btn("secondary")} onClick={() => setAsking(true)}>
-        {t("lm.how.clear")}
+        {label}
       </button>
     );
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-panel2 px-4 py-3">
-      <p className="min-w-0 flex-1 text-sm text-ink">{t("lm.how.clearAsk")}</p>
-      <Button variant="ghost" onClick={() => (setAsking(false), requestAnimationFrame(() => opener.current?.focus()))}>
+      <p id={id} className="min-w-0 flex-1 basis-60 text-sm text-ink">
+        {ask}
+      </p>
+      <Button variant="ghost" aria-describedby={id} onClick={() => (setAsking(false), requestAnimationFrame(() => opener.current?.focus()))}>
         {t("common.cancel")}
       </Button>
-      <Button variant="secondary" autoFocus onClick={onClear}>
-        {t("lm.how.clearYes")}
+      <Button variant="secondary" aria-describedby={id} autoFocus onClick={onYes}>
+        {yes}
       </Button>
     </div>
   );

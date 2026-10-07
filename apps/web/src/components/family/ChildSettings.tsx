@@ -45,7 +45,7 @@ export function ChildSettings({ child }: { child: Profile }) {
                   type="button"
                   aria-pressed={on}
                   onClick={() => updateSettings(child.id, { subjects: on ? s.subjects.filter((y) => y !== x) : [...s.subjects, x] })}
-                  className="min-h-10 rounded-full border border-border bg-panel px-4 text-sm text-muted aria-pressed:border-ink aria-pressed:text-ink"
+                  className="min-h-11 rounded-full border border-border bg-panel px-4 text-sm text-muted aria-pressed:border-ink aria-pressed:text-ink"
                 >
                   {t(`subject.${x}`)}
                 </button>

@@ -3,7 +3,6 @@
 import { useT } from "@/i18n";
 import { isItWorking } from "@/learning/outcomes";
 import { resolvedActsOf } from "@/lib/acts";
-import { useAiMode } from "@/lib/ai/client";
 import { teachingOf } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -13,10 +12,7 @@ import { useSay } from "./say";
 export function IsItWorking({ child, now }: { child: Profile; now: number }) {
   const t = useT();
   const say = useSay();
-  // Until the mode is known, say what is true either way: the AI tutor uses this once connected.
-  const mode = useAiMode();
-  const ai = mode !== null && mode !== "demo";
-  const sentences = useStore((s) => isItWorking(resolvedActsOf(s, child.id, now), teachingOf(s, child, now), now, { ai }));
+  const sentences = useStore((s) => isItWorking(resolvedActsOf(s, child.id, now), teachingOf(s, child, now), now));
   const id = `working-${child.id}`;
   return (
     <section aria-labelledby={id} className="space-y-3">

@@ -40,6 +40,35 @@ describe("child notes", () => {
     expect(read().notes).toHaveLength(2);
   });
 
+  it("keeps keyboard focus in place: back on cancel, on to the next note after a delete, the heading after the last", async () => {
+    const ada = await kid();
+    addNote(ada.id, "First");
+    addNote(ada.id, "Second");
+    render(<ChildNotes child={ada} />);
+    const user = userEvent.setup();
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+
+    const [top] = screen.getAllByRole("button", { name: "Delete note" });
+    top.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Yes, delete" })).toHaveAccessibleDescription("Delete this note?");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await frame();
+    expect(document.activeElement).toBe(screen.getAllByRole("button", { name: "Delete note" })[0]);
+
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Enter}");
+    await frame();
+    expect(read().notes).toHaveLength(1);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Delete note" }));
+
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Enter}");
+    await frame();
+    expect(read().notes).toHaveLength(0);
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Your notes" }));
+  });
+
   it("says when there are none", async () => {
     render(<ChildNotes child={await kid()} />);
     expect(screen.getByText("No notes yet.")).toBeVisible();
