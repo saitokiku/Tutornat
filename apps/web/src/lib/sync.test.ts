@@ -21,7 +21,7 @@ import { renderHook } from "@testing-library/react";
 // Two browsers, one family, a real (in-process) Postgres behind the real route handlers. Each device
 // has its own saved store, sync state and cookies; fetch goes to the handlers.
 
-vi.mock("next/server", () => ({ connection: async () => {} }));
+vi.mock("next/server", () => ({ connection: async () => {}, after: (task: () => unknown) => void task() }));
 
 let close: () => Promise<void>;
 beforeAll(async () => ({ close } = await testDb()));

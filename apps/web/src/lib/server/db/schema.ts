@@ -51,8 +51,13 @@ export const sessions = pgTable(
     tokenHash: text("token_hash").notNull(),
     createdAt: at("created_at").notNull().defaultNow(),
     expiresAt: at("expires_at").notNull(),
+    /**
+     * Who is using this browser now, as it last reported (sync): a learner's id, "parent", or null
+     * (the picker, or not reported yet). AI and voice routes check this learner's consent.
+     */
+    learnerId: text("learner_id"),
   },
-  (t) => [uniqueIndex("sessions_token_key").on(t.tokenHash), index("sessions_account_idx").on(t.accountId)],
+  (t) => [uniqueIndex("sessions_token_key").on(t.tokenHash), index("sessions_account_idx").on(t.accountId), index("sessions_expires_idx").on(t.expiresAt)],
 );
 
 /** Password reset links: one live link per account, used once, kept as a hash. */
@@ -68,7 +73,11 @@ export const passwordResets = pgTable(
     expiresAt: at("expires_at").notNull(),
     usedAt: at("used_at"),
   },
-  (t) => [uniqueIndex("password_resets_token_key").on(t.tokenHash), index("password_resets_account_idx").on(t.accountId)],
+  (t) => [
+    uniqueIndex("password_resets_token_key").on(t.tokenHash),
+    index("password_resets_account_idx").on(t.accountId),
+    index("password_resets_expires_idx").on(t.expiresAt),
+  ],
 );
 
 /** Failed sign-ins and reset requests per key, shared by every server instance. Keys are hashed. */
@@ -174,6 +183,8 @@ export const consentReceipts = pgTable(
     /** A vendor's reference for a verified method. Never a card number or document image. */
     evidence: text("evidence"),
     grantedBy: text("granted_by").notNull(),
+    /** The account holder typed the account password to give it (a child with the device can't). */
+    passwordConfirmed: boolean("password_confirmed").notNull().default(false),
     grantedAt: at("granted_at").notNull().defaultNow(),
     revokedAt: at("revoked_at"),
     updatedAt: at("updated_at").notNull().defaultNow(),

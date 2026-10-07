@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { signUp, type AuthOk } from "./auth";
-import type { Db } from "./client";
+import { readSession, setSessionLearner, signUp, type AuthOk } from "./auth";
+import { setDbForTests, type Db } from "./client";
 import { CONSENT_METHODS, consentGate, grantConsent, methodsFor, revokeConsent, type ConsentMethod } from "./consent";
 import { consentAllows, CONSENT_NOTICE_VERSION, gradeAge, receiptCounts, type ConsentReceipt } from "./policy";
 import { consentReceipts } from "./schema";
@@ -26,8 +26,20 @@ async function familyWith(grades: string[]) {
   await syncAccount(db, r.account.id, { v: 1, since: 0, now: Date.now(), push: { profiles: push } });
   return { accountId: r.account.id, token: r.token, ids: push.map((p) => p.id) };
 }
-const grant = (accountId: string, profileId: string, method: string, env = DEV, extra: Partial<{ under13: boolean; noticeVersion: string; scope: ("ai" | "voice")[]; proof: string }> = {}) =>
-  grantConsent(db, accountId, { profileId, scope: ["ai", "voice"], method, under13: true, noticeVersion: CONSENT_NOTICE_VERSION, ...extra }, { env });
+const PASSWORD = "long enough";
+const grant = (
+  accountId: string,
+  profileId: string,
+  method: string,
+  env: Record<string, string> = DEV,
+  extra: Partial<{ under13: boolean; noticeVersion: string; scope: ("ai" | "voice")[]; proof: string; password: string }> = {},
+) => grantConsent(db, accountId, { profileId, scope: ["ai", "voice"], method, under13: true, noticeVersion: CONSENT_NOTICE_VERSION, password: PASSWORD, ...extra }, { env, ip: `10.2.1.${n}` });
+const revoke = (accountId: string, id: string, password = PASSWORD) => revokeConsent(db, accountId, { id, password }, { ip: `10.2.2.${n}` });
+/** The browser reports who is using it (sync does this); the gate reads it from the session. */
+async function using(token: string, learner: string | null) {
+  const s = (await readSession(db, token))!;
+  await setSessionLearner(db, s, learner);
+}
 
 describe("consent policy", () => {
   const receipt = (over: Partial<ConsentReceipt>): ConsentReceipt => ({
@@ -69,9 +81,28 @@ describe("recording consent", () => {
     const r = await grant(accountId, ids[0], "dev-not-verified", DEV, { scope: ["ai"] });
     expect(r).toMatchObject({
       ok: true,
-      receipt: { profileId: ids[0], method: "dev-not-verified", verified: false, scope: ["ai"], noticeVersion: CONSENT_NOTICE_VERSION, under13: true, grantedBy: `consent${n}@example.test` },
+      receipt: {
+        profileId: ids[0],
+        method: "dev-not-verified",
+        verified: false,
+        scope: ["ai"],
+        noticeVersion: CONSENT_NOTICE_VERSION,
+        under13: true,
+        grantedBy: `consent${n}@example.test`,
+        passwordConfirmed: true,
+      },
     });
     expect((r as { receipt: ConsentReceipt }).receipt.grantedAt).toBeGreaterThan(Date.now() - 60_000);
+  });
+
+  it("takes the account password to give or revoke, so a child holding the device can't", async () => {
+    const { accountId, ids } = await familyWith(["8"]);
+    expect(await grant(accountId, ids[0], "parent-confirmed", PROD, { under13: false, password: "a guess" })).toEqual({ ok: false, error: "password" });
+    expect(await db.select().from(consentReceipts).where(eq(consentReceipts.accountId, accountId))).toEqual([]);
+    const r = (await grant(accountId, ids[0], "parent-confirmed", PROD, { under13: false })) as { receipt: ConsentReceipt };
+    expect(await revoke(accountId, r.receipt.id, "a guess")).toEqual({ ok: false, error: "password" });
+    expect(await revoke(accountId, r.receipt.id)).toEqual({ ok: true });
+    expect(await revoke(accountId, r.receipt.id)).toEqual({ ok: false, error: "not_found" });
   });
 
   it("refuses what doesn't fit: a younger child by confirmation, the dev method in production, an old notice, another family's learner", async () => {
@@ -117,26 +148,62 @@ describe("a verified method plugs in", () => {
 });
 
 describe("the gate on AI and voice routes", () => {
-  it("lets nothing through for a child without consent, and stops again on revoke", async () => {
+  it("refuses a child without consent, whether the session or the request names them, and stops again on revoke", async () => {
     const { accountId, token, ids } = await familyWith(["1"]);
-    expect(await consentGate(req(token), null, "ai")).toBeNull(); // the grown-up's own use
-    const refused = await consentGate(req(token), ids[0], "ai");
+    await using(token, ids[0]);
+    const refused = await consentGate(req(token), "ai");
     expect(refused?.status).toBe(403);
-    expect(await refused?.json()).toEqual({ error: "consent", scope: "ai" });
-    expect((await consentGate(req(), ids[0], "ai"))?.status).toBe(401);
+    expect(await refused?.json()).toEqual({ error: "consent", scope: "ai", reason: "consent" });
+    // The grown-up is using the device, but the request is for the child: still refused.
+    await using(token, "parent");
+    expect((await consentGate(req(token, ids[0]), "ai"))?.status).toBe(403);
 
     const r = (await grant(accountId, ids[0], "dev-not-verified", DEV, { scope: ["ai"] })) as { receipt: ConsentReceipt };
     // Tests run outside production, where the development method counts.
-    expect(await consentGate(req(token), ids[0], "ai")).toBeNull();
-    expect((await consentGate(req(token), ids[0], "voice"))?.status).toBe(403);
-    expect(await revokeConsent(db, accountId, r.receipt.id)).toBe(true);
-    expect((await consentGate(req(token), ids[0], "ai"))?.status).toBe(403);
-    expect(await revokeConsent(db, accountId, r.receipt.id)).toBe(false);
+    await using(token, ids[0]);
+    expect(await consentGate(req(token), "ai")).toBeNull();
+    expect(await consentGate(req(token, ids[0]), "ai")).toBeNull();
+    expect((await consentGate(req(token), "voice"))?.status).toBe(403);
+    // In production the development method never counts.
+    expect((await consentGate(req(token), "ai", PROD))?.status).toBe(403);
+    expect(await revoke(accountId, r.receipt.id)).toEqual({ ok: true });
+    expect((await consentGate(req(token), "ai"))?.status).toBe(403);
+  });
+
+  it("fails closed when nobody is identified and a child lacks consent", async () => {
+    const { accountId, token, ids } = await familyWith(["3", "adult"]);
+    // A session that hasn't reported who is using it, or the picker.
+    expect(await (await consentGate(req(token), "ai"))?.json()).toEqual({ error: "consent", scope: "ai", reason: "unknown_learner" });
+    await using(token, null);
+    expect((await consentGate(req(token), "ai"))?.status).toBe(403);
+    // The grown-up's own use is theirs to decide.
+    await using(token, "parent");
+    expect(await consentGate(req(token), "ai")).toBeNull();
+    // Once every child is covered, nobody needs naming.
+    await using(token, null);
+    await grant(accountId, ids[0], "dev-not-verified", DEV, { scope: ["ai"] });
+    expect(await consentGate(req(token), "ai")).toBeNull();
+  });
+
+  it("lets a family of grown-ups through, and refuses without a session", async () => {
+    const { token } = await familyWith(["adult"]);
+    expect(await consentGate(req(token), "voice")).toBeNull();
+    expect((await consentGate(req(), "ai"))?.status).toBe(401);
   });
 
   it("refuses a learner id from another account", async () => {
     const mine = await familyWith(["3"]);
     const theirs = await familyWith(["3"]);
-    expect((await consentGate(req(mine.token), theirs.ids[0], "ai"))?.status).toBe(403);
+    await using(mine.token, "parent");
+    expect(await (await consentGate(req(mine.token, theirs.ids[0]), "ai"))?.json()).toMatchObject({ reason: "learner" });
+  });
+
+  it("stays out of the way in the browser-only version", async () => {
+    setDbForTests(null);
+    try {
+      expect(await consentGate(req(), "ai")).toBeNull();
+    } finally {
+      setDbForTests(db);
+    }
   });
 });

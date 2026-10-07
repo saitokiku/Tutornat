@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { APPLIED_MIGRATION_SQL, getDb, newestMigration, rowsOf, serverMode, setDbForTests, type Db } from "./client";
+import { APPLIED_MIGRATION_SQL, databaseUrl, getDb, newestMigration, rowsOf, serverMode, setDbForTests, type Db } from "./client";
 import { accounts, attempts, consentReceipts, courses, profiles, RECORD_TABLES, sessions } from "./schema";
 import { testDb } from "./testing";
 import { SYNC_LISTS } from "./wire";
@@ -45,6 +45,17 @@ describe("schema", () => {
       vi.unstubAllEnvs();
       setDbForTests(db);
     }
+  });
+
+  it("keeps production browser-only until the AI and voice routes check consent", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const url = "postgres://u:p@db.example/kaizen";
+    expect(databaseUrl({ DATABASE_URL: url, NODE_ENV: "production" }, false)).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/stays browser-only until the AI and voice routes check consent/));
+    expect(databaseUrl({ DATABASE_URL: url, NODE_ENV: "production" }, true)).toBe(url);
+    expect(databaseUrl({ DATABASE_URL: url, NODE_ENV: "development" }, false)).toBe(url);
+    expect(databaseUrl({ NODE_ENV: "production" }, true)).toBeNull();
+    warn.mockRestore();
   });
 
   it("keeps one account per email", async () => {

@@ -11,6 +11,17 @@ export type ConsentScope = (typeof CONSENT_SCOPES)[number];
 /** The notice a consent was given against. Bump it when /privacy changes in a way consent depends on. */
 export const CONSENT_NOTICE_VERSION = "2026-10-07-draft";
 
+/**
+ * Whether every learner-facing AI and voice route refuses a learner without consent (consentGate in
+ * consent.ts). Until it is true, consent records would promise something nothing enforces, so a
+ * production deployment keeps families in the browser (client.ts serverMode) and development says so
+ * on the consent page. consent-wiring.test.ts reads the routes and fails when this disagrees with them.
+ */
+export const CONSENT_ENFORCED = false;
+
+/** The active learner a session reports when the grown-up is using the app themselves. */
+export const PARENT_LEARNER = "parent";
+
 /** The only method that exists without a vendor: for building and testing, never for real children. */
 export const DEV_METHOD = "dev-not-verified";
 /** The signed-in account holder confirms. Not verifiable consent, so it only counts for learners 13 or older. */
@@ -31,6 +42,8 @@ export type ConsentReceipt = {
   revokedAt?: number;
   /** The account email that gave it. */
   grantedBy: string;
+  /** The account holder typed the account password to give it. */
+  passwordConfirmed?: boolean;
 };
 
 const UNDER_13_GRADES: Grade[] = ["K", "1", "2", "3", "4", "5", "6", "7"];

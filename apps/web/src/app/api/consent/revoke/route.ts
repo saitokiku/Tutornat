@@ -1,15 +1,16 @@
 import { z } from "zod";
 import { listReceipts, revokeConsent } from "@/lib/server/db/consent";
-import { json, readJson, withAccount } from "@/lib/server/db/http";
+import { authFailure, clientIp, json, readJson, withAccount } from "@/lib/server/db/http";
 
-const Body = z.object({ id: z.string().min(1).max(100) });
+const Body = z.object({ id: z.string().min(1).max(100), password: z.string().min(1).max(1000) });
 
-/** Ends a consent. The receipt stays, with the time it ended. */
+/** Ends a consent, with the account password. The receipt stays, with the time it ended. */
 export async function POST(req: Request) {
   return withAccount(req, async ({ db, accountId }) => {
     const body = await readJson(req, Body);
     if (body instanceof Response) return body;
-    if (!(await revokeConsent(db, accountId, body.id))) return json({ error: "not_found" }, { status: 404 });
+    const r = await revokeConsent(db, accountId, body, { ip: clientIp(req) });
+    if (!r.ok) return r.error === "rate" ? authFailure(r) : json({ error: r.error }, { status: r.error === "not_found" ? 404 : 403 });
     return json({ receipts: await listReceipts(db, accountId) });
   });
 }

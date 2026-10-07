@@ -2,9 +2,11 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  confirmPassword,
   confirmReset,
   hashPassword,
   LIMITS,
+  pruneSessions,
   readSession,
   renewSession,
   requestReset,
@@ -124,15 +126,26 @@ describe("sessions", () => {
 });
 
 describe("password reset", () => {
+  /** Stands in for next/server's `after`: tasks run when the test flushes them, after the answer. */
+  function later() {
+    const tasks: (() => Promise<void>)[] = [];
+    return { later: (task: () => Promise<void>) => void tasks.push(task), flush: () => Promise.all(tasks.splice(0).map((t) => t())), pending: () => tasks.length };
+  }
   const base = { origin: "https://kaizenedu.net", production: true, emailConfigured: true };
 
-  it("emails a one-hour link to a known address and answers the same for an unknown one", async () => {
+  it("emails a one-hour link to a known address, after answering exactly as for an unknown one", async () => {
     const address = email();
     await account(address);
     const sent: Mail[] = [];
     const send = vi.fn(async (m: Mail) => (sent.push(m), "sent" as const));
-    expect(await requestReset(db, { email: address, locale: "es" }, { ...ctx(), ...base, send })).toEqual({ delivery: "sent" });
-    expect(await requestReset(db, { email: email(), locale: "en" }, { ...ctx(), ...base, send })).toEqual({ delivery: "sent" });
+    const known = later();
+    expect(await requestReset(db, { email: address, locale: "es" }, { ...ctx(), ...base, send, later: known.later })).toEqual({ delivery: "sent" });
+    // Nothing was sent before the answer.
+    expect(send).not.toHaveBeenCalled();
+    const unknown = later();
+    expect(await requestReset(db, { email: email(), locale: "en" }, { ...ctx(), ...base, send, later: unknown.later })).toEqual({ delivery: "sent" });
+    expect(unknown.pending()).toBe(0);
+    await known.flush();
     expect(send).toHaveBeenCalledOnce();
     expect(sent[0].to).toBe(address);
     expect(sent[0].subject).toMatch(/contraseña/i);
@@ -142,43 +155,73 @@ describe("password reset", () => {
     expect(await resetValid(db, link![1], Date.now() + 61 * 60_000)).toBe(false);
   });
 
+  it("answers 'sent' even when the email fails, logs it, and voids that link", async () => {
+    const address = email();
+    await account(address);
+    const links: string[] = [];
+    const failing = async (m: Mail) => (links.push(m.text.match(/token=([\w-]+)/)![1]), "failed" as const);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const d = later();
+    expect(await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, send: failing, later: d.later })).toEqual({ delivery: "sent" });
+    await d.flush();
+    expect(await resetValid(db, links[0])).toBe(false);
+    expect(error).toHaveBeenCalledWith("[auth] a reset email was not sent (failed)");
+    error.mockRestore();
+  });
+
+  it("without a link address configured, says reset email isn't available to every asker alike", async () => {
+    const address = email();
+    await account(address);
+    const send = vi.fn();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const d = later();
+    expect(await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, origin: null, send, later: d.later })).toEqual({ delivery: "not-configured" });
+    expect(await requestReset(db, { email: email(), locale: "en" }, { ...ctx(), ...base, origin: null, send, later: d.later })).toEqual({ delivery: "not-configured" });
+    expect(d.pending()).toBe(0);
+    error.mockRestore();
+  });
+
   it("shows the link on the page only in development without email", async () => {
     const address = email();
     await account(address);
     const send = vi.fn();
-    const dev = await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, emailConfigured: false, production: false, send });
+    const d = later();
+    const dev = await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, emailConfigured: false, production: false, send, later: d.later });
     expect(dev).toMatchObject({ delivery: "not-configured", devLink: expect.stringMatching(/^\/reset-password\?token=/) });
-    const prod = await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, emailConfigured: false, send });
+    const prod = await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, emailConfigured: false, send, later: d.later });
     expect(prod).toEqual({ delivery: "not-configured" });
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("keeps only the newest link alive and voids one that could not be sent", async () => {
+  it("keeps only the newest link alive", async () => {
     const address = email();
     await account(address);
     const links: string[] = [];
     const send = async (m: Mail) => (links.push(m.text.match(/token=([\w-]+)/)![1]), "sent" as const);
-    await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, send });
-    await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, send });
+    const d = later();
+    await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, send, later: d.later });
+    await d.flush();
+    await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, send, later: d.later });
+    await d.flush();
     expect(await resetValid(db, links[0])).toBe(false);
     expect(await resetValid(db, links[1])).toBe(true);
-    const failing = async (m: Mail) => (links.push(m.text.match(/token=([\w-]+)/)![1]), "failed" as const);
-    expect(await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, send: failing })).toEqual({ delivery: "failed" });
-    expect(await resetValid(db, links[2])).toBe(false);
   });
 
   it("limits requests per address", async () => {
     const address = email();
     const send = async () => "sent" as const;
-    for (let i = 0; i < LIMITS.resetEmail.max; i++) await requestReset(db, { email: address, locale: "en" }, { ip: `172.16.0.${i}`, ...base, send });
-    expect(await requestReset(db, { email: address, locale: "en" }, { ip: "172.16.1.1", ...base, send })).toMatchObject({ status: 429 });
+    const d = later();
+    for (let i = 0; i < LIMITS.resetEmail.max; i++) await requestReset(db, { email: address, locale: "en" }, { ip: `172.16.0.${i}`, ...base, send, later: d.later });
+    expect(await requestReset(db, { email: address, locale: "en" }, { ip: "172.16.1.1", ...base, send, later: d.later })).toMatchObject({ status: 429 });
   });
 
   it("uses the link once, changes the password and signs every device out", async () => {
     const address = email();
     const { token: oldSession } = await account(address);
     let link = "";
-    await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, send: async (m) => ((link = m.text.match(/token=([\w-]+)/)![1]), "sent") });
+    const d = later();
+    await requestReset(db, { email: address, locale: "en" }, { ...ctx(), ...base, send: async (m) => ((link = m.text.match(/token=([\w-]+)/)![1]), "sent"), later: d.later });
+    await d.flush();
     expect(await confirmReset(db, { token: link, password: "short" })).toMatchObject({ ok: false, fields: { password: "err.password" } });
     const r = (await confirmReset(db, { token: link, password: "a new long password" })) as AuthOk;
     expect(r.ok).toBe(true);
@@ -187,6 +230,27 @@ describe("password reset", () => {
     expect(await confirmReset(db, { token: link, password: "another long one" })).toMatchObject({ ok: false, error: "invalid-link" });
     expect((await signIn(db, { email: address, password: "correct horse" }, ctx())).ok).toBe(false);
     expect((await signIn(db, { email: address, password: "a new long password" }, ctx())).ok).toBe(true);
+  });
+});
+
+describe("the account password again", () => {
+  it("confirms the holder, and counts wrong tries against the sign-in limit", async () => {
+    const address = email();
+    const { account: a } = await account(address);
+    expect(await confirmPassword(db, a.id, "correct horse", { ip: "10.9.0.1" })).toEqual({ ok: true, email: address });
+    for (let i = 0; i < LIMITS.signInEmail.max; i++) expect(await confirmPassword(db, a.id, "wrong", { ip: `10.9.1.${i}` })).toMatchObject({ ok: false, error: "bad-login" });
+    // The same limit as signing in: no way around it by guessing here.
+    expect(await confirmPassword(db, a.id, "correct horse", { ip: "10.9.2.1" })).toMatchObject({ ok: false, error: "rate" });
+    expect(await signIn(db, { email: address, password: "correct horse" }, { ip: "10.9.2.2" })).toMatchObject({ ok: false, error: "rate" });
+  });
+});
+
+describe("old rows", () => {
+  it("expired sessions are cleared", async () => {
+    const { token } = await account();
+    const later = Date.now() + SESSION_TTL_MS + 1000;
+    await pruneSessions(db, later);
+    expect(await readSession(db, token)).toBeNull();
   });
 });
 

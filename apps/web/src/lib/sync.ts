@@ -277,9 +277,9 @@ const TIME_FIELD: Partial<Record<SyncList, string>> = {
 const MAX_ACTS = 5000; // the same cap lib/acts.ts keeps per device
 
 /** Puts the server's records into the store. Ids still waiting in the outbox with a newer change are left alone. */
-export function mergeRemote(s: StoreState, answer: Pick<SyncResponse, "changes" | "conflicts" | "account">, accountId: string, skip: (list: SyncList | "account", id: string) => boolean) {
+export function mergeRemote(s: StoreState, answer: Pick<SyncResponse, "changes" | "account">, accountId: string, skip: (list: SyncList | "account", id: string) => boolean) {
   const purged = new Set<string>();
-  for (const part of [answer.changes, answer.conflicts]) {
+  for (const part of [answer.changes]) {
     for (const list of SYNC_LISTS) {
       const recs = part[list];
       if (!recs?.length) continue;

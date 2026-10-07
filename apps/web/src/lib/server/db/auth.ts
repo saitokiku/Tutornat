@@ -3,8 +3,8 @@ import { createHash, randomBytes, randomUUID, scrypt, timingSafeEqual } from "no
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { Locale } from "@/lib/types";
 import type { Db } from "./client";
-import { resetMail, type Delivery, type Sender } from "./email";
-import { NAME_MAX, normEmail, validate, type FieldErrors } from "./fields";
+import { resetMail, type Sender } from "./email";
+import { NAME_MAX, normEmail, PASSWORD_MAX, validate, type FieldErrors } from "./fields";
 import { accounts, authThrottle, passwordResets, sessions } from "./schema";
 import type { PublicAccount } from "./wire";
 
@@ -49,22 +49,35 @@ export const RESET_TTL_MS = 60 * 60_000;
 export const newToken = () => randomBytes(32).toString("base64url");
 export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
-export type Session = { id: string; accountId: string; expiresAt: Date };
+/** `learnerId`: who the browser last said is using it (a learner's id, "parent", or null). */
+export type Session = { id: string; accountId: string; expiresAt: Date; learnerId: string | null };
+
+/** Old rows are worthless; clear them now and then rather than on every request. */
+const sometimes = () => Math.random() < 0.02;
 
 export async function createSession(db: Db, accountId: string, now = Date.now()) {
   const token = newToken();
   const expiresAt = new Date(now + SESSION_TTL_MS);
   await db.insert(sessions).values({ id: randomUUID(), accountId, tokenHash: sha256(token), expiresAt, createdAt: new Date(now) });
+  if (sometimes()) await pruneSessions(db, now);
   return { token, expiresAt };
 }
+
+export const pruneSessions = (db: Db, now = Date.now()) => db.delete(sessions).where(lt(sessions.expiresAt, new Date(now)));
 
 export async function readSession(db: Db, token: string | null, now = Date.now()): Promise<Session | null> {
   if (!token || token.length > 100) return null;
   const [row] = await db
-    .select({ id: sessions.id, accountId: sessions.accountId, expiresAt: sessions.expiresAt })
+    .select({ id: sessions.id, accountId: sessions.accountId, expiresAt: sessions.expiresAt, learnerId: sessions.learnerId })
     .from(sessions)
     .where(and(eq(sessions.tokenHash, sha256(token)), gt(sessions.expiresAt, new Date(now))));
   return row ?? null;
+}
+
+/** Records who is using this browser now (sync reports it), for the consent gate on AI and voice. */
+export async function setSessionLearner(db: Db, session: Session, learner: string | null) {
+  if (session.learnerId === learner) return;
+  await db.update(sessions).set({ learnerId: learner }).where(eq(sessions.id, session.id));
 }
 
 /** Sliding expiry: a session used in its second half gets a fresh 30 days. Returns the new expiry, or null. */
@@ -117,8 +130,7 @@ export async function countHit(db: Db, key: string, limit: Limit, now = Date.now
         windowStart: sql`case when ${expired} then ${start} else ${authThrottle.windowStart} end`,
       },
     });
-  // Old windows are worthless; clear them now and then.
-  if (Math.random() < 0.02) await db.delete(authThrottle).where(lt(authThrottle.windowStart, new Date(now - 24 * 3600_000)));
+  if (sometimes()) await db.delete(authThrottle).where(lt(authThrottle.windowStart, new Date(now - 24 * 3600_000)));
 }
 
 const forgive = (db: Db, key: string) => db.delete(authThrottle).where(eq(authThrottle.key, key));
@@ -192,17 +204,36 @@ export async function signIn(db: Db, input: { email: string; password: string },
   return { ok: true, account: publicAccount(row), ...(await createSession(db, row.id, now)) };
 }
 
-export type ResetAnswer = { delivery: Delivery; devLink?: string };
+/**
+ * The signed-in account holder proves it is them again, before something only they may do (consent
+ * for a child). Wrong passwords count against the same limit as sign-in, so this is no way around it.
+ */
+export async function confirmPassword(db: Db, accountId: string, password: string, ctx: Ctx): Promise<{ ok: true; email: string } | AuthFail> {
+  const now = ctx.now ?? Date.now();
+  const [row] = await db.select({ email: accounts.email, passwordHash: accounts.passwordHash }).from(accounts).where(eq(accounts.id, accountId));
+  if (!row) return { ok: false, status: 401, error: "bad-login" };
+  const emailKey = throttleKey("signin", row.email);
+  const ipKey = throttleKey("signin-ip", ctx.ip);
+  const wait = Math.max(await waitFor(db, emailKey, LIMITS.signInEmail, now), await waitFor(db, ipKey, LIMITS.signInIp, now));
+  if (wait) return rate(wait);
+  if (password.length <= PASSWORD_MAX && (await verifyPassword(password, row.passwordHash))) return { ok: true, email: row.email };
+  await countHit(db, emailKey, LIMITS.signInEmail, now);
+  await countHit(db, ipKey, LIMITS.signInIp, now);
+  return { ok: false, status: 403, error: "bad-login" };
+}
+
+export type ResetAnswer = { delivery: "sent" | "not-configured"; devLink?: string };
 
 /**
- * Answers the same whoever asks, so the form can't list who has an account. A known address gets a
- * fresh link (earlier ones stop working). Without email set up, development shows the link on the
- * page; production says reset email isn't available.
+ * Answers the same whoever asks, at the same speed, so the form can't list who has an account: with
+ * email set up it is always "sent", and a known address's link is made and mailed after the answer
+ * (`later`). A failed send is logged on the server, never told to the asker. Without email,
+ * development shows the link on the page and production says reset email isn't available.
  */
 export async function requestReset(
   db: Db,
   input: { email: string; locale: Locale },
-  ctx: Ctx & { origin: string | null; send: Sender; emailConfigured: boolean; production: boolean },
+  ctx: Ctx & { origin: string | null; send: Sender; emailConfigured: boolean; production: boolean; later: (task: () => Promise<void>) => void },
 ): Promise<ResetAnswer | AuthFail> {
   const now = ctx.now ?? Date.now();
   const email = normEmail(input.email);
@@ -217,24 +248,34 @@ export async function requestReset(
   for (const [key, limit] of keys) await countHit(db, key, limit, now);
 
   const showLink = !ctx.emailConfigured && !ctx.production;
-  if (!ctx.emailConfigured && !showLink) return { delivery: "not-configured" };
-  const [row] = await db.select({ id: accounts.id, email: accounts.email }).from(accounts).where(eq(accounts.email, email));
-  if (!row) return { delivery: ctx.emailConfigured ? "sent" : "not-configured" };
-
-  const token = newToken();
-  const id = randomUUID();
-  await db.update(passwordResets).set({ usedAt: new Date(now) }).where(and(eq(passwordResets.accountId, row.id), isNull(passwordResets.usedAt)));
-  await db.insert(passwordResets).values({ id, accountId: row.id, tokenHash: sha256(token), createdAt: new Date(now), expiresAt: new Date(now + RESET_TTL_MS) });
-  const path = `/reset-password?token=${token}`;
-  if (showLink) return { delivery: "not-configured", devLink: path };
-  if (!ctx.origin) {
-    await db.update(passwordResets).set({ usedAt: new Date(now) }).where(eq(passwordResets.id, id));
+  // Email set up but no address to put in the link: a setup problem, the same for every asker.
+  const origin = ctx.origin;
+  if (!showLink && (!ctx.emailConfigured || !origin)) {
+    if (ctx.emailConfigured) console.error("[auth] reset email is set up but APP_URL is not; no link can be sent");
     return { delivery: "not-configured" };
   }
-  const delivery = await ctx.send(resetMail(row.email, ctx.origin + path, input.locale));
-  // A link nobody received must not stay live.
-  if (delivery !== "sent") await db.update(passwordResets).set({ usedAt: new Date(now) }).where(eq(passwordResets.id, id));
-  return { delivery };
+  const [row] = await db.select({ id: accounts.id, email: accounts.email }).from(accounts).where(eq(accounts.email, email));
+
+  const issue = async () => {
+    const token = newToken();
+    const id = randomUUID();
+    await db.update(passwordResets).set({ usedAt: new Date(now) }).where(and(eq(passwordResets.accountId, row!.id), isNull(passwordResets.usedAt)));
+    await db.insert(passwordResets).values({ id, accountId: row!.id, tokenHash: sha256(token), createdAt: new Date(now), expiresAt: new Date(now + RESET_TTL_MS) });
+    if (sometimes()) await db.delete(passwordResets).where(lt(passwordResets.expiresAt, new Date(now)));
+    return { id, path: `/reset-password?token=${token}` };
+  };
+
+  if (showLink) return row ? { delivery: "not-configured", devLink: (await issue()).path } : { delivery: "not-configured" };
+  if (row)
+    ctx.later(async () => {
+      const { id, path } = await issue();
+      const delivery = await ctx.send(resetMail(row.email, origin + path, input.locale));
+      if (delivery === "sent") return;
+      // A link nobody received must not stay live.
+      await db.update(passwordResets).set({ usedAt: new Date(now) }).where(eq(passwordResets.id, id));
+      console.error(`[auth] a reset email was not sent (${delivery})`);
+    });
+  return { delivery: "sent" };
 }
 
 export async function resetValid(db: Db, token: string, now = Date.now()) {

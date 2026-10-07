@@ -2,6 +2,7 @@ import "server-only";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { CONSENT_ENFORCED } from "./policy";
 import * as schema from "./schema";
 
 // The family database. DATABASE_URL turns server mode on:
@@ -11,17 +12,22 @@ import * as schema from "./schema";
 // Without it the app runs browser-only, exactly as before, and nothing here is touched.
 //
 // Pending migrations (apps/web/drizzle) are applied on first use, over a direct connection and under
-// an advisory lock so two cold-starting instances never apply the same one twice. A deploy can also
-// run them ahead of time with `npx drizzle-kit migrate --config drizzle/drizzle.config.ts`; for that,
-// and for the runtime check to find them, the `drizzle` folder ships with the server
-// (outputFileTracingIncludes in next.config.ts).
+// an advisory lock so two cold-starting instances never apply the same one twice. That needs the
+// `drizzle` folder deployed next to the server functions, which file tracing doesn't do by itself:
+// next.config.ts must list it in outputFileTracingIncludes, or the deploy runs
+// `npx drizzle-kit migrate --config drizzle/drizzle.config.ts` first. Without either, the server logs
+// that the folder is missing and expects the database to be current already.
+//
+// Production keeps families on the server only once the AI and voice routes check consent
+// (CONSENT_ENFORCED in policy.ts). Until then DATABASE_URL is ignored there, with a warning, and the
+// app stays browser-only, so no consent record can promise what nothing enforces.
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
 /** Rows of a raw `db.execute(sql…)`: both drivers answer `{ rows }`. */
 export const rowsOf = <T>(result: unknown) => (result as { rows: T[] }).rows;
 
-type State = { db?: Promise<Db>; test?: Db | null };
+type State = { db?: Promise<Db>; test?: Db | null; warned?: boolean };
 const KEY = Symbol.for("kaizenedu.db");
 const state = ((globalThis as Record<symbol, unknown>)[KEY] ??= {}) as State;
 
@@ -31,7 +37,18 @@ export class NoDatabase extends Error {
   }
 }
 
-export const databaseUrl = () => process.env.DATABASE_URL?.trim() || null;
+type Env = Record<string, string | undefined>;
+
+/** The database to use, or null for browser-only (unset, or production before consent is enforced). */
+export function databaseUrl(env: Env = process.env, enforced = CONSENT_ENFORCED): string | null {
+  const url = env.DATABASE_URL?.trim() || null;
+  if (!url || enforced || env.NODE_ENV !== "production") return url;
+  if (!state.warned) {
+    state.warned = true;
+    console.warn("[db] DATABASE_URL is set, but production stays browser-only until the AI and voice routes check consent (CONSENT_ENFORCED in lib/server/db/policy.ts)");
+  }
+  return null;
+}
 
 /** True when this deployment keeps families on the server. */
 export const serverMode = () => Boolean(state.test) || Boolean(databaseUrl());

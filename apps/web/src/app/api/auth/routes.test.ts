@@ -12,7 +12,7 @@ import { POST as signUp } from "./sign-up/route";
 import { GET as status } from "./status/route";
 
 // Outside Next there is no request scope for `connection()`; the handlers themselves are what's tested.
-vi.mock("next/server", () => ({ connection: async () => {} }));
+vi.mock("next/server", () => ({ connection: async () => {}, after: (task: () => unknown) => void task() }));
 
 let db: Db;
 let close: () => Promise<void>;

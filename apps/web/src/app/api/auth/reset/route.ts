@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { requestReset } from "@/lib/server/db/auth";
 import { getDb, serverMode } from "@/lib/server/db/client";
@@ -6,7 +7,7 @@ import { appOrigin, authFailure, clientIp, crossSite, json, localOnly, readJson 
 
 const Body = z.object({ email: z.string().max(400), locale: z.enum(["en", "es"]).default("en") });
 
-/** Asks for a reset link. The answer is the same whether or not the address has an account. */
+/** Asks for a reset link. The answer is the same, and as quick, whether or not the address has an account. */
 export async function POST(req: Request) {
   if (!serverMode()) return localOnly();
   if (crossSite(req)) return json({ error: "cross_site" }, { status: 403 });
@@ -18,6 +19,8 @@ export async function POST(req: Request) {
     send: resendSender(),
     emailConfigured: emailConfigured(),
     production: process.env.NODE_ENV === "production",
+    // The email goes out after the answer, so a known address takes no longer than an unknown one.
+    later: (task) => after(task),
   });
   return "ok" in r ? authFailure(r) : json(r);
 }
