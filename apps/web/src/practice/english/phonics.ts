@@ -2,6 +2,8 @@ import type { Skill } from "../types";
 import { BLEND_ONSET, SEGMENT_SOUNDS, SOUND_SWAP } from "./phonics/blend";
 import type { Entry } from "./phonics/core";
 import { skill } from "./phonics/core";
+import { SHORT_VOWELS } from "./phonics/grade1a";
+import { BLENDS_FINAL, BLENDS_INITIAL, DIGRAPHS } from "./phonics/grade1b";
 import { FINAL_SOUND, FIRST_SOUND, LETTER_NAMES } from "./phonics/letters";
 import { SIGHT_GRADE1, SIGHT_GRADE2, SIGHT_PREPRIMER, SIGHT_PRIMER } from "./phonics/sight";
 import { MIDDLE_VOWEL, WORD_FAMILIES } from "./phonics/sounds";
@@ -26,6 +28,10 @@ export const PHONICS_BANKS: Record<string, Entry[][]> = {
   "e.sight.preprimer": SIGHT_PREPRIMER,
   "e.sight.primer": SIGHT_PRIMER,
   "e.segment.sounds": SEGMENT_SOUNDS,
+  "e.short.vowels": SHORT_VOWELS,
+  "e.digraphs": DIGRAPHS,
+  "e.blends.initial": BLENDS_INITIAL,
+  "e.blends.final": BLENDS_FINAL,
   "e.sight.grade1": SIGHT_GRADE1,
   "e.sight.grade2": SIGHT_GRADE2,
 };
@@ -45,6 +51,10 @@ export const ENGLISH_PHONICS: Skill[] = [
   skill({ id: "e.sight.primer", grade: "K", title: { en: "Sight words: primer", es: "Palabras frecuentes 2" }, standard: "RF.K.3c", prereqs: ["e.sight.preprimer"] }, bank("e.sight.primer"), [6, 15]),
   // Grade 1
   skill({ id: "e.segment.sounds", grade: "1", title: { en: "Count the sounds", es: "Contar los sonidos" }, standard: "RF.1.2d", prereqs: ["e.sound.swap"] }, bank("e.segment.sounds"), [12]),
+  skill({ id: "e.short.vowels", grade: "1", title: { en: "Short vowel words", es: "Sílabas directas" }, standard: "RF.1.3b", prereqs: ["e.cvc.words", "e.middle.vowel"] }, bank("e.short.vowels"), [10, 8]),
+  skill({ id: "e.digraphs", grade: "1", title: { en: "Letter pairs: sh, ch, th", es: "Pares de letras: ch, ll, rr" }, standard: "RF.1.3a", prereqs: ["e.short.vowels"] }, bank("e.digraphs"), [10, 12]),
+  skill({ id: "e.blends.initial", grade: "1", title: { en: "Blends at the start", es: "Sílabas trabadas" }, standard: "RF.1.2b", prereqs: ["e.short.vowels"] }, bank("e.blends.initial"), [10, 12]),
+  skill({ id: "e.blends.final", grade: "1", title: { en: "Blends at the end", es: "Sílabas inversas" }, standard: "RF.1.3b", prereqs: ["e.blends.initial"] }, bank("e.blends.final"), [10, 12]),
   skill({ id: "e.sight.grade1", grade: "1", title: { en: "Sight words: grade 1", es: "Palabras frecuentes 3" }, standard: "RF.1.3g", prereqs: ["e.sight.primer"] }, bank("e.sight.grade1"), [6, 15]),
   // Grade 2
   skill({ id: "e.sight.grade2", grade: "2", title: { en: "Sight words: grade 2", es: "Palabras frecuentes 4" }, standard: "RF.2.3f", prereqs: ["e.sight.grade1"] }, bank("e.sight.grade2"), [6, 15]),

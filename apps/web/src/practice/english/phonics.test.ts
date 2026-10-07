@@ -18,10 +18,16 @@ const TABLE: [id: string, grade: string, standard: string, prereqs: string[], le
   ["e.sight.preprimer", "K", "RF.K.3c", ["e.sight.words"], 2],
   ["e.sight.primer", "K", "RF.K.3c", ["e.sight.preprimer"], 2],
   ["e.segment.sounds", "1", "RF.1.2d", ["e.sound.swap"], 1],
+  ["e.short.vowels", "1", "RF.1.3b", ["e.cvc.words", "e.middle.vowel"], 2],
+  ["e.digraphs", "1", "RF.1.3a", ["e.short.vowels"], 2],
+  ["e.blends.initial", "1", "RF.1.2b", ["e.short.vowels"], 2],
+  ["e.blends.final", "1", "RF.1.3b", ["e.blends.initial"], 2],
   ["e.sight.grade1", "1", "RF.1.3g", ["e.sight.primer"], 2],
   ["e.sight.grade2", "2", "RF.2.3f", ["e.sight.grade1"], 2],
 ];
 
+/** Reading skills built from the shared gap (level 1) and picture-word (level 2) shapes. */
+const READING = ["e.digraphs", "e.blends.initial", "e.blends.final"];
 const SIGHT = ["e.sight.preprimer", "e.sight.primer", "e.sight.grade1", "e.sight.grade2"];
 /** Levels a pre-reader answers by listening: every choice is a spoken picture. */
 const LISTENING: [string, number][] = [
@@ -31,6 +37,7 @@ const LISTENING: [string, number][] = [
 const SILENT: [string, number][] = [
   ["e.letter.names", 1], ["e.letter.names", 2], ["e.word.families", 2], ["e.blend.onset", 2], ["e.sound.swap", 2],
   ...SIGHT.flatMap((id): [string, number][] => [[id, 1], [id, 2]]),
+  ["e.short.vowels", 1], ...READING.flatMap((id): [string, number][] => [[id, 1], [id, 2]]),
 ];
 
 const LOCALES = ["en", "es"] as const;
@@ -376,5 +383,83 @@ describe("answer keys, checked another way (sight words)", () => {
     for (const id of SIGHT)
       for (const locale of LOCALES)
         for (const q of qs(id, locale)) for (const c of q.choices.slice(1)) expect(c.why, `${key(q)} / ${c.label}`).toBe(tagOf(key(q), c.label));
+  });
+});
+
+// ---- Reading patterns: every miss is re-derived from the key and the wrong word ----
+
+const PAIRS = ["sh", "ch", "th", "wh", "ck", "ng", "ll", "rr"];
+const isVowel = (c: string) => "aeiou".includes(c);
+/** Every misconception a wrong word could show, worked out from the two spellings. */
+function kinds(key: string, wrong: string): Set<string> {
+  const [k, d] = [norm(key), norm(wrong)];
+  const out = new Set<string>();
+  for (let i = 0; i < k.length; i++) if (k.slice(0, i) + k.slice(i + 1) === d) out.add("dropped-letter");
+  for (let i = 0; i + 1 < k.length; i++) if (k.slice(0, i) + k[i + 1] + k[i] + k.slice(i + 2) === d) out.add("swapped-letters");
+  if (k.length === d.length) {
+    const diff = [...k].map((c, i) => i).filter((i) => k[i] !== d[i]);
+    if (diff.length === 1 && !isVowel(k[diff[0]]) && !isVowel(d[diff[0]])) out.add("wrong-consonant").add("wrong-blend");
+  }
+  if (frame(k) === frame(d) && vowels(k) !== vowels(d)) out.add("wrong-vowel");
+  for (const g of PAIRS)
+    for (let i = k.indexOf(g); i >= 0; i = k.indexOf(g, i + 1)) {
+      const [before, after] = [k.slice(0, i), k.slice(i + 2)];
+      if (!d.startsWith(before) || !d.endsWith(after)) continue;
+      const put = d.slice(before.length, d.length - after.length);
+      if (put.length === 1) out.add(g === "ll" && put === "y" ? "sound-alike-spelling" : "single-letter");
+      if (put.length === 2 && put !== g && PAIRS.includes(put)) out.add("wrong-digraph");
+    }
+  return out;
+}
+
+describe("answer keys, checked another way (grade 1 reading)", () => {
+  it("short vowels: misses differ from the key only in the vowel, or in one consonant", () => {
+    for (const q of lv("e.short.vowels", 1, "en")) {
+      expect(key(q), q.alt).toMatch(/^[^aeiou][aeiou][^aeiou]$/);
+      expect(norm(q.alt!), q.alt).toBe(`a ${key(q)}`);
+      for (const c of q.choices.slice(1)) expect(kinds(key(q), c.label).has(c.why!), `${key(q)} ${c.label} ${c.why}`).toBe(true);
+    }
+    for (const q of lv("e.short.vowels", 1, "es")) {
+      const w = norm(q.say.split(".")[0]);
+      expect(w.startsWith(norm(key(q))), q.say).toBe(true);
+      expect(norm(key(q)), q.say).toMatch(/^[^aeiou][aeiou]$/);
+      expect(norm(q.prompt.split(" ").at(-1)!.replace("___", key(q))), q.prompt).toBe(w);
+      for (const c of q.choices.slice(1)) expect(c.why, `${w} ${c.label}`).toBe(c.label[0] === key(q)[0] ? "wrong-vowel" : "wrong-consonant");
+    }
+    for (const locale of LOCALES)
+      for (const q of lv("e.short.vowels", 2, locale)) {
+        const w = q.prompt.split(": ")[1];
+        expect(q.choices[0].say, q.prompt).toBe(w);
+        expect(q.steps.at(-1), q.prompt).toBe(`${w}: ${key(q)}`);
+        for (const c of q.choices.slice(1)) {
+          expect(c.say, q.prompt).not.toBe(w);
+          expect(c.why, `${w} ${c.say}`).toBe(frame(c.say!) === frame(w) && c.say!.length === w.length ? "wrong-vowel" : "wrong-consonant");
+        }
+      }
+  });
+
+  it("letter pairs and blends, level 1: the key fills the gap to spell the spoken word; each fill's tag fits", () => {
+    for (const id of READING)
+      for (const locale of LOCALES)
+        for (const q of lv(id, 1, locale)) {
+          const w = q.say.split(".")[0].toLowerCase();
+          const shown = q.prompt.split(" ").at(-1)!;
+          expect(shown.replace("___", key(q)), q.prompt).toBe(w);
+          for (const c of q.choices.slice(1)) {
+            const made = shown.replace("___", c.label);
+            expect(made, q.prompt).not.toBe(w);
+            expect(kinds(w, made).has(c.why!), `${w} → ${made} (${c.why})`).toBe(true);
+          }
+          if (id === "e.digraphs") expect(PAIRS, q.prompt).toContain(key(q));
+        }
+  });
+
+  it("letter pairs and blends, level 2: the key names the picture; each wrong word's tag fits", () => {
+    for (const id of READING)
+      for (const locale of LOCALES)
+        for (const q of lv(id, 2, locale)) {
+          expect(norm(q.alt!).split(" ").at(-1), q.alt).toBe(norm(key(q)));
+          for (const c of q.choices.slice(1)) expect(kinds(key(q), c.label).has(c.why!), `${key(q)} → ${c.label} (${c.why})`).toBe(true);
+        }
   });
 });
