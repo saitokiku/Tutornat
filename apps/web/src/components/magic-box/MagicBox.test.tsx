@@ -238,6 +238,56 @@ describe("MagicBox as the universal intake", () => {
     fireEvent.change(box(), { target: { value: "Mrs. Lee says there's a short check on fractions on Friday" } });
     expect(radio("Quiz")).toBeChecked();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    // The day the words name (this Friday) beats the reader's, so the item isn't labelled as the AI's reading.
+    await userEvent.click(screen.getByRole("button", { name: /Add quiz/ }));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect(read().events[0]).toMatchObject({ kind: "quiz", title: "Unit 2 fractions quiz", date: "2026-10-09", source: "typed" });
+  });
+
+  it("with AI, an item saved just as the reader read it says so", async () => {
+    ai.mode = "anthropic";
+    const out = { kind: "quiz", title: "Unit 2 fractions quiz", date: "2026-10-16", subject: "math", topic: "fractions", skillIds: ["m.frac.unit"], notes: [] };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(out), { status: 200 })));
+    render(<MagicBox learner={learner} />);
+    fireEvent.change(box(), { target: { value: "Mrs. Lee says there's a short check on fractions" } });
+    await waitFor(() => expect(radio("Quiz")).toBeChecked(), { timeout: 3000 });
+    await userEvent.click(screen.getByRole("button", { name: /Add quiz/ }));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect(read().events[0]).toMatchObject({ kind: "quiz", title: "Unit 2 fractions quiz", date: "2026-10-16", source: "ai" });
+  });
+
+  it("with AI, a stale reading never sticks to new, unrelated words", async () => {
+    ai.mode = "anthropic";
+    const out = { kind: "quiz", title: "Fractions quiz", date: "2026-10-09", subject: "math", topic: "fractions", skillIds: ["m.frac.unit"], notes: [] };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(out), { status: 200 })));
+    render(<MagicBox learner={learner} />);
+    fireEvent.change(box(), { target: { value: "Mrs. Lee says the fractions quiz is on Friday" } });
+    await waitFor(() => expect(screen.getByText(/read by the AI tutor/, { selector: "p:not([role])" })).toBeInTheDocument(), { timeout: 3000 });
+    fireEvent.change(box(), { target: { value: "practice multiplication facts tonight please" } });
+    expect(radio("Practice")).toBeChecked();
+    expect(screen.queryByText(/read by the AI tutor/, { selector: "p:not([role])" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Start practice/ })).toBeInTheDocument();
+  });
+
+  it("school work that mentions an off-limits word still saves, and is never sent to a model", async () => {
+    ai.mode = "anthropic";
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<MagicBox learner={learner} />);
+    fireEvent.change(box(), { target: { value: "Health quiz on drugs and alcohol Friday" } });
+    expect(radio("Quiz")).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: /Add quiz/ }));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect(read().events[0]).toMatchObject({ kind: "quiz", title: "Health quiz on drugs and alcohol", source: "typed" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("an off-limits topic gets one line and nothing to build or practice", async () => {
+    render(<MagicBox learner={learner} />);
+    await userEvent.type(box(), "tell me about drugs");
+    expect(screen.getByText("That's not something I can help with. Want to get back to what you're learning?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Build a course/ })).toBeDisabled();
+    expect(read().notes).toHaveLength(0);
   });
 
   it("a crisis gets the fixed reply instead of a guess, one note for the grown-ups, and nothing can be made", async () => {

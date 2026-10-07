@@ -124,9 +124,10 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     addNote(learner.id, t(noteKind === "abuse" ? "intake.safetyNoteAbuse" : "intake.safetyNoteCrisis"), "safety");
   }, [noteKind, learner.id, t]);
 
-  // The photo or PDF is read as soon as it is added, with what was typed as context (if it passes the safety screen).
+  // The photo or PDF is read as soon as it is added, with what was typed as context (if it passes the
+  // safety screen). Nothing goes to a model while a crisis or abuse message is in the box.
   useEffect(() => {
-    if (!aiOn || !file || file.blob.size > AI_FILE_MAX_BYTES) return;
+    if (!aiOn || !file || file.blob.size > AI_FILE_MAX_BYTES || urgent) return;
     let live = true;
     const typed = area.current?.value ?? "";
     const context = screen(typed, locale).kind === "ok" ? typed : "";
@@ -134,7 +135,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     return () => {
       live = false;
     };
-  }, [aiOn, file, today, locale, learner.grade]);
+  }, [aiOn, file, today, locale, learner.grade, urgent]);
 
   useEffect(() => {
     if (!readText) return;
@@ -542,7 +543,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
           <CameraIcon /> {t("intake.camera")}
         </Button>
         {!urgent && (
-          <Button type="submit" className="ml-auto" disabled={!ready || blocked} loading={busy}>
+          <Button type="submit" className={`ml-auto ${band === "k2" ? "min-h-14 px-6 text-base" : ""}`} disabled={!ready || blocked} loading={busy}>
             {label} <IconArrowRight size={16} />
           </Button>
         )}
