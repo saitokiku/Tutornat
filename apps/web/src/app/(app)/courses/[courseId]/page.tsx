@@ -5,7 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { LangTag } from "@/components/courses/LangTag";
 import { NotFound } from "@/components/courses/NotFound";
+import { OriginBadge } from "@/components/courses/Origin";
 import { Related } from "@/components/courses/Related";
+import { CoursePractice, CourseSources } from "@/components/courses/Sources";
 import { ParentGate } from "@/components/profiles/ParentGate";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
@@ -13,7 +15,7 @@ import { IconArrowLeft, IconArrowRight, IconCheck, IconTrash } from "@/component
 import { Badge, Button, Notice, SubjectDot, btn } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
 import { courseProgress, lessonState } from "@/lib/activity";
-import { getCourse, removeCourse } from "@/lib/courses";
+import { courseOrigin, getCourse, removeCourse } from "@/lib/courses";
 import { KIND_TAG, sizeLabel } from "@/lib/files";
 import { currentLearner } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
@@ -69,9 +71,8 @@ function CourseView() {
         <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
           <SubjectDot subject={course.subject} />
           {t(`subject.${course.subject}` as const)} · {gradeLabel(learner.locale, course.grade)}
-          {course.origin === "catalogue" && <Badge>{t("course.readyMade")}</Badge>}
-          {course.template && <Badge tone="warn">{t("gen.template")}</Badge>}
-          {course.ai && <Badge>{t("gen.aiWritten")}</Badge>}
+          {course.assigned && <Badge tone="good">{t("course.fromGrownUp")}</Badge>}
+          <OriginBadge course={course} />
           <LangTag course={course.locale} learner={learner.locale} />
         </p>
         <h1 lang={course.locale} className="font-brand text-t1 font-semibold text-balance text-ink sm:text-d3">
@@ -137,6 +138,9 @@ function CourseView() {
           })}
         </ol>
       </section>
+
+      {courseOrigin(course) === "sources" && <CoursePractice course={course} learner={learner} />}
+      <CourseSources course={course} />
 
       {course.sources.length > 0 && (
         <section className="space-y-2">

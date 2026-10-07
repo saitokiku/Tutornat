@@ -6,21 +6,25 @@ import { useEffect, useRef, useState } from "react";
 import { matchEntry } from "@/catalogue";
 import { CourseArt } from "@/components/courses/CourseArt";
 import { NotFound } from "@/components/courses/NotFound";
+import { OriginBadge } from "@/components/courses/Origin";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { OutlineEditor } from "@/components/generation/OutlineEditor";
-import { IconArrowLeft, IconArrowRight, IconCheck, IconRefresh } from "@/components/icons";
-import { Badge, Button, Notice, Spinner, SubjectDot } from "@/components/ui";
+import { sourceLine, type StepLine } from "@/components/generation/steps";
+import { IconArrowLeft, IconArrowRight, IconCheck, IconMinus, IconRefresh, IconX } from "@/components/icons";
+import { Button, Notice, Spinner, SubjectDot } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
-import type { Key } from "@/i18n/en";
-import { addFromCatalogue, getCourse, removeCourse, saveCourse } from "@/lib/courses";
+import { addFromCatalogue, finishDraft, getCourse, removeCourse, saveCourse } from "@/lib/courses";
 import { aiStatus } from "@/lib/ai/client";
 import { generateOutline } from "@/lib/generate";
 import { recentSkills } from "@/lib/practice";
+import { isReviewed } from "@/lib/review";
 import { KIND_TAG } from "@/lib/files";
 import { currentLearner } from "@/lib/profiles";
+import { buildSourceCourse, knowFetchers, topicOf, type SourceStep } from "@/lib/source-course";
 import { read, useStore } from "@/lib/store";
 import type { Course, Lesson, Profile } from "@/lib/types";
+import { getSkill } from "@/practice/skills";
 
 export default function DraftPage() {
   return (
@@ -30,7 +34,13 @@ export default function DraftPage() {
   );
 }
 
-type Step = { key: Key; vars?: Record<string, number>; at: number };
+type Step = StepLine & { at: number };
+/** auto: the AI writer when connected, else real sources. sources / template: what the family picked. */
+type Mode = "auto" | "sources" | "template";
+type Note = "gates" | "offline" | "nothing" | null;
+
+const STEP_ICON = { found: IconCheck, none: IconMinus, failed: IconX } as const;
+const STEP_TONE = { found: "text-good", none: "text-muted", failed: "text-warn" } as const;
 
 function Draft() {
   const t = useT();
@@ -49,52 +59,99 @@ function Draft() {
   const ctrl = useRef<AbortController | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [skipped, setSkipped] = useState<string[]>([]);
+  const [note, setNote] = useState<Note>(null);
 
-  // Reads the outline stream; state only changes from its events, so it can run inside an effect.
-  const stream = async (course: Course, c: AbortController, forceTemplate = false) => {
-    const got: Lesson[] = [];
-    const ai = !forceTemplate && (await aiStatus()) !== "demo";
-    const req = {
-      goal: course.goal,
-      grade: course.grade,
+  const step = (line: StepLine) => setSteps((s) => [...s, { ...line, at: Date.now() }]);
+
+  /** Lessons from real sources, no AI. Nothing found stays nothing: the page says so. */
+  const fromSources = async (course: Course, c: AbortController) => {
+    const topic = topicOf(course.goal, [learner.nickname]);
+    const found: SourceStep[] = [];
+    const built = await buildSourceCourse(course.goal, course.grade, course.locale, knowFetchers, {
       subject: course.subject,
       length: course.length,
-      locale: course.locale,
-      sources: course.sources,
-      interests: learner.interests,
-      working: recentSkills(read(), learner.id, Date.now()).slice(0, 6),
-    };
-    setFailed(null);
-    setSkipped([]);
-    for await (const e of generateOutline(req, c.signal, 550, ai)) {
-      if (e.type === "step") setSteps((s) => [...s, { key: `gen.step.${e.step}`, at: Date.now() }]);
-      if (e.type === "lesson") {
-        got.push(e.lesson);
-        setLessons([...got]);
-        setSteps((s) => [...s, { key: "gen.lessonArrived", vars: { n: got.length }, at: Date.now() }]);
-      }
-      if (e.type === "skipped") setSkipped((s) => [...s, e.title]);
-      if (e.type === "error") setFailed(e.error);
-      if (e.type === "done") saveCourse({ ...course, lessons: got, template: !ai, ai: ai || undefined });
-    }
-    if (!c.signal.aborted) setRunning(false);
+      avoid: [learner.nickname],
+      signal: c.signal,
+      onStep: (s) => (found.push(s), step(sourceLine(s, topic))),
+      reviewed: (id) => {
+        const skill = getSkill(id);
+        return !!skill && isReviewed(read(), skill);
+      },
+    });
+    if (c.signal.aborted) return;
+    setLessons(built.lessons);
+    if (!built.lessons.length) return setNote("nothing");
+    if (found.some((s) => "failed" in s && s.failed === "offline")) setNote((n) => n ?? "offline");
+    saveCourse({ ...course, lessons: built.lessons, citations: built.citations, template: false, ai: undefined });
   };
 
-  const restart = (course: Course, forceTemplate = false) => {
+  // Reads the outline stream or builds from sources; state only changes from their events, so it can run inside an effect.
+  const build = async (course: Course, c: AbortController, mode: Mode = "auto") => {
+    setFailed(null);
+    setSkipped([]);
+    setNote(null);
+    try {
+      const ai = mode === "auto" && (await aiStatus()) !== "demo";
+      if (c.signal.aborted) return;
+      // Real sources need a topic to look up; a request that is only attached files gets the template.
+      const searchable = topicOf(course.goal, [learner.nickname]).length >= 2;
+      if (searchable && (mode === "sources" || (mode === "auto" && !ai))) return await fromSources(course, c);
+      const req = {
+        goal: course.goal,
+        grade: course.grade,
+        subject: course.subject,
+        length: course.length,
+        locale: course.locale,
+        sources: course.sources,
+        interests: learner.interests,
+        working: recentSkills(read(), learner.id, Date.now()).slice(0, 6),
+      };
+      const got: Lesson[] = [];
+      let error: string | null = null;
+      let skippedAny = false;
+      for await (const e of generateOutline(req, c.signal, 550, ai)) {
+        if (e.type === "step") step({ key: `gen.step.${e.step}`, tone: "found" });
+        if (e.type === "lesson") {
+          got.push(e.lesson);
+          setLessons([...got]);
+          step({ key: "gen.lessonArrived", vars: { n: got.length }, tone: "found" });
+        }
+        if (e.type === "skipped") {
+          skippedAny = true;
+          setSkipped((s) => [...s, e.title]);
+        }
+        if (e.type === "error") error = e.error;
+      }
+      if (c.signal.aborted) return;
+      if (got.length) return saveCourse({ ...course, lessons: got, template: !ai, ai: ai || undefined, citations: undefined });
+      // The writer failed its own quality gates on every lesson: build from real sources instead, and say so.
+      if (ai && skippedAny && !error) {
+        setNote("gates");
+        return await fromSources(course, c);
+      }
+      if (error) setFailed(error);
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setNote("nothing");
+    } finally {
+      if (!c.signal.aborted) setRunning(false);
+    }
+  };
+
+  const restart = (course: Course, mode: Mode = "auto") => {
     ctrl.current?.abort();
     ctrl.current = new AbortController();
     setLessons([]);
     setSteps([]);
     setRunning(true);
     setStarted(Date.now());
-    void stream(course, ctrl.current, forceTemplate);
+    void build(course, ctrl.current, mode);
   };
 
   // Start automatically when arriving from the magic box; abort if the page goes away.
   useEffect(() => {
     if (!(fresh && draft && draft.status === "outlining" && draft.lessons.length === 0)) return;
     const c = (ctrl.current = new AbortController());
-    void stream(draft, c);
+    void build(draft, c);
     return () => c.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per arrival
   }, [draftId, fresh]);
@@ -121,11 +178,11 @@ function Draft() {
   };
   const create = () => {
     const clean = lessons.map((l) => ({ ...l, title: l.title.trim() || t("gen.newLesson") }));
-    saveCourse({ ...draft, title: title.trim() || draft.title, lessons: clean, status: "ready" });
+    finishDraft(draft.id, learner.id, { title: title.trim() || draft.title, lessons: clean });
     router.push(`/courses/${draft.id}`);
   };
 
-  const stale = !running && lessons.length === 0;
+  const stale = !running && lessons.length === 0 && note !== "nothing" && !failed;
   const match = matchEntry(draft.goal, draft.grade, learner.locale);
   const useMatch = () => {
     if (!match) return;
@@ -135,6 +192,7 @@ function Draft() {
     if (draft.status === "outlining") removeCourse(draft.id);
   };
   const elapsed = Math.max(0, Math.round(((running ? now : (steps.at(-1)?.at ?? started)) - started) / 1000));
+  const sourced = Boolean(draft.citations) && !draft.ai;
 
   return (
     <div className="space-y-8">
@@ -166,13 +224,16 @@ function Draft() {
       {(running || steps.length > 0) && (
         <section aria-label={t("gen.title")} className="rounded-md border border-border bg-panel px-5 py-4">
           <ol className="space-y-1.5">
-            {steps.map((s, i) => (
-              <li key={i} className="flex items-center gap-2.5 text-sm text-ink animate-fade-up">
-                <IconCheck size={16} className="text-good" />
-                {t(s.key, s.vars)}
-                <span className="ml-auto font-opmono text-xs tabular-nums text-muted">{Math.round((s.at - started) / 1000)}s</span>
-              </li>
-            ))}
+            {steps.map((s, i) => {
+              const Icon = STEP_ICON[s.tone];
+              return (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-ink animate-fade-up">
+                  <Icon size={16} className={`mt-0.5 shrink-0 ${STEP_TONE[s.tone]}`} />
+                  <span className="min-w-0 flex-1">{t(s.key, s.vars)}</span>
+                  <span className="shrink-0 font-opmono text-xs tabular-nums text-muted">{Math.round((s.at - started) / 1000)}s</span>
+                </li>
+              );
+            })}
           </ol>
           <div className="mt-3 flex items-center gap-3 border-t border-border pt-3">
             {running ? (
@@ -184,13 +245,47 @@ function Draft() {
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-ink">{t("gen.done")}</p>
+              lessons.length > 0 && <p className="text-sm text-ink">{t("gen.done")}</p>
             )}
           </div>
           <p role="status" className="sr-only">
             {steps.length ? t(steps.at(-1)!.key, steps.at(-1)!.vars) : ""}
           </p>
         </section>
+      )}
+
+      {note === "gates" && <Notice>{t("crs.gatesNote")}</Notice>}
+      {note === "offline" && !running && (
+        <Notice
+          tone="warn"
+          action={
+            <Button size="sm" variant="secondary" onClick={() => restart(draft, "sources")}>
+              <IconRefresh size={14} /> {t("common.retry")}
+            </Button>
+          }
+        >
+          {t("crs.offlineNote")}
+        </Notice>
+      )}
+      {note === "nothing" && !running && (
+        <Notice
+          tone="warn"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={backToBox}>
+                {t("gen.editRequest")}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => restart(draft, "template")}>
+                {t("gen.useTemplate")}
+              </Button>
+              <Button size="sm" onClick={() => restart(draft, "sources")}>
+                <IconRefresh size={14} /> {t("common.retry")}
+              </Button>
+            </div>
+          }
+        >
+          {t("crs.nothing")}
+        </Notice>
       )}
 
       {stale && (
@@ -243,8 +338,8 @@ function Draft() {
               <Button size="sm" onClick={() => restart(draft)}>
                 {t("common.retry")}
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => restart(draft, true)}>
-                {t("gen.useTemplate")}
+              <Button size="sm" variant="secondary" onClick={() => restart(draft, "sources")}>
+                {t("crs.useSources")}
               </Button>
             </div>
           }
@@ -260,8 +355,7 @@ function Draft() {
             <h2 id="outline" className="font-brand text-t2 font-semibold text-ink">
               {t("gen.lessons")}
             </h2>
-            {draft.template && <Badge tone="warn">{t("gen.template")}</Badge>}
-            {draft.ai && <Badge>{t("gen.aiWritten")}</Badge>}
+            {!running && <OriginBadge course={draft} />}
           </div>
           {!running && (
             <div className="space-y-1.5">
@@ -272,7 +366,8 @@ function Draft() {
             </div>
           )}
           <OutlineEditor lessons={lessons} onChange={setLessons} locked={running} />
-          {draft.template && !running && <p className="text-xs text-muted">{t("gen.templateNote")}</p>}
+          {!running && draft.template && !sourced && <p className="text-xs text-muted">{t("gen.templateNote")}</p>}
+          {!running && sourced && <p className="text-xs text-muted">{t("crs.sourcesNote")}</p>}
           {!running && (
             <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-5">
               <Button variant="ghost" onClick={backToBox}>
