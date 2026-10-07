@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { signUp } from "@/lib/auth";
 import { downloadFile, reloadHome } from "@/lib/export";
-import { resetEmailMode, weeklyOf } from "@/lib/email/weekly";
+import { resetEmailMode, resetSendStatus, useWeeklyEmail, weeklyOf } from "@/lib/email/weekly";
 import { createLearner } from "@/lib/profiles";
 import { read, resetMemory, update } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -21,11 +21,14 @@ vi.mock("@/lib/export", async (original) => ({ ...(await original<typeof import(
 
 let mode: "send" | "preview" = "preview";
 let posts: Record<string, unknown>[] = [];
+const CODE = "4K7QMZ2D";
+const TOKEN = `w2.abc123.${"a".repeat(43)}`;
 
 beforeEach(() => {
   mode = "preview";
   posts = [];
   resetEmailMode();
+  resetSendStatus();
   nav.params = new URLSearchParams();
   history.replaceState(null, "", "/settings");
   vi.stubGlobal(
@@ -36,7 +39,8 @@ beforeEach(() => {
       const body = JSON.parse(String(init.body));
       posts.push(body);
       if (mode === "preview") return Response.json({ error: "preview" }, { status: 503 });
-      return Response.json({ ok: body.action !== "verify" || body.token === "a".repeat(43) });
+      if (body.action === "verify") return Response.json(body.code === CODE ? { ok: true, token: TOKEN } : { ok: false });
+      return Response.json({ ok: true });
     }),
   );
 });
@@ -146,7 +150,7 @@ describe("Weekly email in Settings", () => {
     // The preview is the real email for this week so far: numbers, no names.
     await user.click(screen.getByText("Preview this week's email"));
     const text = screen.getByLabelText("Plain text", { selector: "pre" });
-    expect(text).toHaveTextContent("Right on their own: 1");
+    expect(text).toHaveTextContent("Right on own: 1");
     expect(text.textContent).not.toMatch(/Ada|Bo\b|Maria/);
     expect(screen.getByTitle("Weekly email preview")).toHaveAttribute("sandbox", "");
   });
@@ -160,26 +164,42 @@ describe("Weekly email in Settings", () => {
     expect(screen.getByText("Nothing has happened this week yet, so no email would go out.")).toBeInTheDocument();
   });
 
-  it("in send mode: turning it on emails a confirmation link to the account address", async () => {
+  it("in send mode: turning it on emails a code to the account address, and the code typed by keyboard confirms it", async () => {
     mode = "send";
-    await grownUp();
+    const { accountId } = await grownUp();
     const user = userEvent.setup();
     render(<SettingsPage />);
     const sw = await screen.findByRole("switch", { name: /Send me the weekly email/ });
     await waitFor(() => expect(sw).toBeEnabled());
     await user.click(sw);
-    await screen.findByText("Link sent to maria@example.com. Open it in this browser.");
+    await screen.findByText("Code sent to maria@example.com. Enter it below, or open the link in that email in this browser.");
     expect(posts).toEqual([{ action: "confirm", to: "maria@example.com", locale: "en" }]);
-    expect(screen.getByRole("button", { name: "Send the link again" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send a new code" })).toBeInTheDocument();
+
+    // A wrong code: the field says so and keeps focus.
+    const field = screen.getByLabelText("Code from the email");
+    await user.click(field);
+    await user.keyboard("ZZZZ-ZZZZ{Enter}");
+    await screen.findByText(/That code didn't work/);
+    expect(field).toHaveFocus();
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    // Then the right one, typed the way it reads in the email.
+    await user.clear(field);
+    await user.keyboard("4k7q-mz2d{Enter}");
+    await screen.findByText("Confirmed. The weekly email is on.");
+    expect(weeklyOf(read(), accountId)).toMatchObject({ on: true, confirmed: { token: TOKEN } });
+    expect(posts.at(-1)).toEqual({ action: "verify", to: "maria@example.com", code: CODE });
+    // Until the app shell sends too, it says Settings is where the email goes out from.
+    expect(await screen.findByText(/when a grown-up opens Settings here after Sunday/)).toBeInTheDocument();
   });
 
   it("confirms the address from the emailed link and tidies the URL", async () => {
     mode = "send";
     const { accountId } = await grownUp();
-    history.replaceState(null, "", `/settings#weekly=${"a".repeat(43)}`);
+    history.replaceState(null, "", `/settings#weekly=${CODE}`);
     render(<SettingsPage />);
     await screen.findByText("Confirmed. The weekly email is on.");
-    expect(weeklyOf(read(), accountId)).toMatchObject({ on: true, confirmed: { token: "a".repeat(43) } });
+    expect(weeklyOf(read(), accountId)).toMatchObject({ on: true, confirmed: { token: TOKEN } });
     expect(nav.replace).toHaveBeenCalledWith("/settings#weekly");
     expect(await screen.findByText("On, going to maria@example.com.")).toBeInTheDocument();
   });
@@ -187,24 +207,62 @@ describe("Weekly email in Settings", () => {
   it("says when a confirmation link doesn't check out", async () => {
     mode = "send";
     await grownUp();
-    history.replaceState(null, "", `/settings#weekly=${"b".repeat(43)}`);
+    history.replaceState(null, "", "/settings#weekly=ZZZZZZZZ");
     render(<SettingsPage />);
-    await screen.findByText("That confirmation link didn't work. Send a new one below.");
+    await screen.findByText(/That confirmation link didn't work/);
+  });
+
+  it("with the app shell sending too, says the Parent view sends; a failed send is said, not hidden", async () => {
+    mode = "send";
+    const { accountId } = await grownUp();
+    const lastWeek = Date.now() - 8 * 24 * 3600_000;
+    update((s) => {
+      const a = s.accounts.find((x) => x.id === accountId) as (typeof s.accounts)[number] & { weeklyEmail?: unknown };
+      a.weeklyEmail = { on: true, confirmed: { token: TOKEN, at: lastWeek - 7 * 24 * 3600_000 } };
+      s.attempts.push({ id: "lw", profileId: s.profiles[0].id, at: lastWeek, skillId: "m.add.10", level: 1, seed: 1, mode: "practice", correct: true, assisted: false, seconds: 30 });
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url === "/api/ai/status") return Response.json({ mode: "demo" });
+        if (!init?.method) return Response.json({ mode: "send" });
+        posts.push(JSON.parse(String(init.body)));
+        return Response.json({ error: "send_failed" }, { status: 502 });
+      }),
+    );
+    function Shell() {
+      useWeeklyEmail();
+      return <SettingsPage />;
+    }
+    render(<Shell />);
+    expect(await screen.findByText(/the first time a grown-up opens the Parent view here after Sunday/)).toBeInTheDocument();
+    expect(await screen.findByText("Last week's email couldn't be sent. It's tried again the next time a grown-up opens this page.")).toBeInTheDocument();
+    expect(posts.filter((p) => p.action === "send")).toHaveLength(1);
   });
 });
 
 describe("Settings for a learner", () => {
-  it("shows only their language, switching, and the policies", async () => {
-    const { ada } = await grownUp();
-    act(() => update((s) => void (s.session.profileId = ada.id)));
-    history.replaceState(null, "", `/settings#weekly=${"a".repeat(43)}`);
+  it("shows only their language and the way back to a grown-up, at K–2 sizes for a young learner", async () => {
+    const { bo } = await grownUp();
+    act(() => update((s) => void (s.session.profileId = bo.id)));
+    history.replaceState(null, "", `/settings#weekly=${CODE}`);
     render(<SettingsPage />);
-    expect(screen.getByRole("heading", { name: "Language for Ada" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Language for Bo" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download our data" })).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("link", { name: "Open question review" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Privacy" })).toBeNull();
+    expect(screen.queryByText("privacy@kaizenedu.net")).toBeNull();
     expect(screen.getByText(/open the Parent view/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+    for (const name of ["English", "Español"]) expect(screen.getByRole("button", { name })).toHaveClass("min-h-14");
+    expect(screen.getByRole("link", { name: /Switch/ })).toHaveClass("min-h-14");
     expect(posts).toEqual([]);
+  });
+
+  it("an older learner gets the standard sizes", async () => {
+    const { ada } = await grownUp();
+    act(() => update((s) => void (s.session.profileId = ada.id)));
+    render(<SettingsPage />);
+    expect(screen.getByRole("button", { name: "English" })).toHaveClass("min-h-11");
   });
 });

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { signUp } from "./auth";
-import { dataCounts, deleteFamily, deleteLearnerData, EXPORT_FORMAT, exportFamily, exportFileName, wipeBrowserStorage, withFiles } from "./export";
+import { attachedFiles, dataCounts, deleteFamily, deleteLearnerData, EXPORT_FORMAT, exportFamily, exportFileName, wipeBrowserStorage, withFiles } from "./export";
 import { createLearner } from "./profiles";
 import { emptyState, read, resetMemory, STORE_KEY, update, type StoreState } from "./store";
 import type { Profile } from "./types";
@@ -66,6 +66,32 @@ describe("exportFamily", () => {
     expect(out.data).not.toHaveProperty("resets");
     expect(out.data).not.toHaveProperty("accounts");
     expect(JSON.stringify(out)).not.toContain("secret-reset-token");
+  });
+
+  it("leaves out the weekly email's send token, keeping the rest of the opt-in", async () => {
+    const { accountId } = await twoFamilies();
+    const token = `w2.abc123.${"s".repeat(43)}`;
+    update((s) => {
+      const a = s.accounts.find((x) => x.id === accountId) as (typeof s.accounts)[number] & { weeklyEmail?: unknown };
+      a.weeklyEmail = { on: true, confirmed: { token, at: T }, askedAt: T - 1, lastWeek: "2026-09-28", lastSentAt: T };
+    });
+    const out = exportFamily(read(), accountId)!;
+    expect(out.account.weeklyEmail).toEqual({ on: true, confirmed: { at: T }, askedAt: T - 1, lastWeek: "2026-09-28", lastSentAt: T });
+    expect(JSON.stringify(out)).not.toContain(token);
+    // The store itself keeps it: Settings still needs it to send.
+    expect(JSON.stringify(read().accounts)).toContain(token);
+  });
+
+  it("counts the saved files an export without withFiles leaves out", async () => {
+    const { accountId, ada, other } = await twoFamilies();
+    expect(attachedFiles(read(), accountId)).toBe(0);
+    update((s) => {
+      s.events.find((e) => e.id === "e1")!.attachment = { blobId: "b1", name: "quiz.jpg" };
+      s.events.push({ id: "e2", profileId: ada.id, title: "Same photo", kind: "homework", date: "2026-10-10", skillIds: [], source: "typed", createdAt: T, attachment: { blobId: "b1" } });
+      s.events.push({ id: "e3", profileId: ada.id, title: "Name only", kind: "test", date: "2026-10-11", skillIds: [], source: "typed", createdAt: T, attachment: { name: "notes.pdf" } });
+      s.events.push({ id: "e4", profileId: other.id, title: "Theirs", kind: "test", date: "2026-10-11", skillIds: [], source: "typed", createdAt: T, attachment: { blobId: "b2" } });
+    });
+    expect(attachedFiles(read(), accountId)).toBe(1);
   });
 
   it("is null for an account that isn't on this device, and round-trips through JSON", async () => {

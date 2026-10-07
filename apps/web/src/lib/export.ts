@@ -1,6 +1,7 @@
 import { localDate } from "@/planner/dates";
 import type { SchoolEvent } from "@/planner/types";
 import { clearAll, read, STORE_KEY, update, type StoreState } from "./store";
+import type { WeeklyOptIn } from "./email/weekly";
 import type { Account, Profile } from "./types";
 
 // A family's own data: everything KaizenEDU keeps for one account, as one JSON file, and deleting it.
@@ -17,8 +18,12 @@ export type FamilyExport = {
   exportedAt: string;
   /** A sentence for whoever opens the file. */
   note?: string;
-  /** The account without its password hash and salt: those are credentials, not the family's record. */
-  account: Omit<Account, "salt" | "passwordHash">;
+  /**
+   * The account without its credentials: no password hash or salt, and the weekly email's send token
+   * left out (only when it was confirmed). Credentials aren't the family's record, and a file that
+   * gets shared must not let anyone act as the family.
+   */
+  account: Omit<Account, "salt" | "passwordHash"> & { weeklyEmail?: Omit<WeeklyOptIn, "confirmed"> & { confirmed?: { at: number } } };
   learners: Profile[];
   prefs: StoreState["prefs"];
   /** Every other list, filtered to this family: courses, attempts, sets, events, threads, acts, reviews… */
@@ -57,9 +62,11 @@ export function exportFamily(s: StoreState, accountId: string, opts: { at?: numb
   if (!account) return null;
   const ids = familyIds(s, accountId);
   const mine = owner(accountId, ids);
-  const safe: Partial<Account> = { ...account };
-  delete safe.salt;
-  delete safe.passwordHash;
+  const rest: Partial<Account> & { weeklyEmail?: WeeklyOptIn } = { ...account };
+  delete rest.salt;
+  delete rest.passwordHash;
+  const w = rest.weeklyEmail;
+  const safe = { ...rest, ...(w ? { weeklyEmail: { ...w, ...(w.confirmed ? { confirmed: { at: w.confirmed.at } } : {}) } } : {}) } as FamilyExport["account"];
   const data: Record<string, unknown[]> = {};
   for (const [key, rows] of lists(s)) if (!NEVER_EXPORTED.has(key)) data[key] = rows.filter(mine);
   return {
@@ -67,7 +74,7 @@ export function exportFamily(s: StoreState, accountId: string, opts: { at?: numb
     version: 1,
     exportedAt: new Date(opts.at ?? Date.now()).toISOString(),
     ...(opts.note ? { note: opts.note } : {}),
-    account: safe as FamilyExport["account"],
+    account: safe,
     learners: s.profiles.filter((p) => p.accountId === accountId),
     prefs: s.prefs,
     data,
@@ -93,6 +100,12 @@ export async function withFiles(exp: FamilyExport, get: (id: string) => Promise<
 }
 
 export const exportFileName = (at: number) => `kaizenedu-family-${localDate(at)}.json`;
+
+/** How many saved files this family's school items name: what an export made without withFiles() leaves out. */
+export function attachedFiles(s: StoreState, accountId: string) {
+  const ids = familyIds(s, accountId);
+  return new Set(s.events.flatMap((e) => (ids.has(e.profileId) && e.attachment?.blobId ? [e.attachment.blobId] : []))).size;
+}
 
 /** What a delete would remove, counted from the record (shown before a grown-up confirms). */
 export function dataCounts(s: StoreState, who: { accountId: string } | { profileId: string }) {

@@ -28,7 +28,7 @@ export const LearnerWeek = z.object({
   helpOn: skills,
   overdue: skills,
   stuck: skills,
-  /** Tests or quizzes in the next 3 days with no prep set started. Titles have learner names removed. */
+  /** Tests or quizzes in the next 3 days with no prep set finished. Titles have the family's saved names removed. */
   tests: z.array(z.object({ kind: z.enum(["test", "quiz"]), date: day, title: z.string().max(80) })).max(5),
   /** Days since anything was done, when it is 5 or more. */
   idleDays: z.number().int().min(5).max(400).optional(),
@@ -102,7 +102,8 @@ function sections(input: WeeklyInput): Section[] {
       ? [tr(locale, "trust.email.quiet")]
       : [
           tr(locale, "trust.email.minutes", { n: l.minutes }),
-          tr(locale, "trust.email.answers", { own: l.own, help: l.helped, missed: l.missed }),
+          // The Family page's own labels for the same three numbers.
+          `${tr(locale, "growth.own")}: ${l.own} · ${tr(locale, "growth.help")}: ${l.helped} · ${tr(locale, "growth.missed")}: ${l.missed}`,
           tr(locale, "trust.email.done", { lessons: l.lessons, sets: l.sets }),
           ...(l.proved.length ? [tr(locale, "trust.email.proved", { skills: names(l.proved) })] : []),
           ...(l.checksWaiting.length ? [tr(locale, "trust.email.waiting", { skills: names(l.checksWaiting) })] : []),
@@ -179,14 +180,31 @@ ${small(honest)}
   return { subject, text, html };
 }
 
-/** Sent once when a grown-up turns the weekly email on: proves the address is theirs. */
-export function renderConfirm(locale: Locale, link: string): Email {
+/** "4K7QMZ2D" → "4K7Q-MZ2D", easier to read off a phone. */
+export const showCode = (code: string) => `${code.slice(0, 4)}-${code.slice(4)}`;
+
+/**
+ * Sent when a grown-up turns the weekly email on: proves the address is theirs. The code can be typed
+ * into Settings on any device; the link only works in the browser that holds the family's record
+ * (email apps often open links in a browser of their own).
+ */
+export function renderConfirm(locale: Locale, link: string, code: string): Email {
   const subject = tr(locale, "trust.email.confirm.subject");
   const body = tr(locale, "trust.email.confirm.body");
+  const shown = showCode(code);
+  const expires = tr(locale, "trust.email.confirm.expires");
+  const lead = tr(locale, "trust.email.confirm.linkLead");
   const ignore = tr(locale, "trust.email.confirm.ignore");
   return {
     subject,
-    text: [body, "", link, "", ignore].join("\n"),
-    html: page(locale, subject, `<p style="margin:0 0 8px">${esc(body)}</p>${button(link, tr(locale, "trust.email.confirm.button"))}${small(ignore)}`),
+    text: [body, "", shown, "", expires, "", lead, link, "", ignore].join("\n"),
+    html: page(
+      locale,
+      subject,
+      `<p style="margin:0 0 12px">${esc(body)}</p>
+<p style="margin:0 0 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:26px;font-weight:700;letter-spacing:0.08em">${esc(shown)}</p>
+${small(expires)}
+<p style="margin:20px 0 0">${esc(lead)}</p>${button(link, tr(locale, "trust.email.confirm.button"))}${small(ignore)}`,
+    ),
   };
 }

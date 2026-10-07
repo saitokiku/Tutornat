@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { RULES, type SkillStatus } from "@/learning/engine";
 import { getSkill } from "@/practice/skills";
 import { daysBetween, fromLocalDate, localDate } from "@/planner/dates";
@@ -8,24 +8,24 @@ import { weekFacts } from "../family";
 import { statusesOf } from "../practice";
 import { read, update, useStore, type StoreState } from "../store";
 import type { Account, Profile } from "../types";
-import { isQuiet, renderWeekly, tr, withoutNames, type Email, type LearnerWeek, type WeeklyInput } from "./render";
+import { isQuiet, renderWeekly, tr, WeeklyInput, withoutNames, type Email, type LearnerWeek } from "./render";
 
 // The weekly family email (opt-in): composed from the same numbers as the Family page, nothing for a
 // week with no activity, only ever to the account's own address (never to a child, who has none).
 // Until accounts live on our server, the browser that holds the record asks /api/email/weekly to send
-// last week's email the next time a grown-up opens the Parent view (useWeeklyEmail); the server only
-// sends to an address that confirmed by clicking a link. With the backend, a scheduled job calls the
-// same composer.
+// last week's email the next time a grown-up opens a screen that calls useWeeklyEmail (Settings, and
+// every Parent view screen once the app shell calls it); the server only sends to an address that
+// confirmed with the code from a confirmation email. With the backend, a scheduled job calls the same
+// composer.
 
 const DAY = 864e5;
-const WEEK = 7 * DAY;
 
-/** Kept on the account record, so export includes it and deleting the account removes it. */
+/** Kept on the account record, so export includes it (without the token) and deleting the account removes it. */
 export type WeeklyOptIn = {
   on: boolean;
-  /** Set once the address owner opened the confirmation link (token proves it to the server). */
+  /** Set once the address owner entered the emailed code (the token proves it to the server). */
   confirmed?: { token: string; at: number };
-  /** When the confirmation link was last sent. */
+  /** When the confirmation email was last sent. */
   askedAt?: number;
   /** Monday (YYYY-MM-DD) of the last week handled: sent, or skipped because it was empty. */
   lastWeek?: string;
@@ -70,8 +70,20 @@ function lastActive(s: StoreState, profileId: string, now: number): number | und
 
 type Tally = { own: number; helped: number; missed: number };
 
+/** The Monday after `weekStart`, by the calendar: a week with a clock change is 167 or 169 hours long. */
+export function weekEnd(weekStart: number) {
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + 7);
+  return d.getTime();
+}
+
+/** The server's limits (render.ts WeeklyInput), so what the browser composes always parses there. */
+const MAX = { skills: 20, count: 1_000_000, learners: 12 };
+const count = (x: number) => Math.min(MAX.count, Math.max(0, Math.round(x)));
+const ids = (list: string[]) => list.slice(0, MAX.skills);
+
 function learnerWeek(s: StoreState, p: Profile, weekStart: number, now: number, scrub: (text: string) => string): LearnerWeek {
-  const at = Math.min(now, weekStart + WEEK - 1);
+  const at = Math.min(now, weekEnd(weekStart) - 1);
   const f = weekFacts(s, p.id, at);
   // Lesson checks are added to practice answers, as the Family page adds them. weekFacts carries its
   // own count of them once it has one (lessonChecks); until then, the week's lesson events.
@@ -96,34 +108,57 @@ function learnerWeek(s: StoreState, p: Profile, weekStart: number, now: number, 
   const idle = daysBetween(localDate(lastActive(s, p.id, now) ?? p.createdAt), today);
   return {
     grade: p.grade,
-    minutes: f.minutes + f.readingMinutes,
-    lessons: f.lessons,
-    sets: f.sets,
-    own: f.own + checks.own,
-    helped: f.helped + checks.helped,
-    missed: f.missed + checks.missed,
-    proved: f.proved,
-    checksWaiting: f.checksWaiting,
-    helpOn: f.helpOn,
-    overdue: overdue.slice(0, 20),
-    stuck: stuck.slice(0, 20),
+    minutes: count(f.minutes + f.readingMinutes),
+    lessons: count(f.lessons),
+    sets: count(f.sets),
+    own: count(f.own + checks.own),
+    helped: count(f.helped + checks.helped),
+    missed: count(f.missed + checks.missed),
+    proved: ids(f.proved.filter((id) => getSkill(id))),
+    checksWaiting: ids(f.checksWaiting.filter((id) => getSkill(id))),
+    helpOn: ids(f.helpOn),
+    overdue: ids(overdue),
+    stuck: ids(stuck),
     tests,
     ...(idle >= LOOK_RULES.idleDays ? { idleDays: Math.min(idle, 400) } : {}),
   };
 }
 
 /**
+ * Words never treated as a name, though a grown-up may type them into one ("The Lopez Family",
+ * "Mom"): hiding them would garble titles ("Test on the water cycle").
+ */
+const NOT_NAMES = new Set(
+  "the and of for our my family familia los las del la el de y mom mum mommy mummy dad daddy mama mamá papa papá mami papi parent parents padre madre padres grandma grandpa nana abuela abuelo abuelos home casa house kids niños".split(
+    " ",
+  ),
+);
+
+/** Each name, and each word of a longer one ("Maria Lopez", "Mary-Jane"), leaving out common words. */
+export function nameWords(names: string[]): string[] {
+  const out = new Set<string>();
+  const keep = (w: string) => !NOT_NAMES.has(w.toLocaleLowerCase());
+  for (const name of names) {
+    const whole = name.trim();
+    if (whole && keep(whole)) out.add(whole);
+    for (const w of whole.split(/[\s\-‐-―]+/)) if (w.length >= 3 && keep(w)) out.add(w);
+  }
+  return [...out];
+}
+
+/**
  * The email's content for one family and one Monday-to-Sunday week (`weekStart` = Monday 00:00
  * local), or null when nothing happened that week. `now` is when it is composed: tests coming up
- * and days without activity are counted from then.
+ * and days without activity are counted from then. Parsed exactly as the server parses it, so the
+ * preview and the email agree.
  */
 export function weeklyInput(s: StoreState, accountId: string, weekStart: number, now: number): WeeklyInput | null {
   const account = s.accounts.find((a) => a.id === accountId);
-  const kids = s.profiles.filter((p) => p.accountId === accountId).sort((a, b) => a.createdAt - b.createdAt);
-  if (!account || !kids.length) return null;
+  const all = s.profiles.filter((p) => p.accountId === accountId).sort((a, b) => a.createdAt - b.createdAt);
+  if (!account || !all.length) return null;
+  const kids = all.slice(0, MAX.learners);
   const locale = s.prefs.locale;
-  // Whole names, and each word of a longer one ("Maria Lopez" also hides "Maria").
-  const names = [...kids.map((k) => k.nickname), account.displayName].flatMap((n) => [n, ...n.split(/\s+/).filter((w) => w.length >= 3)]);
+  const names = nameWords([...all.map((k) => k.nickname), account.displayName]);
   const scrub = (text: string) => withoutNames(text, names, tr(locale, "trust.email.child"), tr(locale, "trust.email.childs"));
   const learners = kids.map((p) => {
     const twins = kids.filter((k) => k.grade === p.grade);
@@ -131,7 +166,7 @@ export function weeklyInput(s: StoreState, accountId: string, weekStart: number,
     return twins.length > 1 ? { ...week, n: twins.indexOf(p) + 1 } : week;
   });
   if (learners.every(isQuiet)) return null;
-  return { locale, weekStart: localDate(weekStart), learners };
+  return WeeklyInput.parse({ locale, weekStart: localDate(weekStart), learners });
 }
 
 /** What the next email would say if this week ended now (the Settings preview). */
@@ -145,21 +180,33 @@ export function previewWeekly(s: StoreState, accountId: string, now: number, ori
 export type EmailMode = "send" | "preview";
 
 let mode: Promise<EmailMode> | null = null;
-/** "send" when this site can send email (Resend is configured); "preview" otherwise. */
+/**
+ * "send" when this site can send email (Resend is configured); "preview" otherwise. Only an answer
+ * from the server is remembered: after a failed request (offline, a cold start timing out) the next
+ * call asks again.
+ */
 export function emailMode(): Promise<EmailMode> {
   mode ??= fetch("/api/email/weekly", { cache: "no-store" })
-    .then((r) => (r.ok ? r.json() : { mode: "preview" }))
-    .then((j: { mode?: EmailMode }) => (j.mode === "send" ? "send" : "preview"))
-    .catch(() => "preview" as const);
+    .then(async (r) => {
+      if (!r.ok) throw new Error(String(r.status));
+      const j = (await r.json()) as { mode?: EmailMode };
+      return j.mode === "send" ? ("send" as const) : ("preview" as const);
+    })
+    .catch(() => {
+      mode = null;
+      return "preview" as const;
+    });
   return mode;
 }
 /** Test hook. */
 export const resetEmailMode = () => void (mode = null);
 
+type Reply = { ok?: boolean; error?: string; token?: unknown };
 const post = (body: unknown) =>
   fetch("/api/email/weekly", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
-    .then(async (r) => ({ status: r.status, json: (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string } }))
-    .catch(() => ({ status: 0, json: {} as { ok?: boolean; error?: string } }));
+    .then(async (r) => ({ status: r.status, json: (await r.json().catch(() => ({}))) as Reply }))
+    .catch(() => ({ status: 0, json: {} as Reply }));
+const tokenIn = (r: Reply) => (typeof r.token === "string" && /^[A-Za-z0-9._-]{20,120}$/.test(r.token) ? r.token : null);
 
 const signedIn = () => {
   const s = read();
@@ -174,7 +221,7 @@ export function setWeeklyOn(on: boolean) {
 
 export type AskResult = "sent" | "preview" | "rate" | "failed";
 
-/** Emails the confirmation link to the account's address. */
+/** Emails a confirmation code (and a link carrying it) to the account's address. */
 export async function askConfirmation(now = Date.now()): Promise<AskResult> {
   const me = signedIn();
   if (!me) return "failed";
@@ -186,17 +233,35 @@ export async function askConfirmation(now = Date.now()): Promise<AskResult> {
   return "sent";
 }
 
-/** The token of a confirmation link this page was opened from (`/settings#weekly=<token>`), if any. */
-export function confirmTokenInUrl(): string | null {
-  return /^#weekly=(.+)$/.exec(typeof window === "undefined" ? "" : window.location.hash)?.[1] ?? null;
+/**
+ * The confirmation code in what a grown-up typed or pasted: the code itself ("4K7Q-MZ2D", any case,
+ * O for 0 and I or L for 1 forgiven) or the whole link from the email (`…/settings#weekly=4K7QMZ2D`).
+ * Null when there is none.
+ */
+export function codeFrom(text: string): string | null {
+  const raw = /#weekly=([^\s&#]+)/.exec(text)?.[1] ?? text;
+  const c = raw
+    .toUpperCase()
+    .replace(/[\s-]/g, "")
+    .replace(/O/g, "0")
+    .replace(/[IL]/g, "1");
+  return /^[0-9A-HJKMNP-TV-Z]{8}$/.test(c) ? c : null;
 }
 
-/** The link from the confirmation email landed here: check it with the server and keep it. */
-export async function confirmWeekly(token: string, now = Date.now()): Promise<boolean> {
+/** The code of a confirmation link this page was opened from (`/settings#weekly=<code>`), if any. */
+export function confirmCodeInUrl(): string | null {
+  const hash = typeof window === "undefined" ? "" : window.location.hash;
+  return hash.startsWith("#weekly=") ? (codeFrom(hash) ?? "") : null;
+}
+
+/** A code from the confirmation email (typed, pasted, or from its link): check it with the server and keep the token it returns. */
+export async function confirmWeekly(code: string, now = Date.now()): Promise<boolean> {
   const me = signedIn();
-  if (!me || !/^[A-Za-z0-9_-]{20,100}$/.test(token)) return false;
-  const r = await post({ action: "verify", to: me.account.email, token });
-  if (!r.json.ok) return false;
+  const clean = codeFrom(code);
+  if (!me || !clean) return false;
+  const r = await post({ action: "verify", to: me.account.email, code: clean });
+  const token = r.json.ok ? tokenIn(r.json) : null;
+  if (!token) return false;
   patch((w) => ({ ...w, on: true, confirmed: { token, at: now } }));
   return true;
 }
@@ -211,7 +276,12 @@ let sending: Promise<SendResult> | null = null;
  * screens opening together) share one attempt.
  */
 export function sendDueWeekly(now = Date.now()): Promise<SendResult> {
-  sending ??= sendDue(now).finally(() => (sending = null));
+  sending ??= sendDue(now)
+    .then((r) => {
+      setStatus({ last: r });
+      return r;
+    })
+    .finally(() => (sending = null));
   return sending;
 }
 
@@ -236,17 +306,45 @@ async function sendDue(now: number): Promise<SendResult> {
     return "unconfirmed";
   }
   if (!r.json.ok) return "failed";
-  patch((x) => ({ ...x, lastWeek: key, lastSentAt: now }));
+  // A token more than a week old comes back replaced, so an active family's never runs out.
+  const fresh = tokenIn(r.json);
+  patch((x) => ({ ...x, lastWeek: key, lastSentAt: now, ...(fresh && x.confirmed ? { confirmed: { ...x.confirmed, token: fresh } } : {}) }));
   return "sent";
 }
 
+// What Settings says about sending: whether the app shell sends too, and how the last try went.
+type Status = { shells: number; last: SendResult | null };
+let status: Status = { shells: 0, last: null };
+const listeners = new Set<() => void>();
+function setStatus(change: Partial<Status>) {
+  status = { ...status, ...change };
+  for (const l of listeners) l();
+}
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => void listeners.delete(l);
+};
+
 /**
- * For the signed-in app shell and Settings: whenever the Parent view opens with the email on, last
- * week's email goes out if it is due. Does nothing for a learner, or when the email is off.
+ * Sends last week's email, if it is due, whenever a Parent view screen opens with the email
+ * confirmed. Does nothing for a learner, or when the email is off. The app shell calls it with no
+ * argument (then every Parent view screen sends); Settings calls it with "settings".
  */
-export function useWeeklyEmail() {
+export function useWeeklyEmail(from: "shell" | "settings" = "shell") {
   const due = useStore((s) => s.session.profileId === "parent" && Boolean(weeklyOf(s, s.session.accountId)?.confirmed));
+  useEffect(() => {
+    if (from !== "shell") return;
+    setStatus({ shells: status.shells + 1 });
+    return () => setStatus({ shells: status.shells - 1 });
+  }, [from]);
   useEffect(() => {
     if (due) void sendDueWeekly();
   }, [due]);
 }
+
+/** True while the app shell sends the email, so any Parent view screen does (not only Settings). */
+export const useSentFromParentView = () => useSyncExternalStore(subscribe, () => status.shells > 0, () => false);
+/** How the latest send attempt on this page went, or null before one. */
+export const useLastSend = () => useSyncExternalStore(subscribe, () => status.last, () => null);
+/** Test hook. */
+export const resetSendStatus = () => setStatus({ shells: 0, last: null });

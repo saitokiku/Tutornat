@@ -8,15 +8,15 @@ import { read, resetMemory, update } from "../store";
 import type { SchoolEvent } from "@/planner/types";
 import type { Profile } from "../types";
 import { renderWeekly, WeeklyInput, withoutNames } from "./render";
-import { askConfirmation, confirmWeekly, LOOK_RULES, previewWeekly, resetEmailMode, sendDueWeekly, setWeeklyOn, useWeeklyEmail, weeklyInput, weeklyOf } from "./weekly";
-import { getSkill } from "@/practice/skills";
+import { askConfirmation, codeFrom, confirmWeekly, emailMode, LOOK_RULES, nameWords, previewWeekly, resetEmailMode, resetSendStatus, sendDueWeekly, setWeeklyOn, useLastSend, useSentFromParentView, useWeeklyEmail, weekEnd, weeklyInput, weeklyOf } from "./weekly";
+import { getSkill, SKILLS } from "@/practice/skills";
 
 const H = 3600_000;
 const NOW = new Date(2026, 9, 8, 10, 0).getTime(); // Thursday, Oct 8 2026
 const MON = startOfWeek(NOW); // Monday, Oct 5
 const ORIGIN = "https://kaizenedu.net";
 
-beforeEach(() => resetEmailMode());
+beforeEach(() => (resetEmailMode(), resetSendStatus()));
 afterEach(() => {
   resetMemory();
   vi.unstubAllGlobals();
@@ -191,7 +191,7 @@ describe("renderWeekly", () => {
     adaWeek(kids[0]);
     const { subject, text, html } = previewWeekly(read(), accountId, NOW, ORIGIN)!;
     expect(subject).toMatch(/^Your KaizenEDU week: Oct 5\s–\s11$/); // Intl puts thin spaces around the dash
-    expect(text).toContain("Grade 4\n- 22 minutes of practice, lessons and reading\n- Right on their own: 2 · Right with help: 1 · Not yet: 1\n- Lessons finished: 1 · Practice sets finished: 0");
+    expect(text).toContain("Grade 4\n- 22 minutes of practice, lessons and reading\n- Right on own: 2 · Right with hint: 1 · Not yet: 1\n- Lessons finished: 1 · Practice sets finished: 0");
     expect(text).toContain("Kindergarten\n- No practice, lessons or reading this week.");
     expect(text).toContain("https://kaizenedu.net/family");
     expect(text).toContain("https://kaizenedu.net/settings");
@@ -217,7 +217,7 @@ describe("renderWeekly", () => {
     const { subject, text, html } = previewWeekly(read(), accountId, NOW, ORIGIN)!;
     expect(subject).toBe("Tu semana en KaizenEDU: 5–11 de oct");
     expect(text).toContain("Grado 4");
-    expect(text).toContain("Bien sin ayuda: 2 · Bien con ayuda: 1 · Todavía no: 1");
+    expect(text).toContain("Bien sin ayuda: 2 · Bien con pista: 1 · Todavía no: 1");
     expect(text).toContain("Kínder");
     expect(html).toMatch(/<html lang="es">/);
   });
@@ -247,7 +247,11 @@ describe("withoutNames", () => {
 // ----- talking to the server -----
 
 type Call = { url: string; body?: Record<string, unknown> };
-function fakeServer(mode: "send" | "preview", answer: (body: Record<string, unknown>) => [number, unknown] = () => [200, { ok: true }]) {
+const CODE = "4K7QMZ2D";
+const TOKEN = `w2.abc123.${"t".repeat(43)}`;
+/** A stand-in for /api/email/weekly: the code above verifies and is exchanged for TOKEN. */
+const answers = (b: Record<string, unknown>): [number, unknown] => [200, b.action === "verify" ? (b.code === CODE ? { ok: true, token: TOKEN } : { ok: false }) : { ok: true }];
+function fakeServer(mode: "send" | "preview", answer: (body: Record<string, unknown>) => [number, unknown] = answers) {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -262,8 +266,6 @@ function fakeServer(mode: "send" | "preview", answer: (body: Record<string, unkn
   return calls;
 }
 
-const TOKEN = "t".repeat(43);
-
 describe("opt-in and sending", () => {
   it("stays off by default and sends nothing", async () => {
     await family();
@@ -273,18 +275,33 @@ describe("opt-in and sending", () => {
     expect(calls).toEqual([]);
   });
 
-  it("asks for confirmation and keeps the token only after the server checks it", async () => {
+  it("asks for confirmation and keeps a token only after the server accepts the emailed code", async () => {
     const { accountId } = await family();
     setWeeklyOn(true);
-    const calls = fakeServer("send", (b) => [200, { ok: b.action !== "verify" || b.token === TOKEN }]);
+    const calls = fakeServer("send");
     expect(await askConfirmation(NOW)).toBe("sent");
     expect(calls[0].body).toEqual({ action: "confirm", to: "maria@example.com", locale: "en" });
     expect(weeklyOf(read(), accountId)).toMatchObject({ on: true, askedAt: NOW });
     expect(await sendDueWeekly(NOW)).toBe("unconfirmed");
-    expect(await confirmWeekly("x".repeat(43), NOW)).toBe(false);
-    expect(await confirmWeekly("bad token!", NOW)).toBe(false);
-    expect(await confirmWeekly(TOKEN, NOW)).toBe(true);
+    expect(await confirmWeekly("ZZZZ-ZZZZ", NOW)).toBe(false);
+    const before = calls.length;
+    expect(await confirmWeekly("bad code!", NOW)).toBe(false);
+    expect(calls).toHaveLength(before); // not even asked: it can't be a code
+    // Typed as read off a phone, or the whole link pasted.
+    expect(await confirmWeekly("4k7q-mz2d", NOW)).toBe(true);
+    expect(calls.at(-1)!.body).toEqual({ action: "verify", to: "maria@example.com", code: CODE });
     expect(weeklyOf(read(), accountId)?.confirmed).toEqual({ token: TOKEN, at: NOW });
+    expect(await confirmWeekly("https://kaizenedu.net/settings#weekly=4K7QMZ2D", NOW + 1)).toBe(true);
+  });
+
+  it("reads a code from what a grown-up types or pastes", () => {
+    expect(codeFrom("4K7Q-MZ2D")).toBe(CODE);
+    expect(codeFrom(" 4k7q mz2d ")).toBe(CODE);
+    expect(codeFrom("4K7QMZ2O")).toBe("4K7QMZ20");
+    expect(codeFrom("Open https://kaizenedu.net/settings#weekly=4K7QMZ2D now")).toBe(CODE);
+    expect(codeFrom("https://kaizenedu.net/settings#weekly=nope")).toBeNull();
+    expect(codeFrom("hello")).toBeNull();
+    expect(codeFrom("")).toBeNull();
   });
 
   it("reports preview mode and rate limits from the server", async () => {
@@ -302,7 +319,7 @@ describe("opt-in and sending", () => {
     adaWeek(kids[0]);
     setWeeklyOn(true);
     const calls = fakeServer("send");
-    await confirmWeekly(TOKEN, NOW); // confirmed on Thursday: this week is not sent
+    await confirmWeekly(CODE, NOW); // confirmed on Thursday: this week is not sent
     const nextMonday = MON + 7 * 24 * H + 8 * H;
     expect(await sendDueWeekly(NOW)).toBe("not-due");
     expect(await sendDueWeekly(nextMonday)).toBe("sent");
@@ -318,7 +335,7 @@ describe("opt-in and sending", () => {
     const { accountId } = await family();
     setWeeklyOn(true);
     let calls = fakeServer("send");
-    await confirmWeekly(TOKEN, MON - 3 * 24 * H);
+    await confirmWeekly(CODE, MON - 3 * 24 * H);
     expect(await sendDueWeekly(MON + 7 * 24 * H + H)).toBe("empty");
     expect(calls.filter((c) => c.body?.action === "send")).toEqual([]);
     expect(weeklyOf(read(), accountId)?.lastWeek).toBe("2026-10-05");
@@ -338,7 +355,7 @@ describe("opt-in and sending", () => {
     adaWeek(kids[0]);
     setWeeklyOn(true);
     fakeServer("send");
-    await confirmWeekly(TOKEN, MON - 3 * 24 * H);
+    await confirmWeekly(CODE, MON - 3 * 24 * H);
     vi.unstubAllGlobals();
     resetEmailMode();
     const calls = fakeServer("preview");
@@ -353,7 +370,7 @@ describe("opt-in and sending", () => {
     adaWeek(kids[0]);
     setWeeklyOn(true);
     const calls = fakeServer("send");
-    await confirmWeekly(TOKEN, MON - 3 * 24 * H);
+    await confirmWeekly(CODE, MON - 3 * 24 * H);
     const monday = MON + 7 * 24 * H + H;
     const [a, b] = await Promise.all([sendDueWeekly(monday), sendDueWeekly(monday)]);
     expect([a, b]).toEqual(["sent", "sent"]);
@@ -366,7 +383,7 @@ describe("opt-in and sending", () => {
     adaWeek(kids[0]);
     setWeeklyOn(true);
     let calls = fakeServer("send");
-    await confirmWeekly(TOKEN, MON - 3 * 24 * H);
+    await confirmWeekly(CODE, MON - 3 * 24 * H);
     vi.spyOn(Date, "now").mockReturnValue(MON + 7 * 24 * H + H);
     calls.length = 0;
     update((s) => void (s.session.profileId = kids[0].id));
@@ -389,5 +406,123 @@ describe("opt-in and sending", () => {
     expect(await askConfirmation(NOW)).toBe("failed");
     expect(await sendDueWeekly(NOW)).toBe("off");
     expect(calls).toEqual([]);
+  });
+});
+
+describe("what the server accepts", () => {
+  it("keeps every list within the server's limits: 21 open checks still compose an email that parses, preview and send alike", async () => {
+    const { accountId, kids } = await family(["4"]);
+    const ada = kids[0].id;
+    const D = 24 * H;
+    const many = SKILLS.filter((k) => k.subject === "math").slice(0, 25);
+    update((s) => {
+      for (const k of many)
+        for (let i = 0; i < 10; i++) s.attempts.push({ id: `${k.id}-${i}`, profileId: ada, at: NOW - 3 * D + i, skillId: k.id, level: k.levels, seed: i, mode: "practice", correct: true, assisted: false, seconds: 10 });
+    });
+    const input = weeklyInput(read(), accountId, MON, NOW)!;
+    const ada0 = input.learners[0];
+    expect(ada0.checksWaiting.length).toBe(20);
+    expect(WeeklyInput.safeParse(input).success).toBe(true);
+    expect(WeeklyInput.parse(input)).toEqual(input);
+    // The preview renders the same parsed input the server would.
+    expect(previewWeekly(read(), accountId, NOW, ORIGIN)!.text).toContain(`Checks waiting: ${getSkill(ada0.checksWaiting[0])!.title.en}`);
+  });
+
+  it("lists twelve learners at most, as the server does", async () => {
+    const { accountId } = await family(["4"]);
+    update((s) => {
+      for (let i = 0; i < 13; i++) s.profiles.push({ ...s.profiles[0], id: `p${i}`, nickname: `Kid${i}`, createdAt: s.profiles[0].createdAt + i + 1 });
+      s.attempts.push({ id: "x", profileId: "p3", at: MON + H, skillId: "m.add.10", level: 1, seed: 1, mode: "practice", correct: true, assisted: false, seconds: 30 });
+    });
+    const input = weeklyInput(read(), accountId, MON, NOW)!;
+    expect(input.learners).toHaveLength(12);
+    expect(WeeklyInput.safeParse(input).success).toBe(true);
+  });
+});
+
+describe("names in typed titles", () => {
+  it("leaves common words out of a family name: 'The Lopez Family' hides Lopez, not 'the'; 'Mom' hides nothing", () => {
+    expect(nameWords(["The Lopez Family"])).toEqual(["The Lopez Family", "Lopez"]);
+    expect(nameWords(["Mom"])).toEqual([]);
+    expect(nameWords(["Mary-Jane", "Bo"])).toEqual(["Mary-Jane", "Mary", "Jane", "Bo"]);
+    const scrub = (t: string, names: string[]) => withoutNames(t, nameWords(names), "your child", "your child's");
+    expect(scrub("Test on the water cycle", ["The Lopez Family"])).toBe("Test on the water cycle");
+    expect(scrub("Lopez family picnic quiz", ["The Lopez Family"])).toBe("your child family picnic quiz");
+    expect(scrub("Mom's birthday quiz", ["Mom"])).toBe("Mom's birthday quiz");
+    expect(scrub("Mary's quiz and Jane's test", ["Mary-Jane"])).toBe("your child's quiz and your child's test");
+  });
+
+  it("in Spanish, a typed English possessive becomes the plain words", async () => {
+    const { accountId, kids } = await family(["4"]);
+    adaWeek(kids[0]);
+    update((s) => {
+      s.prefs.locale = "es";
+      s.events.push({ id: "e1", profileId: kids[0].id, title: "Ada's spelling quiz", kind: "quiz", date: "2026-10-09", skillIds: [], source: "typed", createdAt: NOW });
+    });
+    const { text } = previewWeekly(read(), accountId, NOW, ORIGIN)!;
+    expect(text).toContain("(tu hijo o hija spelling quiz)");
+    expect(text).toContain("Un examen corto el ");
+    expect(text).not.toContain("de tu hijo o hija spelling");
+  });
+});
+
+describe("the week's edges", () => {
+  it("ends a week at the next Monday by the calendar", () => {
+    expect(weekEnd(MON)).toBe(new Date(2026, 9, 12).getTime());
+    expect(startOfWeek(weekEnd(MON) - 1)).toBe(MON);
+  });
+});
+
+describe("talking to the server, when it fails", () => {
+  it("asks again for the mode after a failed request, instead of staying on preview", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("offline"))));
+    expect(await emailMode()).toBe("preview");
+    vi.unstubAllGlobals();
+    fakeServer("send");
+    expect(await emailMode()).toBe("send");
+  });
+
+  it("keeps a fresh token the server hands back with a send", async () => {
+    const { accountId, kids } = await family();
+    adaWeek(kids[0]);
+    setWeeklyOn(true);
+    const fresh = `w2.def456.${"f".repeat(43)}`;
+    fakeServer("send", (b) => (b.action === "send" ? [200, { ok: true, token: fresh }] : answers(b)));
+    await confirmWeekly(CODE, MON - 3 * 24 * H);
+    expect(await sendDueWeekly(MON + 7 * 24 * H + H)).toBe("sent");
+    expect(weeklyOf(read(), accountId)?.confirmed).toEqual({ token: fresh, at: MON - 3 * 24 * H });
+  });
+
+  it("a send the server can't take is 'failed', retried on the next open, and Settings can tell", async () => {
+    const { accountId, kids } = await family();
+    adaWeek(kids[0]);
+    setWeeklyOn(true);
+    fakeServer("send", (b) => (b.action === "send" ? [400, { error: "bad_request" }] : answers(b)));
+    await confirmWeekly(CODE, MON - 3 * 24 * H);
+    const last = renderHook(() => useLastSend());
+    const monday = MON + 7 * 24 * H + H;
+    await act(async () => void (await sendDueWeekly(monday)));
+    expect(last.result.current).toBe("failed");
+    expect(weeklyOf(read(), accountId)?.lastWeek).toBeUndefined();
+    vi.unstubAllGlobals();
+    fakeServer("send");
+    await act(async () => void (await sendDueWeekly(monday)));
+    expect(last.result.current).toBe("sent");
+  });
+});
+
+describe("who sends", () => {
+  it("says the whole Parent view sends only while the app shell calls useWeeklyEmail", async () => {
+    await family();
+    fakeServer("send");
+    const view = renderHook(() => useSentFromParentView());
+    expect(view.result.current).toBe(false);
+    const settings = renderHook(() => useWeeklyEmail("settings"));
+    expect(view.result.current).toBe(false);
+    const shell = renderHook(() => useWeeklyEmail());
+    expect(view.result.current).toBe(true);
+    act(() => shell.unmount());
+    expect(view.result.current).toBe(false);
+    settings.unmount();
   });
 });

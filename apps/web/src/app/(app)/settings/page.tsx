@@ -10,7 +10,7 @@ import { GoalsPicker } from "@/components/profiles/GoalsPicker";
 import { Button, Field, Notice, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { useAiMode } from "@/lib/ai/client";
-import { confirmTokenInUrl } from "@/lib/email/weekly";
+import { confirmCodeInUrl } from "@/lib/email/weekly";
 import { signOut } from "@/lib/auth";
 import { goalsOf } from "@/lib/family";
 import { currentAccount, currentLearner, renameAccount, updateLearner } from "@/lib/profiles";
@@ -29,12 +29,13 @@ export default function SettingsPage() {
   );
 }
 
-function LanguageChoice({ value, onPick }: { value: Locale; onPick: (l: Locale) => void }) {
+/** English / Español as full names. `big` gives K–2 learners their 56px targets. */
+function LanguageChoice({ value, onPick, big = false }: { value: Locale; onPick: (l: Locale) => void; big?: boolean }) {
   const t = useT();
   return (
     <div className="flex flex-wrap gap-2">
       {(["en", "es"] as const).map((l) => (
-        <button key={l} type="button" lang={l} aria-pressed={value === l} onClick={() => onPick(l)} className="k-chip min-h-11 px-5 text-sm">
+        <button key={l} type="button" lang={l} aria-pressed={value === l} onClick={() => onPick(l)} className={`k-chip px-5 ${big ? "min-h-14 text-body" : "min-h-11 text-sm"}`}>
           {t(`lang.${l}` as const)}
         </button>
       ))}
@@ -52,7 +53,7 @@ function AiStatus() {
         <span aria-hidden="true" className={`size-2 rounded-full ${mode === "demo" ? "bg-warn" : "bg-good"}`} />
         {mode === "demo" ? t("settings.aiDemo") : t("settings.aiOn")}
       </p>
-      <p className="max-w-prose text-sm text-muted">{mode === "demo" ? t("settings.aiDemoBody") : t("settings.aiOnBody")}</p>
+      <p className="max-w-prose text-sm text-muted">{mode === "demo" ? t("settings.aiDemoBody") : t("trust.settings.aiOn")}</p>
       <Link href="/privacy#ai" className="inline-flex min-h-11 items-center text-sm font-medium text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
         {t("trust.settings.aiPrivacy")}
       </Link>
@@ -82,26 +83,28 @@ function Settings() {
   const t = useT();
   useTitle(t("settings.title"));
   const learner = useStore(currentLearner);
-  const [confirming] = useState(() => confirmTokenInUrl() !== null);
+  const [confirming] = useState(() => confirmCodeInUrl() !== null);
 
-  // A learner is using the app: only their language here; the rest is the grown-up's.
-  if (learner)
+  // A learner is using the app: only their language and the way back to the grown-up; the rest
+  // (policies and contact included) is the grown-up's.
+  if (learner) {
+    const young = ["K", "1", "2"].includes(learner.grade);
     return (
       <div>
         <h1 className="mb-6 font-brand text-t1 font-semibold text-ink sm:text-d3">{t("settings.title")}</h1>
         {confirming && <Notice tone="warn">{t("trust.weekly.parentFirst")}</Notice>}
         <Section id="language" title={t("settings.learnerLanguage", { name: learner.nickname })}>
-          <LanguageChoice value={learner.locale} onPick={(l) => updateLearner(learner.id, { nickname: learner.nickname, grade: learner.grade, locale: l })} />
+          <LanguageChoice big={young} value={learner.locale} onPick={(l) => updateLearner(learner.id, { nickname: learner.nickname, grade: learner.grade, locale: l })} />
         </Section>
         <Section id="account" title={t("settings.account")}>
           <p className="text-sm text-muted">{t("settings.grownUps")}</p>
-          <Link href="/profiles" className={btn("secondary", "sm", "min-h-11")}>
+          <Link href="/profiles" className={btn("secondary", young ? "md" : "sm", young ? "min-h-14" : "min-h-11")}>
             {t("nav.switch")}
           </Link>
         </Section>
-        <About />
       </div>
     );
+  }
 
   return <GrownUpSettings />;
 }
