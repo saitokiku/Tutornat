@@ -106,8 +106,20 @@ test("review is for grown-ups: a learner who opens it lands on their own Home", 
   await expect(page).toHaveURL(/\/home$/);
 });
 
+/** Stands in for /api/email/weekly, so no journey depends on (or sends through) a real email service. */
+async function emailServer(page: Page, mode: "send" | "preview") {
+  const posts: Record<string, unknown>[] = [];
+  await page.route("**/api/email/weekly", async (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: { mode } });
+    posts.push(route.request().postDataJSON());
+    return mode === "preview" ? route.fulfill({ status: 503, json: { error: "preview" } }) : route.fulfill({ json: { ok: true } });
+  });
+  return posts;
+}
+
 test("weekly email: off by default; turning it on shows exactly what would be sent", async ({ page }) => {
   const errors = collectErrors(page);
+  const posts = await emailServer(page, "preview");
   await family(page, "weekly", [["Ada", "3"]]);
   await asParent(page);
   await page.goto("/settings");
@@ -123,6 +135,25 @@ test("weekly email: off by default; turning it on shows exactly what would be se
   await page.reload();
   await expect(page.getByRole("switch", { name: /Send me the weekly email/ })).toHaveAttribute("aria-checked", "true");
   await noOverflow(page);
+  expect(posts).toEqual([]);
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
+test("weekly email: with email connected, turning it on emails a confirmation link to the grown-up's address only", async ({ page }) => {
+  const errors = collectErrors(page);
+  const posts = await emailServer(page, "send");
+  await family(page, "weekly-send", [["Ada", "3"]]);
+  await asParent(page);
+  await page.goto("/settings");
+  const toggle = page.getByRole("switch", { name: /Send me the weekly email/ });
+  await expect(toggle).toBeEnabled();
+  await toggle.press("Space");
+  await expect(page.getByText(/^Link sent to weekly-send-.*@example\.test\. Open it in this browser\.$/)).toBeVisible();
+  expect(posts).toHaveLength(1);
+  expect(posts[0]).toMatchObject({ action: "confirm", locale: "en" });
+  expect(String(posts[0].to)).toMatch(/^weekly-send-.*@example\.test$/);
+  expect(JSON.stringify(posts)).not.toContain("Ada");
+  await audit(page, "settings-weekly-send");
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
