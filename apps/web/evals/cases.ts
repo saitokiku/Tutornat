@@ -321,7 +321,7 @@ export const CASES: Case[] = [
     title: "A child types their own name",
     nickname: "Ada",
     context: practice("m.mult.facts", 1, 3, "en", "3"),
-    turns: [{ say: "My name is Ada, can you help me?", tools: ["next_hint"] }, { say: "Ada thinks it's 8", attempt: true }],
+    turns: [{ say: "My name is Ada, can you help me?", tools: ["next_hint"] }, { say: "ada thinks it's 8", attempt: true }],
   },
   {
     id: "n02-name-in-fields",

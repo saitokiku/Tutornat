@@ -1,5 +1,5 @@
 import { readUIMessageStream, simulateReadableStream, wrapLanguageModel, type UIMessage, type UIMessageChunk } from "ai";
-import { scrubName } from "@/lib/ai/client";
+import { scrubNames } from "@/lib/ai/client";
 import { metered, type TokenUsage } from "@/lib/ai/config";
 import { band } from "@/lib/ai/prompts";
 import { screen } from "@/lib/ai/safety";
@@ -76,14 +76,11 @@ export function tagsOf(c: Case): string[] {
 
 export async function runCase(c: Case, base: Model, opts: { priceAs?: string; judge?: Judge } = {}): Promise<CaseResult> {
   const item = c.context.item ? makeItem(c.context.item.skillId, c.context.item.level, c.context.item.seed, c.context.locale) : null;
-  // The browser's side of the contract: the name comes out of everything typed (lib/ai/client.ts).
-  const scrub = (s: string) => scrubName(s, c.nickname);
-  const context = {
-    ...c.context,
-    ...c.extra,
-    homework: c.context.homework && { title: scrub(c.context.homework.title), notes: c.context.homework.notes && scrub(c.context.homework.notes) },
-    interests: c.context.interests?.map(scrub),
-  };
+  // The browser's side of the contract, with the browser's own code: aiFetch (lib/ai/client.ts) runs
+  // scrubNames over the whole request body. `extra` is added after it, as fields a careless browser
+  // might send unscrubbed, to prove the server drops them on its own.
+  const scrub = <T,>(v: T) => scrubNames(v, [c.nickname]);
+  const context = { ...scrub(c.context), ...c.extra };
   const messages: UIMessage[] = [];
   const turns: TurnResult[] = [];
   const seen: string[] = [item?.say ?? "", c.context.lastAnswer ?? "", c.context.lesson?.scene ?? "", c.context.homework ? `${c.context.homework.title} ${c.context.homework.notes ?? ""}` : ""];
@@ -91,8 +88,9 @@ export async function runCase(c: Case, base: Model, opts: { priceAs?: string; ju
   const hints: { text: string; last: boolean }[] = [];
 
   for (const [i, turn] of c.turns.entries()) {
-    const sent = scrub(turn.say);
-    messages.push({ id: `u${i}`, role: "user", parts: [{ type: "text", text: sent }] });
+    messages.push({ id: `u${i}`, role: "user", parts: [{ type: "text", text: turn.say }] });
+    const body = scrub({ messages });
+    const sent = (body.messages.at(-1)!.parts[0] as { text: string }).text;
     seen.push(sent);
     tried ||= !!turn.attempt;
 
@@ -118,7 +116,7 @@ export async function runCase(c: Case, base: Model, opts: { priceAs?: string; ju
     });
 
     const sentAt = performance.now();
-    const res = await tutorTurn({ messages: structuredClone(messages), context }, model);
+    const res = await tutorTurn({ messages: body.messages, context }, model);
     let reply = "";
     let flag: string | undefined;
     let tools: ToolUse[] = [];
@@ -171,7 +169,7 @@ export async function runCase(c: Case, base: Model, opts: { priceAs?: string; ju
     if (!res.ok) checks.push({ id: "short", pass: false, detail: `the tutor route answered ${res.status}` });
     const judged =
       opts.judge && !turn.safety && reply
-        ? await opts.judge({ grade: c.context.grade, locale: c.context.locale, problem: item?.say ?? null, answer: item ? answersOf(item) : [], tried, transcript: messages.slice(0, -1), said: sent, reply, tools })
+        ? await opts.judge({ grade: c.context.grade, locale: c.context.locale, problem: item?.say ?? null, answer: item ? answersOf(item) : [], tried, transcript: scrub(messages.slice(0, -1)), said: sent, reply, tools })
         : undefined;
     turns.push({ say: turn.say, sent, reply, flag, status: res.status, tools, modelCalls, ttftMs, ms, usage, costUsd: cost, checks, judge: judged, pass: checks.every((k) => k.pass) });
   }

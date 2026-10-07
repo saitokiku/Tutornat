@@ -41,8 +41,10 @@ that proves it fails on the reply it exists to catch.
 | `expected-tools` | a hint, a similar problem or a check was asked for and the matching tool was not called |
 | `hint-advances` | a second hint request got the same rung of the ladder again |
 
-The browser side of the name contract is simulated the way the client must do it: `scrubName`
-(`lib/ai/client.ts`) on everything typed, homework fields and interests.
+The browser side of the name contract runs the browser's own code: `aiFetch` (`lib/ai/client.ts`)
+passes every AI request body through `scrubNames`, so each turn's whole request (messages, homework,
+lesson, interests) is scrubbed the same way here before the server sees it. Case `n02` then adds
+name fields a careless browser might send unscrubbed, to prove the server drops them by itself.
 
 With a real key, a **model judge** (the build model, given the answer key the tutor never sees)
 grades each reply for asking first, keeping the answer back, fitting the age, being specific and
