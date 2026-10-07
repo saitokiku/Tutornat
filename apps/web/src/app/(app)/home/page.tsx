@@ -10,7 +10,7 @@ import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { IconArrowRight } from "@/components/icons";
 import { MagicBox } from "@/components/magic-box/MagicBox";
-import { Hear, HearContext } from "@/components/stage/hear";
+import { Hear, HearContext, useHear } from "@/components/stage/hear";
 import { Button, SubjectDot, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { continueTarget, courseProgress } from "@/lib/activity";
@@ -99,6 +99,21 @@ function Home() {
       <MagicBox learner={learner} />
       {continueCard}
       {pick && <SuggestCard entry={pick} learner={learner} />}
+      {!next && picks.length > 1 && (
+        <section aria-labelledby="more" className="space-y-3">
+          <h2 id="more" className="font-brand text-t2 font-semibold text-ink">
+            {t("courses.catalogue")}
+          </h2>
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+            {picks
+              .filter((e) => e.id !== pick?.id)
+              .slice(0, 3)
+              .map((entry) => (
+                <PickTile key={entry.id} entry={entry} learner={learner} courses={courses} events={events} />
+              ))}
+          </ul>
+        </section>
+      )}
       {ready.length > 0 && (
         <section aria-labelledby="mine">
           <div className="mb-3 flex items-baseline justify-between">
@@ -134,6 +149,7 @@ function useStartCourse(learner: Profile, courses: Course[], events: ActivityEve
 
 function PickTile({ entry, learner, courses, events }: { entry: CatalogueEntry; learner: Profile; courses: Course[]; events: ActivityEvent[] }) {
   const start = useStartCourse(learner, courses, events);
+  const { hear } = useHear();
   return (
     <li className="relative">
       <button
@@ -142,7 +158,7 @@ function PickTile({ entry, learner, courses, events }: { entry: CatalogueEntry; 
         className="flex h-full w-full flex-col gap-3 rounded-lg border border-border bg-panel p-2.5 text-left shadow-soft transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-lift sm:p-3"
       >
         <CourseArt lessons={entry.lessons} subject={entry.subject} size="lg" />
-        <span className="flex items-start gap-2 px-1 pb-12 font-brand text-t3 font-semibold text-ink sm:pb-1 sm:pr-12 sm:text-t2" lang={entry.locale}>
+        <span className={`flex items-start gap-2 px-1 font-brand font-semibold text-ink ${hear ? "pb-12 text-t3 sm:pb-1 sm:pr-12 sm:text-t2" : "pb-1 text-t3"}`} lang={entry.locale}>
           <span className="mt-2"><SubjectDot subject={entry.subject} /></span>
           {entry.title}
         </span>
