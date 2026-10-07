@@ -2127,6 +2127,7 @@ const es: Record<Key, string> = {
   "trust.data.where": "Todo lo que KaizenEDU sabe de tu familia se guarda en este navegador, en este dispositivo. Todavía no guardamos una copia en un servidor. Lo que el tutor envía para responder, o lo que el correo semanal envía para entregarse, se usa para esa solicitud y no lo guardamos.",
   "trust.data.exportTitle": "Descargar una copia",
   "trust.data.exportBody": "Un archivo JSON con tu cuenta y cada estudiante, curso, respuesta, conversación con el tutor, actividad escolar, nota, lectura y revisión de preguntas, y el registro de pistas y ayuda que dimos. Tu contraseña no va incluida. Las fotos y archivos adjuntos a actividades escolares aparecen por nombre; los archivos se quedan en este navegador.",
+  "trust.data.exportBodyFiles": "Un archivo JSON con tu cuenta y cada estudiante, curso, respuesta, conversación con el tutor, actividad escolar, nota, lectura y revisión de preguntas, el registro de pistas y ayuda que dimos, y las fotos y archivos adjuntos a actividades escolares. Tu contraseña no va incluida.",
   "trust.data.export": "Descargar nuestros datos",
   "trust.data.exported": "Se guardó {file}",
   "trust.data.deleteTitle": "Borrar todo",

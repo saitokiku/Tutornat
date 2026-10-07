@@ -2125,6 +2125,7 @@ const en = {
   "trust.data.where": "Everything KaizenEDU knows about your family is saved in this browser, on this device. We don't keep a copy on a server yet. What the tutor sends for a reply, or the weekly email sends to be delivered, is used for that request and not stored by us.",
   "trust.data.exportTitle": "Download a copy",
   "trust.data.exportBody": "One JSON file with your account, every learner, course, answer, tutor conversation, school item, note, reading entry and question review, and the record of hints and help we gave. Your password isn't in it. Photos and files attached to school items are listed by name; the files themselves stay in this browser.",
+  "trust.data.exportBodyFiles": "One JSON file with your account, every learner, course, answer, tutor conversation, school item, note, reading entry and question review, the record of hints and help we gave, and the photos and files attached to school items. Your password isn't in it.",
   "trust.data.export": "Download our data",
   "trust.data.exported": "Saved {file}",
   "trust.data.deleteTitle": "Delete everything",
