@@ -1,0 +1,121 @@
+/* learning.css — Learn (.kaizen-workspace) and Activity (.kaizen-record) page styling for the Kaizen interior.
+ * Consumes shell tokens (--paper, --panel, --panel2, --border, --ink, --muted, --accent, --good, --warn, --bad, --font-*);
+ * every token has the brief's value as a fallback so the module renders the same in the private harness. Scoped to the two
+ * page roots only; shell chrome and shared classes are not overridden. Shape lock: inputs 10px, cards 14px, panels 20px,
+ * buttons pill; 44px targets, 26/24px page title, 20px section heads, 16px prose, 14px metadata. No gradients, no glass. */
+.kaizen-workspace, .kaizen-record {
+  --kz-paper: var(--paper, #fafaf9); --kz-panel: var(--panel, #fff); --kz-panel2: var(--panel2, #f1f1ef); --kz-border: var(--border, #e4e3df);
+  --kz-ink: var(--ink, #1a1917); --kz-muted: var(--muted, #6b6862); --kz-accent: var(--accent, #a93b5d); --kz-good: var(--good, #4f7a5b); --kz-warn: var(--warn, #8a6412); --kz-bad: var(--bad, #b3453f);
+  --kz-brand: var(--font-brand, "Schibsted Grotesk", "Avenir Next", "Avenir", system-ui, sans-serif);
+  --kz-body: var(--font-body, "Instrument Sans", "Avenir Next", "Avenir", system-ui, sans-serif);
+  --kz-mono: var(--font-mono, "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace);
+  color: var(--kz-ink); font-family: var(--kz-body); font-size: 1rem; line-height: 1.55; min-width: 0;
+}
+.kaizen-workspace *, .kaizen-record * { min-width: 0; }
+/* page head: eyebrow, title, one metadata line */
+.kaizen-workspace .kz-head, .kaizen-record .kz-head { margin: 0 0 0.75rem; }
+.kaizen-workspace .kz-eyebrow, .kaizen-record .kz-eyebrow { font-family: var(--kz-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--kz-muted); margin: 0 0 0.375rem; }
+.kaizen-workspace #view-h, .kaizen-record #view-h { font-family: var(--kz-brand); font-size: 1.625rem; line-height: 1.2; font-weight: 600; margin: 0; overflow-wrap: anywhere; text-wrap: pretty; }
+.kaizen-workspace .kz-meta, .kaizen-record .kz-meta { font-size: 0.875rem; color: var(--kz-muted); margin: 0.375rem 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.375rem; }
+.kaizen-workspace .kz-meta .tag, .kaizen-record .kz-meta .tag { font-size: 0.75rem; }
+.kaizen-workspace .kz-late { color: var(--kz-bad); font-weight: 600; }
+.kaizen-workspace .kz-instructions { font-size: 1.0625rem; max-width: 62ch; margin: 0.25rem 0 1.25rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kaizen-workspace .kz-lead, .kaizen-record .kz-lead { font-size: 1.125rem; line-height: 1.5; margin: 0 0 0.75rem; max-width: 56ch; }
+.kaizen-workspace .kz-fine, .kaizen-record .kz-fine { font-size: 0.875rem; color: var(--kz-muted); margin: 0.5rem 0 0; max-width: 60ch; }
+.kaizen-workspace h2, .kaizen-record h2 { font-family: var(--kz-brand); font-size: 1.25rem; font-weight: 600; margin: 0 0 0.625rem; line-height: 1.25; }
+.kaizen-workspace h3, .kaizen-record h3 { font-family: var(--kz-brand); font-size: 1.0625rem; font-weight: 600; margin: 0 0 0.375rem; }
+/* layout: one reading/work column, one quieter side column */
+.kaizen-workspace .kz-grid, .kaizen-record .kz-grid { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 900px) { .kaizen-workspace .kz-grid, .kaizen-record .kz-grid { grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 1fr); gap: 1.5rem; } }
+.kaizen-workspace .kz-main, .kaizen-record .kz-main, .kaizen-workspace .kz-side, .kaizen-record .kz-side { display: grid; gap: 1rem; align-content: start; }
+/* surfaces */
+.kaizen-workspace .kz-focus { background: var(--kz-panel); border: 1px solid var(--kz-border); border-radius: 20px; padding: 1.25rem; display: grid; gap: 1rem; }
+.kaizen-workspace .kz-focus > * + * { border-top: 1px solid var(--kz-border); padding-top: 1rem; }
+.kaizen-workspace .kz-focus > .notice + * { border-top: 0; padding-top: 0; }
+.kaizen-workspace .kz-story { background: var(--kz-panel2); border: 1px solid var(--kz-border); border-radius: 14px; padding: 1rem 1.25rem; }
+.kaizen-workspace .kz-story p { margin: 0 0 0.75rem; max-width: 62ch; font-size: 1.0625rem; line-height: 1.6; }
+.kaizen-workspace .kz-story p:last-child { margin-bottom: 0; }
+.kaizen-workspace .kz-steps, .kaizen-workspace .kz-help, .kaizen-record .kz-note, .kaizen-record .kz-visible { background: var(--kz-panel); border: 1px solid var(--kz-border); border-radius: 14px; padding: 1rem 1.25rem; }
+.kaizen-workspace .kz-about, .kaizen-record .kz-about { border: 1px dashed var(--kz-border); border-radius: 14px; padding: 0.625rem 1rem; color: var(--kz-muted); font-size: 0.875rem; }
+.kaizen-workspace .kz-about summary, .kaizen-record .kz-about summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; font-weight: 600; color: var(--kz-ink); }
+.kaizen-workspace .kz-about-body p, .kaizen-record .kz-about-body p { margin: 0.5rem 0 0; }
+.kaizen-workspace .kz-about code, .kaizen-record .kz-about code { font-family: var(--kz-mono); font-size: 0.8125rem; }
+/* actions: ink pill primary, quiet outline secondary; rose only marks selection */
+.kaizen-workspace .btn, .kaizen-record .btn { border-radius: 999px; min-height: 2.75rem; padding: 0 1.125rem; font-family: var(--kz-body); font-weight: 600; background: var(--kz-panel); border: 1px solid var(--kz-border); color: var(--kz-ink); box-shadow: none; }
+.kaizen-workspace .btn:hover, .kaizen-record .btn:hover { border-color: var(--kz-muted); }
+.kaizen-workspace .btn.primary, .kaizen-record .btn.primary { background: var(--kz-ink); border-color: var(--kz-ink); color: var(--kz-paper); }
+.kaizen-workspace .btn.primary:hover, .kaizen-record .btn.primary:hover { background: #2d2b28; border-color: #2d2b28; }
+.kaizen-workspace .btn.big { min-height: 3.75rem; font-size: 1.125rem; padding: 0 1.75rem; }
+.kaizen-workspace .btn:focus-visible, .kaizen-record .btn:focus-visible, .kaizen-workspace .kz-tile:focus-visible { outline: 2px solid var(--kz-accent); outline-offset: 2px; }
+.kaizen-workspace .kz-actions, .kaizen-record .kz-actions { display: flex; flex-wrap: wrap; gap: 0.625rem; align-items: center; }
+.kaizen-workspace .kz-start { display: grid; gap: 0.75rem; justify-items: start; }
+/* fields */
+.kaizen-workspace .field, .kaizen-record .field { display: grid; gap: 0.375rem; margin: 0 0 0.75rem; }
+.kaizen-workspace .field label, .kaizen-record .field label { font-weight: 600; font-size: 1rem; }
+.kaizen-workspace textarea, .kaizen-workspace input, .kaizen-record textarea, .kaizen-record select { width: 100%; font: inherit; font-size: 1rem; color: var(--kz-ink); background: var(--kz-panel); border: 1px solid var(--kz-border); border-radius: 10px; padding: 0.75rem 0.875rem; min-height: 2.75rem; }
+.kaizen-workspace textarea, .kaizen-record textarea { resize: vertical; line-height: 1.5; }
+.kaizen-workspace textarea:focus, .kaizen-workspace input:focus, .kaizen-record textarea:focus, .kaizen-record select:focus { outline: 2px solid var(--kz-accent); outline-offset: 1px; border-color: var(--kz-accent); }
+.kaizen-workspace .field .hint, .kaizen-record .field .hint { font-size: 0.875rem; color: var(--kz-muted); }
+.kaizen-workspace .field .err, .kaizen-record .field .err { font-size: 0.875rem; color: var(--kz-bad); font-weight: 600; }
+.kaizen-workspace .field.invalid textarea, .kaizen-workspace .field.invalid input, .kaizen-record .field.invalid textarea { border-color: var(--kz-bad); }
+.kaizen-workspace .kz-write { display: grid; gap: 0.25rem; }
+.kaizen-workspace .kz-check-row { display: flex; flex-wrap: wrap; gap: 0.625rem; align-items: flex-end; }
+.kaizen-workspace .kz-check-row .field { margin: 0; flex: 0 1 14rem; }
+.kaizen-workspace .kz-check input { font-family: var(--kz-mono); font-variant-numeric: tabular-nums; max-width: 14rem; }
+.kaizen-workspace .kz-check .notice, .kaizen-workspace .kz-focus > .notice { margin: 0.625rem 0 0; }
+/* counting tiles: only on math tasks; big round targets */
+.kaizen-workspace .kz-tiles { display: grid; grid-template-columns: repeat(5, minmax(2.75rem, 3.25rem)); gap: 0.5rem; margin: 0.5rem 0 0.75rem; }
+.kaizen-workspace .kz-tile { min-height: 2.75rem; min-width: 2.75rem; border-radius: 999px; border: 1px solid var(--kz-border); background: var(--kz-panel2); color: var(--kz-muted); font-size: 1.25rem; cursor: pointer; }
+.kaizen-workspace .kz-tile[aria-pressed="true"] { background: var(--kz-ink); border-color: var(--kz-ink); color: var(--kz-paper); }
+.kaizen-workspace[data-band="k2"] .kz-tiles { grid-template-columns: repeat(5, minmax(3.5rem, 4rem)); gap: 0.75rem; }
+.kaizen-workspace[data-band="k2"] .kz-tile { min-height: 3.5rem; min-width: 3.5rem; font-size: 1.5rem; }
+/* student work: verbatim, warm paper tint, time in mono */
+.kaizen-workspace .kz-step-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.kaizen-workspace .kz-step-list li { display: grid; gap: 0.125rem; padding: 0.625rem 0.875rem; border-radius: 10px; background: var(--kz-paper); border: 1px solid var(--kz-border); }
+.kaizen-workspace .kz-when, .kaizen-record .kz-when { font-family: var(--kz-mono); font-size: 0.75rem; color: var(--kz-muted); font-variant-numeric: tabular-nums; }
+.kaizen-workspace .kz-verbatim, .kaizen-record .kz-verbatim { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1rem; margin: 0; }
+/* help: requests and scripted replies are visibly different kinds of entry */
+.kaizen-workspace .kz-help-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.kaizen-workspace .kz-assist { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.5rem; font-size: 0.9375rem; }
+.kaizen-workspace .kz-assist li { display: grid; gap: 0.125rem; padding: 0.5rem 0.75rem; border-radius: 10px; }
+.kaizen-workspace .kz-assist li.assist-requested { border: 1px solid var(--kz-border); }
+.kaizen-workspace .kz-assist li.assist-requested.unavail { border-style: dashed; color: var(--kz-warn); }
+.kaizen-workspace .kz-assist li.assist-scripted { background: var(--kz-panel2); border-left: 3px solid var(--kz-accent); }
+.kaizen-workspace .kz-assist li p { margin: 0; }
+/* Learn empty state / chooser */
+.kaizen-workspace .kz-pick { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.kaizen-workspace .kz-pick li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; background: var(--kz-panel); border: 1px solid var(--kz-border); border-radius: 14px; }
+.kaizen-workspace .kz-pick-main { display: flex; gap: 0.75rem; align-items: center; min-width: 0; }
+.kaizen-workspace .kz-pick-title { font-weight: 600; overflow-wrap: anywhere; }
+.kaizen-workspace .kz-none, .kaizen-record .kz-none { display: grid; gap: 0.5rem; justify-items: start; padding: 1.25rem; background: var(--kz-panel); border: 1px solid var(--kz-border); border-radius: 20px; }
+/* Activity timeline */
+.kaizen-record .kz-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.kaizen-record .kz-filter label { font-weight: 600; }
+.kaizen-record .kz-filter select { width: auto; max-width: 100%; flex: 1 1 14rem; padding-right: 2rem; }
+.kaizen-record .kz-timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.kaizen-record .kz-day { font-family: var(--kz-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--kz-muted); padding: 0.75rem 0 0.125rem; border-bottom: 1px solid var(--kz-border); }
+.kaizen-record .kz-event { display: grid; gap: 0.25rem; padding: 0.625rem 0.875rem; border-radius: 10px; background: var(--kz-panel); border: 1px solid var(--kz-border); }
+.kaizen-record .kz-event-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.625rem; font-size: 0.875rem; }
+.kaizen-record .kz-who { font-weight: 600; color: var(--kz-ink); }
+.kaizen-record .kz-on { color: var(--kz-muted); overflow-wrap: anywhere; }
+.kaizen-record .kz-what { margin: 0; font-size: 0.9375rem; overflow-wrap: anywhere; }
+.kaizen-record .kz-event.work { background: var(--kz-paper); }
+.kaizen-record .kz-event.obs { border-left: 3px solid var(--kz-accent); }
+.kaizen-record .kz-event.help { background: var(--kz-panel2); }
+.kaizen-record .kz-event.act .kz-what { color: var(--kz-muted); }
+/* notices stay quiet: text first, hue second */
+.kaizen-workspace .notice, .kaizen-record .notice { border-radius: 10px; font-size: 0.9375rem; background: var(--kz-panel2); border: 1px solid var(--kz-border); }
+.kaizen-workspace .notice.ok, .kaizen-record .notice.ok { border-color: var(--kz-good); }
+.kaizen-workspace .notice.warn, .kaizen-record .notice.warn { border-color: var(--kz-warn); }
+/* phones: 24px title, full-width primary actions, tiles still large */
+@media (max-width: 600px) {
+  .kaizen-workspace #view-h, .kaizen-record #view-h { font-size: 1.5rem; }
+  .kaizen-workspace .kz-focus, .kaizen-workspace .kz-none, .kaizen-record .kz-none { padding: 1rem; border-radius: 14px; }
+  .kaizen-workspace .kz-actions .btn.primary, .kaizen-workspace .kz-start .btn, .kaizen-record .kz-actions .btn.primary { width: 100%; }
+  .kaizen-workspace .kz-check-row .field { flex: 1 1 100%; }
+  .kaizen-workspace .kz-check input { max-width: none; }
+  .kaizen-workspace .kz-tiles { grid-template-columns: repeat(5, minmax(2.75rem, 1fr)); max-width: 20rem; }
+  .kaizen-workspace[data-band="k2"] .kz-tiles { grid-template-columns: repeat(5, minmax(3rem, 1fr)); max-width: 22rem; }
+}
+@media (max-width: 360px) { .kaizen-workspace .kz-help-row .btn, .kaizen-workspace .kz-actions .btn { width: 100%; } }
+@media (prefers-reduced-motion: no-preference) { .kaizen-workspace .btn, .kaizen-record .btn, .kaizen-workspace .kz-tile { transition: border-color 120ms ease, background-color 120ms ease; } }

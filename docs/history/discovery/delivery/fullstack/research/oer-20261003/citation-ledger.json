@@ -1,0 +1,659 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": 1,
+      "url": "https://openstax.org/blog/openstax-licensing",
+      "title": "openstax_license",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 2,
+      "url": "https://openstax.org/subjects",
+      "title": "openstax_home",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 3,
+      "url": "https://illustrativemathematics.org/terms-of-use",
+      "title": "im_license",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "The first edition of IM K–12 Math curriculum (© 2019 – 2021) is freely accessible by teachers, students, and families as an Open Education Resource at http://im.kendallhunt.com and is licensed for use under the Creative Commons Attribution 4.0 International License (CC BY 4.0).",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "url": "https://www.saylor.org/about/legal",
+      "title": "saylor_license",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 5,
+      "url": "https://phet.colorado.edu/en/licensing",
+      "title": "phet_license",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 6,
+      "url": "https://ocw.mit.edu/pages/privacy-and-terms-of-use",
+      "title": "mitocw_terms",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Noncommercial — You may not use the material for commercial purposes.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "url": "https://www.khanacademy.org/about/docs/khan-academy-terms-of-service",
+      "title": "khan_terms",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 8,
+      "url": "https://en.wikibooks.org/wiki/Wikibooks:Copyrights",
+      "title": "wikibooks_copy",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Most of Wikibooks' text is dual licensed under the Creative Commons Attribution-ShareAlike 4.0 International License (\"CC BY-SA 4.0\") and the GNU Free Documentation License (GFDL) (unversioned, with no invariant sections, front-cover texts, or back-cover texts).",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "url": "https://www.gutenberg.org/policy/license.html",
+      "title": "gutenberg_license",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Nearly all the individual works in the collection are in the public domain in the United States.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "url": "https://standardebooks.org/about",
+      "title": "standardebooks_license",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Content produced by or for Standard Ebooks L 3 C is dedicated to the public domain via the CC0 1.0 Universal Public Domain Dedication .",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "url": "https://oercommons.org/about",
+      "title": "oer_commons",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 12,
+      "url": "https://open.umn.edu/opentextbooks",
+      "title": "otl_umn",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution 4.0 License",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "url": "https://open.bccampus.ca/browse-our-collection",
+      "title": "bccampus",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution 4.0 International Licence .",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "url": "https://libretexts.org/about-us",
+      "title": "libretexts_about",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 15,
+      "url": "https://www.numbas.org.uk",
+      "title": "numbas_about",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "All of the Numbas software is open source, available under the Apache 2.0 licence.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "url": "https://www.thenational.academy/legal/terms-and-conditions",
+      "title": "oak_national",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "This is made available to teachers on a revocable, non-exclusive, non-transferable, limited licence to use for non-commercial educational purposes.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "url": "https://www.commonlit.org/terms",
+      "title": "commonlit_terms",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Some CommonLit content may be offered under open source licenses, including the Creative Commons Attribution/Non-Commercial/Share Alike 4.0 International license (CC BY-NC-SA4.0), that we will make available to you upon your request.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "url": "https://learningequality.org/kolibri/about-kolibri",
+      "title": "kolibri",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "licensed under a Creative Commons Attribution 4.0 International license.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "url": "https://www.geogebra.org/license",
+      "title": "geogebra_terms",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Whether a particular use of the GeoGebra Materials is \"non-commercial\" depends on the use, not the user.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "url": "https://raw.githubusercontent.com/freeCodeCamp/freeCodeCamp/main/LICENSE.md",
+      "title": "fcc_license",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "BSD 3-Clause License",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "url": "https://raw.githubusercontent.com/openwebwork/webwork-open-problem-library/main/README.md",
+      "title": "webwork_opl",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 22,
+      "url": "https://api.github.com/repos/numbas/Numbas",
+      "title": "numbas_gh",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 23,
+      "url": "https://openstax.org/apps/cms/api/v2/pages/?type=books.Book&fields=title,license_name,license_text&limit=60",
+      "title": "openstax_api_books",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "\"license_name\": \"Creative Commons Attribution-NonCommercial-ShareAlike License\"",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "url": "https://openstax.org/tos",
+      "title": "openstax_legal",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 25,
+      "url": "https://raw.githubusercontent.com/phetsims/phet-info/main/LICENSE",
+      "title": "phet_gh_license",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 26,
+      "url": "https://www.saylor.org/terms-of-use",
+      "title": "saylor_terms",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 27,
+      "url": "https://www.siyavula.com/read",
+      "title": "siyavula_books",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "CC-BY (unbranded versions)",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "url": "https://www.core-econ.org/about",
+      "title": "coreecon_about",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 29,
+      "url": "https://www.myopenmath.com/info/aboutus.php",
+      "title": "myopenmath_about",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 30,
+      "url": "https://partner.skillscommons.org",
+      "title": "skillscommons_lic",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 31,
+      "url": "https://chem.libretexts.org/Courses",
+      "title": "libretexts_license_page",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Campus Bookshelves is shared under a CC BY-NC-SA 4.0 license and was authored, remixed, and/or curated by LibreTexts.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "url": "https://lumenlearning.com/about",
+      "title": "lumen_about",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 33,
+      "url": "https://oercommons.org/hubs",
+      "title": "oercommons_license_search",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 34,
+      "url": "https://en.wikiversity.org/wiki/Wikiversity:Copyrights",
+      "title": "wikiversity_copy",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 35,
+      "url": "https://commons.wikimedia.org/wiki/Commons:Licensing",
+      "title": "commons_licensing",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "that are in the public domain in at least the United States and in the source country of the work.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "url": "https://www.loc.gov/legal",
+      "title": "loc_rights",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "You should determine for yourself whether or not an item is protected by copyright or in the public domain, and then satisfy any copyright or use restrictions when publishing or distributing materials from our collections.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "url": "https://www.nasa.gov/nasa-brand-center/images-and-media",
+      "title": "nasa_media",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "The NASA Insignia, Logotype, identifiers, and imagery are not in the public domain.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "url": "https://api.github.com/repos/maths/moodle-qtype_stack",
+      "title": "stack_gh",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 39,
+      "url": "https://api.github.com/repos/openwebwork/webwork-open-problem-library",
+      "title": "opl_gh",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 40,
+      "url": "https://docs.ankiweb.net/importing/text-files.html",
+      "title": "anki_fmt",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 41,
+      "url": "https://ankiweb.net/account/terms",
+      "title": "ankiweb_shared_terms",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 42,
+      "url": "https://opentextbc.ca",
+      "title": "opentextbc_lic",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 43,
+      "url": "https://api.github.com/orgs/openstax/repos?per_page=5&sort=pushed",
+      "title": "openstax_gh",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 44,
+      "url": "https://openstax.org/apps/cms/api/v2/pages/?type=books.Book&fields=title,license_name&limit=70&offset=60",
+      "title": "openstax_api_p2",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 45,
+      "url": "https://www.myopenmath.com",
+      "title": "myopenmath_home",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 46,
+      "url": "https://api.github.com/orgs/phetsims/repos?per_page=4&sort=pushed",
+      "title": "phet_sims_gh",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 47,
+      "url": "https://raw.githubusercontent.com/maths/moodle-qtype_stack/master/COPYING.txt",
+      "title": "stack_lic",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 48,
+      "url": "https://api.github.com/repos/numbas/editor",
+      "title": "numbas_editor_gh",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 49,
+      "url": "https://libretexts.org",
+      "title": "libretexts_lic_tag",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 50,
+      "url": "https://oercommons.org/search?f.general_subject=mathematics",
+      "title": "oercommons_search_cc",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 License.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "url": "https://www.gutenberg.org/ebooks/offline_catalogs.html",
+      "title": "pg_offline",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 52,
+      "url": "https://www.thenational.academy/about-us/who-we-are",
+      "title": "oak_oer",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 53,
+      "url": "https://support.skillscommons.org",
+      "title": "skillscommons_tos",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 54,
+      "url": "https://kolibri-catalog-en.learningequality.org/api/public/v1/channels",
+      "title": "kolibri_channels",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 55,
+      "url": "https://en.wikibooks.org/w/api.php?action=query&meta=siteinfo&siprop=statistics&format=json",
+      "title": "wikibooks_api",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 56,
+      "url": "https://docs.ankiweb.net/exporting.html",
+      "title": "anki_apkg",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 57,
+      "url": "https://openstax.org/general/faq?question=licensing",
+      "title": "cnx_openstax_cc",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 58,
+      "url": "https://raw.githubusercontent.com/phetsims/forces-and-motion-basics/main/LICENSE",
+      "title": "phet_sim_gh_license",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 59,
+      "url": "https://raw.githubusercontent.com/phetsims/chipper/main/LICENSE",
+      "title": "phet_chipper_license",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 60,
+      "url": "https://api.github.com/repos/phetsims/forces-and-motion-basics",
+      "title": "phet_sim_repo",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "\"name\": \"GNU General Public License v3.0\"",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "url": "https://openscied.org",
+      "title": "openscied_home",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 62,
+      "url": "https://mathigon.org",
+      "title": "mathigon_home",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 63,
+      "url": "https://www.oerproject.com",
+      "title": "oerproject_home",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 64,
+      "url": "https://www.merlot.org/merlot/index.htm",
+      "title": "merlot_home",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 65,
+      "url": "https://www.learnfree.org",
+      "title": "gcf_home",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 66,
+      "url": "https://lumenlearning.com",
+      "title": "lumen_home",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 67,
+      "url": "https://pressbooks.com/about",
+      "title": "pressbooks_about",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 68,
+      "url": "https://api.github.com/repos/ankitects/anki",
+      "title": "anki_gh",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 69,
+      "url": "https://creativecommons.org/licenses/by/4.0",
+      "title": "cc_by_deed",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 70,
+      "url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "title": "cc_bysa_deed",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 71,
+      "url": "https://creativecommons.org/publicdomain/zero/1.0",
+      "title": "cc0_deed",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 72,
+      "url": "https://openstax.org/apps/cms/api/v2/pages/?type=books.Book&fields=title,license_name,license_text,slug&limit=3",
+      "title": "openstax_api_detail",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 73,
+      "url": "https://www.colorincolorado.org",
+      "title": "colorincolorado",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 74,
+      "url": "https://oercommons.org",
+      "title": "eusd_oer",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 75,
+      "url": "https://en.wikibooks.org/wiki/Wikijunior",
+      "title": "wikijunior",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 76,
+      "url": "https://www.cia.gov/stories/story/spotlighting-the-world-factbook-as-we-bid-a-fond-farewell",
+      "title": "cia_wfb",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 77,
+      "url": "https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_en.html",
+      "title": "phet_sim_published",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "COMMERCIAL USE REQUIRES A COMMERCIAL LICENSE AGREEMENT FROM THE UNIVERSITY OF COLORADO BOULDER.",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 78,
+      "url": "https://raw.githubusercontent.com/phetsims/phet-core/main/LICENSE",
+      "title": "phet_org_license",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 79,
+      "url": "https://www.learnfree.org/terms-conditions",
+      "title": "gcf_home_lic0",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 80,
+      "url": "https://openscied.org/openscied-terms-of-use-and-privacy-policies",
+      "title": "openscied_home_lic0",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "OpenSciEd website content, including the classroom curriculum and professional learning resources created by OpenSciEd and its partners, are licensed under a Creative Commons Attribution 4.0 International License (CC BY 4.0) or Creative Commons NonCommercial Plus 4.0 International License .",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "url": "https://www.oerproject.com/Terms-of-use",
+      "title": "oerproject_home_lic0",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Generally, Course Materials available on or through the Site and Services are made available pursuant to the terms of the Creative Commons Attribution Non-Commercial License (CC-BY-NC).",
+          "added": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "url": "https://www.colorincolorado.org/terms-and-conditions",
+      "title": "colorincolorado_lic0",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 83,
+      "url": "https://libretexts.org/terms-conditions",
+      "title": "libretexts_about_lic0",
+      "accessed": "2026-10-03"
+    },
+    {
+      "id": 84,
+      "url": "https://raw.githubusercontent.com/ankitects/anki/main/LICENSE",
+      "title": "anki_license_gh",
+      "accessed": "2026-10-03",
+      "quotes": [
+        {
+          "text": "Anki is licensed under the GNU Affero General Public License, version 3 or",
+          "added": "2026-10-03"
+        }
+      ]
+    }
+  ]
+}

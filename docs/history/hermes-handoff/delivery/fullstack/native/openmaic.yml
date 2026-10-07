@@ -1,0 +1,76 @@
+# Isolated native-Opus classroom candidate.
+#
+# Every reachable generation slot is pinned to native Anthropic claude-opus-5.
+# Writing a slot here LOCKS it: Settings > Models shows "Set by the server" and
+# cannot change it, and `policy.allowWorkspaceProviders: false` additionally
+# refuses any model, key, endpoint or header a request names
+# (lib/server/resolve-model.ts:101, REQUEST_PROVIDERS_REFUSED).
+#
+# ANTHROPIC_AUTH_TOKEN is injected into the server process environment by
+# delivery/fullstack/native/launch.mjs, which resolves the local Claude
+# subscription credential through Hermes' own resolver in memory and validates
+# the canonical endpoint before transfer. The value is never written to disk,
+# never sent to the browser and never echoed in an error.
+
+providers:
+  anthropic:
+    preset: anthropic
+    apiKey: ${ANTHROPIC_AUTH_TOKEN}
+
+slots:
+  # Every chat slot inherits this root (lib/config/model-slots.ts): course.*,
+  # classroom, agent and their children all resolve to claude-opus-5 unless
+  # overridden below. No slot declares a `fallback`, so a failed call fails —
+  # it never silently reaches another model or vendor.
+  llm:
+    model: anthropic:claude-opus-5
+    # claude-opus-5 is an adaptive-thinking model: depth is set by effort, and
+    # `max` is the highest value its capability declares — effortValues is
+    # ['none','low','medium','high','xhigh','max'] (lib/ai/model-metadata.ts
+    # anthropicClaude5Effort -> anthropicOpus47Effort). `high` is only this
+    # model's catalogue DEFAULT, not its maximum.
+    thinking:
+      mode: enabled
+      effort: max
+
+  # Scene content is the one slot called N times per lesson (11 calls for an
+  # 11-scene course), so it is the slot where latency is felt. It still runs at
+  # `max`: the owner requires maximum supported reasoning, and reasoning depth
+  # is NOT a throughput lever here. Assigned explicitly (rather than inherited)
+  # so this slot cannot be quietly dropped to `high` again.
+  #
+  # Measured cost at `max`, to be reported and NOT silently traded away: one
+  # scene took >8 minutes sequentially, i.e. ~90 minutes for an 11-scene lesson.
+  # The only lever this candidate uses against that is concurrency
+  # (PARALLEL_SCENE_CONCURRENCY, upstream cap 10, set to 4 by the launcher).
+  course.content:
+    model: anthropic:claude-opus-5
+    thinking:
+      mode: enabled
+      effort: max
+
+  # The agent slot's calls carry function tools, which cannot be combined with
+  # a reasoning effort on every transport, so it declares noThinkingEffort and
+  # an inherited effort is dropped. It is assigned explicitly here to keep the
+  # same model with thinking enabled and no effort.
+  agent:
+    model: anthropic:claude-opus-5
+    thinking:
+      mode: enabled
+
+  # Capabilities this private candidate does not use are locked OFF rather than
+  # left open: `null` turns a capability off and locks it off. This is what
+  # blocks other-vendor calls, cloud speech and web search, instead of relying
+  # on no provider happening to be configured.
+  tts: null
+  asr: null
+  image: null
+  video: null
+  webSearch: null
+  document: null
+
+policy:
+  # The web settings cannot add providers, and a request cannot name its own
+  # model, key or endpoint. Anthropic claude-opus-5 is the only model this
+  # server can reach.
+  allowWorkspaceProviders: false

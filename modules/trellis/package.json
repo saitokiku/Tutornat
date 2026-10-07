@@ -1,0 +1,55 @@
+{
+  "name": "kaizenedu",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "KaizenEdu: a household learning product with Trellis the tutor and an honest learning record. Engine (lib/), PostgreSQL seam (db/), suites (tests/); the web app is web/.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "files": [
+    "lib/",
+    "tests/engine/README.md",
+    "tests/engine/run.cjs",
+    "tests/engine/exposure-pg/",
+    "tests/engine/assessment.cjs",
+    "tests/engine/harness/",
+    "tests/engine/closure-manifest.json",
+    "tests/engine/consumer-inventory.json",
+    "tests/engine/consumer-grep-20a971b.txt",
+    "tests/engine/consumer-grep-20a971b-broad.txt",
+    "tests/engine/containment-modified.json",
+    "npm-shrinkwrap.json",
+    "tsconfig.json",
+    "THIRD_PARTY_NOTICES.md",
+    "tests/engine/pg/PG_VERSION",
+    "tests/engine/pg/e1-db.cjs",
+    "tests/engine/pg/e1-worker.cjs",
+    "tests/engine/pg/e1-preload.cjs",
+    "tests/engine/pg/e1-schema.sql",
+    "tests/engine/pg/e1-run.sh",
+    "tests/engine/pg/e1-test.cjs",
+    "tests/engine/pg/harness.cjs",
+    "tests/engine/pg/paths.cjs",
+    "tests/engine/pg/resolve-pg.cjs",
+    "tests/engine/pg/E1-ADAPTER.md"
+  ],
+  "scripts": {
+    "typecheck": "sh tests/engine/harness/typecheck.sh",
+    "test:engine": "node --no-warnings --experimental-sqlite tests/engine/run.cjs --mode head",
+    "test:engine:baseline": "node --no-warnings --experimental-sqlite tests/engine/run.cjs --mode baseline",
+    "closure:hashes": "sh tests/engine/harness/import-closure.sh verify",
+    "test:pg": "node tests/engine/pg/prove.cjs",
+    "test:engine:pg": "sh tests/engine/pg/e1-run.sh --mode head",
+    "pg:up": "sh tests/engine/pg/up.sh",
+    "pg:down": "sh tests/engine/pg/down.sh",
+    "test:assessment": "node --no-warnings tests/engine/assessment.cjs",
+    "test:assessment:pg17": "sh tests/engine/harness/with-pg17.sh node --no-warnings tests/engine/assessment.cjs",
+    "test:replay:pg17": "sh tests/engine/harness/with-pg17.sh node --no-warnings tests/engine/replay.cjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "@types/node": "22.20.2"
+  }
+}

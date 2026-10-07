@@ -1,0 +1,85 @@
+{
+  "sourceCommit": "20a971b46c8c2bb7d19b9ccfdb8162637c1d1ffe",
+  "note": "Every KaizenEdu consumer of `skill_mastery.status` / `mastered` / `confirmed` (grep at the pinned commit over lib/, app/, components/), classified for E1. `imported` files exist in this repository and are exercised by tests/engine/run.cjs; `excluded` files do not exist here and nothing under lib/ imports them (case c0_consumer_inventory proves both).",
+  "provenance": {
+    "grep": "rg -n \"confirmed|data-status\" components lib app",
+    "output": "tests/engine/consumer-grep-20a971b.txt",
+    "note": "r2 re-audit (review item 3). emails/ does not exist at the pinned commit; email code is lib/tutor/email/, covered below. Every file the grep hits is either listed in `imported`/`excluded`, or in `notMasteryConsumers` because the match is a different sense of the word.",
+    "notMasteryConsumers": [
+      { "path": "lib/tutor/contracts.ts", "why": "the MasteryStatus type and its doc comment; imported as a type, not a consumer" },
+      { "path": "lib/tutor/voice/vad.ts", "why": "`confirmed` = speech confirmed past minSpeechMs (barge-in), not mastery" },
+      { "path": "components/tutor/parent/data.tsx", "why": "comment: account deletion is confirmed by typing a phrase" },
+      { "path": "components/tutor/session/transcript.tsx", "why": "data-status carries the turn entry status (interrupted/failed), not mastery" },
+      { "path": "components/tutor/session/session.css", "why": ".nt-turn[data-status='interrupted'|'failed']: turn status, not mastery" },
+      { "path": "app/generation-preview/page.tsx, app/page.tsx, components/chat/*, components/edit/*, components/stage/*, components/workbench/*, lib/chat/*, lib/classroom/*, lib/hooks/*, lib/import/*, lib/media/*, lib/pbl/*, lib/persistence/*, lib/playback/*, lib/server/*, lib/utils/*, lib/workbench/*", "why": "outside the tutor product: confirmed deletes, confirmed sends, soft_close_confirmed, tool-card data-status ok/error/running" }
+    ],
+    "broad": {
+      "note": "r3 (review r2 item 3): the literal grep cannot see status interpolated without the word `confirmed`. This second grep matches reads of the mastery status field/type — the MasteryStatus type, the skill_mastery table, `mastery` accessors, `.mastered`, the other enum literals, `status.replace`, `skill.status`, and `.status` compared with a mastery literal — over the same three trees at the same pinned commit. Every tutor file it hits (lib/tutor, components/tutor, app/(learner), app/(parent)) that the first grep did not is classified here: dynamic consumers went into `excluded` with line citations; types, re-exports, comments and static copy are recorded below, not dropped. c0_consumer_inventory enforces closure over both greps.",
+      "grep": "rg -n \"confirmed|data-status|MasteryStatus|masteryStatus|skill_mastery|\\bmastery\\b|\\.mastered\\b|not_started|in_progress|status\\.replace|skill\\.status|\\.status\\b[^;]*\\b(mastered|confirmed)\\b\" components lib app",
+      "output": "tests/engine/consumer-grep-20a971b-broad.txt",
+      "newDynamicConsumers": [
+        { "path": "lib/tutor/prompts/build.ts", "lines": [123, 128], "classified": "excluded" },
+        { "path": "lib/tutor/analytics/queries.sql.ts", "lines": [60, 175], "classified": "excluded", "statusReadLines": [46, 177] }
+      ],
+      "types": [
+        { "path": "lib/tutor/wire.ts", "why": "wire contracts: `mastery: SkillMastery[]` / `SkillMastery | null` fields on response shapes (lines 288, 354, 402); type only" }
+      ],
+      "reExports": [
+        { "path": "lib/tutor/report/index.ts", "why": "barrel re-exporting masteryStatusLabel and masteryStatus from report/parent-report and report/rows, both imported and covered by c2_legacy_confirmed_consumers" }
+      ],
+      "commentsOnly": [
+        { "path": "lib/tutor/accounts/deletion.ts", "why": "line 157: a doc comment listing skill_mastery among the tables the deletion job cascades; deletes rows, reads no status" },
+        { "path": "lib/tutor/turn/README.md", "why": "design prose about confirming mastery via the check tag; no code" }
+      ],
+      "staticCopy": [
+        { "path": "lib/tutor/prompts/checks.md", "why": "static prompt text: what a check is and that assisted checks never confirm mastery" },
+        { "path": "lib/tutor/prompts/coach.md", "why": "static prompt text: never grade your own help as mastery" },
+        { "path": "lib/tutor/prompts/wrap.md", "why": "static prompt text for the wrap summary" },
+        { "path": "components/tutor/marketing/landing.tsx", "why": "marketing copy: 'The tutor never grades its own help as mastery.'" },
+        { "path": "components/tutor/marketing/legal/ai-disclosure.tsx", "why": "legal copy: the tutor never grades its own help as mastery" }
+      ],
+      "alreadyClassified": [
+        "app/(parent)/parent/reports/[learnerId]/page.tsx", "lib/tutor/accounts/export.ts", "lib/tutor/checks/service.ts", "lib/tutor/db/schema.ts", "lib/tutor/model/service.ts", "lib/tutor/session/service.ts", "lib/tutor/turn/context.ts"
+      ]
+    }
+  },
+  "imported": [
+    { "path": "lib/tutor/model/student-model.ts", "boundary": "status transitions (applyCheck)", "cases": ["c1_direct_model_confirm_attempt", "c1_*"] },
+    { "path": "lib/tutor/model/service.ts", "boundary": "recordCheckOutcome, toSkillMastery, listMasteryRows", "cases": ["c1_*", "c2_legacy_confirmed_consumers"] },
+    { "path": "lib/tutor/model/evidence.ts", "boundary": "writeEvidence (evidence class guard)", "cases": ["c1_qualifying_write_refused"] },
+    { "path": "lib/tutor/checks/service.ts", "boundary": "answerCheck (the check route body)", "cases": ["c1_*", "c3_*"] },
+    { "path": "lib/tutor/checks/prompt.ts", "boundary": "pendingFromTag / pendingFromBankItem (item authority)", "cases": ["c1_generated_null_id_chain", "c1_supplied_id_repeats"] },
+    { "path": "lib/tutor/report/parent-report.ts", "boundary": "buildParentReport, masteryStatusLabel, REPORT_MASTERY_NOTE, selectNextSkill", "cases": ["c2_legacy_confirmed_consumers"] },
+    { "path": "lib/tutor/report/lead.ts", "boundary": "weeklyLead / headlineFor (weekly email headline input)", "cases": ["c1_generated_null_id_chain", "c2_legacy_confirmed_consumers"] },
+    { "path": "lib/tutor/report/rows.ts", "boundary": "masteryStatus, toSkillMastery (transcripts/export mapper)", "cases": ["c2_legacy_confirmed_consumers"] },
+    { "path": "lib/tutor/progress/service.ts", "boundary": "buildProgress (learner progress API body)", "cases": ["c2_legacy_confirmed_consumers"] },
+    { "path": "lib/tutor/graph/next-skill.ts", "boundary": "selectNextSkill, dueDelayedChecks, isMasteredOrConfirmed", "cases": ["c2_legacy_confirmed_consumers"] }
+  ],
+  "excluded": [
+    { "path": "app/(learner)/api/tutor/check/route.ts", "why": "HTTP plumbing (auth, preview, api-response); body is answerCheck, imported" },
+    { "path": "app/(learner)/api/tutor/progress/route.ts", "why": "HTTP plumbing; body is buildProgress, imported" },
+    { "path": "app/(parent)/api/parent/report/route.ts", "why": "HTTP plumbing; body is buildParentReport, imported" },
+    { "path": "app/(parent)/parent/page.tsx", "why": "React page; reads buildParentReport" },
+    { "path": "app/(parent)/parent/reports/[learnerId]/page.tsx", "why": "React page; reads listMasteryRows + REPORT_MASTERY_NOTE" },
+    { "path": "components/tutor/parent/report-view.tsx", "why": "React view; filters status === 'confirmed' into a 'What is confirmed' section — must be rebuilt on the contained view" },
+    { "path": "components/tutor/learn/progress.tsx", "why": "React view; STATUS_TONE and masteryStatusLabel" },
+    { "path": "components/tutor/ui/section.tsx", "why": "React EstimateBar: passes `status` into data-status (line 105; doc comment line 91 says a confirmed skill is the only one drawn in the success color). Visual consumer of certification state; unreachable — no components/ tree exists here", "lines": [91, 105] },
+    { "path": "components/tutor/brand/tokens.css", "why": "CSS `.nt-bar[data-status='confirmed'] > span` selects the success color (line 259). Visual consumer of certification state; unreachable — no components/ tree exists here", "lines": [259] },
+    { "path": "lib/tutor/client/copy.ts", "why": "client-side duplicate masteryStatusLabel; browser bundle" },
+    { "path": "lib/tutor/client/dashboard.ts", "why": "client tallies 'confirmed by an unaided check'; browser bundle" },
+    { "path": "lib/tutor/email/weekly.ts", "why": "weekly email job: entitlement, email sender, cron; headline input weeklyLead is imported" },
+    { "path": "lib/tutor/email/templates/weekly-report.ts", "why": "email template text 'Confirmed this week'; sender excluded" },
+    { "path": "lib/tutor/accounts/export.ts", "why": "data export; uses report/rows mappers, imported" },
+    { "path": "lib/tutor/metrics/board.ts", "why": "operator metrics counting mastery_change to 'confirmed'" },
+    { "path": "lib/tutor/preview/fixture.ts", "why": "marketing preview fixture with a hard-coded confirmed skill" },
+    { "path": "lib/tutor/turn/context.ts", "why": "LLM prompt context; reads mastery rows for the model, not a claim surface" },
+    { "path": "lib/tutor/prompts/build.ts", "why": "r3 (review r2 item 3): buildContextSection interpolates the target skill's mastery status (line 123, `ctx.skill.status.replace('_', ' ')`) and each prerequisite's status (line 128, `p.status.replace('_', ' ')`) into the tutor prompt — a raw `confirmed` row reads 'confirmed' to the model. Fed by turn/context.ts (excluded above); the formatter is its own file and its own consumer. Not imported, not present; unreachable — no prompt builder or model call exists here. Must be rebuilt on the contained view when the turn engine is imported", "lines": [123, 128] },
+    { "path": "lib/tutor/analytics/queries.sql.ts", "why": "r3 broad audit: operator dashboard SQL reads the mastery_change evidence payload status (line 46, `COALESCE(e.payload->>'to', e.payload->>'status', 'unknown') AS to_status`; surfaced at line 177 as `toStatus: row.to_status`; neither line matches the grep pattern — the grep hit this file on its `mastery` accessors at lines 60 and 175, cited here, and the status read was found by reading the file). Dynamic consumer of persisted status; not imported, not present; unreachable", "lines": [60, 175], "statusReadLines": [46, 177] },
+    { "path": "lib/tutor/turn/engine.ts", "why": "streaming turn engine (LLM, safety, board); its check tag path is pendingFromTag, imported" },
+    { "path": "lib/tutor/wrap/service.ts", "why": "WRAP summary on the stronger model" },
+    { "path": "lib/tutor/session/service.ts#createSession", "why": "delayed_check session target and entitlement gates; excluded from the imported subset" },
+    { "path": "lib/tutor/checks/llm-grade.ts", "why": "live model grader; replaced by an abstaining adapter seam" },
+    { "path": "lib/tutor/db/client.ts", "why": "pg pool + schema DDL on init; replaced by the Queryable interface" },
+    { "path": "lib/tutor/db/schema.ts", "why": "PostgreSQL DDL; the product schema is later work (db/README.md)" }
+  ]
+}

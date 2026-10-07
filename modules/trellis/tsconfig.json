@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "paths": { "@/*": ["./*"] }
+  },
+  "include": ["lib/**/*.ts", "lib/**/*.json"],
+  "exclude": ["node_modules", "legacy", "reference-implementations", "tests", "docs", "app", "db", "web"]
+}

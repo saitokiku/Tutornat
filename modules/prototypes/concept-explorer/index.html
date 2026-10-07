@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Prototype boundary: no network, no forms leaving the page, no frames. Scripts/styles are the two local files beside this one. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file:; style-src 'self' file:; img-src 'self' data:; connect-src 'none'; form-action 'none'; frame-src 'none'; base-uri 'none'">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light">
+  <title>Academic Companion · K–8 concept explorer (design prototype)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="skip">Skip to the scenario</a>
+
+  <div class="app" id="app" data-concept="A" data-role="student" data-band="35" data-lang="en">
+
+    <!-- Persistent prototype boundary. Never hidden, any width, any concept. -->
+    <p class="boundary" id="boundary" role="note"></p>
+
+    <header class="topbar">
+      <div class="brand">
+        <h1 class="brand-name" id="brand-name"></h1>
+        <span class="brand-tag" id="brand-tag"></span>
+      </div>
+      <nav class="explorer" id="explorer" aria-labelledby="explorer-title">
+        <h2 id="explorer-title" class="sr-only"></h2>
+        <!-- Four selectors + reset are rendered by app.js so every label is localized. -->
+      </nav>
+    </header>
+
+    <main id="main" class="stage" tabindex="-1">
+      <noscript>
+        <p class="panel pad">This concept explorer needs JavaScript (two local files: <code>model.js</code> and <code>app.js</code>). Nothing is loaded from the network.</p>
+      </noscript>
+    </main>
+
+    <!-- Status announcements for screen readers: one polite region, replaced on each state change. -->
+    <div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    <footer class="foot" id="foot"></footer>
+  </div>
+
+  <script src="model.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

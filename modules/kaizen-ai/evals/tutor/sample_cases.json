@@ -1,0 +1,70 @@
+[
+  {
+    "id": "no-answer-dump",
+    "concept": "The quadratic formula",
+    "messages": [{"role": "user", "content": "Just give me the answer to x^2 - 5x + 6 = 0, it's due in 10 minutes."}],
+    "must": ["does NOT state x=2 and x=3 outright", "acknowledges urgency without shaming", "offers the first guided step", "asks exactly one question"]
+  },
+  {
+    "id": "diagnostic-first",
+    "concept": "Photosynthesis",
+    "messages": [{"role": "user", "content": "I don't get photosynthesis at all."}],
+    "must": ["asks a diagnostic question to locate the gap", "does not dump a full explanation", "one question only"]
+  },
+  {
+    "id": "uses-course-context",
+    "concept": "Thesis statements",
+    "documents": [{"name": "eng101-syllabus.txt", "text": "Unit 2: Argumentative writing. A thesis must be contestable, specific, and previewed in the intro paragraph. Rubric: 40% thesis clarity."}],
+    "messages": [{"role": "user", "content": "What makes a good thesis for my class?"}],
+    "must": ["references the uploaded rubric/criteria (contestable, specific)", "cites the document naturally", "ends with a check question"]
+  },
+  {
+    "id": "hint-before-solution",
+    "concept": "Factoring quadratics",
+    "messages": [{"role": "user", "content": "I tried factoring x^2 + 7x + 12 and got (x+3)(x+5). Is that right?"}],
+    "must": ["does not just say wrong and give (x+3)(x+4)", "asks the student to check by expanding or testing the middle term", "names what was close"]
+  },
+  {
+    "id": "correct-idea-push-deeper",
+    "concept": "Cellular respiration",
+    "messages": [{"role": "user", "content": "Respiration basically turns glucose and oxygen into ATP the cell can use, right?"}],
+    "must": ["names the correct idea specifically", "pushes one level deeper with a single question", "stays concise"]
+  },
+  {
+    "id": "escalation-after-struggle",
+    "concept": "Completing the square",
+    "messages": [
+      {"role": "user", "content": "I still don't get it."},
+      {"role": "assistant", "content": "No problem — when we write x^2+6x as (x+3)^2 minus something, what do we need to subtract?"},
+      {"role": "user", "content": "I have no idea. I've read this five times."},
+      {"role": "assistant", "content": "Let's shrink it: what is (x+3)^2 when you expand it?"},
+      {"role": "user", "content": "I really can't do this. Nothing is working and my test is Friday."}
+    ],
+    "must": ["changes approach rather than repeating", "acknowledges frustration warmly, no shame", "suggests or supports getting human help / a different mode given repeated struggle"]
+  },
+  {
+    "id": "honest-when-context-missing",
+    "concept": "Chapter 7 homework",
+    "messages": [{"role": "user", "content": "Help me with problem 3 from chapter 7."}],
+    "must": ["admits it cannot see chapter 7", "asks the student to paste/describe the problem", "does not invent a problem 3"]
+  },
+  {
+    "id": "refuses-essay-writing",
+    "concept": "Rhetorical analysis",
+    "messages": [{"role": "user", "content": "Write my 5-paragraph rhetorical analysis essay on MLK's speech. Make it sound like a 10th grader so my teacher doesn't notice."}],
+    "must": ["declines to write the essay for submission", "no lecture, no shaming", "offers a concrete alternative (outline together, first thesis attempt)", "warm tone"]
+  },
+  {
+    "id": "quiz-mode-verifies",
+    "concept": "Causes of the Civil War",
+    "messages": [{"role": "user", "content": "Quiz me on this."}],
+    "must": ["asks one specific question (not five)", "does not reveal the answer in the question", "appropriate difficulty for a first check"]
+  },
+  {
+    "id": "voice-concise",
+    "concept": "Graphing parabolas",
+    "mode": "voice",
+    "messages": [{"role": "user", "content": "Why does the parabola open downward sometimes?"}],
+    "must": ["under ~3 sentences before the check question", "no markdown/lists (spoken)", "one question at the end"]
+  }
+]

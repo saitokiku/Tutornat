@@ -1,0 +1,144 @@
+{
+  "generatedAt": "2026-09-05T02:48:12.868Z",
+  "what": "time to first token and first sentence, direct to the Gemini API, no Next server",
+  "model": "gemini-3-flash-preview",
+  "repeats": 8,
+  "note": "free-tier key from the build sandbox through an HTTPS proxy; absolute values carry that overhead, the differences between arms are the finding",
+  "results": {
+    "A_default_thinking_on": {
+      "ttftMs": {
+        "n": 8,
+        "p50": 2099,
+        "p90": 2415,
+        "min": 1949,
+        "max": 2415
+      },
+      "firstSentenceMs": {
+        "n": 8,
+        "p50": 2099,
+        "p90": 2415,
+        "min": 1949,
+        "max": 2415
+      },
+      "firstSentenceChars": {
+        "n": 8,
+        "p50": 55,
+        "p90": 63,
+        "min": 35,
+        "max": 63
+      },
+      "thoughtTokens": 286,
+      "promptTokens": 118,
+      "errors": 0,
+      "sample": "It does seem strange since the numbers are different."
+    },
+    "B_thinking_budget_0": {
+      "ttftMs": {
+        "n": 8,
+        "p50": 672,
+        "p90": 761,
+        "min": 558,
+        "max": 761
+      },
+      "firstSentenceMs": {
+        "n": 8,
+        "p50": 763,
+        "p90": 874,
+        "min": 681,
+        "max": 874
+      },
+      "firstSentenceChars": {
+        "n": 8,
+        "p50": 93,
+        "p90": 110,
+        "min": 70,
+        "max": 110
+      },
+      "thoughtTokens": 0,
+      "promptTokens": 118,
+      "errors": 0,
+      "sample": "It can definitely be confusing because the numbers are different even though the value is the same."
+    },
+    "C_thinking_level_minimal": {
+      "ttftMs": {
+        "n": 8,
+        "p50": 674,
+        "p90": 790,
+        "min": 587,
+        "max": 790
+      },
+      "firstSentenceMs": {
+        "n": 8,
+        "p50": 774,
+        "p90": 915,
+        "min": 704,
+        "max": 915
+      },
+      "firstSentenceChars": {
+        "n": 8,
+        "p50": 81,
+        "p90": 118,
+        "min": 62,
+        "max": 118
+      },
+      "thoughtTokens": 0,
+      "promptTokens": 118,
+      "errors": 0,
+      "sample": "It can definitely feel strange because the numbers are different even though the value is the same."
+    },
+    "D_minimal_plus_opening_rule": {
+      "ttftMs": {
+        "n": 8,
+        "p50": 660,
+        "p90": 1732,
+        "min": 535,
+        "max": 1732
+      },
+      "firstSentenceMs": {
+        "n": 8,
+        "p50": 781,
+        "p90": 1856,
+        "min": 664,
+        "max": 1856
+      },
+      "firstSentenceChars": {
+        "n": 8,
+        "p50": 30,
+        "p90": 52,
+        "min": 25,
+        "max": 52
+      },
+      "thoughtTokens": 0,
+      "promptTokens": 171,
+      "errors": 0,
+      "sample": "They are the same amount."
+    },
+    "E_minimal_plus_12k_system": {
+      "ttftMs": {
+        "n": 8,
+        "p50": 603,
+        "p90": 674,
+        "min": 580,
+        "max": 674
+      },
+      "firstSentenceMs": {
+        "n": 8,
+        "p50": 755,
+        "p90": 799,
+        "min": 705,
+        "max": 799
+      },
+      "firstSentenceChars": {
+        "n": 8,
+        "p50": 46,
+        "p90": 63,
+        "min": 32,
+        "max": 63
+      },
+      "thoughtTokens": 0,
+      "promptTokens": 2453,
+      "errors": 0,
+      "sample": "It can definitely feel strange since the numbers are different."
+    }
+  }
+}

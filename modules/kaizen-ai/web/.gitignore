@@ -1,0 +1,21 @@
+node_modules
+.next
+out
+build
+*.tsbuildinfo
+.env
+.env.local
+.env*.local
+.DS_Store
+*.log
+.vercel
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/
+.env*
+
+# Tutornat: keep the variable template tracked (it holds names only, no values).
+!.env.example

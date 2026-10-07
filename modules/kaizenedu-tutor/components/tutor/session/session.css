@@ -1,0 +1,615 @@
+/*
+ * The call-style session layout (spec §5.10 A; design-system "Session layout";
+ * D36 chrome diet).
+ *
+ * Desktop is three panes: the tutor tile, the whiteboard tile, and the
+ * transcript column with the dock at its foot. A phone stacks a compact tutor
+ * strip (pinned to the top so the name and the AI label never leave the
+ * screen), the board, and the transcript, with the one-row dock pinned to the
+ * bottom. One focal point at a time: everything but the pane that matters is
+ * quiet, and the dock is the only chrome allowed on top of it.
+ *
+ * Everything here is scoped under `.nt-session`, and every color is a token
+ * from components/tutor/brand/tokens.css, so light and dark follow the rest of
+ * the product.
+ */
+
+.nt-session {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* The persistent "AI tutor" label. It is never hidden, at any width. */
+.nt-ai-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--nt-brand-soft);
+  color: var(--accent-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.nt-session-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(14rem, 1fr) auto;
+  grid-template-areas: 'tutor' 'board' 'rail';
+  /* Room for the fixed one-row dock on a phone. */
+  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 64rem) {
+  .nt-session-body {
+    grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr) minmax(19rem, 23rem);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'tutor board rail';
+    padding-bottom: 0.75rem;
+  }
+}
+
+.nt-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--nt-shadow);
+  overflow: hidden;
+}
+
+.nt-tile-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.nt-tile-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+/* --- Tutor tile ---------------------------------------------------- */
+
+.nt-tutor {
+  grid-area: tutor;
+}
+
+/* A phone: a strip, the presence on the left, the words beside it, the name
+   bar underneath; pinned so the AI label stays on screen while the rest
+   scrolls (R10). */
+@media (max-width: 63.99rem) {
+  .nt-tutor {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    grid-template-areas: 'stage words' 'bar bar';
+  }
+}
+
+.nt-tutor-stage {
+  grid-area: stage;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background: radial-gradient(120% 100% at 50% 0%, var(--nt-brand-soft) 0%, var(--card) 72%);
+}
+
+@media (min-width: 64rem) {
+  .nt-tutor-stage {
+    flex: none;
+    min-height: 13rem;
+    padding: 1rem;
+  }
+}
+
+.nt-avatar-host {
+  width: 4.25rem;
+  aspect-ratio: 1;
+}
+
+@media (min-width: 64rem) {
+  .nt-avatar-host {
+    width: min(13rem, 78%);
+  }
+}
+
+.nt-tutor-words {
+  grid-area: words;
+  display: flex;
+  align-items: center;
+  min-height: 5.5rem;
+  padding: 0.625rem 0.75rem;
+}
+
+@media (min-width: 64rem) {
+  .nt-tutor-words {
+    flex: 1;
+    align-items: flex-start;
+    min-height: 6.5rem;
+    padding: 0.875rem 1rem;
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* The caption: the tutor's words at reading size; the learner's own words,
+   heard back, quieter. Three lines at most on a phone. */
+.nt-caption {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.35;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (min-width: 64rem) {
+  .nt-caption {
+    font-size: 1.25rem;
+    -webkit-line-clamp: 8;
+  }
+}
+
+.nt-caption[data-who='learner'] {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.nt-caption[data-who='none'] {
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+}
+
+.nt-tutor-bar {
+  grid-area: bar;
+  justify-content: flex-start;
+  border-bottom: 0;
+  border-top: 1px solid var(--border);
+}
+
+.nt-tutor-name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.nt-timeleft {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.nt-timeleft[data-urgent='true'] {
+  color: var(--nt-warning);
+  font-weight: 600;
+}
+
+.nt-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 0.375rem;
+  transform: translateX(-50%);
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  box-shadow: var(--nt-shadow);
+  white-space: nowrap;
+}
+
+/* --- Board tile ---------------------------------------------------- */
+
+.nt-board {
+  grid-area: board;
+}
+
+.nt-board-sheet {
+  flex: 1;
+  min-height: 12rem;
+  background: var(--nt-board);
+  display: flex;
+}
+
+.nt-board-sheet > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.nt-board-empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+/* --- Transcript rail ----------------------------------------------- */
+
+.nt-rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.75rem;
+}
+
+.nt-transcript-tile {
+  flex: 1;
+  min-height: 0;
+}
+
+/* On a phone the transcript sits under the board and caps its own height so
+   the board keeps the room it needs. */
+@media (max-width: 63.99rem) {
+  .nt-transcript {
+    max-height: 34vh;
+  }
+}
+
+.nt-transcript {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.nt-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  max-width: 100%;
+}
+
+.nt-turn-who {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.nt-turn-text {
+  /* At least 20px on the session screen (design-system type rule). */
+  font-size: 1.25rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.nt-turn[data-role='learner'] .nt-turn-text {
+  font-size: 1.0625rem;
+  color: var(--muted-foreground);
+}
+
+.nt-turn[data-status='interrupted'] .nt-turn-text::after {
+  content: ' — interrupted';
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.nt-turn[data-status='failed'] .nt-turn-text {
+  color: var(--destructive);
+}
+
+/* --- Dock ----------------------------------------------------------- */
+
+.nt-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--nt-shadow);
+}
+
+@media (max-width: 63.99rem) {
+  .nt-dock {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    z-index: 20;
+  }
+}
+
+.nt-dock-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+.nt-dock-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nt-talk {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: var(--nt-target);
+  min-height: var(--nt-target);
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--nt-text-body);
+  font-weight: 600;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* With a keyboard, Enter sends; the send button is for thumbs. */
+@media (hover: hover) and (pointer: fine) {
+  .nt-dock-send {
+    display: none;
+  }
+}
+
+/* A narrow phone: the icon alone is the control; the label is its name. */
+@media (max-width: 30rem) {
+  .nt-talk {
+    padding: 0;
+    width: var(--nt-target);
+  }
+  .nt-talk-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+.nt-talk[data-talking='true'] {
+  background: var(--nt-success);
+  border-color: var(--nt-success);
+}
+
+/* Hands-free: the same control shows that the microphone is live and mutes
+   when pressed; muted, it is quiet until pressed again. */
+.nt-talk[data-live='true'] {
+  background: var(--nt-brand-soft);
+  border-color: var(--primary);
+  color: var(--accent-foreground);
+}
+
+.nt-talk[data-live='false'],
+.nt-talk[data-offer='true'] {
+  background: var(--card);
+  border-color: var(--input);
+  color: var(--foreground);
+}
+
+.nt-talk:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nt-icon-button {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--nt-target);
+  min-height: var(--nt-target);
+  border-radius: 999px;
+  border: 1px solid var(--input);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.nt-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nt-icon-button[aria-pressed='true'] {
+  background: var(--nt-brand-soft);
+  border-color: var(--primary);
+  color: var(--accent-foreground);
+}
+
+.nt-icon-button-danger {
+  color: var(--destructive);
+  border-color: color-mix(in oklab, var(--destructive) 45%, var(--input));
+}
+
+.nt-dock-input {
+  flex: 1;
+  min-width: 5rem;
+  min-height: var(--nt-target);
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  border: 1px solid var(--input);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: var(--nt-text-body);
+}
+
+.nt-dock-more {
+  position: relative;
+  flex: none;
+}
+
+.nt-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  z-index: 30;
+  min-width: 16rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0.375rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--nt-shadow);
+}
+
+.nt-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: var(--nt-target);
+  padding: 0.5rem 0.75rem;
+  border-radius: calc(var(--radius) / 1.5);
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: var(--nt-text-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nt-menu-item:hover,
+.nt-menu-item:focus-visible {
+  background: var(--muted);
+}
+
+.nt-menu-item.is-on {
+  color: var(--accent-foreground);
+}
+
+.nt-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Overlays ------------------------------------------------------- */
+
+.nt-check {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.nt-check-stem {
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.nt-check-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.nt-check-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: var(--nt-target);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: var(--nt-text-body);
+}
+
+.nt-check-option:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--nt-brand-soft);
+}
+
+.nt-metrics {
+  position: fixed;
+  right: 0.75rem;
+  top: 4.25rem;
+  z-index: 30;
+  max-width: 20rem;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--nt-shadow);
+  font-size: 0.75rem;
+}
+
+.nt-metrics table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.nt-metrics th,
+.nt-metrics td {
+  text-align: right;
+  padding: 0.125rem 0.375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.nt-metrics th:first-child,
+.nt-metrics td:first-child {
+  text-align: left;
+}
+
+.nt-metrics td[data-over='true'] {
+  color: var(--nt-warning);
+  font-weight: 600;
+}
+
+.nt-wrap {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

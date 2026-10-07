@@ -1,0 +1,129 @@
+{
+  "generatedAt": "2026-09-04T06:33:26.276Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "mock": false,
+  "turns": 6,
+  "ttsProvider": "openai-tts",
+  "asrProvider": "openai-whisper",
+  "model": null,
+  "budget": {
+    "firstAudioP50Ms": 1500,
+    "firstAudioP90Ms": 3000,
+    "bargeInStopMs": 300,
+    "whiteboardActionAfterSentenceMs": 2000,
+    "sessionInteractiveMs": 2000,
+    "firstAudioAfterStartMs": 10000
+  },
+  "summary": {
+    "learner_synth": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "asr": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "llm_ttft": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "llm_first_sent": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "llm_total": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "tts_first": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "first_audio": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "wb_first_action": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    }
+  },
+  "samples": [
+    {
+      "turn": 1,
+      "learnerLine": "I have homework on fractions and I do not get equivalent fractions.",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "tts HTTP 500: {\"success\":false,\"errorCode\":\"GENERATION_FAILED\",\"error\":\"OpenAI TTS API error: Forbidden\"}"
+    },
+    {
+      "turn": 2,
+      "learnerLine": "Why is two fourths the same as one half? They look different.",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "tts HTTP 500: {\"success\":false,\"errorCode\":\"GENERATION_FAILED\",\"error\":\"OpenAI TTS API error: Forbidden\"}"
+    },
+    {
+      "turn": 3,
+      "learnerLine": "Okay so if I multiply the top and bottom by the same number it stays the same?",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "tts HTTP 500: {\"success\":false,\"errorCode\":\"GENERATION_FAILED\",\"error\":\"OpenAI TTS API error: Forbidden\"}"
+    },
+    {
+      "turn": 4,
+      "learnerLine": "Can you draw it on the whiteboard?",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "tts HTTP 500: {\"success\":false,\"errorCode\":\"GENERATION_FAILED\",\"error\":\"OpenAI TTS API error: Forbidden\"}"
+    },
+    {
+      "turn": 5,
+      "learnerLine": "What about three sixths, is that also one half?",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "tts HTTP 500: {\"success\":false,\"errorCode\":\"GENERATION_FAILED\",\"error\":\"OpenAI TTS API error: Forbidden\"}"
+    },
+    {
+      "turn": 6,
+      "learnerLine": "I think I get it now. Give me one to try.",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "tts HTTP 500: {\"success\":false,\"errorCode\":\"GENERATION_FAILED\",\"error\":\"OpenAI TTS API error: Forbidden\"}"
+    }
+  ]
+}

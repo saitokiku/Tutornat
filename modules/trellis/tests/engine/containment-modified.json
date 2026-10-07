@@ -1,0 +1,10 @@
+[
+  "lib/tutor/model/student-model.ts",
+  "lib/tutor/model/evidence.ts",
+  "lib/tutor/model/service.ts",
+  "lib/tutor/checks/service.ts",
+  "lib/tutor/report/parent-report.ts",
+  "lib/tutor/report/lead.ts",
+  "lib/tutor/report/rows.ts",
+  "lib/tutor/graph/next-skill.ts"
+]

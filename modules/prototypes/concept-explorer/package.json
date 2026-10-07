@@ -1,0 +1,13 @@
+{
+  "name": "academic-companion-concept-explorer",
+  "version": "0.2.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test tests/model.test.cjs",
+    "test:quality": "node --test tests/model.test.cjs tests/model.repair.test.cjs tests/quality.model.test.cjs",
+    "check": "node --check model.js && node --check app.js && node --check tests/ui.e2e.cjs",
+    "e2e": "node tests/ui.e2e.cjs",
+    "e2e:quality": "node tests/quality.e2e.cjs"
+  }
+}

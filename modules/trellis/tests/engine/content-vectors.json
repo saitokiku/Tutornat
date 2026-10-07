@@ -1,0 +1,35 @@
+{
+  "purpose": "One grammar in two languages: lib/tutor/assessment/content-check.ts (parseExactRational, evaluateStem) and e2.exact_rational / e2.evaluate_stem (db/migrations/0007, 0014). Both tests/engine/content-parity.cjs sides consume this file, so the two implementations cannot drift again. E3 integration #24 round 2, review r1 findings 5 and 6.",
+  "rational": [
+    { "input": "3/4", "expected": "3/4", "note": "plain" },
+    { "input": " 3/4 ", "expected": "3/4", "note": "ordinary spaces" },
+    { "input": "\t3/4\n", "expected": "3/4", "note": "reviewer: tab and newline (JS trim)" },
+    { "input": "\u00a03/4\u00a0", "expected": "3/4", "note": "reviewer: NBSP-wrapped (JS trim)" },
+    { "input": "\u3000\u20073/4\ufeff", "expected": "3/4", "note": "ideographic space, figure space, BOM (JS trim)" },
+    { "input": "\u000b\f\r3/4\u2028\u2029", "expected": "3/4", "note": "VT FF CR, line and paragraph separators (JS trim)" },
+    { "input": "0.75", "expected": "3/4", "note": "reviewer control: finite decimal" },
+    { "input": "6/8", "expected": "3/4", "note": "reviewer control: lowest terms" },
+    { "input": "-0.5", "expected": "-1/2", "note": "negative decimal" },
+    { "input": "4", "expected": "4", "note": "integer" },
+    { "input": "4/0", "expected": null, "note": "zero denominator" },
+    { "input": "3 / 4", "expected": null, "note": "inner space is not whitespace to trim" },
+    { "input": "\u200b3/4", "expected": null, "note": "zero-width space is not JS whitespace" },
+    { "input": "0.75e0", "expected": null, "note": "no exponent form" }
+  ],
+  "stem": [
+    { "input": "Compute 1/2 + 1/4 = ?", "value": "3/4", "why": null, "note": "single trailer '= ?'" },
+    { "input": "Compute 1/2 + 1/4.", "value": "3/4", "why": null, "note": "single trailer '.'" },
+    { "input": "Compute 1/2 + 1/4?", "value": "3/4", "why": null, "note": "single trailer '?'" },
+    { "input": "Compute 1/2 + 1/4 = ?.", "value": null, "why": "not_canonical_stem", "note": "reviewer: double trailer abstains (#15/#19)" },
+    { "input": "Compute 1/2 + 1/4 = ??", "value": null, "why": "not_canonical_stem", "note": "reviewer: double trailer abstains (#15/#19)" },
+    { "input": "\t1/2 + 1/4\n", "value": "3/4", "why": null, "note": "JS whitespace collapse and trim" },
+    { "input": "\u00a01/2\u00a0+\u00a01/4\u00a0", "value": "3/4", "why": null, "note": "NBSP is JS whitespace" },
+    { "input": "$1/2 + 1/4$", "value": "3/4", "why": null, "note": "LaTeX delimiters" },
+    { "input": "What is the value of (2 × 3/5)?", "value": "6/5", "why": null, "note": "lead phrase, parentheses, ×" },
+    { "input": "Compute 2 ÷ 0.", "value": null, "why": "evaluator_error:division_by_zero", "note": "division by zero" },
+    { "input": "Compute ½ + 1.", "value": null, "why": "not_canonical_stem", "note": "NFKC creates a digit: lossy" },
+    { "input": "   ", "value": null, "why": "stem_missing", "note": "whitespace-only stem" },
+    { "input": "\u00a0", "value": null, "why": "stem_missing", "note": "NBSP-only stem is missing under JS trim" },
+    { "input": "Compute 2 + 2. Then double the result.", "value": null, "why": "not_canonical_stem", "note": "two sentences abstain" }
+  ]
+}

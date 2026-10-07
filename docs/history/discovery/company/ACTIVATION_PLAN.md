@@ -1,0 +1,11 @@
+# Astra coordinator execution plan — company activation
+
+This plan is written by the current Astra coordinator, not represented as a separate model consultation. Follow the existing redesign plan for product behavior; this plan adds accountable company operation.
+
+1. Recover current authority and actual company state; preserve the old pause as history. Verify role inventory, safe model routing, exact source paths and known limits. No unrelated issue or agent changes.
+2. Convene three independent Fable executive consultations against the same operating brief. CTO inspects the incomplete candidate and delivers the minimum engineering allocation; COO designs a lean single-board delivery system; VP Marketing supplies positioning and a parent-research kit without unearned claims. Each produces a concrete artifact and two scoped team briefs, in distinct directories. Time box each to 12 minutes / 18 tool calls; stop with exact gaps. No code or API writes by consultation workers.
+3. Coordinator creates durable executive roles and one product project through inspected Paperclip schemas. Timer heartbeats off. Check stored instructions/model/routing and read back exact targets. Do not enable duplicate execution while a consultation is running. Preserve old generic agents and onboarding tasks.
+4. Reconcile the three actual reports, resolve contradictions using owner direction, and assign scoped teams. Engineering first: one shell/integration implementer, then separate specification and quality reviewers; other departments work independently in their own paths. Save full briefs, IDs, dependencies and acceptance criteria. No hires merely to fill an org chart.
+5. Expose the existing Paperclip project and working product preview through a named Hermes desktop project; only build an additive UI extension if existing surfaces leave a demonstrated gap. Independently verify controls and resulting target state. Show the owner the product, active work and the next meaningful decision.
+
+Success is verified roles + actual executive outputs + activated bounded work + usable owner access. It is not a fake meeting transcript, an org chart alone, or an unverified product-finished claim. External writes, deploys, paid spend and destructive actions remain outside this plan.

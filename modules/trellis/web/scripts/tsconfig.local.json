@@ -1,0 +1,16 @@
+{
+  "// why": "Local typecheck of the framework-free server code (web/lib) with the repo toolchain when `next`/@types are not installable offline. Vercel runs the real `tsc -p web/tsconfig.json` via next build.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "types": [],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": { "@/*": ["../*"], "pg": ["./types/pg-shim.d.ts"] }
+  },
+  "include": ["../lib/**/*.ts", "types/*.d.ts"]
+}

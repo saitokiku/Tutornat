@@ -1,0 +1,46 @@
+-- 0032_ledger_close.sql — close the last privilege the selling law leaves open.
+-- Additive and idempotent. Run after 0031.
+--
+-- NOTHING HERE IS EXPLOITABLE TODAY, and saying so first is the point: this is
+-- the same defence-in-depth argument 0019 made, applied to the one table 0019
+-- exempted by mistake.
+--
+-- 0019 revoked client INSERT/UPDATE/DELETE from every table whose privileges
+-- provably disagreed with its policies, and listed the tables it deliberately
+-- left alone under a single rationale: "Those ARE client-synced by design and
+-- carry `auth.uid() = user_id` policies; revoking would break sync."
+--
+-- That rationale is true of `courses`, `homework_items`, `practice_sets` and
+-- the rest of the localStorage-backed working copy. It is NOT true of
+-- `app_settings`, which is in the list anyway. That table:
+--
+--   * has no user_id column and therefore no `auth.uid() = user_id` policy —
+--     its only two policies are `settings readable` (SELECT, to everyone) and
+--     `admin settings` (ALL, gated on is_admin()), both from 0001;
+--   * is never written by a browser. The one client reference in the entire
+--     codebase is components/LoginPage.js reading `signups_enabled` before a
+--     session exists (which is why 0011 kept it anon-READABLE). Every write
+--     goes through /api/admin/settings with the service role;
+--   * holds `club_enabled` — the fail-closed switch that gates the schedule,
+--     the tutor directory, booking, and membership checkout. CLAUDE.md rule 4
+--     and docs/legal/REVIEW_QUEUE.md items 10-15 are enforced through this one
+--     boolean.
+--
+-- So the grant is inert (RLS denies the write, is_admin() is false for a
+-- learner) and it is also the highest-consequence inert grant in the schema:
+-- one carelessly-permissive policy on this table — the kind 0011 and 0019 were
+-- both written to clean up after — and a browser with the anon key flips
+-- selling on. The privilege should not be sitting there waiting for that
+-- mistake. Stated twice, the way every other money-bearing table already is.
+--
+-- SELECT is re-granted explicitly below rather than merely left alone, so the
+-- signup kill switch keeps working and the intent is legible without having to
+-- reconstruct it from 0011.
+
+-- ── app_settings: read-only to the browser, service-role to write ────────────
+revoke insert, update, delete on app_settings from anon, authenticated;
+grant select on app_settings to anon, authenticated;
+
+-- The standing audit from 0019 is the check that this held:
+--   select * from admin_client_writable_tables where table_name = 'app_settings';
+-- Zero rows is the expected result from here on.

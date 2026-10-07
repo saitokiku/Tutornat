@@ -1,0 +1,424 @@
+/*
+ * Academic Companion — K–8 concept explorer (design prototype).
+ *
+ * Visual vocabulary is informed by the local product source
+ * (snapshots/KaizenEdu components/tutor/brand/tokens.css): one teal hue (195),
+ * warm-tinted neutrals in oklch, semantic success/warning, surface sizing that
+ * scales by audience instead of per page, one outside-drawn focus ring, and
+ * motion that collapses under prefers-reduced-motion. Upstream purple is not
+ * inherited. Layouts for the three concepts are new to this prototype.
+ *
+ * Local fonts only. No remote assets.
+ */
+
+:root {
+  --font: "Avenir Next", "Avenir", "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --bg: oklch(0.985 0.004 85);
+  --ink: oklch(0.22 0.015 60);
+  --muted: oklch(0.44 0.02 60);
+  --card: oklch(1 0 0);
+  --board: oklch(0.995 0.003 85);
+  --line: oklch(0.88 0.008 80);
+  --line-strong: oklch(0.78 0.012 80);
+  /* Essential boundaries (enabled inputs, K–2 counting cells) measure ≥ 3:1 on card/board/secondary
+     backgrounds (WCAG 1.4.11). Decorative panel edges deliberately keep the lighter tokens. */
+  --line-input: oklch(0.58 0.012 80);
+  --secondary: oklch(0.955 0.006 85);
+
+  --brand: oklch(0.46 0.085 195);
+  --brand-ink: oklch(0.32 0.06 195);
+  --brand-soft: oklch(0.94 0.028 195);
+  --ring: oklch(0.52 0.09 195);
+
+  --success: oklch(0.46 0.12 150);
+  --success-soft: oklch(0.95 0.04 150);
+  --warn: oklch(0.52 0.13 70);
+  --warn-soft: oklch(0.965 0.05 85);
+  --danger: oklch(0.5 0.19 27);
+  --danger-soft: oklch(0.96 0.03 27);
+
+  --shadow: 0 1px 2px oklch(0.3 0.02 60 / 6%), 0 8px 24px -12px oklch(0.3 0.02 60 / 18%);
+
+  /* Audience sizing: overridden by band/role below. */
+  --text-body: 1rem;
+  --text-lead: 1.125rem;
+  --text-small: 0.875rem;
+  --target: 2.75rem;
+  --gap: 1rem;
+  --radius: 0.75rem;
+}
+
+/* K–2: bigger text, bigger targets, more room, one thing at a time. */
+.app[data-band="K2"] {
+  --text-body: 1.1875rem;
+  --text-lead: 1.375rem;
+  --text-small: 1rem;
+  --target: 3.5rem;
+  --gap: 1.25rem;
+  --radius: 1rem;
+}
+/* Parent surface: quieter and denser, still 44px targets on touch. */
+.app[data-role="parent"] {
+  --text-body: 0.9375rem;
+  --text-lead: 1.0625rem;
+  --text-small: 0.8125rem;
+  --target: 2.75rem;
+  --gap: 0.875rem;
+  --radius: 0.625rem;
+}
+
+* { box-sizing: border-box; }
+/* The sticky boundary banner's measured height (app.js sets --banner-h on every render and
+   resize) keeps focused controls, anchors and skip-link targets below it. */
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--banner-h, 4rem) + 0.5rem); }
+a, button, input, select, textarea, summary, [tabindex] { scroll-margin-top: calc(var(--banner-h, 4rem) + 0.5rem); }
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+}
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+button, input, textarea, select { font: inherit; color: inherit; }
+code { font-family: var(--mono); font-size: 0.92em; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip {
+  position: absolute; left: 0.5rem; top: -3rem; z-index: 100;
+  display: inline-flex; align-items: center; min-height: 2.75rem;
+  padding: 0.5rem 0.75rem; background: var(--ink); color: var(--bg); border-radius: var(--radius);
+}
+.skip:focus { top: 0.5rem; }
+
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* --- Shell ------------------------------------------------------------ */
+
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+.boundary {
+  position: sticky; top: 0; z-index: 30;
+  padding: 0.5rem 1rem;
+  background: var(--warn-soft);
+  color: oklch(0.36 0.09 70);
+  border-bottom: 1px solid oklch(0.85 0.08 80);
+  font-size: var(--text-small);
+  line-height: 1.4;
+}
+.boundary strong { font-weight: 600; }
+
+.topbar {
+  display: grid; gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+@media (min-width: 64rem) {
+  .topbar { grid-template-columns: auto 1fr; align-items: center; gap: 1.5rem; }
+}
+.brand { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.brand-name { font-weight: 600; letter-spacing: -0.01em; font-size: 1.0625rem; margin: 0; }
+.brand-tag { color: var(--muted); font-size: 0.8125rem; }
+
+.explorer { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; }
+.explorer fieldset {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem;
+  margin: 0; padding: 0; border: 0; min-width: 0;
+}
+.explorer legend { float: left; margin-right: 0.375rem; font-size: 0.8125rem; color: var(--muted); font-weight: 500; }
+.seg {
+  display: inline-flex; border: 1px solid var(--line-strong); border-radius: 999px; overflow: hidden; background: var(--secondary);
+}
+.seg button {
+  min-height: 2.75rem; min-width: 2.75rem; padding: 0 0.75rem;
+  border: 0; background: transparent; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: var(--muted);
+}
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--brand-ink); font-weight: 600; box-shadow: inset 0 0 0 1px var(--brand); }
+.seg button:focus-visible { outline-offset: -3px; }
+.explorer .reset { margin-left: auto; }
+
+/* --- Buttons ---------------------------------------------------------- */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: var(--target); padding: 0.5rem 1rem;
+  border: 1px solid var(--line-strong); border-radius: calc(var(--radius) - 0.125rem);
+  background: var(--card); color: var(--ink); cursor: pointer; font-weight: 500;
+  text-wrap: balance;
+}
+.btn:hover { border-color: var(--brand); color: var(--brand-ink); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: white; font-weight: 600; }
+.btn.primary:hover { background: var(--brand-ink); border-color: var(--brand-ink); color: white; }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--brand-ink); }
+.btn.quiet:hover { background: var(--brand-soft); }
+.btn.danger { color: var(--danger); }
+.btn.danger:hover { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+.btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.btn.big { font-size: var(--text-lead); padding: 0.75rem 1.25rem; }
+.btn .glyph { font-size: 1.25em; line-height: 1; }
+.app[data-band="K2"] .btn .glyph { font-size: 1.6em; }
+
+/* --- Stage and blocks ------------------------------------------------- */
+
+.stage { flex: 1; width: 100%; max-width: 90rem; margin: 0 auto; padding: var(--gap) 1rem 2rem; }
+.layout { display: grid; gap: var(--gap); grid-template-columns: minmax(0, 1fr); }
+
+.panel {
+  min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.pad { padding: 1rem 1.125rem; }
+.panel > header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1.125rem; border-bottom: 1px solid var(--line); }
+.panel > header h2 { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
+.panel > header .meta { font-size: var(--text-small); color: var(--muted); }
+.panel > .body { padding: 1rem 1.125rem; display: grid; gap: 0.875rem; }
+
+.lead { font-size: var(--text-lead); line-height: 1.4; text-wrap: pretty; max-width: 60ch; }
+.small { font-size: var(--text-small); color: var(--muted); line-height: 1.45; text-wrap: pretty; }
+.h-display { font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.125rem); line-height: 1.15; letter-spacing: -0.015em; font-weight: 600; text-wrap: balance; }
+.app[data-band="K2"] .h-display { font-size: clamp(1.75rem, 1.2rem + 2.4vw, 2.75rem); }
+
+.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.stack { display: grid; gap: 0.5rem; }
+
+/* Pills: role of the speaker/label, never decorative. */
+.pill {
+  display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.125rem 0.5rem;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--secondary);
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; color: var(--muted);
+}
+.pill.ai { background: var(--brand-soft); color: var(--brand-ink); border-color: transparent; }
+.pill.ok { background: var(--success-soft); color: var(--success); border-color: transparent; }
+.pill.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.pill.sample { background: var(--warn-soft); color: oklch(0.36 0.09 70); border-color: transparent; }
+.pill.parent { background: var(--secondary); color: var(--ink); }
+
+/* Status dots: status is also in text, color is reinforcement only. */
+.status { display: inline-flex; align-items: center; gap: 0.4rem; font-size: var(--text-small); color: var(--muted); }
+.status::before { content: ""; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--line-strong); flex: none; }
+.status[data-s="in_progress"]::before { background: var(--brand); }
+.status[data-s="complete"]::before { background: var(--success); }
+.status[data-s="needs_help"]::before { background: var(--warn); }
+
+/* --- Task / focus block ---------------------------------------------- */
+
+.task { display: grid; gap: 0.75rem; }
+.task .subject { font-size: var(--text-small); color: var(--muted); font-weight: 500; text-transform: none; }
+.task .due { font-variant-numeric: tabular-nums; }
+.task-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.app[data-band="K2"] .task-actions { display: grid; }
+.app[data-band="K2"] .task-actions .btn { min-height: 3.75rem; font-size: 1.25rem; }
+
+/* K–2 visual cue strip: shape + label, readable without reading. */
+.cues { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.cue {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.75rem;
+  border-radius: 999px; background: var(--secondary); font-weight: 600; font-size: var(--text-small);
+}
+.cue .glyph { font-size: 1.4em; }
+.cue[data-on="true"] { background: var(--brand-soft); color: var(--brand-ink); }
+
+/* --- Board (shared visual workspace) ---------------------------------- */
+
+.board {
+  position: relative; min-height: 12rem; padding: 1.125rem;
+  background: var(--board); border: 1px solid var(--line); border-radius: calc(var(--radius) - 0.125rem);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px);
+  background-size: 100% 1.75rem; background-position: 0 1.1rem;
+}
+.board .problem { font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem); font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; line-height: 1.75rem; }
+.app[data-band="K2"] .board .problem { font-size: clamp(1.75rem, 1.2rem + 2.6vw, 2.75rem); line-height: 1.2; }
+.board .passage { font-size: var(--text-lead); line-height: 1.75rem; max-width: 56ch; text-wrap: pretty; }
+.board .steps { margin-top: 0.75rem; display: grid; gap: 0.25rem; line-height: 1.75rem; font-variant-numeric: tabular-nums; }
+.board .step[data-from="hint"] { background: var(--brand-soft); border-radius: 0.25rem; padding: 0 0.375rem; display: inline-block; }
+.board .step[data-from="student"] { font-weight: 600; }
+.board .mark { position: absolute; right: 0.75rem; top: 0.75rem; }
+.board .tenframes { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; }
+.board .tenframe { display: grid; grid-template-columns: repeat(5, 2rem); gap: 0.25rem; }
+.board .tenframe span { width: 2rem; height: 2rem; border: 2px solid var(--line-input); border-radius: 0.375rem; }
+.board .tenframe span[data-fill="a"] { background: var(--brand); border-color: var(--brand); }
+.board .tenframe span[data-fill="b"] { background: var(--warn); border-color: var(--warn); }
+.board mark { background: var(--warn-soft); color: inherit; padding: 0 0.125rem; }
+
+/* --- Companion (voice demo + typed path) ------------------------------- */
+
+.companion .caption {
+  font-size: var(--text-lead); line-height: 1.4; min-height: 3.5rem; text-wrap: pretty; overflow-wrap: anywhere;
+}
+.companion .caption[data-who="student"] { color: var(--muted); font-style: italic; }
+.companion .caption[data-who="none"] { color: var(--muted); font-size: var(--text-body); }
+.turns { display: grid; gap: 0.375rem; max-height: 14rem; overflow: auto; align-content: start; }
+.turns-drawer > summary { cursor: pointer; min-height: var(--target); display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: var(--text-small); list-style: none; }
+.turns-drawer > summary::-webkit-details-marker { display: none; }
+.turns-drawer > summary::before { content: "▸"; color: var(--muted); }
+.turns-drawer[open] > summary::before { content: "▾"; }
+.turns-drawer[open] > summary { margin-bottom: 0.375rem; }
+.board .step .pill { margin-left: 0.375rem; vertical-align: middle; }
+.turn { display: grid; gap: 0.125rem; padding: 0.5rem 0.625rem; border-radius: calc(var(--radius) - 0.25rem); background: var(--secondary); font-size: var(--text-small); }
+.turn[data-who="companion"] { background: var(--brand-soft); }
+.turn .who { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+.mic {
+  display: grid; gap: 0.5rem; padding: 0.75rem; border-radius: calc(var(--radius) - 0.125rem); border: 1px dashed var(--line-strong);
+}
+.mic[data-mic="denied"] { border-color: var(--danger); background: var(--danger-soft); }
+.mic[data-mic="recovered"] { border-color: var(--success); background: var(--success-soft); }
+.typed { display: grid; gap: 0.5rem; }
+.typed .field { display: grid; gap: 0.25rem; }
+.typed input { min-height: var(--target); }
+
+/* --- Plan / timeline --------------------------------------------------- */
+
+.plan { display: grid; gap: 0.25rem; }
+.plan li {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.75rem;
+  padding: 0.625rem 0.25rem; border-top: 1px solid var(--line); min-height: var(--target);
+}
+.plan li:first-child { border-top: 0; }
+.plan li[data-active="true"] { background: var(--brand-soft); border-radius: calc(var(--radius) - 0.25rem); padding-inline: 0.625rem; }
+.plan .when { font-variant-numeric: tabular-nums; font-size: var(--text-small); color: var(--muted); min-width: 4.5rem; }
+.plan .what { display: grid; gap: 0.125rem; }
+.plan .what strong { font-weight: 600; }
+.plan.big li { padding: 0.875rem 0.5rem; }
+
+.day { display: grid; gap: 0.5rem; }
+.day h3 { font-size: var(--text-small); color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
+
+/* --- Ledger (provenance table) ----------------------------------------- */
+
+.ledger { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+.ledger th, .ledger td { text-align: left; vertical-align: top; padding: 0.5rem 0.5rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+.ledger th { font-weight: 600; color: var(--muted); }
+.ledger td.k { color: var(--ink); font-weight: 600; }
+.ledger .ev { display: inline-flex; gap: 0.375rem; align-items: center; }
+
+/* Utility classes (keep markup free of inline styles so the CSP can stay strict). */
+.strong { font-weight: 600; }
+.ink { color: var(--ink); }
+.gap { gap: var(--gap); }
+.scaffold { margin-top: 0.5rem; }
+.quote { margin: 0; }
+.select { min-height: var(--target); width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--line-input); border-radius: calc(var(--radius) - 0.25rem); background: var(--card); }
+.board .soundboxes { display: flex; gap: 0.25rem; margin-top: 0.5rem; }
+.board .soundboxes span { width: 3rem; height: 3rem; display: grid; place-items: center; font-weight: 600; border: 2px solid var(--line-input); border-radius: 0.375rem; font-size: 1.25rem; }
+
+/* --- Forms (parent) ---------------------------------------------------- */
+
+.form { display: grid; gap: 0.75rem; }
+.field { display: grid; gap: 0.25rem; }
+.field label { font-weight: 600; font-size: var(--text-small); }
+.field .help { font-size: var(--text-small); color: var(--muted); }
+input[type="text"], input[type="date"], textarea {
+  width: 100%; min-height: var(--target); padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line-input); border-radius: calc(var(--radius) - 0.25rem); background: var(--card);
+}
+textarea { min-height: 6rem; resize: vertical; line-height: 1.5; }
+.extract { display: grid; gap: 0.75rem; padding: 0.875rem; border-radius: calc(var(--radius) - 0.125rem); background: var(--secondary); }
+.extract[data-status="confirmed"] { background: var(--success-soft); }
+.notice { padding: 0.625rem 0.75rem; border-radius: calc(var(--radius) - 0.25rem); background: var(--secondary); font-size: var(--text-small); }
+.notice.ok { background: var(--success-soft); color: var(--success); }
+.notice.warn { background: var(--warn-soft); color: oklch(0.36 0.09 70); }
+.notice.info { background: var(--brand-soft); color: var(--brand-ink); }
+.empty { padding: 1rem; border: 1px dashed var(--line-strong); border-radius: calc(var(--radius) - 0.125rem); color: var(--muted); font-size: var(--text-small); text-align: left; }
+.obs { display: grid; gap: 0.5rem; }
+.obs li { display: grid; gap: 0.25rem; padding: 0.625rem 0.75rem; border: 1px solid var(--line); border-radius: calc(var(--radius) - 0.25rem); }
+.obs .t { font-size: var(--text-body); }
+.replay-task { display: grid; gap: 0.5rem; }
+.replay-task + .replay-task { border-top: 1px solid var(--line); padding-top: 0.75rem; }
+
+details.drawer > summary { cursor: pointer; min-height: var(--target); display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1.125rem; font-weight: 600; list-style: none; }
+details.drawer > summary::-webkit-details-marker { display: none; }
+details.drawer > summary::before { content: "▸"; color: var(--muted); }
+details.drawer[open] > summary::before { content: "▾"; }
+details.drawer > .body { border-top: 1px solid var(--line); }
+
+/* --- Concept compositions (desktop ≥ 64rem) ---------------------------- */
+
+.layout > * { min-width: 0; }
+
+@media (min-width: 64rem) {
+  /* A — Today-first: one focus task; the companion stays beside it; the rail is secondary. */
+  .layout[data-c="A"][data-r="student"] {
+    grid-template-columns: minmax(0, 1fr) minmax(19rem, 24rem);
+    grid-template-areas: "focus companion" "rail companion";
+    align-items: start;
+  }
+  .layout[data-c="A"][data-r="student"] .b-focus { grid-area: focus; }
+  .layout[data-c="A"][data-r="student"] .b-companion { grid-area: companion; position: sticky; top: 3.25rem; }
+  .layout[data-c="A"][data-r="student"] .b-rail { grid-area: rail; }
+
+  /* B — Workspace-first: the board dominates; companion tile left; the plan is a strip on the right. */
+  .layout[data-c="B"][data-r="student"] {
+    grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr) minmax(17rem, 21rem);
+    grid-template-areas: "companion board rail";
+    align-items: stretch;
+  }
+  .layout[data-c="B"][data-r="student"] .b-companion { grid-area: companion; }
+  .layout[data-c="B"][data-r="student"] .b-board { grid-area: board; }
+  .layout[data-c="B"][data-r="student"] .b-rail { grid-area: rail; }
+  .layout[data-c="B"] .board { min-height: 22rem; }
+
+  /* C — Shared plan-first: the week plan is the primary surface; the companion is a drawer. */
+  .layout[data-c="C"][data-r="student"] {
+    grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr);
+    grid-template-areas: "plan side";
+    align-items: start;
+  }
+  .layout[data-c="C"][data-r="student"] .b-plan { grid-area: plan; }
+  .layout[data-c="C"][data-r="student"] .b-side { grid-area: side; display: grid; gap: var(--gap); }
+
+  /* Parent compositions. */
+  .layout[data-c="A"][data-r="parent"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: "today today" "replay observe" "extract draft";
+    align-items: start;
+  }
+  .layout[data-c="A"][data-r="parent"] .b-today { grid-area: today; }
+  .layout[data-c="A"][data-r="parent"] .b-replay { grid-area: replay; }
+  .layout[data-c="A"][data-r="parent"] .b-observe { grid-area: observe; }
+  .layout[data-c="A"][data-r="parent"] .b-extract { grid-area: extract; }
+  .layout[data-c="A"][data-r="parent"] .b-draft { grid-area: draft; }
+
+  .layout[data-c="B"][data-r="parent"] {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+    grid-template-areas: "replay forms";
+    align-items: start;
+  }
+  .layout[data-c="B"][data-r="parent"] .b-replay { grid-area: replay; }
+  .layout[data-c="B"][data-r="parent"] .b-forms { grid-area: forms; display: grid; gap: var(--gap); }
+
+  .layout[data-c="C"][data-r="parent"] {
+    grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr);
+    grid-template-areas: "plan side";
+    align-items: start;
+  }
+  .layout[data-c="C"][data-r="parent"] .b-plan { grid-area: plan; }
+  .layout[data-c="C"][data-r="parent"] .b-side { grid-area: side; display: grid; gap: var(--gap); }
+}
+
+/* Phone: nothing inside the stage is sticky. The persistent boundary banner already
+   occupies the top; a sticky companion panel covered the task's Start button. */
+@media (max-width: 63.99rem) {
+  .b-side, .b-forms { display: grid; gap: var(--gap); }
+  .stage { padding-inline: 0.75rem; }
+  .explorer .reset { margin-left: 0; }
+  .seg { flex-wrap: wrap; border-radius: calc(var(--radius) - 0.125rem); }
+  .seg button { flex: 1 1 auto; }
+  .seg button + button { border-left: 0; }
+}
+
+.foot { padding: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.8125rem; max-width: 90rem; margin: 0 auto; width: 100%; }
+
+/* Motion: state changes fade in; reduced motion collapses it. */
+.fade { animation: fade 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}

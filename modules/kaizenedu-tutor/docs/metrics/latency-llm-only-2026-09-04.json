@@ -1,0 +1,133 @@
+{
+  "generatedAt": "2026-09-04T07:23:17.065Z",
+  "baseUrl": "http://localhost:3000",
+  "mock": false,
+  "turns": 6,
+  "ttsProvider": null,
+  "asrProvider": null,
+  "model": null,
+  "budget": {
+    "firstAudioP50Ms": 1500,
+    "firstAudioP90Ms": 3000,
+    "bargeInStopMs": 300,
+    "whiteboardActionAfterSentenceMs": 2000,
+    "sessionInteractiveMs": 2000,
+    "firstAudioAfterStartMs": 10000
+  },
+  "summary": {
+    "learner_synth": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "asr": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "llm_ttft": {
+      "n": 1,
+      "p50": 2714.094443,
+      "p90": 2714.094443,
+      "max": 2714.094443
+    },
+    "llm_first_sent": {
+      "n": 1,
+      "p50": 2876.199848,
+      "p90": 2876.199848,
+      "max": 2876.199848
+    },
+    "llm_total": {
+      "n": 1,
+      "p50": 4095.084009,
+      "p90": 4095.084009,
+      "max": 4095.084009
+    },
+    "tts_first": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "first_audio": {
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "max": null
+    },
+    "wb_first_action": {
+      "n": 1,
+      "p50": -261.73538899999994,
+      "p90": -261.73538899999994,
+      "max": -261.73538899999994
+    }
+  },
+  "samples": [
+    {
+      "turn": 1,
+      "learnerLine": "I have homework on fractions and I do not get equivalent fractions.",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {
+        "llm_total": 4095.084009,
+        "llm_ttft": 2714.094443,
+        "llm_first_sent": 2876.199848,
+        "wb_first_action": -261.73538899999994
+      },
+      "tutorText": "I can absolutely help with that! Equivalent fractions are just different ways of showing the exact same amount.Look at these two blocks. The left one is cut in half. The right one is cut into four parts, but we shaded two. See how they cover the exact same space?",
+      "actionCount": 9
+    },
+    {
+      "turn": 2,
+      "learnerLine": "Why is two fourths the same as one half? They look different.",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "terminated"
+    },
+    {
+      "turn": 3,
+      "learnerLine": "Okay so if I multiply the top and bottom by the same number it stays the same?",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "fetch failed"
+    },
+    {
+      "turn": 4,
+      "learnerLine": "Can you draw it on the whiteboard?",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "fetch failed"
+    },
+    {
+      "turn": 5,
+      "learnerLine": "What about three sixths, is that also one half?",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "fetch failed"
+    },
+    {
+      "turn": 6,
+      "learnerLine": "I think I get it now. Give me one to try.",
+      "transcript": null,
+      "asrInput": "synthetic-tone",
+      "hops": {},
+      "tutorText": "",
+      "actionCount": 0,
+      "error": "fetch failed"
+    }
+  ]
+}

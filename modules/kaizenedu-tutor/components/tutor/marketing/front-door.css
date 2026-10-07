@@ -1,0 +1,49 @@
+/*
+ * The front door (D36): the level row, the one big button, and the disclosure
+ * under it. Loaded by the landing page only; colors are tokens from
+ * components/tutor/brand/tokens.css.
+ */
+
+.nt-talk-start {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.nt-level-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.nt-level-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--nt-target);
+  padding: 0 0.875rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: var(--nt-text-body);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nt-level-chip:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--nt-brand-soft);
+  color: var(--accent-foreground);
+}
+
+.nt-level-chip:has(input:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.nt-big-button {
+  min-height: 4rem;
+  font-size: 1.25rem;
+  border-radius: 999px;
+}

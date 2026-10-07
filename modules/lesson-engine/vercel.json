@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
+  "outputDirectory": null,
+  "functions": {
+    "server.mjs": {
+      "maxDuration": 300,
+      "memory": 1024
+    }
+  }
+}

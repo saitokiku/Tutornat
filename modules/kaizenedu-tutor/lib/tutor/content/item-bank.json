@@ -1,0 +1,2645 @@
+[
+  {
+    "id": "F1-bar-001",
+    "skill": "F1",
+    "type": "single",
+    "stem": "A chocolate bar is cut into 5 equal pieces. Sam eats 1 piece. What fraction of the bar did Sam eat?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{5}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{4}{5}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{5}{1}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{1}{4}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "One piece out of five equal pieces is one fifth. Four fifths is what is left, not what was eaten.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F1-set-002",
+    "skill": "F1",
+    "type": "single",
+    "stem": "A bag holds 12 marbles and 3 of them are red. What fraction of the marbles are red?",
+    "representation": "set",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{3}{12}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{12}{3}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{9}{12}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{3}{9}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "The denominator counts everything in the set: 12 marbles. Three of them are red, so three twelfths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F1-bar-003",
+    "skill": "F1",
+    "type": "numeric",
+    "stem": "A bar is split into equal parts, and one of those parts is $\\frac{1}{7}$ of the whole bar. How many parts is the bar split into?",
+    "representation": "bar",
+    "band": "both",
+    "answer": {
+      "value": 7,
+      "tolerance": 0
+    },
+    "rationale": "The bottom number of a unit fraction is the number of equal parts the whole was cut into.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F1-word-004",
+    "skill": "F1",
+    "type": "single",
+    "stem": "Which of these is a unit fraction?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{9}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{9}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{9}{1}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{9}{9}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "A unit fraction is one single part of a whole, so its top number is 1.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F1-bar-005",
+    "skill": "F1",
+    "type": "single",
+    "stem": "Two ribbons are exactly the same length. One is cut into 3 equal pieces, the other into 8. Which single piece is longer?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "One piece from the ribbon cut into 3",
+        "correct": true
+      },
+      {
+        "text": "One piece from the ribbon cut into 8",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "They are the same length",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "There is no way to tell",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      }
+    ],
+    "rationale": "The same ribbon cut into more pieces gives smaller pieces. A bigger bottom number means a smaller piece.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F1-set-006",
+    "skill": "F1",
+    "type": "numeric",
+    "stem": "A class has 24 students and one quarter of them walk to school. How many students walk?",
+    "representation": "set",
+    "band": "both",
+    "answer": {
+      "value": 6,
+      "tolerance": 0
+    },
+    "rationale": "One quarter means one of four equal groups. 24 split into 4 groups is 6 in each group.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F1-sym-007",
+    "skill": "F1",
+    "type": "single",
+    "stem": "In the fraction $\\frac{3}{4}$, what does the 4 tell you?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "How many equal parts the whole was divided into",
+        "correct": true
+      },
+      {
+        "text": "How many parts are being counted",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "That the fraction is worth 4",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "That the whole is 4 times bigger",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "The bottom number names the size of the parts by saying how many of them make one whole. The top number counts them.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F1-nl-008",
+    "skill": "F1",
+    "type": "short",
+    "stem": "A number line runs from 0 to 1 and is split into 5 equal steps. What fraction sits at the first mark after 0?",
+    "representation": "number_line",
+    "band": "both",
+    "answer": {
+      "value": "1/5",
+      "accept": ["1/5", "one fifth", "0.2", "a fifth"]
+    },
+    "rationale": "Five equal steps from 0 to 1 makes each step one fifth, so the first mark is at one fifth.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F2-nl-001",
+    "skill": "F2",
+    "type": "single",
+    "stem": "A number line runs from 0 to 1 with 4 equal steps marked. Which fraction sits at the third mark after 0?",
+    "representation": "number_line",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{3}{4}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{3}{3}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{4}{3}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{1}{3}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "Four equal steps make each step one quarter. Three steps along is three quarters.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F2-nl-002",
+    "skill": "F2",
+    "type": "single",
+    "stem": "On a number line from 0 to 1, which fraction sits closest to 1?",
+    "representation": "number_line",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{7}{8}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{1}{8}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{1}{2}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{2}{3}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      }
+    ],
+    "rationale": "Seven eighths is only one eighth short of the whole, and one eighth is a very small step.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F2-nl-003",
+    "skill": "F2",
+    "type": "numeric",
+    "stem": "A number line from 0 to 2 is split into equal steps of $\\frac{1}{2}$. How many steps does it take to get from 0 to 2?",
+    "representation": "number_line",
+    "band": "both",
+    "answer": {
+      "value": 4,
+      "tolerance": 0
+    },
+    "rationale": "Two halves make one whole, so two wholes take four halves.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F2-nl-004",
+    "skill": "F2",
+    "type": "single",
+    "stem": "Where does $\\frac{5}{4}$ sit on a number line?",
+    "representation": "number_line",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "Between 1 and 2",
+        "correct": true
+      },
+      {
+        "text": "Between 0 and 1",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "Exactly at 5",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "Between 4 and 5",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Four quarters make 1, so five quarters is one whole and a quarter more — just past 1.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F2-nl-005",
+    "skill": "F2",
+    "type": "single",
+    "stem": "Two number lines both run from 0 to 1. One is split into 3 equal steps, the other into 6. Which line has the smaller steps?",
+    "representation": "number_line",
+    "band": "both",
+    "options": [
+      {
+        "text": "The one split into 6",
+        "correct": true
+      },
+      {
+        "text": "The one split into 3",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "The steps are the same size",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "It depends how long the lines are drawn",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      }
+    ],
+    "rationale": "Both lines cover the same distance, so cutting it into more steps makes each step shorter.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F2-nl-006",
+    "skill": "F2",
+    "type": "short",
+    "stem": "A number line from 0 to 1 is split into 10 equal steps. What fraction sits halfway along it?",
+    "representation": "number_line",
+    "band": "both",
+    "answer": {
+      "value": "5/10",
+      "accept": ["5/10", "1/2", "one half", "0.5", "a half", "five tenths"]
+    },
+    "rationale": "Halfway is 5 steps of the 10, which is five tenths — the same place as one half.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F2-nl-007",
+    "skill": "F2",
+    "type": "numeric",
+    "stem": "On a number line, how many steps of $\\frac{1}{3}$ does it take to travel from 0 to 1?",
+    "representation": "number_line",
+    "band": "both",
+    "answer": {
+      "value": 3,
+      "tolerance": 0
+    },
+    "rationale": "Three thirds make one whole, so it takes three steps.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F2-sym-008",
+    "skill": "F2",
+    "type": "single",
+    "stem": "Which fraction is further from 0 on a number line, $\\frac{2}{5}$ or $\\frac{2}{9}$?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "$\\frac{2}{5}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{9}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "They are the same distance",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "There is not enough information",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      }
+    ],
+    "rationale": "Both count 2 pieces, but fifths are bigger pieces than ninths, so two fifths reaches further.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F3-bar-001",
+    "skill": "F3",
+    "type": "single",
+    "stem": "Which fraction is the same amount as $\\frac{1}{2}$?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{3}{6}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{1}{6}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "$\\frac{2}{3}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{6}{3}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Cutting each half into 3 gives 6 pieces and takes 3 of them. More pieces, same amount of bar.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F3-sym-002",
+    "skill": "F3",
+    "type": "numeric",
+    "stem": "Fill in the missing number: $\\frac{2}{3} = \\frac{?}{12}$",
+    "representation": "symbolic",
+    "band": "both",
+    "answer": {
+      "value": 8,
+      "tolerance": 0
+    },
+    "rationale": "Twelve is 3 multiplied by 4, so the top must also be multiplied by 4: 2 times 4 is 8.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F3-word-003",
+    "skill": "F3",
+    "type": "single",
+    "stem": "You multiply both the top and the bottom of a fraction by 5. What happens to its value?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "It stays exactly the same",
+        "correct": true
+      },
+      {
+        "text": "It gets 5 times bigger",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "It gets 5 times smaller",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "It gets 10 times bigger",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "You have cut every piece into 5 smaller pieces and taken 5 times as many. Same amount, different name.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F3-set-004",
+    "skill": "F3",
+    "type": "single",
+    "stem": "In a bag of 20 counters, 5 are blue. Which fraction also describes the blue share?",
+    "representation": "set",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{4}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{1}{5}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{5}{15}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{15}{20}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "Five out of twenty groups as one out of every four counters, so five twentieths is one quarter.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F3-sym-005",
+    "skill": "F3",
+    "type": "numeric",
+    "stem": "Fill in the missing number: $\\frac{?}{15} = \\frac{3}{5}$",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": 9,
+      "tolerance": 0
+    },
+    "rationale": "Fifteen is 5 multiplied by 3, so the top must also be multiplied by 3: 3 times 3 is 9.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F3-bar-006",
+    "skill": "F3",
+    "type": "single",
+    "stem": "A bar shows $\\frac{4}{8}$ shaded. Which of these is the same amount?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{2}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{1}{4}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "$\\frac{4}{4}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{8}{4}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Four of eight equal pieces is exactly half the bar.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F3-sym-007",
+    "skill": "F3",
+    "type": "short",
+    "stem": "Write a fraction equivalent to $\\frac{3}{4}$ with a denominator of 20.",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": "15/20",
+      "accept": ["15/20", "15 / 20", "fifteen twentieths"]
+    },
+    "rationale": "Twenty is 4 multiplied by 5, so the top is 3 multiplied by 5, which is 15.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F3-nl-008",
+    "skill": "F3",
+    "type": "single",
+    "stem": "On a number line, where does $\\frac{6}{8}$ sit compared with $\\frac{3}{4}$?",
+    "representation": "number_line",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "In exactly the same place",
+        "correct": true
+      },
+      {
+        "text": "A little to the right of it",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "A little to the left of it",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "Twice as far along",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Six eighths and three quarters are two names for the same point.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F4-sym-001",
+    "skill": "F4",
+    "type": "single",
+    "stem": "Which is bigger, $\\frac{1}{3}$ or $\\frac{1}{5}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{3}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{1}{5}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "They are equal",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "You cannot compare them",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      }
+    ],
+    "rationale": "One whole shared between 3 gives a bigger piece than the same whole shared between 5.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F4-bar-002",
+    "skill": "F4",
+    "type": "single",
+    "stem": "Which is bigger, $\\frac{3}{4}$ or $\\frac{2}{3}$?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{3}{4}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{3}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "They are equal",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "It depends on the size of the whole",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Three quarters is one quarter short of the whole; two thirds is a whole third short. A quarter is the smaller gap.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F4-word-003",
+    "skill": "F4",
+    "type": "single",
+    "stem": "Which of these fractions is more than $\\frac{1}{2}$?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{5}{8}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{3}{8}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{4}{9}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "$\\frac{2}{5}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "Half of 8 is 4, so five eighths is past halfway.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F4-sym-004",
+    "skill": "F4",
+    "type": "numeric",
+    "stem": "What is the lowest common denominator you would use to compare $\\frac{2}{3}$ and $\\frac{3}{4}$?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": 12,
+      "tolerance": 0
+    },
+    "rationale": "Twelve is the smallest number that both 3 and 4 divide into.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F4-set-005",
+    "skill": "F4",
+    "type": "single",
+    "stem": "Ana got 7 out of 10 on a quiz. Ben got 3 out of 4 on a different quiz. Who scored the higher fraction?",
+    "representation": "set",
+    "band": "both",
+    "options": [
+      {
+        "text": "Ben",
+        "correct": true
+      },
+      {
+        "text": "Ana",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "They scored the same",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "You cannot compare different quizzes",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      }
+    ],
+    "rationale": "Seven tenths is 0.7 and three quarters is 0.75, so Ben's fraction is higher even though Ana answered more questions.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F4-nl-006",
+    "skill": "F4",
+    "type": "single",
+    "stem": "Put these in order from smallest to largest: $\\frac{1}{2}$, $\\frac{1}{8}$, $\\frac{1}{4}$.",
+    "representation": "number_line",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{8}$, $\\frac{1}{4}$, $\\frac{1}{2}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{1}{2}$, $\\frac{1}{4}$, $\\frac{1}{8}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "$\\frac{1}{2}$, $\\frac{1}{8}$, $\\frac{1}{4}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "$\\frac{1}{4}$, $\\frac{1}{8}$, $\\frac{1}{2}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      }
+    ],
+    "rationale": "With the same top number, the bigger the bottom number the smaller the piece.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F4-word-007",
+    "skill": "F4",
+    "type": "short",
+    "stem": "Name a fraction that sits between $\\frac{1}{2}$ and $\\frac{3}{4}$.",
+    "representation": "word",
+    "band": "13-17",
+    "answer": {
+      "value": "5/8",
+      "accept": ["5/8", "5 / 8", "0.6", "0.625", "2/3", "5/9", "7/12"]
+    },
+    "rationale": "Five eighths is 0.625, which lands between 0.5 and 0.75. Two thirds also works.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F4-sym-008",
+    "skill": "F4",
+    "type": "numeric",
+    "stem": "Rewrite $\\frac{2}{3}$ over a denominator of 12. What is the new numerator?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": 8,
+      "tolerance": 0
+    },
+    "rationale": "Three multiplied by 4 is 12, so the top is 2 multiplied by 4, which is 8.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F5-sym-001",
+    "skill": "F5",
+    "type": "single",
+    "stem": "Write $\\frac{6}{8}$ in its simplest form.",
+    "representation": "symbolic",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{3}{4}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{4}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{6}{4}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{1}{2}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      }
+    ],
+    "rationale": "Both 6 and 8 divide by 2, giving 3 and 4. Nothing divides both of those, so it is finished.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F5-sym-002",
+    "skill": "F5",
+    "type": "numeric",
+    "stem": "What is the greatest common factor of 12 and 18?",
+    "representation": "symbolic",
+    "band": "both",
+    "answer": {
+      "value": 6,
+      "tolerance": 0
+    },
+    "rationale": "Six divides both, and nothing larger does.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F5-word-003",
+    "skill": "F5",
+    "type": "single",
+    "stem": "When you simplify a fraction, what happens to its value?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "It stays exactly the same",
+        "correct": true
+      },
+      {
+        "text": "It gets smaller",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "It gets larger",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "It becomes a whole number",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "Simplifying only renames the fraction with bigger pieces. The amount does not move.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F5-sym-004",
+    "skill": "F5",
+    "type": "numeric",
+    "stem": "Simplify $\\frac{15}{20}$ fully. What is the new denominator?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": 4,
+      "tolerance": 0
+    },
+    "rationale": "Both divide by 5, giving three quarters.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F5-set-005",
+    "skill": "F5",
+    "type": "single",
+    "stem": "In a box of 30 pencils, 10 are broken. Write that fraction in its simplest form.",
+    "representation": "set",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{3}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{10}{30}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{1}{10}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{3}{1}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      }
+    ],
+    "rationale": "Both 10 and 30 divide by 10, leaving one third. Ten thirtieths is right but not yet simplest.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F5-bar-006",
+    "skill": "F5",
+    "type": "single",
+    "stem": "A bar shows $\\frac{9}{12}$ shaded. What is that in simplest form?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{3}{4}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{9}{4}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{1}{3}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{4}{3}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      }
+    ],
+    "rationale": "Both 9 and 12 divide by 3, giving three quarters.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F5-sym-007",
+    "skill": "F5",
+    "type": "short",
+    "stem": "Simplify $\\frac{24}{36}$ fully.",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": "2/3",
+      "accept": ["2/3", "2 / 3", "two thirds"]
+    },
+    "rationale": "The greatest common factor of 24 and 36 is 12, and dividing both by it gives two thirds.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F5-nl-008",
+    "skill": "F5",
+    "type": "numeric",
+    "stem": "$\\frac{4}{10}$ is marked on a number line. Simplified, its denominator is what number?",
+    "representation": "number_line",
+    "band": "both",
+    "answer": {
+      "value": 5,
+      "tolerance": 0
+    },
+    "rationale": "Both 4 and 10 divide by 2, giving two fifths — the same point on the line.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F6-sym-001",
+    "skill": "F6",
+    "type": "single",
+    "stem": "Write $\\frac{7}{3}$ as a mixed number.",
+    "representation": "symbolic",
+    "band": "both",
+    "options": [
+      {
+        "text": "$2\\frac{1}{3}$",
+        "correct": true
+      },
+      {
+        "text": "$3\\frac{1}{7}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$2\\frac{1}{7}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$1\\frac{4}{3}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "Three thirds make 1, so seven thirds is two wholes with one third left over.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F6-sym-002",
+    "skill": "F6",
+    "type": "numeric",
+    "stem": "Write $2\\frac{3}{4}$ as an improper fraction. What is the numerator?",
+    "representation": "symbolic",
+    "band": "both",
+    "answer": {
+      "value": 11,
+      "tolerance": 0
+    },
+    "rationale": "Two wholes is 8 quarters, plus 3 more quarters makes 11 quarters.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F6-nl-003",
+    "skill": "F6",
+    "type": "single",
+    "stem": "Where does $1\\frac{1}{2}$ sit on a number line?",
+    "representation": "number_line",
+    "band": "both",
+    "options": [
+      {
+        "text": "Halfway between 1 and 2",
+        "correct": true
+      },
+      {
+        "text": "Halfway between 0 and 1",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "At 11 and a bit",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "Halfway between 2 and 3",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "One and a half is one whole plus half of the next one.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F6-bar-004",
+    "skill": "F6",
+    "type": "numeric",
+    "stem": "Bars are each split into quarters. How many quarter pieces make $1\\frac{3}{4}$?",
+    "representation": "bar",
+    "band": "both",
+    "answer": {
+      "value": 7,
+      "tolerance": 0
+    },
+    "rationale": "One whole is 4 quarters, and 3 more makes 7.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F6-word-005",
+    "skill": "F6",
+    "type": "single",
+    "stem": "Which of these is an improper fraction?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{9}{5}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{5}{9}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$1\\frac{4}{5}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{4}{9}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "An improper fraction has a top number at least as big as its bottom number, so it is worth 1 or more.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F6-sym-006",
+    "skill": "F6",
+    "type": "single",
+    "stem": "Which is larger, $\\frac{11}{4}$ or $2\\frac{1}{2}$?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "$\\frac{11}{4}$",
+        "correct": true
+      },
+      {
+        "text": "$2\\frac{1}{2}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "They are equal",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "You cannot compare a mixed number with an improper fraction",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Eleven quarters is two and three quarters, which is more than two and a half.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F6-sym-007",
+    "skill": "F6",
+    "type": "short",
+    "stem": "Write $\\frac{17}{5}$ as a mixed number.",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": "3 2/5",
+      "accept": ["3 2/5", "3 and 2/5", "3.4", "three and two fifths"]
+    },
+    "rationale": "Five goes into 17 three times with 2 left over, so it is three and two fifths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F6-set-008",
+    "skill": "F6",
+    "type": "numeric",
+    "stem": "Eggs come in boxes of 6. You have 15 eggs. How many full boxes can you fill?",
+    "representation": "set",
+    "band": "both",
+    "answer": {
+      "value": 2,
+      "tolerance": 0
+    },
+    "rationale": "Fifteen sixths is two whole boxes with three eggs left over, which is half a box.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F7-sym-001",
+    "skill": "F7",
+    "type": "numeric",
+    "stem": "What is $\\frac{2}{7} + \\frac{3}{7}$? Give the numerator of the answer.",
+    "representation": "symbolic",
+    "band": "both",
+    "answer": {
+      "value": 5,
+      "tolerance": 0
+    },
+    "rationale": "The pieces are the same size, so count them: 2 sevenths plus 3 sevenths is 5 sevenths. The bottom number does not change.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F7-sym-002",
+    "skill": "F7",
+    "type": "single",
+    "stem": "What is $\\frac{1}{5} + \\frac{2}{5}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{3}{5}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{3}{10}$",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{2}{10}$",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{3}{25}$",
+        "correct": false,
+        "misconception": "add_across"
+      }
+    ],
+    "rationale": "Both are fifths, so three fifths. Adding the bottom numbers would change the size of the pieces, which addition never does.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F7-bar-003",
+    "skill": "F7",
+    "type": "single",
+    "stem": "A bar is split into eighths. You shade $\\frac{3}{8}$, then shade $\\frac{2}{8}$ more. How much is shaded?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{5}{8}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{5}{16}$",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{6}{8}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{5}{10}$",
+        "correct": false,
+        "misconception": "add_across"
+      }
+    ],
+    "rationale": "The pieces stay eighths however many you shade. Three plus two is five of them.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F7-sym-004",
+    "skill": "F7",
+    "type": "numeric",
+    "stem": "What is $\\frac{7}{9} - \\frac{4}{9}$? Give the numerator of the answer.",
+    "representation": "symbolic",
+    "band": "both",
+    "answer": {
+      "value": 3,
+      "tolerance": 0
+    },
+    "rationale": "Take 4 ninths away from 7 ninths and 3 ninths are left. The pieces are still ninths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F7-word-005",
+    "skill": "F7",
+    "type": "single",
+    "stem": "Maya drinks $\\frac{2}{6}$ of a bottle in the morning and $\\frac{3}{6}$ at lunch. How much has she drunk?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{5}{6}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{5}{12}$",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{6}{6}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{5}{36}$",
+        "correct": false,
+        "misconception": "add_across"
+      }
+    ],
+    "rationale": "Both amounts are sixths of the same bottle, so five sixths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F7-set-006",
+    "skill": "F7",
+    "type": "numeric",
+    "stem": "A tray holds 10 cookies. You take $\\frac{3}{10}$, then $\\frac{4}{10}$ more. How many cookies have you taken?",
+    "representation": "set",
+    "band": "both",
+    "answer": {
+      "value": 7,
+      "tolerance": 0
+    },
+    "rationale": "Three tenths plus four tenths is seven tenths, and a tenth of 10 cookies is 1 cookie.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F7-nl-007",
+    "skill": "F7",
+    "type": "single",
+    "stem": "You start at $\\frac{1}{4}$ on a number line and move forward $\\frac{2}{4}$. Where do you land?",
+    "representation": "number_line",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{3}{4}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{3}{8}$",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{2}{4}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{3}{16}$",
+        "correct": false,
+        "misconception": "add_across"
+      }
+    ],
+    "rationale": "Each step is a quarter. One quarter plus two more quarters lands on three quarters.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F7-sym-008",
+    "skill": "F7",
+    "type": "short",
+    "stem": "What is $\\frac{5}{6} - \\frac{1}{6}$? Give your answer in simplest form.",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": "2/3",
+      "accept": ["2/3", "2 / 3", "4/6", "two thirds"]
+    },
+    "rationale": "Five sixths minus one sixth is four sixths, and both divide by 2 to give two thirds.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-sym-001",
+    "skill": "F8",
+    "type": "single",
+    "stem": "What is $\\frac{1}{2} + \\frac{1}{3}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{5}{6}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{5}$",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{1}{6}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "$\\frac{2}{6}$",
+        "correct": false,
+        "misconception": "add_across"
+      }
+    ],
+    "rationale": "Halves and thirds are different sizes, so rewrite both as sixths: 3 sixths plus 2 sixths is 5 sixths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-sym-002",
+    "skill": "F8",
+    "type": "numeric",
+    "stem": "What is the lowest common denominator for $\\frac{1}{4}$ and $\\frac{1}{6}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "answer": {
+      "value": 12,
+      "tolerance": 0
+    },
+    "rationale": "Twelve is the smallest number that both 4 and 6 divide into.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-bar-003",
+    "skill": "F8",
+    "type": "single",
+    "stem": "Why can you not just add the tops and bottoms of $\\frac{1}{2}$ and $\\frac{1}{4}$?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "The pieces are different sizes, so they must be renamed first",
+        "correct": true
+      },
+      {
+        "text": "Because the answer would be too big",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "Because one of them is already simplified",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "You can, and the answer is $\\frac{2}{6}$",
+        "correct": false,
+        "misconception": "add_across"
+      }
+    ],
+    "rationale": "Adding counts pieces, and you can only count pieces that are the same size. Half is 2 quarters, so the answer is 3 quarters.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-sym-004",
+    "skill": "F8",
+    "type": "numeric",
+    "stem": "What is $\\frac{2}{3} + \\frac{1}{6}$? Give the numerator when written over 6.",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": 5,
+      "tolerance": 0
+    },
+    "rationale": "Two thirds is four sixths, and four sixths plus one sixth is five sixths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-word-005",
+    "skill": "F8",
+    "type": "single",
+    "stem": "A recipe needs $\\frac{1}{3}$ cup of milk and $\\frac{1}{4}$ cup of cream. How much liquid altogether?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{7}{12}$ cup",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{7}$ cup",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{1}{12}$ cup",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "$\\frac{2}{12}$ cup",
+        "correct": false,
+        "misconception": "add_across"
+      }
+    ],
+    "rationale": "Over twelfths, a third is 4 twelfths and a quarter is 3 twelfths. Together that is 7 twelfths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-sym-006",
+    "skill": "F8",
+    "type": "single",
+    "stem": "What is $\\frac{3}{4} - \\frac{1}{3}$?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "$\\frac{5}{12}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{1}$",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{2}{12}$",
+        "correct": false,
+        "misconception": "add_across"
+      },
+      {
+        "text": "$\\frac{1}{12}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      }
+    ],
+    "rationale": "Over twelfths that is 9 twelfths minus 4 twelfths, which is 5 twelfths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-sym-007",
+    "skill": "F8",
+    "type": "short",
+    "stem": "What is $\\frac{1}{2} + \\frac{2}{5}$? Give your answer as a fraction.",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": "9/10",
+      "accept": ["9/10", "9 / 10", "0.9", "nine tenths"]
+    },
+    "rationale": "Over tenths, a half is 5 tenths and two fifths is 4 tenths, so together nine tenths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-nl-008",
+    "skill": "F8",
+    "type": "numeric",
+    "stem": "You start at $\\frac{1}{2}$ and move forward $\\frac{1}{4}$. Written over quarters, what is the numerator where you land?",
+    "representation": "number_line",
+    "band": "13-17",
+    "answer": {
+      "value": 3,
+      "tolerance": 0
+    },
+    "rationale": "A half is 2 quarters, and 2 quarters plus 1 quarter is 3 quarters.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F9-sym-001",
+    "skill": "F9",
+    "type": "single",
+    "stem": "What is $\\frac{1}{2} \\times \\frac{1}{3}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{6}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{5}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{1}{5}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{3}{2}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Half of a third is a sixth. Multiply the tops and multiply the bottoms.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F9-set-002",
+    "skill": "F9",
+    "type": "numeric",
+    "stem": "What is $\\frac{3}{4}$ of 20?",
+    "representation": "set",
+    "band": "both",
+    "answer": {
+      "value": 15,
+      "tolerance": 0
+    },
+    "rationale": "A quarter of 20 is 5, so three quarters is 15.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F9-word-003",
+    "skill": "F9",
+    "type": "single",
+    "stem": "When you multiply a whole number by a fraction smaller than 1, the answer is",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "smaller than the whole number you started with",
+        "correct": true
+      },
+      {
+        "text": "bigger than the whole number you started with",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "always a whole number",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "the same as the whole number",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Taking a part of something gives less than all of it. Half of 8 is 4.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F9-set-004",
+    "skill": "F9",
+    "type": "numeric",
+    "stem": "A class of 28 students is $\\frac{2}{7}$ girls. How many girls are in the class?",
+    "representation": "set",
+    "band": "both",
+    "answer": {
+      "value": 8,
+      "tolerance": 0
+    },
+    "rationale": "A seventh of 28 is 4, so two sevenths is 8.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F9-bar-005",
+    "skill": "F9",
+    "type": "single",
+    "stem": "A bar shows $\\frac{2}{3}$ shaded. You take half of the shaded part. What fraction of the whole bar is that?",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "$\\frac{1}{3}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{1}{2}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{2}{6}$ is wrong and $\\frac{1}{6}$ is right",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{1}{5}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Half of two thirds is one third: $\\frac{1}{2} \\times \\frac{2}{3} = \\frac{2}{6} = \\frac{1}{3}$.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F9-sym-006",
+    "skill": "F9",
+    "type": "numeric",
+    "stem": "What is $\\frac{2}{5} \\times \\frac{5}{6}$? Give the answer's denominator in simplest form.",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": 3,
+      "tolerance": 0
+    },
+    "rationale": "Multiplying gives ten thirtieths, and both divide by 10 to give one third.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F9-sym-007",
+    "skill": "F9",
+    "type": "short",
+    "stem": "What is $\\frac{3}{4} \\times \\frac{2}{9}$ in simplest form?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": "1/6",
+      "accept": ["1/6", "1 / 6", "6/36", "one sixth"]
+    },
+    "rationale": "Six thirty-sixths, and both divide by 6, giving one sixth.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F9-nl-008",
+    "skill": "F9",
+    "type": "single",
+    "stem": "On a number line, $\\frac{1}{2} \\times 6$ lands where?",
+    "representation": "number_line",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "At 3",
+        "correct": true
+      },
+      {
+        "text": "At 12",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "At 6 and a half",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "At $\\frac{1}{12}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "Half of 6 is 3. Multiplying by a half halves the distance from 0.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F10-sym-001",
+    "skill": "F10",
+    "type": "single",
+    "stem": "What is $6 \\div \\frac{1}{2}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "options": [
+      {
+        "text": "12",
+        "correct": true
+      },
+      {
+        "text": "3",
+        "correct": false,
+        "misconception": "division_makes_smaller"
+      },
+      {
+        "text": "6",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{1}{12}$",
+        "correct": false,
+        "misconception": "division_makes_smaller"
+      }
+    ],
+    "rationale": "The question asks how many halves fit into 6, and each whole holds two, so 12. Dividing by a number less than 1 makes the answer bigger.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F10-word-002",
+    "skill": "F10",
+    "type": "single",
+    "stem": "Dividing by $\\frac{1}{4}$ gives the same answer as",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "multiplying by 4",
+        "correct": true
+      },
+      {
+        "text": "multiplying by $\\frac{1}{4}$",
+        "correct": false,
+        "misconception": "division_makes_smaller"
+      },
+      {
+        "text": "dividing by 4",
+        "correct": false,
+        "misconception": "division_makes_smaller"
+      },
+      {
+        "text": "subtracting 4",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "Asking how many quarters fit into something is the same as counting 4 for every whole.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F10-bar-003",
+    "skill": "F10",
+    "type": "numeric",
+    "stem": "How many $\\frac{1}{3}$ pieces fit into 2 whole bars?",
+    "representation": "bar",
+    "band": "both",
+    "answer": {
+      "value": 6,
+      "tolerance": 0
+    },
+    "rationale": "Each whole bar holds 3 thirds, so 2 bars hold 6.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F10-sym-004",
+    "skill": "F10",
+    "type": "single",
+    "stem": "What is $\\frac{3}{4} \\div \\frac{1}{2}$?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "$\\frac{3}{2}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{3}{8}$",
+        "correct": false,
+        "misconception": "division_makes_smaller"
+      },
+      {
+        "text": "$\\frac{2}{3}$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$\\frac{4}{6}$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "Flip the second fraction and multiply: three quarters times two is six quarters, which is three halves.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F10-word-005",
+    "skill": "F10",
+    "type": "numeric",
+    "stem": "A ribbon is 4 metres long. How many $\\frac{1}{2}$ metre pieces can you cut from it?",
+    "representation": "word",
+    "band": "both",
+    "answer": {
+      "value": 8,
+      "tolerance": 0
+    },
+    "rationale": "Each metre gives 2 half-metre pieces, so 4 metres gives 8.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F10-word-006",
+    "skill": "F10",
+    "type": "single",
+    "stem": "Is $8 \\div \\frac{2}{3}$ bigger or smaller than 8?",
+    "representation": "word",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "Bigger, because two thirds fits into 8 more than 8 times",
+        "correct": true
+      },
+      {
+        "text": "Smaller, because dividing always makes things smaller",
+        "correct": false,
+        "misconception": "division_makes_smaller"
+      },
+      {
+        "text": "The same, because you are dividing by a fraction",
+        "correct": false,
+        "misconception": "division_makes_smaller"
+      },
+      {
+        "text": "Smaller, because two thirds is less than one",
+        "correct": false,
+        "misconception": "division_makes_smaller"
+      }
+    ],
+    "rationale": "Dividing asks how many fit. Pieces smaller than 1 fit more than once per whole, so the count is larger than 8.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F10-sym-007",
+    "skill": "F10",
+    "type": "short",
+    "stem": "What is $\\frac{2}{3} \\div \\frac{4}{9}$ in simplest form?",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": "3/2",
+      "accept": ["3/2", "3 / 2", "1 1/2", "1.5", "18/12", "one and a half"]
+    },
+    "rationale": "Flip and multiply: two thirds times nine quarters is eighteen twelfths, which simplifies to three halves.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F10-set-008",
+    "skill": "F10",
+    "type": "numeric",
+    "stem": "You have 10 cups of flour and each loaf needs $\\frac{2}{5}$ of a cup. How many loaves can you make?",
+    "representation": "set",
+    "band": "13-17",
+    "answer": {
+      "value": 25,
+      "tolerance": 0
+    },
+    "rationale": "Each cup makes two and a half loaves, so 10 cups make 25.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F11-sym-001",
+    "skill": "F11",
+    "type": "single",
+    "stem": "Which is bigger, $0.5$ or $0.25$?",
+    "representation": "symbolic",
+    "band": "both",
+    "options": [
+      {
+        "text": "$0.5$",
+        "correct": true
+      },
+      {
+        "text": "$0.25$",
+        "correct": false,
+        "misconception": "decimal_length"
+      },
+      {
+        "text": "They are equal",
+        "correct": false,
+        "misconception": "decimal_length"
+      },
+      {
+        "text": "You cannot compare them",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "More digits does not mean more value. Half is bigger than a quarter.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F11-sym-002",
+    "skill": "F11",
+    "type": "numeric",
+    "stem": "Write $\\frac{3}{4}$ as a percentage. Give the number only.",
+    "representation": "symbolic",
+    "band": "both",
+    "answer": {
+      "value": 75,
+      "tolerance": 0
+    },
+    "rationale": "Three quarters of 100 is 75.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F11-word-003",
+    "skill": "F11",
+    "type": "single",
+    "stem": "Which of these is the same as $\\frac{1}{5}$?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "$20\\%$",
+        "correct": true
+      },
+      {
+        "text": "$5\\%$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$15\\%$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$1.5\\%$",
+        "correct": false,
+        "misconception": "decimal_length"
+      }
+    ],
+    "rationale": "A fifth of 100 is 20, so one fifth is 20 percent.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F11-sym-004",
+    "skill": "F11",
+    "type": "numeric",
+    "stem": "Write $\\frac{1}{4}$ as a decimal.",
+    "representation": "symbolic",
+    "band": "both",
+    "answer": {
+      "value": 0.25,
+      "tolerance": 0.001
+    },
+    "rationale": "One quarter of 1 is 0.25.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F11-nl-005",
+    "skill": "F11",
+    "type": "single",
+    "stem": "Which of these sits furthest to the right on a number line?",
+    "representation": "number_line",
+    "band": "both",
+    "options": [
+      {
+        "text": "$0.7$",
+        "correct": true
+      },
+      {
+        "text": "$0.07$",
+        "correct": false,
+        "misconception": "decimal_length"
+      },
+      {
+        "text": "$0.007$",
+        "correct": false,
+        "misconception": "decimal_length"
+      },
+      {
+        "text": "$0.0007$",
+        "correct": false,
+        "misconception": "decimal_length"
+      }
+    ],
+    "rationale": "Each extra zero after the point makes the number ten times smaller, not bigger.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F11-set-006",
+    "skill": "F11",
+    "type": "numeric",
+    "stem": "A shirt costs $40. It is 25% off. How many dollars do you save?",
+    "representation": "set",
+    "band": "both",
+    "answer": {
+      "value": 10,
+      "tolerance": 0,
+      "units": "dollars"
+    },
+    "rationale": "Twenty-five percent is a quarter, and a quarter of 40 is 10.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F11-sym-007",
+    "skill": "F11",
+    "type": "short",
+    "stem": "Write $0.6$ as a fraction in simplest form.",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": "3/5",
+      "accept": ["3/5", "3 / 5", "6/10", "three fifths"]
+    },
+    "rationale": "Six tenths, and both divide by 2 to give three fifths.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F11-bar-008",
+    "skill": "F11",
+    "type": "single",
+    "stem": "A bar shows $\\frac{2}{5}$ shaded. What percentage is that?",
+    "representation": "bar",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "$40\\%$",
+        "correct": true
+      },
+      {
+        "text": "$25\\%$",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "$2\\%$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$50\\%$",
+        "correct": false,
+        "misconception": "computation"
+      }
+    ],
+    "rationale": "A fifth is 20 percent, so two fifths is 40 percent.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F12-set-001",
+    "skill": "F12",
+    "type": "numeric",
+    "stem": "A recipe uses 2 cups of flour for every 3 cups of milk. If you use 6 cups of flour, how many cups of milk do you need?",
+    "representation": "set",
+    "band": "both",
+    "answer": {
+      "value": 9,
+      "tolerance": 0
+    },
+    "rationale": "Six cups of flour is three lots of 2, so you need three lots of 3 cups of milk.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F12-word-002",
+    "skill": "F12",
+    "type": "single",
+    "stem": "A car travels 120 miles in 2 hours. What is its speed?",
+    "representation": "word",
+    "band": "both",
+    "options": [
+      {
+        "text": "60 miles per hour",
+        "correct": true
+      },
+      {
+        "text": "240 miles per hour",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "120 miles per hour",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "2 miles per hour",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "A rate per hour means dividing the distance by the hours: 120 divided by 2.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F12-set-003",
+    "skill": "F12",
+    "type": "numeric",
+    "stem": "In a class the ratio of cats to dogs owned is 3 to 5. If there are 9 cats, how many dogs are there?",
+    "representation": "set",
+    "band": "both",
+    "answer": {
+      "value": 15,
+      "tolerance": 0
+    },
+    "rationale": "Nine cats is three lots of 3, so there are three lots of 5 dogs.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F12-word-004",
+    "skill": "F12",
+    "type": "single",
+    "stem": "Which is the better value: 4 apples for $2, or 10 apples for $4?",
+    "representation": "word",
+    "band": "13-17",
+    "options": [
+      {
+        "text": "10 apples for $4",
+        "correct": true
+      },
+      {
+        "text": "4 apples for $2",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "They are the same value",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "You cannot compare different amounts",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Per apple that is 50 cents against 40 cents, so the larger bag is cheaper each.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F12-sym-005",
+    "skill": "F12",
+    "type": "numeric",
+    "stem": "Solve for the missing value: $\\frac{3}{4} = \\frac{x}{20}$",
+    "representation": "symbolic",
+    "band": "13-17",
+    "answer": {
+      "value": 15,
+      "tolerance": 0
+    },
+    "rationale": "Twenty is 4 multiplied by 5, so x is 3 multiplied by 5.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F12-bar-006",
+    "skill": "F12",
+    "type": "single",
+    "stem": "A ratio of 1 to 4 means",
+    "representation": "bar",
+    "band": "both",
+    "options": [
+      {
+        "text": "1 part of the first for every 4 parts of the second",
+        "correct": true
+      },
+      {
+        "text": "the first is 4 times bigger",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "there are 5 of the first",
+        "correct": false,
+        "misconception": "computation"
+      },
+      {
+        "text": "the two amounts are equal",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "A ratio compares parts. One to four means five parts in total, one of them the first thing.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F12-word-007",
+    "skill": "F12",
+    "type": "short",
+    "stem": "A printer prints 45 pages in 3 minutes. How many pages does it print per minute?",
+    "representation": "word",
+    "band": "13-17",
+    "answer": {
+      "value": "15",
+      "accept": ["15", "15 pages", "fifteen"]
+    },
+    "rationale": "Divide by the number of minutes: 45 divided by 3 is 15 pages a minute.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F12-nl-008",
+    "skill": "F12",
+    "type": "numeric",
+    "stem": "On a map, 1 centimetre stands for 25 kilometres. Two towns are 6 centimetres apart on the map. How many kilometres apart are they?",
+    "representation": "number_line",
+    "band": "13-17",
+    "answer": {
+      "value": 150,
+      "tolerance": 0,
+      "units": "kilometres"
+    },
+    "rationale": "Six lots of 25 kilometres is 150.",
+    "source": "natural-tutor/authored-2026-09"
+  },
+  {
+    "id": "F8-ka-001",
+    "skill": "F8",
+    "type": "numeric",
+    "stem": "What is $\\frac{1}{2}$ + $\\frac{1}{3}$? Give your answer as a fraction.",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "bare-computation",
+    "answer": {
+      "value": "5/6",
+      "tolerance": 0.0005,
+      "wrong": [
+        {
+          "value": "2/5",
+          "misconception": "add_across"
+        }
+      ]
+    },
+    "rationale": "Halves and thirds become sixths: 3 sixths plus 2 sixths is 5 sixths. Adding tops and bottoms straight across gives 2/5, which is smaller than the half you started with.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F8-ka-002",
+    "skill": "F8",
+    "type": "numeric",
+    "stem": "What is $\\frac{3}{4}$ + $\\frac{1}{6}$? Give your answer as a fraction.",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "bare-computation",
+    "answer": {
+      "value": "11/12",
+      "tolerance": 0.0005,
+      "wrong": [
+        {
+          "value": "4/10",
+          "misconception": "add_across"
+        }
+      ]
+    },
+    "rationale": "Twelfths fit both: 9 twelfths plus 2 twelfths is 11 twelfths. Adding straight across gives 4/10.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F8-ka-003",
+    "skill": "F8",
+    "type": "numeric",
+    "stem": "A recipe needs $\\frac{1}{3}$ cup of oil and $\\frac{1}{4}$ cup of water. How many cups of liquid is that in total?",
+    "representation": "word",
+    "band": "both",
+    "context": "word-problem",
+    "answer": {
+      "value": "7/12",
+      "tolerance": 0.0005,
+      "units": "cups",
+      "wrong": [
+        {
+          "value": "2/7",
+          "misconception": "add_across"
+        }
+      ]
+    },
+    "rationale": "Twelfths fit both: 4 twelfths of oil plus 3 twelfths of water is 7 twelfths of a cup.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F8-ka-004",
+    "skill": "F8",
+    "type": "numeric",
+    "stem": "You walk $\\frac{2}{5}$ of a mile, then $\\frac{1}{2}$ a mile more. How far have you walked in total?",
+    "representation": "word",
+    "band": "both",
+    "context": "word-problem",
+    "answer": {
+      "value": "9/10",
+      "tolerance": 0.0005,
+      "units": "miles",
+      "wrong": [
+        {
+          "value": "3/7",
+          "misconception": "add_across"
+        }
+      ]
+    },
+    "rationale": "Tenths fit both: 4 tenths plus 5 tenths is 9 tenths of a mile.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F9-ka-001",
+    "skill": "F9",
+    "type": "numeric",
+    "stem": "What is $\\frac{2}{3}$ \\times $\\frac{3}{5}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "bare-computation",
+    "answer": {
+      "value": "2/5",
+      "tolerance": 0.0005,
+      "accept": ["6/15"],
+      "wrong": [
+        {
+          "value": "10/9",
+          "misconception": "computation"
+        }
+      ]
+    },
+    "rationale": "Tops times tops and bottoms times bottoms: 6 fifteenths, which is 2 fifths. Cross-multiplying (2 times 5 over 3 times 3) gives 10/9, a move that belongs to solving a proportion, not to multiplying.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F9-ka-002",
+    "skill": "F9",
+    "type": "numeric",
+    "stem": "What is $\\frac{3}{4}$ of $\\frac{2}{9}$?",
+    "representation": "word",
+    "band": "both",
+    "context": "word-problem",
+    "answer": {
+      "value": "1/6",
+      "tolerance": 0.0005,
+      "accept": ["6/36"]
+    },
+    "rationale": "\"Of\" means multiply: 3 times 2 over 4 times 9 is 6 thirty-sixths, which is 1 sixth.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F9-ka-003",
+    "skill": "F9",
+    "type": "numeric",
+    "stem": "A recipe needs $\\frac{3}{4}$ cup of sugar. You are making half the recipe. How much sugar do you need?",
+    "representation": "word",
+    "band": "both",
+    "context": "word-problem",
+    "answer": {
+      "value": "3/8",
+      "tolerance": 0.0005,
+      "units": "cups"
+    },
+    "rationale": "Half of three quarters is three eighths: 1 times 3 over 2 times 4.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F12-ka-001",
+    "skill": "F12",
+    "type": "numeric",
+    "stem": "If 3 pencils cost $1.20, what do 5 pencils cost, in dollars?",
+    "representation": "word",
+    "band": "both",
+    "context": "word-problem",
+    "answer": {
+      "value": 2,
+      "tolerance": 0.005,
+      "units": "dollars"
+    },
+    "rationale": "One pencil costs 40 cents, so five cost 2 dollars.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F12-ka-002",
+    "skill": "F12",
+    "type": "numeric",
+    "stem": "The ratio of red to blue marbles is 2:3. There are 12 red marbles. How many blue marbles are there?",
+    "representation": "word",
+    "band": "both",
+    "context": "word-problem",
+    "answer": {
+      "value": 18,
+      "tolerance": 0
+    },
+    "rationale": "Twelve red is six lots of 2, so there are six lots of 3 blue: 18.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F12-ka-003",
+    "skill": "F12",
+    "type": "numeric",
+    "stem": "Solve the proportion for $x$: $\\frac{2}{5}$ = $\\frac{x}{20}$",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "bare-computation",
+    "answer": {
+      "value": 8,
+      "tolerance": 0
+    },
+    "rationale": "Twenty is 5 times 4, so x is 2 times 4: 8.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F12-ka-004",
+    "skill": "F12",
+    "type": "numeric",
+    "stem": "Solve the proportion for $x$: $\\frac{x}{6}$ = $\\frac{9}{2}$",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "bare-computation",
+    "answer": {
+      "value": 27,
+      "tolerance": 0
+    },
+    "rationale": "Six is 2 times 3, so x is 9 times 3: 27.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F3-ka-001",
+    "skill": "F3",
+    "type": "single",
+    "stem": "Which fraction is equivalent to $\\frac{2}{3}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "recognise",
+    "options": [
+      {
+        "text": "$\\frac{4}{9}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "$\\frac{6}{9}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{2}{6}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      },
+      {
+        "text": "$\\frac{3}{4}$",
+        "correct": false,
+        "misconception": "equivalence_as_change"
+      }
+    ],
+    "rationale": "Multiply top and bottom by the same number: 2 times 3 over 3 times 3 is 6 ninths. The wrong options scale only one part, or add 1 to both.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F3-ka-002",
+    "skill": "F3",
+    "type": "numeric",
+    "stem": "Fill in the blank: $\\frac{3}{4}$ = $\\frac{?}{12}$",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "generate",
+    "answer": {
+      "value": 9,
+      "tolerance": 0
+    },
+    "rationale": "Twelve is 4 times 3, so the top is 3 times 3: 9.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F3-ka-003",
+    "skill": "F3",
+    "type": "numeric",
+    "stem": "Fill in the blank: $\\frac{2}{5}$ = $\\frac{8}{?}$",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "generate",
+    "answer": {
+      "value": 20,
+      "tolerance": 0
+    },
+    "rationale": "Eight is 2 times 4, so the bottom is 5 times 4: 20.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F5-ka-001",
+    "skill": "F5",
+    "type": "short",
+    "stem": "Write $\\frac{6}{8}$ in simplest form.",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "simplify",
+    "answer": {
+      "value": "3/4",
+      "exact": true
+    },
+    "rationale": "Two divides both 6 and 8: 3 over 4. The answer has to be the simplified fraction; 6/8 itself is not.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F5-ka-002",
+    "skill": "F5",
+    "type": "short",
+    "stem": "Write $\\frac{15}{25}$ in simplest form.",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "simplify",
+    "answer": {
+      "value": "3/5",
+      "exact": true
+    },
+    "rationale": "Five divides both: 3 over 5.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F5-ka-003",
+    "skill": "F5",
+    "type": "short",
+    "stem": "Write $\\frac{12}{18}$ in simplest form.",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "simplify",
+    "answer": {
+      "value": "2/3",
+      "exact": true
+    },
+    "rationale": "Six divides both: 2 over 3.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F4-ka-001",
+    "skill": "F4",
+    "type": "single",
+    "stem": "Which is larger, $\\frac{1}{3}$ or $\\frac{1}{8}$?",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "compare",
+    "options": [
+      {
+        "text": "$\\frac{1}{3}$",
+        "correct": true
+      },
+      {
+        "text": "$\\frac{1}{8}$",
+        "correct": false,
+        "misconception": "denominator_magnitude"
+      },
+      {
+        "text": "They are the same size",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      }
+    ],
+    "rationale": "Cutting a whole into 3 gives bigger pieces than cutting it into 8, so one third is larger. Picking 1/8 because 8 is bigger is the denominator trap; calling them equal because both tops are 1 ignores the size of the pieces.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F4-ka-002",
+    "skill": "F4",
+    "type": "single",
+    "stem": "Which fraction is closest to 1?",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "estimate",
+    "options": [
+      {
+        "text": "$\\frac{3}{5}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{1}{2}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{2}{3}$",
+        "correct": false,
+        "misconception": "whole_number_bias"
+      },
+      {
+        "text": "$\\frac{7}{8}$",
+        "correct": true
+      }
+    ],
+    "rationale": "Seven eighths is one eighth short of a whole; the others are short by two fifths, a half and a third. Judging by the size of the digits rather than the size of the gap is the whole-number trap.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F4-ka-003",
+    "skill": "F4",
+    "type": "short",
+    "stem": "Which is larger, $\\frac{3}{5}$ or $\\frac{5}{8}$? Write the larger fraction.",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "compare",
+    "answer": {
+      "value": "5/8",
+      "exact": true,
+      "wrong": [
+        {
+          "value": "3/5",
+          "misconception": "whole_number_bias"
+        }
+      ]
+    },
+    "rationale": "Over 40: 24 fortieths against 25 fortieths, so 5/8 is larger by one fortieth.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F4-ka-004",
+    "skill": "F4",
+    "type": "short",
+    "stem": "Which is larger, $\\frac{7}{10}$ or $\\frac{2}{3}$? Write the larger fraction.",
+    "representation": "symbolic",
+    "band": "both",
+    "context": "compare",
+    "answer": {
+      "value": "7/10",
+      "exact": true,
+      "wrong": [
+        {
+          "value": "2/3",
+          "misconception": "whole_number_bias"
+        }
+      ]
+    },
+    "rationale": "Over 30: 21 thirtieths against 20 thirtieths, so 7/10 is larger by one thirtieth.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  },
+  {
+    "id": "F4-ka-005",
+    "skill": "F4",
+    "type": "short",
+    "stem": "One jug is $\\frac{5}{6}$ full. Another is $\\frac{4}{5}$ full. Which fraction is the fuller jug? Write it.",
+    "representation": "word",
+    "band": "both",
+    "context": "word-problem",
+    "answer": {
+      "value": "5/6",
+      "exact": true,
+      "wrong": [
+        {
+          "value": "4/5",
+          "misconception": "whole_number_bias"
+        }
+      ]
+    },
+    "rationale": "Over 30: 25 thirtieths against 24 thirtieths, so 5/6 is fuller by one thirtieth.",
+    "source": "kaizen-ai/seed_kc.sql (hand-verified)"
+  }
+]

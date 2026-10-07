@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaizen-AI dashboard interior — local reference reconstruction (fictional fixtures)</title>
+<!--
+  Local reference reconstruction of the Kaizen-AI dashboard interior (snapshot
+  commit 91af9e452c7df5867afa7249a6dc58b00003f531, web/). Real snapshot
+  components are bundled (see dist/bundled-sources.txt); the shell markup is a
+  static extraction of app/dashboard/page.js:600-712. Fixtures are fictional.
+  This is NOT a screenshot of the original running in production.
+  Build: node devtools/build.cjs && node devtools/tailwind.cjs  (see REFERENCE.md)
+-->
+<link rel="stylesheet" href="dist/reference.css">
+<style>
+  /* The original sets these via next/font/google in app/layout.js. No network
+     is used here: the named families apply only if installed locally,
+     otherwise the snapshot's own fallback stacks (tailwind.config.js:40-48). */
+  :root {
+    --font-brand: 'Schibsted Grotesk';
+    --font-body: 'Instrument Sans';
+    --font-opmono: 'IBM Plex Mono';
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="dist/reference.js"></script>
+</body>
+</html>

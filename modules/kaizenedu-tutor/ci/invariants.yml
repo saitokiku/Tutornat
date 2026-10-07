@@ -1,0 +1,101 @@
+name: Invariants
+
+# The five CLAUDE.md invariants as tests, the skill validator, and a scan of
+# the built client bundle for canary secrets. Pinned by
+# tests/invariants/workflow-contract.test.ts so a step cannot be disabled
+# quietly. Kept as its own workflow so upstream's ci.yml (and the contract
+# test that pins it) stays untouched across weekly merges.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: invariants-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  invariants:
+    name: Invariant suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Invariant tests
+        run: pnpm test:invariants
+
+      - name: Skills validate
+        run: pnpm skills:validate
+
+      # The copy rules (no banned words, exclamation points or emoji on a
+      # product surface) and the prompt rules (the tutor names itself an AI;
+      # no exclamation in spoken text). Both scripts exit 1 on a violation.
+      - name: Copy check
+        run: node .claude/skills/design-system/scripts/check-copy.mjs
+
+      - name: Prompt check
+        run: node .claude/skills/tutor-loop/scripts/check-prompts.mjs
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-invariants-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('next.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-invariants-nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      # Build with canary secrets in every secret-looking variable so the audit
+      # has something concrete to look for. TUTOR_MODE is on so product paths
+      # are compiled in.
+      - name: Build with canary secrets
+        env:
+          TUTOR_MODE: '1'
+          NEXT_PUBLIC_TUTOR_MODE: '1'
+          KAIZEN_CANARY_SECRET: canary-8d1f0a7c-invariants
+          OPENAI_API_KEY: sk-canary-8d1f0a7c-openai
+          ANTHROPIC_API_KEY: sk-canary-8d1f0a7c-anthropic
+          GOOGLE_API_KEY: canary-8d1f0a7c-google
+          TTS_OPENAI_API_KEY: canary-8d1f0a7c-tts
+          ASR_OPENAI_API_KEY: canary-8d1f0a7c-asr
+          TTS_ELEVENLABS_API_KEY: canary-8d1f0a7c-eleven
+          ASR_AZURE_API_KEY: canary-8d1f0a7c-azure-asr
+          PERSISTENCE_DEV_TOKEN: canary-8d1f0a7c-persistence
+          CLERK_SECRET_KEY: canary-8d1f0a7c-clerk
+          STRIPE_SECRET_KEY: canary-8d1f0a7c-stripe
+          STRIPE_WEBHOOK_SECRET: canary-8d1f0a7c-stripe-webhook
+          POSTHOG_API_KEY: canary-8d1f0a7c-posthog
+          SENTRY_AUTH_TOKEN: canary-8d1f0a7c-sentry
+          RESEND_API_KEY: canary-8d1f0a7c-resend
+          DATABASE_URL: postgres://canary:canary-8d1f0a7c-db@db.internal/kaizen
+        run: pnpm build
+
+      - name: Client bundle carries no secrets
+        env:
+          KAIZEN_CANARY_SECRET: canary-8d1f0a7c-invariants
+          OPENAI_API_KEY: sk-canary-8d1f0a7c-openai
+          ANTHROPIC_API_KEY: sk-canary-8d1f0a7c-anthropic
+          GOOGLE_API_KEY: canary-8d1f0a7c-google
+          TTS_OPENAI_API_KEY: canary-8d1f0a7c-tts
+          ASR_OPENAI_API_KEY: canary-8d1f0a7c-asr
+          TTS_ELEVENLABS_API_KEY: canary-8d1f0a7c-eleven
+          ASR_AZURE_API_KEY: canary-8d1f0a7c-azure-asr
+          PERSISTENCE_DEV_TOKEN: canary-8d1f0a7c-persistence
+          CLERK_SECRET_KEY: canary-8d1f0a7c-clerk
+          STRIPE_SECRET_KEY: canary-8d1f0a7c-stripe
+          STRIPE_WEBHOOK_SECRET: canary-8d1f0a7c-stripe-webhook
+          POSTHOG_API_KEY: canary-8d1f0a7c-posthog
+          SENTRY_AUTH_TOKEN: canary-8d1f0a7c-sentry
+          RESEND_API_KEY: canary-8d1f0a7c-resend
+          DATABASE_URL: postgres://canary:canary-8d1f0a7c-db@db.internal/kaizen
+        run: pnpm audit:client-bundle

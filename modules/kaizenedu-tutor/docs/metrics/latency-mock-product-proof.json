@@ -1,0 +1,220 @@
+{
+  "generatedAt": "2026-09-06T00:00:17.045Z",
+  "baseUrl": "http://127.0.0.1:41299",
+  "mode": "product",
+  "mock": true,
+  "turns": 6,
+  "ttsProvider": "mock-tts",
+  "asrProvider": null,
+  "model": null,
+  "budget": {
+    "firstAudioP50Ms": 1500,
+    "firstAudioP90Ms": 3000,
+    "bargeInStopMs": 300,
+    "whiteboardActionAfterSentenceMs": 2000,
+    "sessionInteractiveMs": 2000,
+    "firstAudioAfterStartMs": 10000
+  },
+  "summary": {
+    "learner_synth": {
+      "n": 6,
+      "p50": 302.59060299999874,
+      "p90": 305.81096899999994,
+      "max": 305.81096899999994
+    },
+    "asr": {
+      "n": 6,
+      "p50": 253.20433000000048,
+      "p90": 254.40608099999986,
+      "max": 254.40608099999986
+    },
+    "llm_ttft": {
+      "n": 6,
+      "p50": 401.7752380000002,
+      "p90": 403.06683599999997,
+      "max": 403.06683599999997
+    },
+    "llm_first_sent": {
+      "n": 6,
+      "p50": 629.0960599999999,
+      "p90": 633.791813,
+      "max": 633.791813
+    },
+    "llm_total": {
+      "n": 6,
+      "p50": 1309.5879809999988,
+      "p90": 1320.2542329999997,
+      "max": 1320.2542329999997
+    },
+    "tts_first": {
+      "n": 6,
+      "p50": 302.0551890000006,
+      "p90": 304.0358930000002,
+      "max": 304.0358930000002
+    },
+    "turn_to_audio": {
+      "n": 6,
+      "p50": 931.3767769999995,
+      "p90": 938.0582430000002,
+      "max": 938.0582430000002
+    },
+    "first_audio": {
+      "n": 6,
+      "p50": 1183.3749779999998,
+      "p90": 1192.025703,
+      "max": 1192.025703
+    },
+    "first_audio_pipelined": {
+      "n": 6,
+      "p50": 1183.6005059999989,
+      "p90": 1192.464324,
+      "max": 1192.464324
+    },
+    "wb_first_action": {
+      "n": 6,
+      "p50": 49.57296199999928,
+      "p90": 53.29117400000018,
+      "max": 53.29117400000018
+    },
+    "wb_action_to_sentence": {
+      "n": 6,
+      "p50": 176.92323299999998,
+      "p90": 177.93522900000062,
+      "max": 177.93522900000062
+    }
+  },
+  "samples": [
+    {
+      "turn": 1,
+      "learnerLine": "I have homework on fractions and I do not get equivalent fractions.",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 305.81096899999994,
+        "asr": 254.40608099999986,
+        "llm_total": 1318.4281899999999,
+        "llm_ttft": 403.06683599999997,
+        "llm_first_sent": 633.791813,
+        "wb_first_action": 53.29117400000018,
+        "wb_action_to_sentence": 177.4338029999999,
+        "tts_first": 303.8278090000001,
+        "turn_to_audio": 938.0582430000002,
+        "first_audio": 1192.025703,
+        "first_audio_pipelined": 1192.464324
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1,
+      "costCents": 1
+    },
+    {
+      "turn": 2,
+      "learnerLine": "Why is two fourths the same as one half? They look different.",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 303.9450049999996,
+        "asr": 253.84136000000035,
+        "llm_total": 1320.2542329999997,
+        "llm_ttft": 402.9557070000001,
+        "llm_first_sent": 631.669058,
+        "wb_first_action": 51.79011799999989,
+        "wb_action_to_sentence": 176.92323299999998,
+        "tts_first": 304.0358930000002,
+        "turn_to_audio": 935.923785,
+        "first_audio": 1189.5463110000005,
+        "first_audio_pipelined": 1189.7651450000003
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1,
+      "costCents": 1
+    },
+    {
+      "turn": 3,
+      "learnerLine": "Okay so if I multiply the top and bottom by the same number it stays the same?",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 303.96100899999965,
+        "asr": 252.5357100000001,
+        "llm_total": 1306.521957,
+        "llm_ttft": 401.4229520000008,
+        "llm_first_sent": 627.7847670000001,
+        "wb_first_action": 49.57296199999928,
+        "wb_action_to_sentence": 176.78885300000002,
+        "tts_first": 302.0099089999994,
+        "turn_to_audio": 929.9993060000006,
+        "first_audio": 1182.3303859999996,
+        "first_audio_pipelined": 1182.5350160000007
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1,
+      "costCents": 1
+    },
+    {
+      "turn": 4,
+      "learnerLine": "Can you draw it on the whiteboard?",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 302.31029000000035,
+        "asr": 253.23568299999988,
+        "llm_total": 1307.8143960000007,
+        "llm_ttft": 401.28553700000066,
+        "llm_first_sent": 626.7865230000007,
+        "wb_first_action": 49.8600120000001,
+        "wb_action_to_sentence": 175.64097399999991,
+        "tts_first": 301.462133,
+        "turn_to_audio": 928.4836770000002,
+        "first_audio": 1181.4843390000005,
+        "first_audio_pipelined": 1181.71936
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1,
+      "costCents": 1
+    },
+    {
+      "turn": 5,
+      "learnerLine": "What about three sixths, is that also one half?",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 302.5209729999997,
+        "asr": 252.22372899999937,
+        "llm_total": 1309.5879809999988,
+        "llm_ttft": 401.7752380000002,
+        "llm_first_sent": 629.0960599999999,
+        "wb_first_action": 49.452839999999924,
+        "wb_action_to_sentence": 177.86798199999976,
+        "tts_first": 302.0551890000006,
+        "turn_to_audio": 931.3767769999995,
+        "first_audio": 1183.3749779999998,
+        "first_audio_pipelined": 1183.6005059999989
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1,
+      "costCents": 1
+    },
+    {
+      "turn": 6,
+      "learnerLine": "I think I get it now. Give me one to try.",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 302.59060299999874,
+        "asr": 253.20433000000048,
+        "llm_total": 1315.2279780000008,
+        "llm_ttft": 402.2900040000004,
+        "llm_first_sent": 629.7400580000012,
+        "wb_first_action": 49.5148250000002,
+        "wb_action_to_sentence": 177.93522900000062,
+        "tts_first": 302.23218199999974,
+        "turn_to_audio": 932.1640299999999,
+        "first_audio": 1185.1765700000014,
+        "first_audio_pipelined": 1185.3683600000004
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1,
+      "costCents": 1
+    }
+  ]
+}

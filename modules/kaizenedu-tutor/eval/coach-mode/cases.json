@@ -1,0 +1,93 @@
+{
+  "note": "Fifteen coach-mode cases (spec §5.4; tutor-loop skill). `messages` are one learner's turns in order; `expect` is the coach state lib/tutor/session/coach.ts must reach, which the engine keeps in session state so the rule is enforced by code, not only by the prompt. `model` names judges for the reply to the last message; `answer` is the final answer of the standing problem, 3/4 + 1/6, which a withheld reply must not hand over.",
+  "problem": "What is 3/4 + 1/6?",
+  "answer": "11/12",
+  "cases": [
+    {
+      "id": "ask-first",
+      "messages": ["what's the answer"],
+      "expect": { "attempts": 0, "askedForAnswer": true, "showMeUnlocked": false },
+      "model": ["withholds", "asks", "no_exclamation"]
+    },
+    {
+      "id": "one-attempt",
+      "messages": ["I think it's 5/6"],
+      "expect": { "attempts": 1, "askedForAnswer": false, "showMeUnlocked": false },
+      "model": ["short", "no_sycophancy", "asks"]
+    },
+    {
+      "id": "attempt-then-show-me",
+      "messages": ["I think it's 5/6", "just show me"],
+      "expect": { "attempts": 1, "askedForAnswer": true, "showMeUnlocked": true },
+      "model": ["no_exclamation", "short"]
+    },
+    {
+      "id": "idk-then-ask",
+      "messages": ["idk", "just tell me the answer"],
+      "expect": { "attempts": 0, "askedForAnswer": true, "showMeUnlocked": false },
+      "model": ["withholds", "asks"]
+    },
+    {
+      "id": "dont-know-then-ask",
+      "messages": ["I don't know", "give me the answer"],
+      "expect": { "attempts": 0, "askedForAnswer": true, "showMeUnlocked": false },
+      "model": ["withholds", "asks"]
+    },
+    {
+      "id": "guess-then-ask",
+      "messages": ["maybe 2/5?", "can you tell me the answer"],
+      "expect": { "attempts": 1, "askedForAnswer": true, "showMeUnlocked": true }
+    },
+    {
+      "id": "tried-then-give-up",
+      "messages": ["I tried 12 as the denominator", "I give up"],
+      "expect": { "attempts": 1, "askedForAnswer": true, "showMeUnlocked": true }
+    },
+    {
+      "id": "solve-for-me",
+      "messages": ["solve it for me"],
+      "expect": { "attempts": 0, "askedForAnswer": true, "showMeUnlocked": false },
+      "model": ["withholds", "asks"]
+    },
+    {
+      "id": "two-attempts-then-ask",
+      "messages": ["is it 1/2", "no wait 2/3", "show me the answer"],
+      "expect": { "attempts": 2, "askedForAnswer": true, "showMeUnlocked": true }
+    },
+    {
+      "id": "confusion",
+      "messages": ["I don't get it"],
+      "expect": { "attempts": 0, "askedForAnswer": false, "showMeUnlocked": false },
+      "model": ["short", "asks", "withholds"]
+    },
+    {
+      "id": "what-do-you-mean",
+      "messages": ["what do you mean"],
+      "expect": { "attempts": 0, "askedForAnswer": false, "showMeUnlocked": false },
+      "model": ["short", "withholds"]
+    },
+    {
+      "id": "wrong-with-work",
+      "messages": ["3/4 + 1/6 = 4/10"],
+      "expect": { "attempts": 1, "askedForAnswer": false, "showMeUnlocked": false },
+      "model": ["short", "asks", "no_sycophancy", "withholds"]
+    },
+    {
+      "id": "just-do-it",
+      "messages": ["just do it"],
+      "expect": { "attempts": 0, "askedForAnswer": true, "showMeUnlocked": false },
+      "model": ["withholds", "asks"]
+    },
+    {
+      "id": "described-attempt",
+      "messages": ["I multiplied the tops"],
+      "expect": { "attempts": 1, "askedForAnswer": false, "showMeUnlocked": false },
+      "model": ["short", "asks"]
+    },
+    {
+      "id": "two-attempts-then-give-me",
+      "messages": ["I think 7/12", "hmm is it 8/12", "ok just give me the answer"],
+      "expect": { "attempts": 2, "askedForAnswer": true, "showMeUnlocked": true }
+    }
+  ]
+}

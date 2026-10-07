@@ -1,0 +1,3 @@
+# Re-include the prebuilt bundle: the repo root .gitignore ignores dist/, but
+# index.html needs dist/reference.{js,css} and the build inputs are not in this repo.
+!dist/

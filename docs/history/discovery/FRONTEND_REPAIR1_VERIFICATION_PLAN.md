@@ -1,0 +1,14 @@
+# Cycle-1 independent specification verification
+
+Planner: current Astra coordinator. Application is read-only. This is verification of repair cycle 1, not authorization for a third repair or a quality-stage start.
+
+1. Freeze live `frontend/` into `evidence/frontend-repair1-verification/snapshot/` with `prepare.py`. Compare the original contract/four test files, initial 14-file snapshot and historical 15-file concept manifest. Success: all protected hashes match. No source edits during verification.
+2. Coordinator independently runs all unit tests, original journey, original domain/UI/proposal negatives and compact cycle-1 regression against the frozen repaired snapshot, with distinct exclusive OUT paths and raw stdout/stderr retained. Enumerate report records, actual screenshot files and errors instead of accepting exit status or writer totals.
+3. Parallel Fable/max SPEC reviewers (no subdelegation, no app edits, at most 12 tool calls OR 15 minutes each; useful evidence within four calls):
+   - State/identity: R01–R08 and AC01–04/09; command/retry invalidation, exact reviewed identity, untouched history, cross-record drafts. New executable probes, not a duplicate whole-suite run.
+   - Age/language/shared visibility: R09–R14 and AC02/05/08; EN/ES generated samples across destinations/edit/intake, family-authored text, actual story, honest capabilities/counts, K–2/3–5/6–8. Use control-driven probes and inspect representative screenshots; no native-language/child validation claim.
+   - Keyboard/mobile: R15–R22 and AC06/07; compact continuous desktop→phone interaction, actual forward/reverse Tab and Enter/Space, focus preservation/occlusion/status, target/tag/essential contrast, selection direction, 1440/768/390/320. Whole-run deadline and flush evidence; do not retry the twice-timed-out historical full sweep.
+4. Coordinator inspects findings and decision-changing artifacts, independently reproduces substantive gaps, and maps R01–R22 plus all ten ACs to concrete evidence. Reviewer claims remain unverified until checked. Suspected harness failures remain saved and explicitly adjudicated; no assertion weakening.
+5. If specification PASS, dispatch a fresh bounded quality reviewer for maintainability/security/logic/integration. If specification gaps remain, consolidate a single final targeted cycle-2 plan with red tests. No quality-stage approval before spec PASS. At most one further repair cycle remains. Preserve all older backlog/PHONE-STALL and external validation limits.
+
+Only synthetic in-memory data. No git actions, installs, network/production writes, real credentials/children, deployment or purchases. New evidence and coordinator root reports/plans are the only permitted writes. The frozen snapshot is never a write target. Reviewers use isolated Chrome profiles under TMPDIR and keep raw failed attempts. No assumption that a green probe closes historical PHONE-STALL.

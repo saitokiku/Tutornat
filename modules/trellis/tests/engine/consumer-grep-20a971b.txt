@@ -1,0 +1,148 @@
+app/generation-preview/page.tsx:1137:      const confirmedSession: GenerationSessionState = {
+app/generation-preview/page.tsx:1142:      persistSession(confirmedSession);
+app/generation-preview/page.tsx:1144:      void startGeneration(confirmedSession);
+app/generation-preview/page.tsx:1181:    const confirmedSession: GenerationSessionState = {
+app/generation-preview/page.tsx:1186:    persistSession(confirmedSession);
+app/generation-preview/page.tsx:1188:    void startGeneration(confirmedSession);
+app/page.tsx:447:  // name is confirmed. (A Radix DropdownMenu is modal, so the name input cannot
+components/chat/use-chat-sessions.ts:1538:        source: 'soft_close_confirmed',
+components/chat/use-chat-sessions.ts:1540:      await endSession(sessionId, { source: 'soft_close_confirmed' });
+components/edit/PlaybackChromeRoot.tsx:1103:    /** User confirmed scene switch via AlertDialog */
+components/edit/PlaybackChromeRoot.tsx:486:     * only when a confirmed or timed-out soft close ended a Q&A that had
+components/stage/header-controls.tsx:108:  // are text-only, but the latest review confirmed that this menu intentionally
+components/tutor/brand/tokens.css:259:.nt-bar[data-status='confirmed'] > span {
+components/tutor/brand/tokens.css:262:.nt-bar[data-status='not_started'] > span {
+components/tutor/learn/progress.tsx:122:                    row.status === 'confirmed'
+components/tutor/learn/progress.tsx:38: * `confirmed` skill is called mastery, everything else is named an estimate,
+components/tutor/learn/progress.tsx:47:  confirmed: 'success',
+components/tutor/learn/progress.tsx:87:        body="After your first session this shows what you have covered, what the tutor confirmed without helping, and what is due for another look."
+components/tutor/parent/data.tsx:30: * whole account. Deletion is confirmed by typing a phrase, once, with no
+components/tutor/parent/report-view.tsx:171:      <Section title="What is confirmed" description={masteryNote}>
+components/tutor/parent/report-view.tsx:172:        {confirmed.length === 0 ? (
+components/tutor/parent/report-view.tsx:174:            Nothing is confirmed yet. Confirmation needs a check with no help at least a day after
+components/tutor/parent/report-view.tsx:179:            {confirmed.map((skill) => (
+components/tutor/parent/report-view.tsx:30: * Two rules shape every line: the word mastery appears only for a `confirmed`
+components/tutor/parent/report-view.tsx:39:  confirmed: 'success',
+components/tutor/parent/report-view.tsx:79:  const confirmed = report.skills.filter((skill) => skill.status === 'confirmed');
+components/tutor/session/session.css:295:.nt-turn[data-status='interrupted'] .nt-turn-text::after {
+components/tutor/session/session.css:301:.nt-turn[data-status='failed'] .nt-turn-text {
+components/tutor/session/transcript.tsx:64:              data-status={entry.status}
+components/tutor/ui/section.tsx:105:    <div className="nt-bar" data-status={status} role="img" aria-label={`${label}: ${pct} percent`}>
+components/tutor/ui/section.tsx:91: * A 0-to-1 estimate. `status` colors it: a confirmed skill is the only one
+components/workbench/WorkbenchChat.tsx:232:  // fold moves off it (the runner confirmed, or a terminal `session_end`
+components/workbench/chat/composer-send-state.ts:19: * had when send was pressed — the runner confirmed (live), or a terminal
+components/workbench/chat/tool-card.tsx:154:      data-status={failed ? 'failed' : node.toolState === 'done' ? 'done' : 'running'}
+components/workbench/chat/tool-card.tsx:168:          <span className={styles.toolCard.status} data-status="error">
+components/workbench/chat/tool-card.tsx:172:          <span className={styles.toolCard.status} data-status="ok">
+components/workbench/workspace/WorkspaceRail.tsx:1122:                              // Asked as a question rather than confirmed in the
+components/workbench/workspace/WorkspaceRail.tsx:221:   *  confirmed the delete. Rows are already gone optimistically down here. */
+components/workbench/workspace/WorkspaceShell.tsx:539:   * server confirmed the delete, so a failed delete never navigates (the row
+components/workbench/workspace/WorkspaceShell.tsx:776:    // unconfirmed decision even when the owner row has not reached the list.
+components/workbench/workspace/WorkspaceShell.tsx:779:    const mutation = ownerSessionClient.current?.getUnconfirmedSessionTitle(panes.sessionId);
+lib/chat/pi/tools/native-whiteboard.ts:562:      'Whiteboard mutation outcome could not be confirmed. Call wb_read before any further mutation.',
+lib/classroom/load-classroom.ts:211:          // The read SUCCEEDED and confirmed nothing to migrate for this
+lib/hooks/use-home-discovery.tsx:251:  // name is confirmed. (A Radix DropdownMenu is modal, so the name input cannot
+lib/import/use-import-classroom.ts:186:/** Allocate imported audio only after its ZIP entry has been confirmed present. */
+lib/media/use-asset-url.ts:242:/** Resolve one ref while preserving pending versus confirmed-miss state. */
+lib/pbl/v2/agents/simulator.ts:82: *     experiment confirmed this is the ROOT CAUSE of the role-bleed bug:
+lib/persistence/owner-materials.ts:244: *   object is removed or confirmed already absent, and throw to keep the
+lib/persistence/owner-materials.ts:266:        // The byte object is not confirmed gone; keep the reservation so the
+lib/playback/auto-resume.ts:38:  if (args.source !== 'soft_close_confirmed' && args.source !== 'soft_close_timeout') return false;
+lib/playback/auto-resume.ts:4: * Where a chat-session cleanup originated. A confirmed or timed-out soft close
+lib/playback/auto-resume.ts:9:  | 'soft_close_confirmed'
+lib/server/agent-runtime/curriculum-tools.ts:233:        // did not mint at the same id is a collision and must not be confirmed.
+lib/server/agent-runtime/session-materials.ts:113: * fetch's provenance (title / source URL / text character count). A confirmed
+lib/server/agent-runtime/session-materials.ts:173: * confirmed material-row failure removes the just-stored asset; ambiguous
+lib/server/agent-runtime/session-materials.ts:198:    // asset when the row is confirmed absent.
+lib/tutor/client/copy.ts:58:    case 'confirmed':
+lib/tutor/client/copy.ts:71:    case 'confirmed':
+lib/tutor/client/dashboard.ts:103:  if (tally.confirmed === 0 && tally.estimated === 0 && tally.inProgress === 0) {
+lib/tutor/client/dashboard.ts:106:  const parts = [`${tally.confirmed} of ${tally.total} confirmed by an unaided check`];
+lib/tutor/client/dashboard.ts:108:    parts.push(`${tally.estimated} at an estimate that is not confirmed yet`);
+lib/tutor/client/dashboard.ts:116:  return status === 'confirmed';
+lib/tutor/client/dashboard.ts:148: * What to show under "what you have learned": confirmed skills first, then the
+lib/tutor/client/dashboard.ts:155:    .filter((row) => row.status === 'confirmed' || row.status === 'mastered')
+lib/tutor/client/dashboard.ts:157:      if (a.status !== b.status) return a.status === 'confirmed' ? -1 : 1;
+lib/tutor/client/dashboard.ts:171: * rule: only `confirmed` is a skill the tutor has checked without helping, and
+lib/tutor/client/dashboard.ts:176:  const touched = tally.confirmed + tally.estimated + tally.inProgress;
+lib/tutor/client/dashboard.ts:179:  if (tally.confirmed > 0) {
+lib/tutor/client/dashboard.ts:180:    parts.push(`${tally.confirmed} confirmed by a check with no help`);
+lib/tutor/client/dashboard.ts:298:  const confirmed = report.skills.filter((skill) => skill.status === 'confirmed');
+lib/tutor/client/dashboard.ts:307:  if (confirmed.length > 0) {
+lib/tutor/client/dashboard.ts:308:    progress = `Checked without help: ${nameList(confirmed)}.`;
+lib/tutor/client/dashboard.ts:4: * a skill is called mastery only when its status is `confirmed` (strategy law
+lib/tutor/client/dashboard.ts:73:  confirmed: number;
+lib/tutor/client/dashboard.ts:74:  /** At the estimate bar but not confirmed by a later unaided check. */
+lib/tutor/client/dashboard.ts:83:    confirmed: 0,
+lib/tutor/client/dashboard.ts:89:    if (row.status === 'confirmed') tally.confirmed += 1;
+lib/tutor/client/dashboard.ts:98: * The one-line summary above the skill list. Only `confirmed` is allowed to
+lib/tutor/contracts.ts:207: * may include assisted work. `confirmed` is granted only by an unassisted,
+lib/tutor/contracts.ts:211:export type MasteryStatus = 'not_started' | 'in_progress' | 'mastered' | 'confirmed';
+lib/tutor/contracts.ts:7: * Strategy references (docs/STRATEGY-INTEGRATION.md): working versus confirmed
+lib/tutor/email/templates/weekly-report.ts:2: * The weekly report (spec R18; parent-comms skill): the confirmed headline,
+lib/tutor/email/templates/weekly-report.ts:70:      : input.lead.confirmed > 0
+lib/tutor/email/templates/weekly-report.ts:71:        ? `Nothing new was confirmed this week. ${REPORT_MASTERY_NOTE}`
+lib/tutor/email/weekly.ts:244:  // Nothing happened: no session, nothing confirmed, nothing cleared up.
+lib/tutor/graph/next-skill.ts:16: * The lowest-ordinal skill that is not mastered or confirmed and whose
+lib/tutor/graph/next-skill.ts:9:const SATISFIED: readonly MasteryStatus[] = ['mastered', 'confirmed'];
+lib/tutor/metrics/board.ts:146:  confirmedChanges: number;
+lib/tutor/metrics/board.ts:147:  confirmedLearners: number;
+lib/tutor/metrics/board.ts:210:  const confirmed = await db.query<{ n: number | string; learners: number | string }>(
+lib/tutor/metrics/board.ts:213:     WHERE type = 'mastery_change' AND payload->>'to' = 'confirmed' AND ts >= $1 AND ts < $2`,
+lib/tutor/metrics/board.ts:231:    confirmedChanges: Number(confirmed.rows[0]?.n ?? 0),
+lib/tutor/metrics/board.ts:232:    confirmedLearners: Number(confirmed.rows[0]?.learners ?? 0),
+lib/tutor/metrics/board.ts:354:      ['mastery', 'Skills confirmed'],
+lib/tutor/metrics/board.ts:404:      label: 'Skills confirmed',
+lib/tutor/metrics/board.ts:406:      display: String(c.confirmedChanges),
+lib/tutor/metrics/board.ts:407:      basis: c.confirmedChanges
+lib/tutor/metrics/board.ts:408:        ? `skills confirmed by an unassisted check, across ${c.confirmedLearners} ${c.confirmedLearners === 1 ? 'learner' : 'learners'}`
+lib/tutor/metrics/board.ts:409:        : 'no skill was confirmed this week',
+lib/tutor/metrics/board.ts:410:      trend: trend(c.confirmedChanges, prev?.confirmedChanges ?? null).label,
+lib/tutor/model/student-model.ts:105:  if (prev.status === 'confirmed') {
+lib/tutor/model/student-model.ts:106:    status = estimate >= STUDENT_MODEL.masteredEstimate ? 'confirmed' : 'in_progress';
+lib/tutor/model/student-model.ts:110:      status = 'confirmed';
+lib/tutor/model/student-model.ts:12: * confirmed (an unassisted correct check at or after next_check_at). A failed
+lib/tutor/model/student-model.ts:2: * Student model v0 (spec §5.7) plus the confirmed tier (strategy D17). Pure.
+lib/tutor/preview/fixture.ts:100: * check, one estimated but not yet confirmed, several in progress, the rest
+lib/tutor/preview/fixture.ts:111:    status: 'confirmed',
+lib/tutor/preview/fixture.ts:281:      status: 'confirmed',
+lib/tutor/preview/fixture.ts:415:  // F2 is estimated but not confirmed, and its delayed unassisted check is
+lib/tutor/preview/fixture.ts:99: * A deliberately mixed picture: one skill confirmed by a delayed unassisted
+lib/tutor/progress/service.ts:8: * estimate and reserves the word mastery for `confirmed`.
+lib/tutor/report/lead.ts:10: * AND that is confirmed now: the change log says when, the current row says
+lib/tutor/report/lead.ts:38:  confirmed: number;
+lib/tutor/report/lead.ts:39:  /** Confirmed inside the window and still confirmed now, newest first; named, not just counted. */
+lib/tutor/report/lead.ts:44:export function headlineFor(tracked: number, confirmed: number, moved: number): string {
+lib/tutor/report/lead.ts:47:  if (confirmed === 0) return `No skills confirmed yet, ${tracked} in progress`;
+lib/tutor/report/lead.ts:48:  const base = `${confirmed} of ${tracked} ${plural(tracked)} confirmed`;
+lib/tutor/report/lead.ts:59:  const confirmedNow = new Map(
+lib/tutor/report/lead.ts:60:    tracked.filter((skill) => skill.status === 'confirmed').map((skill) => [skill.skillId, skill]),
+lib/tutor/report/lead.ts:66:    if (change.to !== 'confirmed') continue;
+lib/tutor/report/lead.ts:69:    const skill = confirmedNow.get(change.skillId);
+lib/tutor/report/lead.ts:6: * Only `confirmed` counts (D17): "could do it with help" is not a thing to
+lib/tutor/report/lead.ts:83:    confirmed: confirmedNow.size,
+lib/tutor/report/lead.ts:85:    headline: headlineFor(tracked.length, confirmedNow.size, movedList.length),
+lib/tutor/report/lead.ts:9: * week" is a skill whose change to confirmed was recorded inside the window
+lib/tutor/report/parent-report.ts:20:/** The D17 sentence the parent view shows beside the confirmed list. */
+lib/tutor/report/parent-report.ts:22:  'The tutor never grades its own help as mastery: a skill is confirmed only by an unassisted check at least a day later.';
+lib/tutor/report/parent-report.ts:42:const MASTERED_OR_CONFIRMED: ReadonlySet<MasteryStatus> = new Set(['mastered', 'confirmed']);
+lib/tutor/report/parent-report.ts:58: * mastered or confirmed (spec §5.7); null when the graph is empty or nothing
+lib/tutor/report/parent-report.ts:76:/** Status wording for the parent view: "mastery" only for `confirmed`, "estimate" elsewhere. */
+lib/tutor/report/parent-report.ts:79:    case 'confirmed':
+lib/tutor/report/parent-report.ts:80:      return 'mastery confirmed';
+lib/tutor/report/parent-report.ts:9: * called an estimate, the word mastery is used only for `confirmed`, and
+lib/tutor/report/rows.ts:139:  'confirmed',
+lib/tutor/voice/vad.ts:120:  let confirmed = false;
+lib/tutor/voice/vad.ts:152:    confirmed = false;
+lib/tutor/voice/vad.ts:168:      confirmed = false;
+lib/tutor/voice/vad.ts:187:          confirmed = false;
+lib/tutor/voice/vad.ts:202:      if (!confirmed && nowMs - speechStartedAt >= minSpeechMs) {
+lib/tutor/voice/vad.ts:204:          confirmed = true;
+lib/tutor/voice/vad.ts:210:        const wasConfirmed = confirmed || lastLoudAt - speechStartedAt >= minSpeechMs;
+lib/tutor/voice/vad.ts:30:  /** Speech confirmed (past `minSpeechMs`): commit the barge-in. */
+lib/utils/deleted-stages.ts:125: * A cascade's outcome is now known: either the document was confirmed
+lib/workbench/owner-session-client.ts:211:   * The local title decision a full owner snapshot has not confirmed yet.
+lib/workbench/owner-session-client.ts:215:  getUnconfirmedSessionTitle(sessionId: string): { readonly title: string | null } | null {
+lib/workbench/owner-session-client.ts:247:      const unconfirmedTitleMutation =
+lib/workbench/owner-session-client.ts:259:      if (timestampStaleTitle || unconfirmedTitleMutation) this.requestFullFetch();
+lib/workbench/owner-session-client.ts:266:        if (event.type === 'session_title' && !unconfirmedTitleMutation) {

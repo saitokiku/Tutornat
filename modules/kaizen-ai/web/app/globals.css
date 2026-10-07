@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* The palette lives here as channel triplets so tailwind.config.js can wrap them in
+   rgb(... / <alpha-value>) and every opacity utility keeps working. One place to
+   change a color; a dark mode is a later variable flip, not a rewrite.
+   Every pair below ships verified against WCAG: ink 16.8:1, muted 5.3:1,
+   accent 5.8:1, ember-on-coal 7.3:1, nightmuted-on-coal 6.1:1. */
+:root {
+  --c-paper: 250 250 249;
+  --c-panel: 255 255 255;
+  --c-panel2: 241 241 239;
+  --c-border: 228 227 223;
+  --c-ink: 26 25 23;
+  --c-muted: 107 104 98;
+  --c-accent: 169 59 93;
+  --c-good: 79 122 91;
+  --c-warn: 138 100 18;
+  --c-bad: 179 69 63;
+  /* The one dark surface: /ai. Never a mid-page inversion. */
+  --c-coal: 20 19 16;
+  --c-coal2: 31 29 25;
+  --c-nightline: 51 48 42;
+  --c-ember: 232 133 159;
+  --c-nightmuted: 152 147 138;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--c-border)); border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+::selection { background: rgb(var(--c-accent) / 0.20); color: rgb(var(--c-ink)); }
+
+:focus-visible { outline: 2px solid rgb(var(--c-accent)); outline-offset: 2px; }
+
+button { -webkit-tap-highlight-color: transparent; }
+
+@layer components {
+  /* ── Primitives ───────────────────────────────────────────────────────────
+     Shape lock: inputs 10px, cards 14px, large panels 20px, buttons pill.
+     Nothing else is rounded. React wrappers live in components/ui/ — prefer
+     those; these classes exist because ~40 files already address them by name
+     and several are pinned by tests. */
+
+  .k-card { @apply bg-panel rounded-md border border-border shadow-soft; }
+  /* Genuinely quieter than .k-card, which it used to duplicate byte for byte:
+     an inset surface for nested groups, no elevation of its own. */
+  .k-card-sm { @apply bg-panel2 rounded-sm border border-border; }
+
+  /* Ink acts, rose marks. Primary is the same pill on every surface so crossing
+     /pricing to /billing never changes the action color. */
+  .k-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink text-paper
+           font-semibold transition-[background-color,transform] duration-150
+           hover:bg-ink/90 active:scale-[0.98] disabled:opacity-30 disabled:pointer-events-none;
+  }
+  .k-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-panel border border-border
+           text-ink font-semibold transition-[border-color,transform] duration-150
+           hover:border-ink/30 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
+  }
+  /* The accent pill is reserved for the one destructive-adjacent confirm and for
+     brand moments. It is not the default action. */
+  .k-btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent text-paper
+           font-semibold transition-[background-color,transform] duration-150
+           hover:bg-accent/90 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .k-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-panel2 border border-border
+           text-xs font-medium text-muted px-3 py-1.5 transition-colors
+           hover:text-ink hover:border-ink/25;
+  }
+  .k-input {
+    @apply w-full bg-panel rounded-sm border border-border px-4 py-3 text-body text-ink
+           placeholder:text-muted/70 transition-colors
+           focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20;
+  }
+  /* One eyebrow recipe for the whole product. Color is set per usage; rationed to
+     at most one per three sections. */
+  .k-label { @apply font-opmono text-micro font-medium uppercase text-muted; }
+  .dn-kicker { @apply font-opmono text-micro font-medium uppercase; }
+
+  /* Row badges: still text, so the foreground is pulled toward ink until the
+     letters actually read. The hue codes the kind; only its darkness changes.
+     The @apply text-ink is the fallback wherever color-mix is unsupported —
+     darker than intended, never less readable. */
+  .k-badge {
+    @apply inline-flex items-center text-[10px] font-bold uppercase tracking-wider
+           px-1.5 py-0.5 rounded-full;
+  }
+  .k-badge-accent { @apply bg-accent/10 text-ink; color: color-mix(in srgb, rgb(var(--c-accent)) 60%, rgb(var(--c-ink))); }
+  .k-badge-good   { @apply bg-good/10 text-ink;   color: color-mix(in srgb, rgb(var(--c-good)) 60%, rgb(var(--c-ink))); }
+  .k-badge-warn   { @apply bg-warn/10 text-ink;   color: color-mix(in srgb, rgb(var(--c-warn)) 60%, rgb(var(--c-ink))); }
+  .k-badge-muted  { @apply bg-panel2 text-ink;    color: color-mix(in srgb, rgb(var(--c-muted)) 70%, rgb(var(--c-ink))); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ── Rich chat prose (.k-md) ───────────────────────────────────────────────
+   Markdown rendered inside assistant bubbles: headings, lists, tables,
+   blockquotes, inline code, KaTeX. Sized off the body scale so a chat answer
+   and a page paragraph read as the same voice. */
+@layer components {
+  .k-md { @apply text-body leading-relaxed break-words; }
+  .k-md > :first-child { margin-top: 0; }
+  .k-md > :last-child { margin-bottom: 0; }
+  .k-md p { margin: 0.5em 0; }
+  .k-md h1, .k-md h2, .k-md h3, .k-md h4 { @apply font-brand font-semibold text-ink; margin: 0.85em 0 0.3em; line-height: 1.25; }
+  .k-md h1 { font-size: 1.25em; }
+  .k-md h2 { font-size: 1.15em; }
+  .k-md h3 { font-size: 1.05em; }
+  .k-md ul { margin: 0.4em 0; padding-left: 1.3em; list-style: disc; }
+  .k-md ol { margin: 0.4em 0; padding-left: 1.4em; list-style: decimal; }
+  .k-md li { margin: 0.2em 0; }
+  .k-md li > ul, .k-md li > ol { margin: 0.2em 0; }
+  .k-md a { @apply text-accent underline underline-offset-2; }
+  .k-md strong { font-weight: 600; }
+  .k-md blockquote { @apply border-l-2 border-accent/40 pl-3 text-muted; margin: 0.5em 0; }
+  .k-md hr { @apply border-border; margin: 0.85em 0; }
+  .k-md table { width: 100%; border-collapse: collapse; margin: 0.6em 0; font-size: 0.92em; display: block; overflow-x: auto; }
+  .k-md th, .k-md td { @apply border border-border; padding: 0.35em 0.6em; text-align: left; }
+  .k-md th { @apply bg-panel2 font-semibold; }
+  .k-inline-code { @apply bg-panel2 text-ink rounded px-1 py-0.5 font-opmono; font-size: 0.88em; }
+  .k-md .katex { font-size: 1.04em; }
+  .k-md .katex-display { margin: 0.6em 0; padding: 0.15em 0; overflow-x: auto; overflow-y: hidden; }
+}

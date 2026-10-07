@@ -1,0 +1,89 @@
+{
+  "slice": "fractions-to-pre-algebra",
+  "grades": "4-8",
+  "prerequisite_checkins": ["multiplication_facts", "factors_and_multiples"],
+  "misconception_tags": [
+    "denominator_magnitude",
+    "add_across",
+    "whole_number_bias",
+    "equivalence_as_change",
+    "division_makes_smaller",
+    "decimal_length",
+    "computation"
+  ],
+  "skills": [
+    {
+      "id": "F1",
+      "name": "Fraction as part of a whole; unit fractions",
+      "prereqs": [],
+      "tags": ["whole_number_bias", "denominator_magnitude"]
+    },
+    {
+      "id": "F2",
+      "name": "Fractions on a number line",
+      "prereqs": ["F1"],
+      "tags": ["whole_number_bias", "denominator_magnitude"]
+    },
+    {
+      "id": "F3",
+      "name": "Equivalent fractions",
+      "prereqs": ["F1", "F2"],
+      "tags": ["equivalence_as_change", "whole_number_bias"]
+    },
+    {
+      "id": "F4",
+      "name": "Comparing and ordering (common denominators, benchmarks 1/2 and 1)",
+      "prereqs": ["F3"],
+      "tags": ["denominator_magnitude", "whole_number_bias"]
+    },
+    {
+      "id": "F5",
+      "name": "Simplifying (GCF)",
+      "prereqs": ["F3"],
+      "tags": ["equivalence_as_change", "computation"]
+    },
+    {
+      "id": "F6",
+      "name": "Mixed numbers and improper fractions",
+      "prereqs": ["F2"],
+      "tags": ["whole_number_bias", "computation"]
+    },
+    {
+      "id": "F7",
+      "name": "Add and subtract with like denominators",
+      "prereqs": ["F1"],
+      "tags": ["add_across"]
+    },
+    {
+      "id": "F8",
+      "name": "Add and subtract with unlike denominators (LCD)",
+      "prereqs": ["F3", "F7"],
+      "tags": ["add_across", "equivalence_as_change"]
+    },
+    {
+      "id": "F9",
+      "name": "Multiply fractions; fraction of a set",
+      "prereqs": ["F3"],
+      "tags": ["whole_number_bias", "computation"]
+    },
+    {
+      "id": "F10",
+      "name": "Divide fractions (reciprocal, and why it works)",
+      "prereqs": ["F9"],
+      "tags": ["division_makes_smaller", "computation"]
+    },
+    {
+      "id": "F11",
+      "name": "Fractions, decimals, and percents",
+      "prereqs": ["F4"],
+      "tags": ["decimal_length", "whole_number_bias"]
+    },
+    {
+      "id": "F12",
+      "name": "Ratios and rates (bridge to pre-algebra)",
+      "prereqs": ["F9", "F11"],
+      "tags": ["whole_number_bias", "computation"]
+    }
+  ],
+  "item_bank": { "min_items_per_skill": 8, "min_total": 96 }
+}

@@ -1,0 +1,228 @@
+{
+  "sourceRepository": "https://github.com/saitokiku/KaizenEdu",
+  "sourceCommit": "20a971b46c8c2bb7d19b9ccfdb8162637c1d1ffe",
+  "sourceLicense": "MIT (legacy/reference-implementations/kaizenedu/LICENSE); see THIRD_PARTY_NOTICES.md",
+  "generatedBy": "tests/engine/harness/write-manifest.cjs",
+  "files": [
+    {
+      "path": "lib/tutor/graph/graph.ts",
+      "sourceBlob": "4bf45c75e8873e15aa481b67a8ee878d96370124",
+      "sourceSha256": "c76e1ed6b2436edb86ad6f8bd2e1006945e3fc17c0bf2ae227a875543de6d147",
+      "treeSha256": "c76e1ed6b2436edb86ad6f8bd2e1006945e3fc17c0bf2ae227a875543de6d147",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/graph/next-skill.ts",
+      "sourceBlob": "b7cbf12c407fed1dd971374a08010f8e669b58a9",
+      "sourceSha256": "d828bb30c22d9aeebe21f160d50b0eea47f2bf7080dff497c90fbd7dbaedc413",
+      "treeSha256": "1705683f84132e58b15f41652c8fa7582caa7b11ef3f0792c4e4225cf44057ca",
+      "verbatim": false,
+      "containment": true
+    },
+    {
+      "path": "lib/tutor/graph/items.ts",
+      "sourceBlob": "16cc6815bf7c42e97e56a85e6c4cd1b441c031f4",
+      "sourceSha256": "fb098715b6a091ed90c2e82f0a7846defc1d3edc53736a08232e7190a3e3d8f0",
+      "treeSha256": "fb098715b6a091ed90c2e82f0a7846defc1d3edc53736a08232e7190a3e3d8f0",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/graph/skill-graph.json",
+      "sourceBlob": "108fec094b23c5e9aee69b58a54198e36eeb844e",
+      "sourceSha256": "b81d687ec83726dfa0a394613d213b5119f3e9af78c1964457123f80d85e80c4",
+      "treeSha256": "b81d687ec83726dfa0a394613d213b5119f3e9af78c1964457123f80d85e80c4",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/checks/grading.ts",
+      "sourceBlob": "b5657ae9ff0337d72701f208d5b61fcaab859b16",
+      "sourceSha256": "925e16624516d42576a572f7b00ce832df22beb725f3f05097e445719191f887",
+      "treeSha256": "925e16624516d42576a572f7b00ce832df22beb725f3f05097e445719191f887",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/checks/math-expr.ts",
+      "sourceBlob": "636c8177ca8f20bd8bc73f824d08e5d5f0f1aec3",
+      "sourceSha256": "a3a39bfbbdbb8376c747f3cee3852f007e16d7a6f3e9dfdef285c8542ddecc0d",
+      "treeSha256": "a3a39bfbbdbb8376c747f3cee3852f007e16d7a6f3e9dfdef285c8542ddecc0d",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/checks/symbolic.ts",
+      "sourceBlob": "4e801c7342a50b02fea761b90805fa78214cbb49",
+      "sourceSha256": "fb011bde6a4633a98a101804b36987fddf9e2e4e6e0df2a21db472ebd4324b40",
+      "treeSha256": "fb011bde6a4633a98a101804b36987fddf9e2e4e6e0df2a21db472ebd4324b40",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/checks/prompt.ts",
+      "sourceBlob": "824fd45c807edf4c6d2e26a4d631a7b5c9c34dbc",
+      "sourceSha256": "c570da0788f4712280bf6dd210a01b5443b13c92f836ea057598c7ef34dff333",
+      "treeSha256": "edf0df255fb26574bb49d9a02f8ecbdb5f2d989f7d56fc34d92e891a841c78b8",
+      "verbatim": false,
+      "adaptation": "import '@/lib/tutor/auth/session' -> '@/lib/tutor/ids'"
+    },
+    {
+      "path": "lib/tutor/checks/service.ts",
+      "sourceBlob": "10468a788a7cb9d9b85d8e26b6fde7652879d405",
+      "sourceSha256": "c416689101c0c630e716e6e701bb69c43adf5795d6b2b303913b1470ec885263",
+      "treeSha256": "b7a95534e06f10a78dda028491ff97ce82475c018e653976e7e6c137e7036934",
+      "verbatim": false,
+      "adaptation": "live-model grader and diagnose placement replaced by abstaining/deterministic adapter seams; imports of cost/sources, prompts/loader, turn/llm-call, llm-grade removed",
+      "containment": true
+    },
+    {
+      "path": "lib/tutor/model/student-model.ts",
+      "sourceBlob": "3074c8d448ef2156ec77679910ccd711bc7d92bd",
+      "sourceSha256": "76bf217cbb9bc81700bd3dfe29b9df25892af9046aa2aee9bce6e9a064d2f284",
+      "treeSha256": "1f1b371dc28ae19ff01f1167dbd90b42e0dc5ae59002182ee9c3c900c05492a6",
+      "verbatim": false,
+      "adaptation": "import '@/kaizen.config' -> '@/lib/tutor/config'",
+      "containment": true
+    },
+    {
+      "path": "lib/tutor/model/evidence.ts",
+      "sourceBlob": "bc62d5b52d84d446454833b21b5cff989d347d36",
+      "sourceSha256": "112f6d638531a80dc475875fea031bb2359e371329b7e0644f788b691cb68991",
+      "treeSha256": "814cc9e0dbf5f5cb5696b753e8d2233600f78b1a590277ece51bebb5c18c7059",
+      "verbatim": false,
+      "adaptation": "import '@/lib/tutor/auth/session' -> '@/lib/tutor/ids'",
+      "containment": true
+    },
+    {
+      "path": "lib/tutor/model/rows.ts",
+      "sourceBlob": "01c960245f84ac71cd91fb63f279b2ba7633c884",
+      "sourceSha256": "aa2d5c3185bb1383ebe4f7fa498e8d7289cb8d12e2b8eea39479580bf32ba5fb",
+      "treeSha256": "aa2d5c3185bb1383ebe4f7fa498e8d7289cb8d12e2b8eea39479580bf32ba5fb",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/model/service.ts",
+      "sourceBlob": "6b7ed62837a19fe02ba6d0c7cfc75b6f15987620",
+      "sourceSha256": "2d3be74fb5fceb0ff7767c996752f110f578836392920113eae589886f90dc11",
+      "treeSha256": "520fd2fcee9f39d666afe7ff85bf27b6e48bbb09b29bd296c3dc1ec18d7354ea",
+      "verbatim": false,
+      "containment": true
+    },
+    {
+      "path": "lib/tutor/session/state.ts",
+      "sourceBlob": "15b12dabd305f6cfce97fc5059b88b753d294f02",
+      "sourceSha256": "d21ee437f219e2890e00675e7a88e51f01ab7ac02bdda13e4159ca51b5dceea4",
+      "treeSha256": "fb2a9349eaf1d411fd7067a3f3e642eaac9c5ae8cdf6e3a53ec799f482cdf529",
+      "verbatim": false,
+      "adaptation": "import '@/kaizen.config' -> '@/lib/tutor/config'"
+    },
+    {
+      "path": "lib/tutor/session/state-machine.ts",
+      "sourceBlob": "58d9ce83001849137f40d34269ed8725df0accbd",
+      "sourceSha256": "9908dc73cf3389faf62a377573e949cec0340c15746075421bd29969c809f3f6",
+      "treeSha256": "53d56cbbc6dbcd42da050ed79ee17f10f1a8b47413ee0fbf590ae5bcfd2a3c5f",
+      "verbatim": false,
+      "adaptation": "import '@/kaizen.config' -> '@/lib/tutor/config'"
+    },
+    {
+      "path": "lib/tutor/session/coach.ts",
+      "sourceBlob": "19054edab65b83f2dd04270b071e52a1331b0f97",
+      "sourceSha256": "2e3e9570a522d6dadbca0ac06a00d0d26b6c63a1503e0eb42f05a7511ffb9b46",
+      "treeSha256": "2e3e9570a522d6dadbca0ac06a00d0d26b6c63a1503e0eb42f05a7511ffb9b46",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/session/sitting.ts",
+      "sourceBlob": "a8689fb39bdb6ff24bf9d84dc16ce140a407a1aa",
+      "sourceSha256": "d8f5369acdd646feba9cc1f19c2e34be412739148686000fd8d1af9124ecbeb7",
+      "treeSha256": "d8f5369acdd646feba9cc1f19c2e34be412739148686000fd8d1af9124ecbeb7",
+      "verbatim": true
+    },
+    {
+      "path": "lib/tutor/session/service.ts",
+      "sourceBlob": "b575dcdfacee09066c64534c414556d5acd9253a",
+      "sourceSha256": "c67921174c53f5bf918d61359c76ff919bfbc703bc6ef05019ed9bc4cba4f238",
+      "treeSha256": "cc532be68816fcdb2b953202f0df3a8d881916b4ffc1b2e563f5f440a762b184",
+      "verbatim": false,
+      "adaptation": "subset: rowToSession, loadSession, saveSessionState, rowToTurn, listTurns verbatim; createSession/updateSession/meterMinutes/sitting lookup excluded"
+    },
+    {
+      "path": "lib/tutor/report/parent-report.ts",
+      "sourceBlob": "69e14ca5c554124201b8e73bb6255b21a80096d6",
+      "sourceSha256": "b9483d0b279bb946233c30780caa570a6ade10b6ed4e0a6d24aedfa7397a6956",
+      "treeSha256": "8e5e40c56e7f90a00e09435ee09d1dd90147e98a7814b593711177e714635729",
+      "verbatim": false,
+      "containment": true
+    },
+    {
+      "path": "lib/tutor/report/lead.ts",
+      "sourceBlob": "bb954ddbc8f95ecaa0e26898a5b14ebcdfb7bb8a",
+      "sourceSha256": "413cc1fcf03e20cb3fdd8d97ef8f588c747738650cbff93e8dc004add1d4bf20",
+      "treeSha256": "7f73fea6f38f2b44019c39ee3bd95b7bb26643b0d98b7104a096bf864514cb65",
+      "verbatim": false,
+      "containment": true
+    },
+    {
+      "path": "lib/tutor/report/rows.ts",
+      "sourceBlob": "a8bdc7ec40f4a9627acc8658f88480334f5baea7",
+      "sourceSha256": "5a7821e8435d73b6669ff3769b4ee9096f5b98b4fafb0185f41a1273837c4321",
+      "treeSha256": "a378bf08c00ab4a443a77197e237c1cad47c84e57f92831523d39aef8b1e9b45",
+      "verbatim": false,
+      "containment": true
+    },
+    {
+      "path": "lib/tutor/progress/service.ts",
+      "sourceBlob": "e704d92c245c2c3dd2133aecc9c7d07931e912c3",
+      "sourceSha256": "672e339c4b61ec6f4e62a0db645dceb6ffe75abea922eae12fa31e4ee0f986f1",
+      "treeSha256": "672e339c4b61ec6f4e62a0db645dceb6ffe75abea922eae12fa31e4ee0f986f1",
+      "verbatim": true
+    }
+  ],
+  "added": [
+    {
+      "path": "lib/tutor/config.ts",
+      "sha256": "06e45123a02ccd7a82975134beb5bf24f197f6989fb273faf5a234c95fb1d3a6",
+      "derivedFrom": "kaizen.config.ts (AgeBand, BANDS.sessionMinutes/thinkingPauseMs, STUDENT_MODEL)"
+    },
+    {
+      "path": "lib/tutor/contracts.ts",
+      "sha256": "19f7a79138f7808fc2d8f210366144b9d09085d21807335e4383b7741789ab9e",
+      "derivedFrom": "lib/tutor/contracts.ts (engine subset)"
+    },
+    {
+      "path": "lib/tutor/wire.ts",
+      "sha256": "5710061d234d5e2bb0b72317a57ac8230f04b3f223ff7d3ab042751bc19dbafa",
+      "derivedFrom": "lib/tutor/wire.ts (check/progress/report subset)"
+    },
+    {
+      "path": "lib/tutor/db/index.ts",
+      "sha256": "42efbc6d5528f8bf364aabcacdd03e839ce91043a01bd3202891bb82ab9d8f09",
+      "derivedFrom": "lib/tutor/db/client.ts (Queryable interface only)"
+    },
+    {
+      "path": "lib/tutor/ids.ts",
+      "sha256": "031d10825f9f6e1f18884848a30a627d964ce95cb72f54433fb842cb2f998a38",
+      "derivedFrom": "lib/tutor/auth/session.ts (newId only)"
+    },
+    {
+      "path": "lib/tutor/accounts/rows.ts",
+      "sha256": "6642355f615ec89f8deda911512259c4374bb21245a515695ede35b4a7cc54fd",
+      "derivedFrom": "lib/tutor/accounts/rows.ts (toIso, toIsoOrNull only)"
+    }
+  ],
+  "containmentModified": [
+    "lib/tutor/model/student-model.ts",
+    "lib/tutor/model/evidence.ts",
+    "lib/tutor/model/service.ts",
+    "lib/tutor/checks/service.ts",
+    "lib/tutor/report/parent-report.ts",
+    "lib/tutor/report/lead.ts",
+    "lib/tutor/report/rows.ts",
+    "lib/tutor/graph/next-skill.ts"
+  ],
+  "excludedFromImport": [
+    "git history",
+    ".env* and every credential",
+    "provider registries and Gemini/LLM routes",
+    "lib/tutor/db/client.ts (pg pool)",
+    "renderer / OpenMAIC workspace",
+    "app/ routes and components",
+    "lib/tutor/content/item-bank.json (118 authored items, none reviewed)"
+  ]
+}

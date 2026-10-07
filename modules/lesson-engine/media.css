@@ -1,0 +1,142 @@
+/* media.css — voice controls and teaching scenes.
+ * Consumes the tokens already declared in lesson/styles.css :root. Declares none of
+ * its own, overrides nothing global, loads no font and no asset. Scoped entirely to
+ * .lw-voice and .lw-scene so the lesson shell is untouched when this file is absent.
+ */
+
+/* ---------------------------------------------------------------- voice */
+.lw-voice {
+  display: grid; gap: .625rem;
+  padding: .875rem 1rem 1rem;
+  border: 1px solid var(--border); border-radius: var(--r-card);
+  background: var(--panel);
+}
+.lw-voice[data-state="recording"] { border-color: var(--accent); background: var(--accent-soft); }
+.lw-voice[data-state="working"] { border-color: #d8c6cd; }
+
+.lw-voice-legend {
+  margin: 0; font-family: var(--font-brand); font-weight: 600;
+  font-size: .9375rem; letter-spacing: -.01em; color: var(--ink);
+}
+.lw-voice-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+.lw-voice-status {
+  margin: 0; font-size: .875rem; line-height: 1.5; color: var(--muted);
+  min-height: 1.3125em;    /* reserved: status text swaps without the panel jumping */
+}
+.lw-voice[data-state="recording"] .lw-voice-status { color: var(--accent); font-weight: 600; }
+
+/* A dot that reads as "live" without flashing. Stills to a solid dot when the
+   learner has asked for less motion. */
+.lw-voice[data-state="recording"] .lw-voice-status::before {
+  content: ""; display: inline-block; vertical-align: baseline;
+  width: .5rem; height: .5rem; margin-right: .4375rem; border-radius: 50%;
+  background: var(--accent); animation: lw-voice-pulse 1.6s cubic-bezier(.22,1,.36,1) infinite;
+}
+@keyframes lw-voice-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+.lw-voice-rec[data-cap-ms] { font-variant-numeric: tabular-nums; }
+
+.lw-voice-draft-label {
+  margin: 0; font-size: .8125rem; font-weight: 600; color: var(--muted);
+}
+.lw-voice-draft {
+  min-height: 3.5rem; resize: vertical;
+  font-family: var(--font-body); line-height: 1.5;
+}
+.lw-voice-draft::selection { background: rgba(169,59,93,.22); color: var(--ink); }
+
+/* ---------------------------------------------------------------- scene */
+.lw-scene {
+  display: grid; gap: .75rem;
+  padding: 1rem; border: 1px solid var(--border);
+  border-radius: var(--r-card); background: var(--panel2);
+}
+.lw-scene-how { margin: 0; font-size: .875rem; line-height: 1.5; color: var(--muted); }
+.lw-scene-cap { margin: 0; font-size: .8125rem; line-height: 1.5; color: var(--muted); }
+.lw-scene-state {
+  margin: 0; font-family: var(--font-mono); font-size: .875rem;
+  font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink);
+}
+.lw-scene-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* fraction ------------------------------------------------------------- */
+.lw-scene-bar {
+  display: flex; gap: 3px; padding: 3px;
+  border: 1px solid var(--border); border-radius: var(--r-input); background: var(--panel);
+}
+.lw-scene-part {
+  flex: 1 1 0; min-width: 0; min-height: var(--target);
+  border: 1px solid var(--border); border-radius: 6px; background: var(--panel);
+  cursor: pointer; padding: 0;
+  transition: background-color .28s cubic-bezier(.22,1,.36,1), border-color .18s ease;
+}
+.lw-scene-part[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+.lw-scene-part:hover { border-color: var(--ink); }
+/* The staged reveal: a part the scene has just shaded grows into place from its
+   own left edge, so the learner sees the quantity accumulate rather than blink. */
+.lw-scene-part[data-revealing="true"] { animation: lw-scene-grow .34s cubic-bezier(.22,1,.36,1) both; }
+@keyframes lw-scene-grow { from { transform: scaleX(.2); opacity: .55; } to { transform: scaleX(1); opacity: 1; } }
+.lw-scene-part[data-revealing="true"] { transform-origin: left center; }
+
+/* tokens --------------------------------------------------------------- */
+.lw-scene-tokens { display: flex; flex-wrap: wrap; gap: .375rem; }
+.lw-scene-token {
+  width: var(--target); height: var(--target);
+  border: 1px solid var(--border); border-radius: 50%; background: var(--panel);
+  font: 600 .875rem/1 var(--font-mono); color: var(--ink); cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background-color .22s cubic-bezier(.22,1,.36,1), color .22s ease, border-color .18s ease;
+}
+.lw-scene-token[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.lw-scene-token:hover { border-color: var(--ink); }
+.lw-scene-token[data-revealing="true"] { animation: lw-scene-pop .3s cubic-bezier(.22,1,.36,1) both; }
+@keyframes lw-scene-pop { from { transform: scale(.72); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+
+/* number line ---------------------------------------------------------- */
+.lw-scene-range { width: 100%; min-height: var(--target); accent-color: var(--accent); margin: 0; }
+.lw-scene-ticks {
+  display: flex; justify-content: space-between;
+  font: .75rem/1 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums;
+}
+
+/* passage -------------------------------------------------------------- */
+.lw-scene-passage { display: grid; gap: .25rem; }
+.lw-scene-sentence {
+  text-align: left; font: inherit; line-height: 1.6; color: var(--ink);
+  max-width: 68ch;
+  padding: .4375rem .625rem; min-height: var(--target);
+  border: 1px solid transparent; border-radius: var(--r-input);
+  background: transparent; cursor: pointer;
+  transition: background-color .22s ease, border-color .18s ease;
+}
+.lw-scene-sentence[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.lw-scene-sentence:hover { border-color: var(--border); }
+.lw-scene-sentence[data-revealing="true"] { animation: lw-scene-rise .34s cubic-bezier(.22,1,.36,1) both; }
+@keyframes lw-scene-rise { from { transform: translateY(.375rem); opacity: .35; } to { transform: none; opacity: 1; } }
+
+/* sequence ------------------------------------------------------------- */
+.lw-scene-seq { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.lw-scene-stage {
+  display: flex; gap: .625rem; align-items: flex-start;
+  padding: .625rem .75rem;
+  border: 1px solid var(--border); border-radius: var(--r-input); background: var(--panel);
+  transition: border-color .22s ease, background-color .22s ease;
+}
+.lw-scene-stage[data-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.lw-scene-stage[data-revealing="true"] { animation: lw-scene-rise .34s cubic-bezier(.22,1,.36,1) both; }
+.lw-scene-n {
+  flex: none; width: 1.625rem; height: 1.625rem; margin: 0;
+  display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: 50%; background: var(--panel2);
+  font: 600 .8125rem/1 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.lw-scene-stage[data-current="true"] .lw-scene-n { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.lw-scene-label { margin: 0 0 .125rem; font-family: var(--font-brand); font-weight: 600; font-size: .9375rem; color: var(--ink); }
+.lw-scene-detail { margin: 0; font-size: .875rem; line-height: 1.55; color: var(--muted); max-width: 68ch; }
+
+/* Reduced motion: every reveal lands instantly. Content is never gated behind an
+   animation, so nothing is lost — see the scene's own reducedMotion branch. */
+@media (prefers-reduced-motion: reduce) {
+  .lw-voice *, .lw-scene, .lw-scene * { animation: none !important; transition: none !important; }
+}

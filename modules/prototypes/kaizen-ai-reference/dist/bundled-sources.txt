@@ -1,0 +1,15 @@
+../../../snapshots/Kaizen-AI/web/components/Brand.js
+../../../snapshots/Kaizen-AI/web/components/Icons.js
+../../../snapshots/Kaizen-AI/web/components/Rings.js
+../../../snapshots/Kaizen-AI/web/components/TaskModal.js
+../../../snapshots/Kaizen-AI/web/components/TodayView.js
+../../../snapshots/Kaizen-AI/web/components/ui/AppFooter.js
+../../../snapshots/Kaizen-AI/web/components/ui/Button.js
+../../../snapshots/Kaizen-AI/web/components/ui/Card.js
+../../../snapshots/Kaizen-AI/web/components/ui/Eyebrow.js
+../../../snapshots/Kaizen-AI/web/lib/appState.js
+../../../snapshots/Kaizen-AI/web/lib/courses.js
+../../../snapshots/Kaizen-AI/web/lib/mastery.js
+../src/entry.jsx
+../src/fixtures.js
+../src/stubs/next-link.jsx

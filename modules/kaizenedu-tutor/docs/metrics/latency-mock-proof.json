@@ -1,0 +1,177 @@
+{
+  "generatedAt": "2026-09-04T00:51:27.587Z",
+  "baseUrl": "http://127.0.0.1:39587",
+  "mock": true,
+  "turns": 6,
+  "ttsProvider": "mock-tts",
+  "asrProvider": null,
+  "model": null,
+  "budget": {
+    "firstAudioP50Ms": 1500,
+    "firstAudioP90Ms": 3000,
+    "bargeInStopMs": 300,
+    "whiteboardActionAfterSentenceMs": 2000,
+    "sessionInteractiveMs": 2000,
+    "firstAudioAfterStartMs": 10000
+  },
+  "summary": {
+    "learner_synth": {
+      "n": 6,
+      "p50": 303.6413530000009,
+      "p90": 365.79659100000003,
+      "max": 365.79659100000003
+    },
+    "asr": {
+      "n": 6,
+      "p50": 253.31531600000017,
+      "p90": 257.6030260000001,
+      "max": 257.6030260000001
+    },
+    "llm_ttft": {
+      "n": 6,
+      "p50": 402.39286100000027,
+      "p90": 404.18128,
+      "max": 404.18128
+    },
+    "llm_first_sent": {
+      "n": 6,
+      "p50": 605.6577120000002,
+      "p90": 607.2240390000006,
+      "max": 607.2240390000006
+    },
+    "llm_total": {
+      "n": 6,
+      "p50": 1312.6820000000007,
+      "p90": 1316.892702000001,
+      "max": 1316.892702000001
+    },
+    "tts_first": {
+      "n": 6,
+      "p50": 303.65984200000094,
+      "p90": 304.2852979999989,
+      "max": 304.2852979999989
+    },
+    "first_audio": {
+      "n": 6,
+      "p50": 1162.836687000001,
+      "p90": 1168.9619050000001,
+      "max": 1168.9619050000001
+    },
+    "wb_first_action": {
+      "n": 6,
+      "p50": 152.0028770000008,
+      "p90": 154.22539300000062,
+      "max": 154.22539300000062
+    }
+  },
+  "samples": [
+    {
+      "turn": 1,
+      "learnerLine": "I have homework on fractions and I do not get equivalent fractions.",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 365.79659100000003,
+        "asr": 257.6030260000001,
+        "llm_total": 1313.748216,
+        "llm_ttft": 404.18128,
+        "llm_first_sent": 607.1260789999999,
+        "wb_first_action": 152.82859299999996,
+        "tts_first": 304.2328000000002,
+        "first_audio": 1168.9619050000001
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1
+    },
+    {
+      "turn": 2,
+      "learnerLine": "Why is two fourths the same as one half? They look different.",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 305.28665599999977,
+        "asr": 254.58494900000005,
+        "llm_total": 1311.906196,
+        "llm_ttft": 403.03109399999994,
+        "llm_first_sent": 605.716848,
+        "wb_first_action": 151.1642240000001,
+        "tts_first": 303.9178959999999,
+        "first_audio": 1164.219693
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1
+    },
+    {
+      "turn": 3,
+      "learnerLine": "Okay so if I multiply the top and bottom by the same number it stays the same?",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 304.78325700000005,
+        "asr": 254.16402000000016,
+        "llm_total": 1307.9909390000003,
+        "llm_ttft": 401.6846910000004,
+        "llm_first_sent": 603.7711070000005,
+        "wb_first_action": 151.84583899999961,
+        "tts_first": 302.74336200000016,
+        "first_audio": 1160.6784890000008
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1
+    },
+    {
+      "turn": 4,
+      "learnerLine": "Can you draw it on the whiteboard?",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 303.6345739999997,
+        "asr": 253.1316050000005,
+        "llm_total": 1312.6820000000007,
+        "llm_ttft": 401.64588000000003,
+        "llm_first_sent": 605.6577120000002,
+        "wb_first_action": 152.8505840000007,
+        "tts_first": 304.2852979999989,
+        "first_audio": 1163.0746149999995
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1
+    },
+    {
+      "turn": 5,
+      "learnerLine": "What about three sixths, is that also one half?",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 303.32629199999974,
+        "asr": 253.31531600000017,
+        "llm_total": 1312.780630000001,
+        "llm_ttft": 402.51043000000027,
+        "llm_first_sent": 604.7981060000002,
+        "wb_first_action": 152.0028770000008,
+        "tts_first": 303.65984200000094,
+        "first_audio": 1161.7732640000013
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1
+    },
+    {
+      "turn": 6,
+      "learnerLine": "I think I get it now. Give me one to try.",
+      "transcript": "mock transcript of the learner line",
+      "asrInput": "tts",
+      "hops": {
+        "learner_synth": 303.6413530000009,
+        "asr": 252.01056900000003,
+        "llm_total": 1316.892702000001,
+        "llm_ttft": 402.39286100000027,
+        "llm_first_sent": 607.2240390000006,
+        "wb_first_action": 154.22539300000062,
+        "tts_first": 303.60207900000023,
+        "first_audio": 1162.836687000001
+      },
+      "tutorText": "Two fourths and one half name the same amount. Picture a chocolate bar cut into four pieces; two of them is exactly half the bar. So the fraction looks different, but the value is the same. ",
+      "actionCount": 1
+    }
+  ]
+}

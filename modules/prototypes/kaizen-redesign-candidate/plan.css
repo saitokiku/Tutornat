@@ -1,0 +1,118 @@
+/* plan.css — Kaizen Plan page. Scoped under .kaizen-plan; consumes shell tokens (Kaizen names first, current-shell names as
+ * fallback) and the shared .btn/.panel/.row/.stack/.muted/.tag/.notice classes. No gradients, no decoration: type, rules, spacing. */
+.kaizen-plan {
+  --kp-paper: var(--paper, var(--bg, #fafaf9));
+  --kp-card: var(--card, var(--panel, #fff));
+  --kp-quiet: var(--panel2, #f1f1ef);
+  --kp-border: var(--border, var(--line, #e4e3df));
+  --kp-ink: var(--ink, #1a1917);
+  --kp-muted: var(--muted, #6b6862);
+  --kp-accent: var(--accent, #a93b5d);
+  --kp-good: var(--good, var(--success, #4f7a5b));
+  --kp-warn: var(--warn, #8a6412);
+  --kp-bad: var(--bad, var(--danger, #b3453f));
+  --kp-mono: var(--font-mono, var(--mono, "IBM Plex Mono", ui-monospace, Menlo, monospace));
+  --kp-r-card: 14px; --kp-r-input: 10px;
+  min-width: 0;
+}
+.kaizen-plan .kp-intro { margin: -0.5rem 0 1rem; }
+.kaizen-plan .kp-body { display: grid; gap: var(--gap, 1rem); grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: start; }
+.kaizen-plan .kp-main { min-width: 0; display: grid; gap: 0.75rem; }
+.kaizen-plan .kp-side { min-width: 0; }
+.kaizen-plan .kp-mono { font-family: var(--kp-mono); font-variant-numeric: tabular-nums; font-size: 14px; color: var(--kp-muted); }
+.kaizen-plan .kp-mono.overdue { color: var(--kp-bad); font-weight: 600; }
+
+/* Week navigation: range in mono, buttons 44px, "This week" appears only when the view has moved. */
+.kaizen-plan .kp-weeknav { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.kaizen-plan .kp-weeknav .btn { min-height: 44px; }
+.kaizen-plan .kp-range { font-family: var(--kp-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; padding: 0 0.25rem; flex: 1 1 auto; text-align: center; min-width: 0; overflow-wrap: anywhere; }
+
+/* The week: seven columns, rules not boxes. Today is the one accent in the grid. */
+.kaizen-plan .kp-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--kp-border); border-radius: var(--kp-r-card); background: var(--kp-card); overflow: hidden; }
+.kaizen-plan .kp-day { min-width: 0; min-height: 9rem; padding: 0.5rem 0.4rem 0.6rem; border-left: 1px solid var(--kp-border); display: flex; flex-direction: column; gap: 0.4rem; }
+.kaizen-plan .kp-day:first-child { border-left: 0; }
+.kaizen-plan .kp-day.past { background: var(--kp-quiet); }
+.kaizen-plan .kp-day.today { background: var(--kp-card); box-shadow: inset 0 3px 0 var(--kp-accent); }
+.kaizen-plan .kp-dayhead { display: flex; align-items: baseline; gap: 0.35rem; flex-wrap: wrap; }
+.kaizen-plan .kp-wd { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--kp-muted); }
+.kaizen-plan .kp-dn { font-family: var(--kp-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; color: var(--kp-ink); }
+.kaizen-plan .kp-day.today .kp-dn { color: var(--kp-accent); }
+.kaizen-plan .kp-todaytag { font-size: 12px; font-weight: 600; color: var(--kp-accent); }
+.kaizen-plan .kp-items { display: grid; gap: 0.35rem; align-content: start; }
+.kaizen-plan .kp-week-empty { padding: 1rem 1.25rem; display: grid; gap: 0.25rem; }
+.kaizen-plan .kp-week-empty p { margin: 0; }
+
+/* Chips: a DUE chip is the real deadline (solid rule, ink text); WORK is the accepted plan (quiet fill); SUGGESTED is a
+ * pending draft (dashed) — three kinds a parent can tell apart without a legend, and the legend names them anyway. */
+.kaizen-plan .btn.kp-item { display: flex; width: 100%; min-height: 44px; padding: 0.4rem 0.5rem; text-align: left; justify-content: flex-start; border-radius: var(--kp-r-input); font-size: 14px; line-height: 1.3; min-width: 0; }
+.kaizen-plan .kp-chip-body { display: grid; gap: 0.1rem; min-width: 0; }
+.kaizen-plan .kp-kind { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--kp-muted); }
+.kaizen-plan .kp-title { color: var(--kp-ink); font-weight: 600; overflow-wrap: anywhere; }
+.kaizen-plan .kp-sub { font-size: 12px; color: var(--kp-muted); }
+.kaizen-plan .btn.kp-item.due { background: var(--kp-card); border: 1px solid var(--kp-ink); }
+.kaizen-plan .btn.kp-item.due .kp-kind { color: var(--kp-ink); }
+.kaizen-plan .btn.kp-item.work { background: var(--kp-quiet); border: 1px solid var(--kp-border); }
+.kaizen-plan .btn.kp-item.work .kp-kind { color: var(--kp-good); }
+.kaizen-plan .btn.kp-item.draft { background: transparent; border: 1px dashed var(--kp-muted); }
+.kaizen-plan .btn.kp-item.draft .kp-kind { color: var(--kp-warn); }
+.kaizen-plan .btn.kp-item.selected { box-shadow: 0 0 0 2px var(--kp-accent); }
+.kaizen-plan .kp-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; }
+.kaizen-plan .kp-legend-item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.kaizen-plan .kp-legend .kp-kind { padding: 0.1rem 0.4rem; border-radius: 4px; }
+.kaizen-plan .kp-legend .kp-kind.due { color: var(--kp-ink); border: 1px solid var(--kp-ink); }
+.kaizen-plan .kp-legend .kp-kind.work { color: var(--kp-good); background: var(--kp-quiet); border: 1px solid var(--kp-border); }
+.kaizen-plan .kp-legend .kp-kind.draft { color: var(--kp-warn); border: 1px dashed var(--kp-muted); }
+
+/* Before / after the shown week: nothing disappears. */
+.kaizen-plan .kp-outside h3 { font-size: 14px; margin: 0 0 0.35rem; }
+.kaizen-plan .kp-outside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.kaizen-plan .kp-outside li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 0.5rem; }
+.kaizen-plan .kp-outside li .tag { justify-self: start; }
+.kaizen-plan .kp-outside li .btn.kp-item { min-height: 44px; }
+.kaizen-plan .kp-outside li .kp-mono:only-of-type { grid-column: 1 / 3; }
+
+/* Side: the selected task and, for students, what the shared plan means for them. */
+.kaizen-plan .kp-selected h3 { margin: 0; font-size: 16px; }
+.kaizen-plan .kp-select-hint { margin: 0.25rem 0; }
+.kaizen-plan .panel { border-radius: var(--kp-r-card); }
+
+/* Decisions: one line + one button when there is nothing to decide; a panel only while a suggestion waits. */
+.kaizen-plan .kp-decide-row { display: grid; gap: 0.5rem; padding: 0.25rem 0 0.5rem; border-bottom: 1px solid var(--kp-border); }
+.kaizen-plan .kp-decide-row p { margin: 0; }
+.kaizen-plan .kp-draft { border-color: var(--kp-ink); }
+.kaizen-plan .kp-worklist, .kaizen-plan .kp-conflicts, .kaizen-plan .kp-props-list, .kaizen-plan .kp-history ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.kaizen-plan .kp-worklist li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.5rem; align-items: baseline; font-size: 14px; }
+.kaizen-plan .kp-conflicts li { font-size: 14px; color: var(--kp-warn); }
+.kaizen-plan .kp-current .muted, .kaizen-plan .kp-draft .muted { overflow-wrap: anywhere; }
+.kaizen-plan details.kp-workdays summary, .kaizen-plan details.kp-history summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; font-size: 14px; }
+.kaizen-plan details.kp-workdays { margin-top: 0.25rem; }
+.kaizen-plan details.kp-history { border-top: 1px solid var(--kp-border); padding-top: 0.25rem; }
+.kaizen-plan details.kp-history li { font-size: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+
+/* Proposals: the record (task, from → to, status) on one line, the student's reason verbatim beneath, then the decision. */
+.kaizen-plan .kp-prop { display: grid; gap: 0.4rem; padding: 0.6rem 0; border-top: 1px solid var(--kp-border); }
+.kaizen-plan .kp-prop:first-child { border-top: 0; padding-top: 0; }
+.kaizen-plan .kp-prop-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
+.kaizen-plan .kp-reason { margin: 0; }
+.kaizen-plan .kp-prop-form { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--kp-border); }
+.kaizen-plan .kp-prop-form h3 { font-size: 16px; margin: 0 0 0.5rem; }
+.kaizen-plan .kp-prop-form input, .kaizen-plan .kp-prop-form select, .kaizen-plan .kp-prop-form textarea { border-radius: var(--kp-r-input); min-height: 44px; }
+.kaizen-plan .kp-prop-form textarea { min-height: 3.5rem; }
+
+@media (max-width: 900px) {
+  .kaizen-plan .kp-body { grid-template-columns: minmax(0, 1fr); }
+}
+/* Phone: the week becomes an agenda. Days stack, each with its date in a narrow left column; empty days other than today
+ * collapse so the list is the schoolwork, not a grid of blanks. */
+@media (max-width: 700px) {
+  .kaizen-plan .kp-weeknav .kp-range { order: -1; flex-basis: 100%; text-align: left; padding: 0.25rem 0; }
+  .kaizen-plan .kp-week { grid-template-columns: minmax(0, 1fr); }
+  .kaizen-plan .kp-day { min-height: 0; border-left: 0; border-top: 1px solid var(--kp-border); display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: 0.5rem; padding: 0.6rem 0.75rem; }
+  .kaizen-plan .kp-day:first-child { border-top: 0; }
+  .kaizen-plan .kp-day.today { box-shadow: inset 3px 0 0 var(--kp-accent); }
+  .kaizen-plan .kp-day.empty:not(.today) { display: none; }
+  .kaizen-plan .kp-dayhead { flex-direction: column; align-items: flex-start; gap: 0; }
+  .kaizen-plan .kp-dn { font-size: 18px; }
+  .kaizen-plan .kp-outside li { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
+  .kaizen-plan .kp-outside li .kp-mono:only-of-type { grid-column: auto; }
+}

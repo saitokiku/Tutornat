@@ -1,0 +1,329 @@
+app/(parent)/parent/reports/[learnerId]/page.tsx:26: * `skill_mastery.next_check_at`, which the report payload does not carry, so
+app/page.tsx:447:  // name is confirmed. (A Radix DropdownMenu is modal, so the name input cannot
+lib/media/use-asset-url.ts:242:/** Resolve one ref while preserving pending versus confirmed-miss state. */
+components/stage/header-controls.tsx:108:  // are text-only, but the latest review confirmed that this menu intentionally
+app/api/pbl/v2/task/update/route.ts:9: *   - `start`             — mark a microtask in_progress (used when the
+lib/import/use-import-classroom.ts:186:/** Allocate imported audio only after its ZIP entry has been confirmed present. */
+app/generation-preview/page.tsx:1137:      const confirmedSession: GenerationSessionState = {
+app/generation-preview/page.tsx:1142:      persistSession(confirmedSession);
+app/generation-preview/page.tsx:1144:      void startGeneration(confirmedSession);
+app/generation-preview/page.tsx:1181:    const confirmedSession: GenerationSessionState = {
+app/generation-preview/page.tsx:1186:    persistSession(confirmedSession);
+app/generation-preview/page.tsx:1188:    void startGeneration(confirmedSession);
+lib/utils/deleted-stages.ts:125: * A cascade's outcome is now known: either the document was confirmed
+lib/chat/pi/tools/native-whiteboard.ts:562:      'Whiteboard mutation outcome could not be confirmed. Call wb_read before any further mutation.',
+lib/server/agent-runtime/curriculum-tools.ts:233:        // did not mint at the same id is a collision and must not be confirmed.
+lib/classroom/load-classroom.ts:211:          // The read SUCCEEDED and confirmed nothing to migrate for this
+lib/server/agent-runtime/session-materials.ts:113: * fetch's provenance (title / source URL / text character count). A confirmed
+lib/server/agent-runtime/session-materials.ts:173: * confirmed material-row failure removes the just-stored asset; ambiguous
+lib/server/agent-runtime/session-materials.ts:198:    // asset when the row is confirmed absent.
+lib/quiz/view-state.ts:76:  phase: 'not_started' | 'answering' | 'reviewing';
+lib/quiz/view-state.ts:84:  if (!state) return { phase: 'not_started', answers: {}, results: [] };
+lib/quiz/view-state.ts:93:    return { phase: 'not_started', answers: {}, results: [] };
+lib/playback/auto-resume.ts:4: * Where a chat-session cleanup originated. A confirmed or timed-out soft close
+lib/playback/auto-resume.ts:9:  | 'soft_close_confirmed'
+lib/playback/auto-resume.ts:38:  if (args.source !== 'soft_close_confirmed' && args.source !== 'soft_close_timeout') return false;
+lib/tutor/session/service.ts:150:  const mastery = await listMasteryRows(db, principal.accountId, principal.learnerId);
+lib/tutor/session/service.ts:170:    const due = dueDelayedChecks(mastery.map(toSkillMastery), now);
+lib/tutor/session/service.ts:171:    if (isBrandNew(mastery)) {
+lib/tutor/session/service.ts:184:      skillId = selectNextSkill(mastery.map(toSkillMastery))?.id ?? null;
+lib/persistence/owner-materials.ts:244: *   object is removed or confirmed already absent, and throw to keep the
+lib/persistence/owner-materials.ts:266:        // The byte object is not confirmed gone; keep the reservation so the
+lib/workbench/owner-session-client.ts:211:   * The local title decision a full owner snapshot has not confirmed yet.
+lib/workbench/owner-session-client.ts:215:  getUnconfirmedSessionTitle(sessionId: string): { readonly title: string | null } | null {
+lib/workbench/owner-session-client.ts:247:      const unconfirmedTitleMutation =
+lib/workbench/owner-session-client.ts:259:      if (timestampStaleTitle || unconfirmedTitleMutation) this.requestFullFetch();
+lib/workbench/owner-session-client.ts:266:        if (event.type === 'session_title' && !unconfirmedTitleMutation) {
+lib/hooks/use-home-discovery.tsx:251:  // name is confirmed. (A Radix DropdownMenu is modal, so the name input cannot
+lib/tutor/analytics/queries.sql.ts:3: * turns), latency percentiles (turns.latency_ms), and mastery changes
+lib/tutor/analytics/queries.sql.ts:60:  mastery: MASTERY_CHANGES_SQL,
+lib/tutor/analytics/queries.sql.ts:129:  mastery: MasteryDay[];
+lib/tutor/analytics/queries.sql.ts:147:  const [cost, latency, mastery] = await Promise.all([
+lib/tutor/analytics/queries.sql.ts:175:    mastery: mastery.rows.map((row) => ({
+lib/tutor/email/weekly.ts:25:import { masteryStatus, parseSessionSummary } from '@/lib/tutor/report/rows';
+lib/tutor/email/weekly.ts:190:  const [week, mastery, changes, resolved, notes] = await Promise.all([
+lib/tutor/email/weekly.ts:198:       FROM skill_mastery m LEFT JOIN skills s ON s.id = m.skill_id
+lib/tutor/email/weekly.ts:223:  const skills: LeadSkill[] = mastery.rows.map((skill) => ({
+lib/tutor/email/weekly.ts:226:    status: masteryStatus(skill.status),
+lib/tutor/email/weekly.ts:244:  // Nothing happened: no session, nothing confirmed, nothing cleared up.
+lib/tutor/email/templates/weekly-report.ts:2: * The weekly report (spec R18; parent-comms skill): the confirmed headline,
+lib/tutor/email/templates/weekly-report.ts:70:      : input.lead.confirmed > 0
+lib/tutor/email/templates/weekly-report.ts:71:        ? `Nothing new was confirmed this week. ${REPORT_MASTERY_NOTE}`
+lib/tutor/turn/README.md:114:confirm mastery (strategy law 1, spec §5.7). Skipping the tag would let the
+lib/tutor/graph/next-skill.ts:3: * (strategy D17). Pure: takes mastery rows, returns a decision.
+lib/tutor/graph/next-skill.ts:5:import type { MasteryStatus, SkillMastery } from '@/lib/tutor/contracts';
+lib/tutor/graph/next-skill.ts:9:const SATISFIED: readonly MasteryStatus[] = ['mastered', 'confirmed'];
+lib/tutor/graph/next-skill.ts:11:export function isMasteredOrConfirmed(status: MasteryStatus | undefined): boolean {
+lib/tutor/graph/next-skill.ts:16: * The lowest-ordinal skill that is not mastered or confirmed and whose
+lib/tutor/graph/next-skill.ts:21:  mastery: ReadonlyArray<Pick<SkillMastery, 'skillId' | 'status'>>,
+lib/tutor/graph/next-skill.ts:23:  const status = new Map(mastery.map((row) => [row.skillId, row.status]));
+lib/tutor/graph/next-skill.ts:38:  mastery: ReadonlyArray<Pick<SkillMastery, 'skillId' | 'status' | 'nextCheckAt'>>,
+lib/tutor/graph/next-skill.ts:42:  for (const row of mastery) {
+lib/tutor/graph/next-skill.ts:43:    if (row.status !== 'mastered' || !row.nextCheckAt) continue;
+lib/tutor/graph/next-skill.ts:52:export function isBrandNew(mastery: ReadonlyArray<Pick<SkillMastery, 'nItems'>>): boolean {
+lib/tutor/graph/next-skill.ts:53:  return mastery.every((row) => row.nItems === 0);
+lib/tutor/turn/context.ts:231:      return [{ id, name: prereq.name, status: byId.get(id)?.status ?? 'not_started' }];
+lib/tutor/client/copy.ts:11:  MasteryStatus,
+lib/tutor/client/copy.ts:50:export function masteryStatusLabel(status: MasteryStatus): string {
+lib/tutor/client/copy.ts:52:    case 'not_started':
+lib/tutor/client/copy.ts:54:    case 'in_progress':
+lib/tutor/client/copy.ts:58:    case 'confirmed':
+lib/tutor/client/copy.ts:63:export function masteryStatusHint(status: MasteryStatus): string {
+lib/tutor/client/copy.ts:65:    case 'not_started':
+lib/tutor/client/copy.ts:67:    case 'in_progress':
+lib/tutor/client/copy.ts:71:    case 'confirmed':
+lib/tutor/wire.ts:288:  mastery: SkillMastery[];
+lib/tutor/wire.ts:354:  mastery: SkillMastery | null;
+lib/tutor/wire.ts:402:  mastery: SkillMastery[];
+lib/tutor/client/dashboard.ts:4: * a skill is called mastery only when its status is `confirmed` (strategy law
+lib/tutor/client/dashboard.ts:13:  MasteryStatus,
+lib/tutor/client/dashboard.ts:30:  status: MasteryStatus;
+lib/tutor/client/dashboard.ts:42: * Joins the twelve skills to whatever mastery rows exist, in graph order, so
+lib/tutor/client/dashboard.ts:47:  mastery: readonly SkillMastery[],
+lib/tutor/client/dashboard.ts:50:  const bySkill = new Map(mastery.map((row) => [row.skillId, row]));
+lib/tutor/client/dashboard.ts:56:      status: row?.status ?? 'not_started',
+lib/tutor/client/dashboard.ts:73:  confirmed: number;
+lib/tutor/client/dashboard.ts:74:  /** At the estimate bar but not confirmed by a later unaided check. */
+lib/tutor/client/dashboard.ts:83:    confirmed: 0,
+lib/tutor/client/dashboard.ts:89:    if (row.status === 'confirmed') tally.confirmed += 1;
+lib/tutor/client/dashboard.ts:90:    else if (row.status === 'mastered') tally.estimated += 1;
+lib/tutor/client/dashboard.ts:91:    else if (row.status === 'in_progress') tally.inProgress += 1;
+lib/tutor/client/dashboard.ts:98: * The one-line summary above the skill list. Only `confirmed` is allowed to
+lib/tutor/client/dashboard.ts:99: * be called mastery; an estimate is always named an estimate.
+lib/tutor/client/dashboard.ts:103:  if (tally.confirmed === 0 && tally.estimated === 0 && tally.inProgress === 0) {
+lib/tutor/client/dashboard.ts:106:  const parts = [`${tally.confirmed} of ${tally.total} confirmed by an unaided check`];
+lib/tutor/client/dashboard.ts:108:    parts.push(`${tally.estimated} at an estimate that is not confirmed yet`);
+lib/tutor/client/dashboard.ts:114:/** True only for the status the product is allowed to call mastery. */
+lib/tutor/client/dashboard.ts:115:export function isConfirmedMastery(status: MasteryStatus): boolean {
+lib/tutor/client/dashboard.ts:116:  return status === 'confirmed';
+lib/tutor/client/dashboard.ts:140:  return rows.filter((row) => row.status !== 'not_started');
+lib/tutor/client/dashboard.ts:144:  return rows.filter((row) => row.status === 'not_started');
+lib/tutor/client/dashboard.ts:148: * What to show under "what you have learned": confirmed skills first, then the
+lib/tutor/client/dashboard.ts:151: * mastery.
+lib/tutor/client/dashboard.ts:155:    .filter((row) => row.status === 'confirmed' || row.status === 'mastered')
+lib/tutor/client/dashboard.ts:157:      if (a.status !== b.status) return a.status === 'confirmed' ? -1 : 1;
+lib/tutor/client/dashboard.ts:171: * rule: only `confirmed` is a skill the tutor has checked without helping, and
+lib/tutor/client/dashboard.ts:172: * an estimate is never called mastery.
+lib/tutor/client/dashboard.ts:176:  const touched = tally.confirmed + tally.estimated + tally.inProgress;
+lib/tutor/client/dashboard.ts:179:  if (tally.confirmed > 0) {
+lib/tutor/client/dashboard.ts:180:    parts.push(`${tally.confirmed} confirmed by a check with no help`);
+lib/tutor/client/dashboard.ts:269:  if (skill.status === 'not_started') return `${skill.name} — no checks yet`;
+lib/tutor/client/dashboard.ts:298:  const confirmed = report.skills.filter((skill) => skill.status === 'confirmed');
+lib/tutor/client/dashboard.ts:301:      skill.status !== 'not_started' &&
+lib/tutor/client/dashboard.ts:305:  const touched = report.skills.filter((skill) => skill.status !== 'not_started');
+lib/tutor/client/dashboard.ts:307:  if (confirmed.length > 0) {
+lib/tutor/client/dashboard.ts:308:    progress = `Checked without help: ${nameList(confirmed)}.`;
+lib/tutor/contracts.ts:7: * Strategy references (docs/STRATEGY-INTEGRATION.md): working versus confirmed
+lib/tutor/contracts.ts:8: * mastery, append-only evidence, assisted-versus-unassisted labelling.
+lib/tutor/contracts.ts:207: * may include assisted work. `confirmed` is granted only by an unassisted,
+lib/tutor/contracts.ts:209: * report calls mastery without the word "estimate".
+lib/tutor/contracts.ts:211:export type MasteryStatus = 'not_started' | 'in_progress' | 'mastered' | 'confirmed';
+lib/tutor/contracts.ts:219:  status: MasteryStatus;
+lib/tutor/contracts.ts:296:  status: MasteryStatus;
+lib/tutor/db/schema.ts:117:  `CREATE TABLE IF NOT EXISTS skill_mastery (
+lib/tutor/db/schema.ts:125:    status TEXT NOT NULL DEFAULT 'not_started',
+lib/tutor/db/schema.ts:325:  'skill_mastery',
+lib/tutor/checks/service.ts:125:  let mastery: CheckAnswerResponse['mastery'] = null;
+lib/tutor/checks/service.ts:138:    mastery = outcome.mastery;
+lib/tutor/checks/service.ts:210:  return { ok: true, response: { result, mastery } };
+lib/tutor/prompts/checks.md:3:A check is one graded item that feeds the learner's mastery estimate. The AI tutor issues it with a `[[check ...]]` tag; the learner answers on a card, the server grades it, and the result appears in your next context.
+lib/tutor/prompts/checks.md:8:- Not in the same turn as a hint on the same skill: a hint before a check makes it assisted, and assisted checks can never confirm mastery. Give the hint, let them try, then check on a fresh similar item next turn.
+lib/tutor/report/parent-report.ts:9: * called an estimate, the word mastery is used only for `confirmed`, and
+lib/tutor/report/parent-report.ts:12:import type { MasteryStatus, ParentReport, ParentReportSkill } from '@/lib/tutor/contracts';
+lib/tutor/report/parent-report.ts:15:import { masteryStatus, parseSessionSummary } from './rows';
+lib/tutor/report/parent-report.ts:20:/** The D17 sentence the parent view shows beside the confirmed list. */
+lib/tutor/report/parent-report.ts:22:  'The tutor never grades its own help as mastery: a skill is confirmed only by an unassisted check at least a day later.';
+lib/tutor/report/parent-report.ts:42:const MASTERED_OR_CONFIRMED: ReadonlySet<MasteryStatus> = new Set(['mastered', 'confirmed']);
+lib/tutor/report/parent-report.ts:58: * mastered or confirmed (spec §5.7); null when the graph is empty or nothing
+lib/tutor/report/parent-report.ts:63:  statuses: ReadonlyMap<string, MasteryStatus>,
+lib/tutor/report/parent-report.ts:68:  const done = (id: string) => MASTERED_OR_CONFIRMED.has(statuses.get(id) ?? 'not_started');
+lib/tutor/report/parent-report.ts:76:/** Status wording for the parent view: "mastery" only for `confirmed`, "estimate" elsewhere. */
+lib/tutor/report/parent-report.ts:77:export function masteryStatusLabel(status: MasteryStatus): string {
+lib/tutor/report/parent-report.ts:79:    case 'confirmed':
+lib/tutor/report/parent-report.ts:80:      return 'mastery confirmed';
+lib/tutor/report/parent-report.ts:83:    case 'in_progress':
+lib/tutor/report/parent-report.ts:153:  const [week, mastery, misconceptions, skills, notes, attention] = await Promise.all([
+lib/tutor/report/parent-report.ts:161:       FROM skill_mastery m LEFT JOIN skills s ON s.id = m.skill_id
+lib/tutor/report/parent-report.ts:187:  const statuses = new Map<string, MasteryStatus>();
+lib/tutor/report/parent-report.ts:188:  const reportSkills: ParentReportSkill[] = mastery.rows.map((row) => {
+lib/tutor/report/parent-report.ts:189:    const status = masteryStatus(row.status);
+lib/tutor/prompts/build.ts:11:  MasteryStatus,
+lib/tutor/prompts/build.ts:21:  status: MasteryStatus;
+lib/tutor/prompts/build.ts:37:  prereqs: Array<{ id: string; name: string; status: MasteryStatus }>;
+lib/tutor/prompts/build.ts:123:      `Target skill: ${ctx.skill.id} ${ctx.skill.name} (estimate ${ctx.skill.estimate.toFixed(2)}, ${ctx.skill.status.replace('_', ' ')}, ${ctx.skill.nItems} items so far).`,
+lib/tutor/prompts/build.ts:128:      `Prerequisites: ${ctx.prereqs.map((p) => `${p.id} ${p.name} (${p.status.replace('_', ' ')})`).join('; ')}.`,
+lib/tutor/report/index.ts:4:  masteryStatusLabel,
+lib/tutor/report/index.ts:17:  masteryStatus,
+lib/tutor/progress/service.ts:3: * strategy D17). The skill graph, the mastery rows, the open and resolved
+lib/tutor/progress/service.ts:8: * estimate and reserves the word mastery for `confirmed`.
+lib/tutor/progress/service.ts:57:  const mastery: SkillMastery[] = masteryRows.map(toSkillMastery);
+lib/tutor/progress/service.ts:60:  const next = selectNextSkill(mastery);
+lib/tutor/progress/service.ts:63:    mastery,
+lib/tutor/progress/service.ts:68:    dueChecks: dueDelayedChecks(mastery, now),
+lib/tutor/prompts/coach.md:11:- Never present a hint as if it were the learner's own reasoning, and never grade your own help as their mastery: after a hint, the next check on that skill is assisted.
+lib/tutor/report/lead.ts:6: * Only `confirmed` counts (D17): "could do it with help" is not a thing to
+lib/tutor/report/lead.ts:9: * week" is a skill whose change to confirmed was recorded inside the window
+lib/tutor/report/lead.ts:10: * AND that is confirmed now: the change log says when, the current row says
+lib/tutor/report/lead.ts:14:import type { MasteryStatus } from '@/lib/tutor/contracts';
+lib/tutor/report/lead.ts:19:  status: MasteryStatus;
+lib/tutor/report/lead.ts:36:  /** Skills the learner has touched: every row past `not_started`. */
+lib/tutor/report/lead.ts:38:  confirmed: number;
+lib/tutor/report/lead.ts:39:  /** Confirmed inside the window and still confirmed now, newest first; named, not just counted. */
+lib/tutor/report/lead.ts:44:export function headlineFor(tracked: number, confirmed: number, moved: number): string {
+lib/tutor/report/lead.ts:47:  if (confirmed === 0) return `No skills confirmed yet, ${tracked} in progress`;
+lib/tutor/report/lead.ts:48:  const base = `${confirmed} of ${tracked} ${plural(tracked)} confirmed`;
+lib/tutor/report/lead.ts:58:  const tracked = input.skills.filter((skill) => skill.status !== 'not_started');
+lib/tutor/report/lead.ts:59:  const confirmedNow = new Map(
+lib/tutor/report/lead.ts:60:    tracked.filter((skill) => skill.status === 'confirmed').map((skill) => [skill.skillId, skill]),
+lib/tutor/report/lead.ts:66:    if (change.to !== 'confirmed') continue;
+lib/tutor/report/lead.ts:69:    const skill = confirmedNow.get(change.skillId);
+lib/tutor/report/lead.ts:83:    confirmed: confirmedNow.size,
+lib/tutor/report/lead.ts:85:    headline: headlineFor(tracked.length, confirmedNow.size, movedList.length),
+lib/tutor/model/service.ts:2: * The only writer of `skill_mastery` and `misconceptions` (tutor-11,
+lib/tutor/model/service.ts:93:    `SELECT * FROM skill_mastery WHERE account_id = $1 AND learner_id = $2 ORDER BY skill_id`,
+lib/tutor/model/service.ts:106:    `SELECT * FROM skill_mastery WHERE account_id = $1 AND learner_id = $2 AND skill_id = $3`,
+lib/tutor/model/service.ts:126:    `INSERT INTO skill_mastery (account_id, learner_id, skill_id, estimate, n_items, n_sessions, session_ids, status, starting_estimate, updated_at, last_seen_at, next_check_at)
+lib/tutor/model/service.ts:186:  mastery: SkillMastery;
+lib/tutor/model/service.ts:194:/** Applies one graded check to the model and writes the mastery-change and misconception evidence. */
+lib/tutor/model/service.ts:267:    mastery: toSkillMastery(update.next),
+lib/tutor/model/service.ts:321:    `INSERT INTO skill_mastery (account_id, learner_id, skill_id, estimate, status, last_seen_at, updated_at)
+lib/tutor/model/service.ts:322:     VALUES ($1, $2, $3, 0.5, 'not_started', $4, $4)
+lib/tutor/report/rows.ts:3: * reader, and the data export read: sessions, turns, skill_mastery,
+lib/tutor/report/rows.ts:10:  MasteryStatus,
+lib/tutor/report/rows.ts:135:export const MASTERY_STATUSES: readonly MasteryStatus[] = [
+lib/tutor/report/rows.ts:136:  'not_started',
+lib/tutor/report/rows.ts:137:  'in_progress',
+lib/tutor/report/rows.ts:139:  'confirmed',
+lib/tutor/report/rows.ts:142:export function masteryStatus(value: string): MasteryStatus {
+lib/tutor/report/rows.ts:144:    ? (value as MasteryStatus)
+lib/tutor/report/rows.ts:145:    : 'not_started';
+lib/tutor/report/rows.ts:155:    status: masteryStatus(row.status),
+lib/tutor/model/student-model.ts:2: * Student model v0 (spec §5.7) plus the confirmed tier (strategy D17). Pure.
+lib/tutor/model/student-model.ts:10: * status: not_started (0 items) → in_progress → mastered (estimate ≥ 0.8,
+lib/tutor/model/student-model.ts:12: * confirmed (an unassisted correct check at or after next_check_at). A failed
+lib/tutor/model/student-model.ts:14: * skill to in_progress. Assisted work can never confirm (law 1).
+lib/tutor/model/student-model.ts:17:import type { MasteryStatus, SkillMastery } from '@/lib/tutor/contracts';
+lib/tutor/model/student-model.ts:36:  from: MasteryStatus;
+lib/tutor/model/student-model.ts:71:    status: 'not_started',
+lib/tutor/model/student-model.ts:81:    row.status === 'mastered' &&
+lib/tutor/model/student-model.ts:103:  let status: MasteryStatus;
+lib/tutor/model/student-model.ts:105:  if (prev.status === 'confirmed') {
+lib/tutor/model/student-model.ts:106:    status = estimate >= STUDENT_MODEL.masteredEstimate ? 'confirmed' : 'in_progress';
+lib/tutor/model/student-model.ts:107:    if (status === 'in_progress') nextCheckAt = null;
+lib/tutor/model/student-model.ts:110:      status = 'confirmed';
+lib/tutor/model/student-model.ts:113:      status = 'in_progress';
+lib/tutor/model/student-model.ts:121:    if (prev.status !== 'mastered' || !prev.nextCheckAt) {
+lib/tutor/model/student-model.ts:125:    status = 'in_progress';
+lib/tutor/prompts/wrap.md:9:- tutorNote: one or two factual sentences for the parent or account holder about what happened, in the third person ("The learner..."), with the check tally and any misconception named plainly. Never quote the learner, never diagnose feelings, never use the word mastery (say "estimate").
+lib/tutor/metrics/board.ts:146:  confirmedChanges: number;
+lib/tutor/metrics/board.ts:147:  confirmedLearners: number;
+lib/tutor/metrics/board.ts:210:  const confirmed = await db.query<{ n: number | string; learners: number | string }>(
+lib/tutor/metrics/board.ts:213:     WHERE type = 'mastery_change' AND payload->>'to' = 'confirmed' AND ts >= $1 AND ts < $2`,
+lib/tutor/metrics/board.ts:231:    confirmedChanges: Number(confirmed.rows[0]?.n ?? 0),
+lib/tutor/metrics/board.ts:232:    confirmedLearners: Number(confirmed.rows[0]?.learners ?? 0),
+lib/tutor/metrics/board.ts:354:      ['mastery', 'Skills confirmed'],
+lib/tutor/metrics/board.ts:403:      key: 'mastery',
+lib/tutor/metrics/board.ts:404:      label: 'Skills confirmed',
+lib/tutor/metrics/board.ts:406:      display: String(c.confirmedChanges),
+lib/tutor/metrics/board.ts:407:      basis: c.confirmedChanges
+lib/tutor/metrics/board.ts:408:        ? `skills confirmed by an unassisted check, across ${c.confirmedLearners} ${c.confirmedLearners === 1 ? 'learner' : 'learners'}`
+lib/tutor/metrics/board.ts:409:        : 'no skill was confirmed this week',
+lib/tutor/metrics/board.ts:410:      trend: trend(c.confirmedChanges, prev?.confirmedChanges ?? null).label,
+lib/tutor/metrics/board.ts:545:    const display = row.status === 'ok' ? row.display : `— (${row.status.replace('_', ' ')})`;
+lib/tutor/preview/fixture.ts:99: * A deliberately mixed picture: one skill confirmed by a delayed unassisted
+lib/tutor/preview/fixture.ts:100: * check, one estimated but not yet confirmed, several in progress, the rest
+lib/tutor/preview/fixture.ts:111:    status: 'confirmed',
+lib/tutor/preview/fixture.ts:133:    status: 'in_progress',
+lib/tutor/preview/fixture.ts:144:    status: 'in_progress',
+lib/tutor/preview/fixture.ts:281:      status: 'confirmed',
+lib/tutor/preview/fixture.ts:295:      status: 'in_progress',
+lib/tutor/preview/fixture.ts:302:      status: 'in_progress',
+lib/tutor/preview/fixture.ts:320: * the pedagogy skill graph; only the first four carry mastery above, which
+lib/tutor/preview/fixture.ts:412:  mastery: previewMastery,
+lib/tutor/preview/fixture.ts:415:  // F2 is estimated but not confirmed, and its delayed unassisted check is
+lib/tutor/voice/vad.ts:30:  /** Speech confirmed (past `minSpeechMs`): commit the barge-in. */
+lib/tutor/voice/vad.ts:120:  let confirmed = false;
+lib/tutor/voice/vad.ts:152:    confirmed = false;
+lib/tutor/voice/vad.ts:168:      confirmed = false;
+lib/tutor/voice/vad.ts:187:          confirmed = false;
+lib/tutor/voice/vad.ts:202:      if (!confirmed && nowMs - speechStartedAt >= minSpeechMs) {
+lib/tutor/voice/vad.ts:204:          confirmed = true;
+lib/tutor/voice/vad.ts:210:        const wasConfirmed = confirmed || lastLoudAt - speechStartedAt >= minSpeechMs;
+lib/tutor/accounts/export.ts:45:  const [sessions, turns, mastery, misconceptions, evidence, consents] = await Promise.all([
+lib/tutor/accounts/export.ts:58:      `SELECT ${MASTERY_COLUMNS} FROM skill_mastery WHERE account_id = $1 AND learner_id = $2 ORDER BY skill_id`,
+lib/tutor/accounts/export.ts:76:    mastery: mastery.rows.map(toSkillMastery),
+lib/pbl/v2/prompts/instructor-base-rules.md:75:4. **Converge → commit → justify.** Help them pick ONE direction to go deep on, framed as a *starting point* (not the single correct answer), then have them justify it. **That justification is the evidence of mastery** for an open task — there is no "it runs" to check, so the reasoned choice is what shows they've got it.
+lib/tutor/accounts/deletion.ts:157: * attention_stats, recovery_events), coursework, consents, skill_mastery,
+components/chat/use-chat-sessions.ts:1538:        source: 'soft_close_confirmed',
+components/chat/use-chat-sessions.ts:1540:      await endSession(sessionId, { source: 'soft_close_confirmed' });
+components/scene-renderers/quiz-view.tsx:47:type Phase = 'not_started' | 'answering' | 'submitting' | 'grading' | 'reviewing';
+components/scene-renderers/quiz-view.tsx:702:  const [phase, setPhase] = useState<Phase>('not_started');
+components/scene-renderers/quiz-view.tsx:854:        setPhase('not_started');
+components/scene-renderers/quiz-view.tsx:907:        {phase === 'not_started' && (
+lib/pbl/v2/operations/runtime/advance-patch.ts:141:        task.status = 'in_progress';
+components/tutor/session/transcript.tsx:64:              data-status={entry.status}
+components/tutor/session/session.css:295:.nt-turn[data-status='interrupted'] .nt-turn-text::after {
+components/tutor/session/session.css:301:.nt-turn[data-status='failed'] .nt-turn-text {
+lib/pbl/v2/operations/runtime/completion-stats.ts:34:   *  Higher = the learner demonstrated mastery without being asked. */
+components/workbench/WorkbenchChat.tsx:232:  // fold moves off it (the runner confirmed, or a terminal `session_end`
+components/tutor/learn/progress.tsx:11:  masteryStatusLabel,
+components/tutor/learn/progress.tsx:22:import type { MasteryStatus } from '@/lib/tutor/contracts';
+components/tutor/learn/progress.tsx:38: * `confirmed` skill is called mastery, everything else is named an estimate,
+components/tutor/learn/progress.tsx:43:const STATUS_TONE: Record<MasteryStatus, 'neutral' | 'brand' | 'success' | 'warning'> = {
+components/tutor/learn/progress.tsx:44:  not_started: 'neutral',
+components/tutor/learn/progress.tsx:45:  in_progress: 'brand',
+components/tutor/learn/progress.tsx:47:  confirmed: 'success',
+components/tutor/learn/progress.tsx:65:  const rows = buildProgressRows(data.skills, data.mastery, data.dueChecks);
+components/tutor/learn/progress.tsx:87:        body="After your first session this shows what you have covered, what the tutor confirmed without helping, and what is due for another look."
+components/tutor/learn/progress.tsx:122:                    row.status === 'confirmed'
+components/tutor/learn/progress.tsx:132:                  <Pill tone={STATUS_TONE[row.status]}>{masteryStatusLabel(row.status)}</Pill>
+components/tutor/learn/progress.tsx:139:            what the checks in session imply, and it is not a claim of mastery.
+components/tutor/learn/progress.tsx:205:        <Pill tone={STATUS_TONE[row.status]}>{masteryStatusLabel(row.status)}</Pill>
+lib/pbl/v2/agents/tier-guidance.ts:46:  'Disclosure ladder across task shapes: the rungs above are written for **closed** tasks (a checkable artefact — code that runs, a right answer, a configured tool). For **open** tasks (analysis / decision / writing / design / planning — several valid answers) the same rungs map differently: L1 = a lens / framework / criteria + where to look · L2 = a partial structure, or an *analogous worked analysis on a DIFFERENT topic* · L3 = a model structure / answer for THIS task. The "literal deliverable" you withhold until the release gate generalizes from "the exact code line(s)" to "the actual argument / decision / draft the task asks them to produce". Evidence of mastery on an open task is a reasoned choice / structure / justification, not runnable output.',
+components/tutor/ui/section.tsx:91: * A 0-to-1 estimate. `status` colors it: a confirmed skill is the only one
+components/tutor/ui/section.tsx:105:    <div className="nt-bar" data-status={status} role="img" aria-label={`${label}: ${pct} percent`}>
+components/workbench/workspace/WorkspaceShell.tsx:539:   * server confirmed the delete, so a failed delete never navigates (the row
+components/workbench/workspace/WorkspaceShell.tsx:776:    // unconfirmed decision even when the owner row has not reached the list.
+components/workbench/workspace/WorkspaceShell.tsx:779:    const mutation = ownerSessionClient.current?.getUnconfirmedSessionTitle(panes.sessionId);
+components/tutor/parent/report-view.tsx:11:  masteryStatusLabel,
+components/tutor/parent/report-view.tsx:16:import type { Learner, MasteryStatus, ParentReport } from '@/lib/tutor/contracts';
+components/tutor/parent/report-view.tsx:30: * Two rules shape every line: the word mastery appears only for a `confirmed`
+components/tutor/parent/report-view.tsx:35:const STATUS_TONE: Record<MasteryStatus, 'neutral' | 'brand' | 'success' | 'warning'> = {
+components/tutor/parent/report-view.tsx:36:  not_started: 'neutral',
+components/tutor/parent/report-view.tsx:37:  in_progress: 'brand',
+components/tutor/parent/report-view.tsx:39:  confirmed: 'success',
+components/tutor/parent/report-view.tsx:79:  const confirmed = report.skills.filter((skill) => skill.status === 'confirmed');
+components/tutor/parent/report-view.tsx:80:  const touched = report.skills.filter((skill) => skill.status !== 'not_started');
+components/tutor/parent/report-view.tsx:110:        description="Where each skill started this week and where it is now. An estimate is what the checks in session imply; it is not a claim of mastery."
+components/tutor/parent/report-view.tsx:153:                        <Pill tone={STATUS_TONE[skill.status]}>
+components/tutor/parent/report-view.tsx:154:                          {masteryStatusLabel(skill.status)}
+components/tutor/parent/report-view.tsx:158:                          status={skill.status}
+components/tutor/parent/report-view.tsx:171:      <Section title="What is confirmed" description={masteryNote}>
+components/tutor/parent/report-view.tsx:172:        {confirmed.length === 0 ? (
+components/tutor/parent/report-view.tsx:174:            Nothing is confirmed yet. Confirmation needs a check with no help at least a day after
+components/tutor/parent/report-view.tsx:179:            {confirmed.map((skill) => (
+components/tutor/marketing/legal/ai-disclosure.tsx:63:        it, and the tutor never grades its own help as mastery.
+components/scene-renderers/pbl/v2/chat.tsx:122:  return ms?.microtasks.find((t) => t.status === 'todo' || t.status === 'in_progress')?.id;
+components/scene-renderers/pbl/v2/chat.tsx:200:   *    the first microtask in_progress, and stamps the handover as
+components/scene-renderers/pbl/v2/chat.tsx:210:   * the next microtask wouldn't be in_progress yet.
+components/tutor/parent/data.tsx:30: * whole account. Deletion is confirmed by typing a phrase, once, with no
+components/tutor/parent/data.tsx:67:        data.mastery.length,
+components/tutor/marketing/landing.tsx:109:        The tutor never grades its own help as mastery.
+components/scene-renderers/pbl/v2/sidebar.tsx:435:      case 'in_progress':
+components/scene-renderers/pbl/v2/sidebar.tsx:448:        task.status === 'in_progress' &&
+lib/pbl/v2/agents/instructor.ts:325:  return status.replace(/_/g, ' ');
+components/tutor/brand/tokens.css:259:.nt-bar[data-status='confirmed'] > span {
+components/tutor/brand/tokens.css:262:.nt-bar[data-status='not_started'] > span {
+components/workbench/chat/tool-card.tsx:154:      data-status={failed ? 'failed' : node.toolState === 'done' ? 'done' : 'running'}
+components/workbench/chat/tool-card.tsx:168:          <span className={styles.toolCard.status} data-status="error">
+components/workbench/chat/tool-card.tsx:172:          <span className={styles.toolCard.status} data-status="ok">
+lib/pbl/v2/agents/simulator.ts:82: *     experiment confirmed this is the ROOT CAUSE of the role-bleed bug:
+lib/pbl/legacy/read.ts:124:              status === 'completed' ? 'completed' : status === 'active' ? 'in_progress' : 'todo',
+components/scene-renderers/pbl/v2/submission.tsx:306:    const task = ms.microtasks.find((t) => t.status === 'todo' || t.status === 'in_progress');
+components/scene-renderers/pbl/v2/workspace.tsx:545:    (task) => task.status === 'todo' || task.status === 'in_progress',
+components/edit/PlaybackChromeRoot.tsx:486:     * only when a confirmed or timed-out soft close ended a Q&A that had
+components/edit/PlaybackChromeRoot.tsx:1103:    /** User confirmed scene switch via AlertDialog */
+components/workbench/workspace/WorkspaceRail.tsx:221:   *  confirmed the delete. Rows are already gone optimistically down here. */
+components/workbench/workspace/WorkspaceRail.tsx:1122:                              // Asked as a question rather than confirmed in the
+components/workbench/chat/composer-send-state.ts:19: * had when send was pressed — the runner confirmed (live), or a terminal
+components/workbench/chat/status-dot.tsx:28:    case 'in_progress':
