@@ -38,10 +38,13 @@ To turn on the AI tutor and lesson writer, put **one** of these in `apps/web/.en
 it) or in the Vercel project's environment:
 
 ```
-ANTHROPIC_API_KEY=…            # Anthropic directly (preferred)
+ANTHROPIC_API_KEY=…            # Anthropic directly (preferred); on Vercel also set KAIZEN_AI=anthropic
 AI_GATEWAY_API_KEY=…           # or Vercel AI Gateway, Anthropic models only
 KAIZEN_AI=gateway              # or, on Vercel, the deployment's own OIDC token through AI Gateway
 ```
+
+See `apps/web/.env.example`. On Vercel an Anthropic key is ignored unless `KAIZEN_AI=anthropic` is set,
+because the project still holds keys from earlier attempts; requests always go to Anthropic's own API.
 
 Settings shows which one is live. `npm run verify` runs lint, type check, 724 unit tests and a
 production build. `npm run e2e` runs six journeys and an accessibility audit at desktop and phone
