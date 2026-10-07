@@ -92,6 +92,18 @@ describe("next-try-right", () => {
     expect(one(drawer, { sets: [practiceSet("s1", [5, 6])], attempts: [help, helped] }).status).toBe("pending");
   });
 
+  it("finds the problem a talk was about from the drawer's help row when the act names only its thread", () => {
+    // Logged as the tutor contract says: thread id and skill, nothing about the problem.
+    const talk = act({ kind: "tutor", intent: "next-try-right", skillId: S, ref: "thread-3" }, 1);
+    const help = ans(undefined, 5, 0.5, { mode: "tutor", correct: false, assisted: true });
+    const helped = ans("s1", 5, 3, { assisted: true });
+    expect(one(talk, { attempts: [help, helped, ans("s1", 6, 4)] })).toMatchObject({ status: "met", resolvedAt: T0 + 4 * MIN });
+    expect(one(talk, { attempts: [help, helped, ans("s1", 6, 4, { correct: false })] }).status).toBe("missed");
+    expect(one(talk, { attempts: [help, helped] }).status).toBe("pending");
+    // A problem the drawer never opened on still decides, helped or not.
+    expect(one(talk, { attempts: [help, ans("s1", 7, 3, { assisted: true })] }).status).toBe("missed");
+  });
+
   it("keeps an outcome already on the act", () => {
     expect(one({ ...hint, outcome: "missed", resolvedAt: T0 }, {})).toMatchObject({ status: "missed", resolvedAt: T0 });
   });

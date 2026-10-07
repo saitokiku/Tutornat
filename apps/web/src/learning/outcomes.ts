@@ -136,8 +136,10 @@ const setClosed = (set: PracticeSet | undefined, answers: Attempt[], now: number
  * last problem on the skill in a set has nothing to show it and is left out (void).
  *
  * A tutor conversation → the learner's next answer on its skill within a day. A talk beside a problem
- * names that problem (setId, and its seed in `detail`); the problem's own answer is helped by the
- * talk, so it is skipped and the next one decides.
+ * is about that problem, and the problem's own answer is helped by the talk, so it is skipped and the
+ * next one decides. The problem is known from the tutor help row the drawer records when it opens on
+ * it (same skill and seed, in the day before the talk or after it), or from the act itself (`setId`,
+ * and the seed in `detail`).
  */
 function nextTryRight(act: TeachingAct, ix: Index, now: number): Judged {
   const set = act.setId ? ix.sets.get(act.setId) : undefined;
@@ -147,9 +149,11 @@ function nextTryRight(act: TeachingAct, ix: Index, now: number): Judged {
   const answers = ix.answersBySkill.get(`${act.profileId}|${skillId}`) ?? [];
 
   if (act.kind === "tutor" || !act.setId) {
-    const seed = act.kind === "tutor" && /^\d+$/.test(act.detail ?? "") ? Number(act.detail) : undefined;
-    const helped = (a: Attempt) => seed !== undefined && a.seed === seed && (!act.setId || a.setId === act.setId);
     const until = act.at + OUTCOME_RULES.tutorMs;
+    const seed = act.kind === "tutor" && /^\d+$/.test(act.detail ?? "") ? Number(act.detail) : undefined;
+    const drawer =
+      act.kind === "tutor" ? (ix.allBySkill.get(`${act.profileId}|${skillId}`) ?? []).filter((a) => a.mode === "tutor" && a.at >= act.at - OUTCOME_RULES.tutorMs && a.at <= until) : [];
+    const helped = (a: Attempt) => (seed !== undefined && a.seed === seed && (!act.setId || a.setId === act.setId)) || drawer.some((d) => d.seed === a.seed && d.at <= a.at);
     const next = answers.find((a) => a.at > act.at && a.at <= until && !helped(a));
     if (next) return judged(next);
     return now > until ? VOID : PENDING;

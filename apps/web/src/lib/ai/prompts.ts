@@ -78,7 +78,7 @@ export function systemPrompt(ctx: TutorContext): string {
 
 // ----- the teaching profile (learning/profile.ts → lib/ai/context.ts TeachingBlock) -----
 
-const RUNG = { 1: "a nudge", 2: "the strategy", 3: "the first step done" } as const;
+const RUNG = { 1: "a small nudge", 2: "the strategy", 3: "the first step done" } as const;
 
 const PICTURES = {
   pictures: "pictures and diagrams (a clock, shapes, the things in the problem)",
@@ -100,15 +100,15 @@ export function teachingPrompt(t: NonNullable<TutorContext["teaching"]>, locale:
     const counts = t.hintSolved ? ` Of ${t.hintSolved[0] + t.hintSolved[1] + t.hintSolved[2]} problems they solved after hints, ${t.hintSolved[0]} took the nudge, ${t.hintSolved[1]} the strategy and ${t.hintSolved[2]} the first step.` : "";
     lines.push(
       r === 1
-        ? `Hints: a small nudge (hint 1 of 3) is usually enough for this learner.${counts} Give one hint at a time with next_hint and let them try after each.`
-        : `Hints: this learner has usually needed ${RUNG[r]} (hint ${r} of 3).${counts} Use next_hint for every hint; when a smaller hint doesn't land after a real try, go straight on to the next one instead of rephrasing it.`,
+        ? `Start hints at rung 1 of 3 (${RUNG[1]}): it is usually enough for this learner.${counts} Give one hint at a time with next_hint and let them try after each.`
+        : `Start hints at rung ${r} of 3 (${RUNG[r]}): next_hint starts there for this learner.${counts} Use next_hint for every hint; when a hint doesn't land after a real try, go on to the next one instead of rephrasing it.`,
     );
   }
   if (t.leadWith === "example")
     lines.push(
-      "Worked example first: for this learner this replaces the usual order of hint, then worked example. When they are stuck after a real try, show a similar problem worked out (similar_problem) before any hint, then let them finish their own, with next_hint if they still need it.",
+      "Lead with a worked example: for this learner this replaces the usual order of hint, then worked example. When they are stuck after a real try, show a similar problem worked out (similar_problem) before any hint, then let them finish their own, with next_hint if they still need it.",
     );
-  if (t.leadWith === "hint") lines.push("Hint first: when they are stuck after a real try, give the next hint (next_hint) before showing a worked example.");
+  if (t.leadWith === "hint") lines.push("Lead with a hint: when they are stuck after a real try, give the next hint (next_hint) before showing a worked example.");
   if (t.representation) lines.push(`Pictures that help this learner most: ${PICTURES[t.representation]}. Choose these first with show_visual.`);
   const mistakes = (t.misconceptions ?? []).map((m) => {
     const title = m.skillId ? getSkill(m.skillId)?.title[locale] : undefined;

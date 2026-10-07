@@ -12,8 +12,8 @@ import { newId, update, type StoreState } from "./store";
  *   slot's index in set.slots as a string ("0", "1", …, the index recordAnswer gets); a hint's `detail`
  *   is the rung just shown, "1" | "2" | "3".
  * - tutor, intent "next-try-right", once: `ref` = the thread id, `skillId` when known. Beside a problem
- *   (the drawer) also `setId` and `detail` = String(item.seed), so the helped problem is skipped and the
- *   next one decides.
+ *   (the drawer), the help row the drawer records names the helped problem, so its answer is skipped
+ *   and the next one decides; `setId` and `detail` = String(item.seed) on the act say the same.
  * - set "skill-moves" · check "check-decides": `setId`, `skillId`. prep "test-goes-well": `ref` = event id.
  * - plan "plan-line-done", once: `ref` = "<date>:<plan item key>". lesson "lesson-checks-pass", once:
  *   `ref` = "<courseId>/<lessonId>", before the first quiz answer. course "course-finished": `ref` = course id.

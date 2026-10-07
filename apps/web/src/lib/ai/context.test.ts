@@ -152,21 +152,22 @@ describe("the prompt reads the teaching block", () => {
 
   it("says where hints start and why, what to lead with, the pictures, the mistakes and the pace", () => {
     const p = systemPrompt(ctx);
-    expect(p).toContain("this learner has usually needed the strategy (hint 2 of 3). Of 7 problems they solved after hints, 1 took the nudge, 5 the strategy and 1 the first step.");
+    expect(p).toContain("Start hints at rung 2 of 3 (the strategy): next_hint starts there for this learner. Of 7 problems they solved after hints, 1 took the nudge, 5 the strategy and 1 the first step.");
     expect(p).toContain("Use next_hint for every hint");
     expect(p).not.toContain("rarely been enough");
     expect(p).toContain("blocks and counters");
     expect(p).toContain(`added denominators (in ${getSkill("m.frac.addunlike")!.title.en})`);
     expect(p).toContain("never hurry them");
     expect(p).toContain('"the learner loves drawing"');
-    expect(teachingPrompt({ hintRung: 1 }, "en")).toContain("a small nudge (hint 1 of 3) is usually enough");
-    expect(teachingPrompt({ leadWith: "hint" }, "en")).toContain("Hint first");
+    expect(teachingPrompt({ hintRung: 1 }, "en")).toContain("Start hints at rung 1 of 3 (a small nudge): it is usually enough");
+    expect(teachingPrompt({ hintRung: 3 }, "en")).toContain("Start hints at rung 3 of 3 (the first step done)");
+    expect(teachingPrompt({ leadWith: "hint" }, "en")).toContain("Lead with a hint");
     expect(teachingPrompt({}, "en")).toBeNull();
   });
 
   it("a worked example first replaces the usual hint-first order, and says so", () => {
     const p = systemPrompt(ctx);
-    expect(p).toContain("Worked example first: for this learner this replaces the usual order of hint, then worked example.");
+    expect(p).toContain("Lead with a worked example: for this learner this replaces the usual order of hint, then worked example.");
     expect(p).toContain("show a similar problem worked out (similar_problem) before any hint");
     expect(p).toContain("follow it instead of that order in the rules above");
   });
@@ -188,7 +189,7 @@ describe("the prompt reads the teaching block", () => {
     const block = teachingFor({ ...family, sets: [set], acts, attempts }, { ...learner, teaching: undefined }, NOW)!;
     expect(block.leadWith).toBe("example");
     const p = systemPrompt({ locale: "en", grade: "4", surface: "practice", item: { skillId: S, level: 1, seed: 999 }, tries: 1, teaching: block });
-    expect(p).toContain("Worked example first");
+    expect(p).toContain("Lead with a worked example");
     expect(p.indexOf("similar_problem) before any hint")).toBeGreaterThan(-1);
   });
 
