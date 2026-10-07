@@ -182,6 +182,9 @@ describe("buildSourceCourse: article found", () => {
     // A sibling, the grown-up and a curly possessive are names too.
     expect(topicOf("teach Ada and Ben about volcanoes for Maria’s class", ["Ada", "Ben", "Maria Lopez", "Maria", "Lopez"])).toBe("Teach and about volcanoes for class");
     expect(topicOf("teach me about volcanoes for Ada's class", ["Ada"])).toBe("Volcanoes for class");
+    // With the name gone, what's left of "Ada wants to learn about" is a lead-in too.
+    expect(topicOf("Ada wants to learn about volcanoes", ["Ada"])).toBe("Volcanoes");
+    expect(topicOf("Ana quiere aprender sobre los volcanes", ["Ana"])).toBe("Los volcanes");
     // Names come out before the topic is cut to length, so no piece of one is left behind.
     const long = `${"volcanoes and earthquakes and mountains ".repeat(2)}for Alexandria`;
     expect(topicOf(long, ["Alexandria"])).not.toMatch(/alex/i);

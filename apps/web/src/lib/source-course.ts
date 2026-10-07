@@ -132,8 +132,9 @@ const LOGISTICS = new Set(
     .map(stem),
 );
 
+/** "I want to learn about", and the same with the name taken out ("Ada wants to learn about" → "wants to learn about"). */
 const LEAD_IN =
-  /^(i (want|would like|need) to (learn|know|understand)( more)?( about)?|teach me( about)?|tell me about|learn about|help me (with|understand)|how (do|does|to)|what (is|are)|quiero (aprender|saber)( m[aá]s)?( sobre| de)?|ens[eé][ñn]ame( sobre)?|qu[eé] (es|son)|c[oó]mo)\s+/i;
+  /^(((i|we|he|she|they) )?(want|wants|would like|need|needs) to (learn|know|understand|study)( more)?( about)?|teach (me|us)( about)?|tell (me|us) about|learn(ing)? about|help (me|us) (with|understand)|how (do|does|to)|what (is|are)|quier(o|e|en) (aprender|saber)( m[aá]s)?( sobre| de| acerca de)?|ens[eé][ñn]a(me|nos)( sobre)?|qu[eé] (es|son)|c[oó]mo)\s+/i;
 
 /** Removes each name (and its possessive) as a whole word; longer names first, so "Ana María" goes before "Ana". */
 function withoutNames(text: string, avoid: string[]) {
