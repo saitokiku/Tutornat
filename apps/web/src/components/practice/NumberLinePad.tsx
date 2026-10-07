@@ -3,7 +3,9 @@
 import { useId, useMemo, useRef, type KeyboardEvent, type MouseEvent } from "react";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 import { useT } from "@/i18n";
-import { DEFAULT_PADS, linePoints, nearestPoint, pointOf, startPoint, type LinePad } from "./pad-math";
+import { Hear } from "@/components/stage/hear";
+import { DEFAULT_PADS, labelsCrowded, linePoints, nearestPoint, pointOf, startPoint, type LinePad } from "./pad-math";
+import { hearSize } from "./targets";
 
 // Answer by placing a point on a number line: tap anywhere on the (tall) line, or use the arrow keys
 // or the two step buttons. The response is the point's value ("-2", "3/4"), read by the checker.
@@ -34,8 +36,8 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
   const majors = points.flatMap((p, i) => (p.major ? [i] : []));
   // PageUp/PageDown jump from one labelled point to the next.
   const jump = majors.length > 1 ? majors[1] - majors[0] : Math.max(1, Math.round(count / 10));
-  // With many labels, a phone shows every other one so the numbers never collide, always keeping 0.
-  const crowded = majors.length > 6;
+  // When the labels would collide on a phone, it shows every other one, always keeping 0.
+  const crowded = labelsCrowded(points);
   const anchor = Math.max(0, majors.indexOf(start));
 
   const place = (i: number) => {
@@ -79,6 +81,12 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
           ? t("pr.line.describeParts", { min: points[0].label, max: points[count - 1].label, n: pad.denominator })
           : t("pr.line.describe", { min: points[0].label, max: points[count - 1].label })}
       </p>
+      {!placed && !disabled && (
+        <div className="flex items-center justify-center gap-2">
+          <p className={`text-center text-muted ${young ? "text-t3" : "text-sm"}`}>{t("pr.line.tap")}</p>
+          <Hear text={t("pr.line.tap")} className={hearSize(young)} />
+        </div>
+      )}
       <div
         ref={track}
         role="slider"
@@ -144,7 +152,7 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
           <IconChevronLeft size={20} />
         </button>
         <p aria-live="polite" className={`min-w-0 flex-1 text-center text-ink ${young ? "text-t3" : "text-sm"}`}>
-          {placed ? t("pr.line.at", { value: label }) : t("pr.line.tap")}
+          {placed ? t("pr.line.at", { value: label }) : t("pr.line.none")}
         </p>
         <button type="button" onClick={() => place(placed ? index + 1 : start)} disabled={disabled || (placed && index === count - 1)} aria-label={t("pr.line.right")} className={stepBtn}>
           <IconChevronRight size={20} />

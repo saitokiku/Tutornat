@@ -25,6 +25,17 @@ export function nextOffer(s: StoreState, learner: Profile, set: PracticeSet, now
   return next && next !== set.skillId ? { kind: "skill", skillId: next } : null;
 }
 
+/**
+ * Whether this set was the last thing on today's plan: every other line is done. A line that cannot
+ * be offered here (homework due, done away from the screen) still counts as not done, so the finish
+ * never says the plan is over while Today still lists something.
+ */
+export function planFinished(s: StoreState, learner: Profile, set: PracticeSet, now: number): boolean {
+  if (!set.planKey) return false;
+  const plan = todayPlan(s, learner, now);
+  return [...plan.lead, ...plan.more].every((i) => i.done || `${plan.date}:${i.key}` === set.planKey);
+}
+
 /** What the offer is called, in the learner's words (the same names Today uses). */
 export function offerTitle(offer: Offer, locale: Locale): string {
   const skill = (id?: string) => (id ? (getSkill(id)?.title[locale] ?? "") : "");

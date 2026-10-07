@@ -6,10 +6,13 @@ import { Hear } from "@/components/stage/hear";
 import { crossPath, dotsPerRow } from "@/components/stage/visuals-practice";
 import { useT } from "@/i18n";
 import type { Visual } from "@/lib/types";
+import { hearSize } from "./targets";
 
 // Tap-to-mark counting: the dots, ten-frame or array picture drawn large enough to touch, with a
 // button over every counter. Marking is a counting aid, not help: it never marks an answer as helped.
 // Keyboard: arrows move between counters, Space or Enter marks. Marks belong to one problem.
+// Counter squares are 56 px for K–2 (46 px otherwise) and only shrink, never below 44 px, when the
+// room is narrower than one row of a group needs.
 
 export type MarkableVisual = Extract<Visual, { kind: "dots" | "ten-frame" | "array" }>;
 export const isMarkable = (v?: Visual): v is MarkableVisual => v?.kind === "dots" || v?.kind === "ten-frame" || v?.kind === "array";
@@ -31,11 +34,16 @@ export type Counter = {
 export type CounterLayout = { width: number; height: number; cell: number; counters: Counter[] };
 
 const PAD = 2;
+/** The smallest touch target anywhere in the product. */
+export const MIN_TARGET = 44;
+/** Counter squares: 56 px for K–2 learners, 46 px for everyone else. */
+export const counterCell = (young?: boolean) => (young ? 56 : 46);
 
 /**
  * Lays the picture out on a grid of `cell`-px squares. Groups (or ten-frames) sit side by side and
- * wrap onto the next line when the width runs out, so each counter keeps a full-size touch target.
- * Only an array, which must keep its shape, shrinks its squares to fit (never below 28 px).
+ * wrap onto the next line when the width runs out, so each counter keeps a full-size touch target;
+ * when even one group's row is wider than the room, its squares shrink to fit, never below 44 px.
+ * Only an array, which must keep its shape, shrinks further (never below 28 px).
  */
 export function layoutCounters(v: MarkableVisual, maxWidth: number, cell: number): CounterLayout {
   type Spec = { count: number; perRow: number; kind: Counter["kind"]; filled: (i: number) => boolean; crossed: (i: number) => boolean };
@@ -55,6 +63,10 @@ export function layoutCounters(v: MarkableVisual, maxWidth: number, cell: number
   } else {
     size = Math.max(28, Math.min(cell, Math.floor((maxWidth - PAD * 2) / v.cols)));
     specs = [{ count: v.rows * v.cols, perRow: v.cols, kind: "dot", filled: () => true, crossed: () => false }];
+  }
+  if (v.kind !== "array") {
+    const widest = Math.max(...specs.map((sp) => Math.max(1, Math.min(sp.count, sp.perRow))));
+    size = Math.max(MIN_TARGET, Math.min(cell, Math.floor((maxWidth - PAD * 2) / widest)));
   }
   const gap = v.kind === "ten-frame" ? 16 : Math.round(size * 0.6);
   const room = Math.max(maxWidth - PAD * 2, 1);
@@ -99,8 +111,9 @@ type Props = { visual: MarkableVisual; alt: string; tint?: string; young?: boole
 export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }: Props) {
   const t = useT();
   const box = useRef<HTMLDivElement>(null);
-  // Laid out for a phone first; the observer reports the real width before the first paint.
-  const [room, setRoom] = useState(288);
+  // Laid out for a 320 px phone first (the room the problem card gives it there); the observer
+  // reports the real width before the first paint.
+  const [room, setRoom] = useState(286);
   useEffect(() => {
     const el = box.current;
     if (!el || typeof ResizeObserver === "undefined") return;
@@ -108,7 +121,7 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const layout = useMemo(() => layoutCounters(visual, room, young ? 52 : 46), [visual, room, young]);
+  const layout = useMemo(() => layoutCounters(visual, room, counterCell(young)), [visual, room, young]);
   const { cell, counters } = layout;
   const targets = useMemo(() => counters.flatMap((c, i) => (c.crossed ? [] : [i])), [counters]);
   const [marked, setMarked] = useState<ReadonlySet<number>>(() => new Set());
@@ -127,6 +140,9 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
     refs.current[k]?.focus();
   };
   const onKey = (e: KeyboardEvent, k: number) => {
+    // Space and Enter mark this counter and nothing else: keep them from the answer pad's keyboard
+    // handler on the window, which reads Enter as "check my answer".
+    if (e.key === " " || e.key === "Enter") e.stopPropagation();
     const c = counters[targets[k]];
     const vertical = (dir: 1 | -1) => targets.findIndex((i) => counters[i].group === c.group && counters[i].col === c.col && counters[i].row === c.row + dir);
     const moves: Record<string, () => number> = {
@@ -190,10 +206,11 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
                 style={{ left: c.x, top: c.y, width: cell, height: cell }}
               >
                 {on && (
-                  // A pencil-like mark: an ink ring around the counter and a tick on it; the counter stays visible.
+                  // A pencil-like mark in the rose of selection: a ring around the counter and a tick on it
+                  // (white on a counter, rose in an empty box); the counter stays visible.
                   <span
                     aria-hidden="true"
-                    className={`grid place-items-center rounded-full border-[3px] border-ink ${c.filled ? "text-paper" : "text-ink"}`}
+                    className={`grid place-items-center rounded-full border-[3px] border-accent ${c.filled ? "text-paper" : "text-accent"}`}
                     style={{ width: r * 2 + 10, height: r * 2 + 10 }}
                   >
                     <IconCheck size={Math.round(r * 1.1)} strokeWidth={3} />
@@ -204,11 +221,11 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
           })}
         </div>
       </div>
-      <div className="mt-3 flex min-h-11 flex-wrap items-center justify-center gap-x-3 gap-y-1">
+      <div className={`mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 ${young ? "min-h-14" : "min-h-11"}`}>
         <p aria-live="polite" className={`text-ink ${young ? "text-t3" : "text-sm"}`}>
           {count ? t("pr.mark.count", { n: count }) : t("pr.mark.how")}
         </p>
-        {!count && <Hear text={t("pr.mark.how")} />}
+        {!count && <Hear text={t("pr.mark.how")} className={hearSize(young)} />}
         {count > 0 && (
           <button
             type="button"
@@ -216,7 +233,7 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
               setMarked(new Set());
               refs.current[focus]?.focus();
             }}
-            className="k-btn-ghost"
+            className={`k-btn-ghost ${young ? "min-h-14 text-base" : ""}`}
           >
             {t("pr.mark.clear")}
           </button>

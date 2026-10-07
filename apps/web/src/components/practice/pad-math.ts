@@ -1,4 +1,4 @@
-import type { Pad } from "@/practice/types";
+import type { Input, Pad } from "@/practice/types";
 
 // The arithmetic behind the touch pads, kept pure so the pads, the Runner and the tests agree on
 // exactly which positions exist and how each one is written as a response for the checker.
@@ -54,9 +54,27 @@ export function linePoints(pad: LinePad): LinePoint[] {
   });
 }
 
-/** Label every k-th point so a phone shows at most about 11 numbers. */
+/**
+ * Label every k-th point so the line shows at most about 11 numbers: every point when that fits,
+ * otherwise round fives and tens (0, 5, 10, 15, 20), the way a classroom number line is labelled.
+ */
 function labelEvery(count: number) {
-  return [1, 2, 5, 10, 20, 25, 50, 100].find((k) => Math.ceil(count / k) <= 11) ?? 200;
+  return [1, 5, 10, 20, 25, 50, 100].find((k) => Math.ceil(count / k) <= 11) ?? 200;
+}
+
+/** Width of the line on a 320 px phone: the 288 px column minus the line's end insets. */
+export const PHONE_LINE_PX = 262;
+
+/**
+ * Whether the labelled points would collide on a 320 px phone (mono labels, about 7.5 px a
+ * character, with a little air between). When they would, the phone shows every other label.
+ */
+export function labelsCrowded(points: LinePoint[], width = PHONE_LINE_PX) {
+  const majors = points.flatMap((p, i) => (p.major ? [i] : []));
+  if (majors.length < 2) return false;
+  const gap = (width * (majors[1] - majors[0])) / (points.length - 1);
+  const widest = Math.max(...majors.map((i) => points[i].label.length));
+  return gap < widest * 7.5 + 8;
 }
 
 /** The point closest to a tap at `fraction` (0 = left end of the line, 1 = right end). */
@@ -76,14 +94,27 @@ export const pointOf = (points: LinePoint[], response: string) => points.findInd
 /** "3:05": hour without a leading zero, two-digit minutes — the checker's clock convention. */
 export const clockText = (h: number, m: number) => `${h}:${String(m).padStart(2, "0")}`;
 
+/** Where a clock pad's hands start: 12:00, a time the learner can also answer without moving them. */
+export const CLOCK_START = clockText(12, 0);
+
+/**
+ * What Check sends for a pad's current value. A clock always shows a time, so an untouched clock
+ * answers with the time it shows; every other pad has nothing to send until the learner acts.
+ */
+export const responseOf = (input: Input, value: string) => value || (input === "clock" ? CLOCK_START : "");
+
 const turn = (deg: number) => ((deg % 360) + 360) % 360;
 
 /** Degrees clockwise from 12 o'clock for a point (x, y) around the center (cx, cy). */
 export const angleAt = (x: number, y: number, cx: number, cy: number) => turn((Math.atan2(x - cx, cy - y) * 180) / Math.PI);
 
-/** The hour (1–12) a tap at this angle points to. */
-export function hourAt(deg: number) {
-  const h = Math.round(turn(deg) / 30) % 12;
+/**
+ * The hour (1–12) whose short hand, at `minutes` past, sits nearest a tap at this angle. The short
+ * hand creeps toward the next hour as the minutes pass (half way at :30), so at 3:30 a tap half way
+ * between 3 and 4 is 3, not 4.
+ */
+export function hourAt(deg: number, minutes = 0) {
+  const h = ((Math.round(turn(deg) / 30 - minutes / 60) % 12) + 12) % 12;
   return h === 0 ? 12 : h;
 }
 
