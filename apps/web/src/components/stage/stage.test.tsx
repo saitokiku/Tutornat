@@ -77,3 +77,22 @@ describe("science widgets", () => {
     expect(onCheck).toHaveBeenLastCalledWith(true);
   });
 });
+
+describe("tap to hear", () => {
+  it("shows a speaker for the question and every choice for young learners only", async () => {
+    const { HearContext } = await import("./hear");
+    const scene = {
+      id: "s1", kind: "quiz" as const, title: "Check",
+      questions: [{ id: "q1", prompt: "What happened first?", choices: ["Seed", "Water", "Plant"], answer: 0, hint: "h", explain: "e" }],
+    };
+    const { unmount } = render(
+      <HearContext.Provider value={{ hear: true, young: true, locale: "en" }}>
+        <QuizView scene={scene} onAnswer={() => {}} onSpeakText={() => {}} />
+      </HearContext.Provider>,
+    );
+    expect(screen.getAllByRole("button", { name: /^Read aloud:/ })).toHaveLength(4);
+    unmount();
+    render(<QuizView scene={scene} onAnswer={() => {}} onSpeakText={() => {}} />);
+    expect(screen.queryAllByRole("button", { name: /^Read aloud:/ })).toHaveLength(0);
+  });
+});

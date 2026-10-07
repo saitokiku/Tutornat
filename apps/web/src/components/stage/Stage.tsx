@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { IconArrowLeft, IconArrowRight, IconBoard, IconCheck, IconChat, IconLayers, IconSpeaker, IconStop } from "@/components/icons";
+import { IconArrowLeft, IconArrowRight, IconBoard, IconCheck, IconCheckCircle, IconChat, IconEye, IconHand, IconHome, IconLayers, IconSpeaker, IconStop } from "@/components/icons";
 import { Button, EmptyState, Notice, SubjectDot, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { lessonState, record } from "@/lib/activity";
 import { read } from "@/lib/store";
-import type { Course, Lesson, Profile } from "@/lib/types";
+import type { Course, Lesson, Profile, Scene } from "@/lib/types";
 import { InteractiveView, ProjectView, QuizView, SlideView, sceneSpeech, type OnAnswer } from "./scenes";
+import { HearContext } from "./hear";
 import { TutorPanel } from "./TutorPanel";
 import { useSpeech } from "./useSpeech";
 
 const MAX_SECONDS = 2 * 60 * 60;
+const KIND_ICON: Record<Scene["kind"], typeof IconEye> = { slide: IconEye, interactive: IconHand, quiz: IconCheckCircle, project: IconHome };
+const isYoung = (p: Profile) => p.grade === "K" || p.grade === "1" || p.grade === "2";
 
 export function Stage({ course, lesson, learner }: { course: Course; lesson: Lesson; learner: Profile }) {
   const t = useT();
@@ -83,8 +86,8 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
           <Button size="sm" variant="ghost" aria-pressed={false} onClick={() => setBoardNote(!boardNote)} aria-label={t("stage.whiteboard")}>
             <IconBoard size={16} />
           </Button>
-          <Button size="sm" variant="ghost" className="xl:hidden" aria-expanded={showTutor} onClick={() => setShowTutor(!showTutor)} aria-label={showTutor ? t("tutor.hide") : t("tutor.show")}>
-            <IconChat size={16} />
+          <Button size="sm" variant={showTutor ? "secondary" : "ghost"} aria-expanded={showTutor} onClick={() => setShowTutor(!showTutor)} aria-label={showTutor ? t("tutor.hide") : t("tutor.show")}>
+            <IconChat size={16} /> <span className="hidden sm:inline">{t("tutor.title")}</span>
           </Button>
         </div>
       )}
@@ -118,11 +121,13 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     );
 
   const last = index === lesson.scenes.length - 1;
+  const young = isYoung(learner);
 
   return (
+    <HearContext.Provider value={{ hear: young, young, locale: course.locale }}>
     <div className="min-h-dvh bg-paper">
       {header}
-      <div className="mx-auto grid max-w-[90rem] gap-4 px-3 py-4 sm:px-6 lg:grid-cols-[14rem_1fr] xl:grid-cols-[14rem_1fr_19rem]">
+      <div className={`mx-auto grid max-w-[90rem] gap-4 px-3 py-4 sm:px-6 lg:grid-cols-[14rem_1fr] ${showTutor ? "xl:grid-cols-[14rem_1fr_19rem]" : ""}`}>
         <nav aria-label={t("stage.scenes")} className="lg:sticky lg:top-4 lg:self-start">
           <button
             type="button"
@@ -150,7 +155,11 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                     }`}
                   >
                     <span aria-hidden="true" className={`absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full ${on ? "bg-accent" : "bg-transparent"}`} />
-                    <span className="w-11 shrink-0 font-opmono text-[10px] uppercase tracking-wider">{t(`stage.kind.${s.kind}` as const)}</span>
+                    {(() => {
+                      const Icon = KIND_ICON[s.kind];
+                      return <Icon size={16} className={`shrink-0 ${on ? "text-accent" : "text-muted"}`} />;
+                    })()}
+                    <span className="sr-only">{t(`stage.kind.${s.kind}` as const)}:</span>
                     <span className="min-w-0 flex-1 truncate" lang={course.locale}>
                       {s.title}
                     </span>
@@ -173,7 +182,9 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                   {t("stage.finished")}
                 </h2>
                 <p className="mt-2 text-sm text-muted">{t("stage.finishedBody")}</p>
-                <p className="mt-5 font-opmono text-sm tabular-nums text-ink">{t("stage.checksSummary", tally)}</p>
+                <p className="mt-5 font-opmono text-sm tabular-nums text-ink">
+                  {tally.own + tally.help + tally.missed ? t("stage.checksSummary", tally) : t("stage.noChecks")}
+                </p>
                 <p className="mt-1 font-opmono text-xs tabular-nums text-muted">{t("stage.minutesSpent", { n: Math.max(1, Math.round(finished / 60)) })}</p>
                 <div className="mt-8 flex flex-wrap justify-center gap-3">
                   <Link href={`/courses/${course.id}`} className={btn("secondary")}>
@@ -221,10 +232,13 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
           </section>
         </main>
 
-        <div className={`xl:block ${showTutor ? "block lg:col-start-2" : "hidden"} xl:sticky xl:top-4 xl:col-start-auto xl:self-start`}>
-          <TutorPanel />
-        </div>
+        {showTutor && (
+          <div className="lg:col-start-2 xl:sticky xl:top-4 xl:col-start-auto xl:self-start">
+            <TutorPanel />
+          </div>
+        )}
       </div>
     </div>
+    </HearContext.Provider>
   );
 }

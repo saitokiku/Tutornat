@@ -169,3 +169,20 @@ export const IconBoard = (p: P) => (
     <path d="M8 20.5l4-4 4 4" />
   </I>
 );
+export const IconEye = (p: P) => (
+  <I {...p}>
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </I>
+);
+export const IconHand = (p: P) => (
+  <I {...p}>
+    <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5V4a1.5 1.5 0 0 1 3 0v6m0-1a1.5 1.5 0 0 1 3 0v4.5a6.5 6.5 0 0 1-6.5 6.5h-.6a6 6 0 0 1-4.6-2.2L4.2 14a1.5 1.5 0 0 1 2.3-1.9L9 14.5" />
+  </I>
+);
+export const IconCheckCircle = (p: P) => (
+  <I {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M8 12.3l2.7 2.7L16 9.7" />
+  </I>
+);
