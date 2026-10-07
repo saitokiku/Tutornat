@@ -5,18 +5,22 @@ import { collectErrors, family, noOverflow } from "./helpers";
 
 // AI infrastructure journeys: what the browser tells the AI routes (opaque ids, never a name), what
 // a learner over the daily spend cap sees, and that nothing without a provider ever reaches a model.
-// The caps themselves are enforced on the server and tested in src/lib/server/budget.test.ts; here
-// the tutor's capped reply is served exactly as lib/server/budget.ts streams it.
+// The caps themselves are enforced on the server and driven end to end, through the real tutor route,
+// by the eval (`npm run evals`, cases c01 and c02) and src/lib/server/budget.test.ts. Here the
+// tutor's capped reply is served exactly as lib/server/budget.ts streams it for a skill on screen.
 
-/** The tutor's reply over a cap, in the same stream format and with the same metadata as the server's. */
-async function cappedReply(text: string) {
+/** The tutor's reply over a cap: the line in its own voice, metadata.budget, and the practice card. */
+async function cappedReply(text: string, skillId: string) {
   const res = createUIMessageStreamResponse({
+    headers: { "x-kaizen-budget": "day" },
     stream: createUIMessageStream({
       execute: ({ writer }) => {
         writer.write({ type: "start", messageMetadata: { budget: "day" } });
         writer.write({ type: "text-start", id: "budget" });
         writer.write({ type: "text-delta", id: "budget", delta: text });
         writer.write({ type: "text-end", id: "budget" });
+        writer.write({ type: "tool-input-available", toolCallId: "budget-1", toolName: "start_practice", input: { skillId, reason: "" } });
+        writer.write({ type: "tool-output-available", toolCallId: "budget-1", output: { offered: true } });
         writer.write({ type: "finish" });
       },
     }),
@@ -33,9 +37,8 @@ test("the browser asks about AI with opaque ids and the local date, never the le
   });
   await family(page, "aistatus", [["Ada", "4"]]);
   await page.getByRole("button", { name: /Ada/ }).click();
-  await page.getByRole("link", { name: "Get help now" }).click();
-  await expect(page).toHaveURL(/\/talk$/);
-  await expect(page.getByText("I'm a computer tutor, not a person.", { exact: false })).toBeVisible();
+  await page.goto("/talk");
+  await expect(page.getByText(en["tutor.disclosure"], { exact: false })).toBeVisible();
   expect(asked.length).toBeGreaterThan(0);
   const h = asked.at(-1)!;
   expect(h["x-kaizen-learner"]).toMatch(/^[a-f0-9]{32}$/);
@@ -48,28 +51,28 @@ test("the browser asks about AI with opaque ids and the local date, never the le
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
-test("over the daily cap the tutor says so kindly, in its own voice, and practice still works", async ({ page }) => {
+test("over the daily cap the tutor says so kindly, in its own voice, and practice is one tap away", async ({ page }) => {
   const errors = collectErrors(page);
   await page.route("**/api/ai/status", (route) => route.fulfill({ json: { mode: "anthropic", budget: null } }));
-  const reply = await cappedReply(en["ai.budget.tutor.day"]);
+  const reply = await cappedReply(en["ai.budget.tutor.day"], "m.add.10");
   await page.route("**/api/tutor", (route) => route.fulfill(reply));
-  await family(page, "aicap", [["Ada", "4"]]);
+  await family(page, "aicap", [["Ada", "1"]]);
   await page.getByRole("button", { name: /Ada/ }).click();
-  await page.getByRole("link", { name: "Get help now" }).click();
-  await expect(page).toHaveURL(/\/talk$/);
-  await page.getByRole("textbox").fill("how do I add fractions?");
+  await page.goto("/talk");
+  await page.getByRole("textbox").fill("how do I add?");
   await page.keyboard.press("Enter");
-  const capped = page.getByText(en["ai.budget.tutor.day"]);
-  await expect(capped).toBeVisible();
-  // It is a tutor message, not an error and not a safety referral.
+  const log = page.getByRole("log");
+  await expect(log.getByText(en["ai.budget.tutor.day"])).toBeVisible();
+  // A tutor message, not an error and not a safety referral.
   await expect(page.getByText(en["tutor.error"])).toHaveCount(0);
   await expect(page.getByText("988", { exact: false })).toHaveCount(0);
+  await expect(log.getByText(en["tutor.practiceCard"])).toBeVisible();
   await noOverflow(page);
-
-  await page.goto("/practice");
-  await page.getByRole("button", { name: /^Start/ }).first().click();
+  // The practice card works by keyboard as well as by tap.
+  const start = log.getByRole("button", { name: en["practice.start"] });
+  await start.focus();
+  await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/practice\/.+/);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   expect(errors, errors.join("\n")).toEqual([]);
 });
 

@@ -16,6 +16,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["evals/**/*.{test,eval}.ts"],
+    setupFiles: ["evals/setup.ts"],
     // Conversations run one after another so latency is measured, not contended.
     fileParallelism: false,
     testTimeout: real ? 30 * 60_000 : 120_000,

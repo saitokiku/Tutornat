@@ -156,7 +156,7 @@ describe.skipIf(!runs("writer"))("course writer sample", () => {
     const used = kindsUsed(passedLessons);
     const notUsed = (all: string[], seen: string[]) => all.filter((k) => !seen.includes(k));
     const summary = {
-      mode: real ? `real model (${real.modelId})` : "mock writer (priced as claude-opus-5-5)",
+      mode: real ? `real model (${real.modelId})` : "mock writer",
       courses: rows.length,
       firstTryPassRate: firstTry,
       passRate: passed,
@@ -179,7 +179,7 @@ describe.skipIf(!runs("writer"))("course writer sample", () => {
       `- Lessons passing after the one retry: ${pct(passed)}; skipped and named to the family: ${summary.skipped}`,
       `- Outputs the schema refused: ${summary.schemaFailures}`,
       `- Courses served from the cache on the second request: ${summary.cachedAfterwards} / ${rows.length}, slowest ${summary.slowestCacheHitMs.toFixed(2)} ms, no model calls`,
-      `- Model calls: ${calls}; estimated cost ${usd(cost)}`,
+      real ? `- Model calls: ${calls}; estimated cost ${usd(cost)} from the provider's token counts at list price` : `- Model calls: ${calls}; mock token counts, not a cost estimate (${usd(cost)} if billed as claude-opus-5-5)`,
       `- Picture kinds in passing lessons: ${used.visuals.length} / ${VISUALS.length}${notUsed(VISUALS, used.visuals).length ? ` (never passed: ${notUsed(VISUALS, used.visuals).join(", ")})` : ""}; interactive kinds: ${used.widgets.length} / ${WIDGETS.length}${notUsed(WIDGETS, used.widgets).length ? ` (never passed: ${notUsed(WIDGETS, used.widgets).join(", ")})` : ""}`,
       "",
       "## Why first drafts were rejected",

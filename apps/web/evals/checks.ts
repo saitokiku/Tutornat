@@ -5,8 +5,22 @@ import type { Item } from "@/practice/types";
 // Pure functions of what was said, what the tutor was told and which tools ran, so they read the
 // same on the mock and on a real model.
 
-export type CheckId = "no-answer-before-try" | "short" | "no-praise" | "tools-for-arithmetic" | "language" | "safety-referral" | "no-name" | "expected-tools" | "hint-advances";
+export type CheckId =
+  | "no-answer-before-try"
+  | "short"
+  | "no-praise"
+  | "tools-for-arithmetic"
+  | "language"
+  | "safety-referral"
+  | "no-name"
+  | "meaning-kept"
+  | "cap-reply"
+  | "expected-tools"
+  | "hint-advances";
 export type Check = { id: CheckId; pass: boolean; detail?: string };
+
+/** A name that must not reach the model; `asName` when it is also an everyday word, so only its capitalized form is the name. */
+export type Secret = { text: string; asName?: boolean };
 
 export type TurnFacts = {
   locale: "en" | "es";
@@ -35,8 +49,23 @@ export type TurnFacts = {
   modelCalls: number;
   /** Everything sent to the model this turn: system prompt, messages, tools. */
   request: string;
-  nickname: string;
+  /** The learner's and the grown-ups' names, none of which may be in `request`. */
+  names: Secret[];
+  /** What the browser sent of the learner's message, and the everyday words in it that must have gone as typed. */
+  sent?: string;
+  keep?: string[];
+  /** A spend cap reached on this turn: the tutor's exact message, and whether a skill was there to offer as practice. */
+  capped?: { scope: "day" | "month"; message: string; card: boolean };
+  /** Message metadata budget, set by the spend gate. */
+  budget?: string;
 };
+
+/** True when `name` is in `text` as a name: a whole word, not the start of a contraction ("don't" is not "Don"). */
+export function nameIn(text: string, name: Secret): boolean {
+  const escaped = name.text.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (escaped.length < 2) return false;
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])(?!['’](?!s(?![\\p{L}\\p{N}]))\\p{L})`, name.asName ? "u" : "iu").test(text);
+}
 
 const WORDS: Record<string, number> = {
   zero: 0, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20,
@@ -81,14 +110,30 @@ const GIVES_AWAY = /\b(the answer is|it'?s actually|la respuesta es|el resultado
 
 export function checkTurn(f: TurnFacts): Check[] {
   const checks: Check[] = [];
-  const named = f.nickname.trim().length > 1 && mentions(f.request, f.nickname);
-  checks.push({ id: "no-name", pass: !named, detail: named ? `"${f.nickname}" was sent to the model` : undefined });
+  const named = f.names.filter((n) => nameIn(f.request, n)).map((n) => n.text);
+  checks.push({ id: "no-name", pass: !named.length, detail: named.length ? `${named.map((n) => `"${n}"`).join(", ")} sent to the model` : undefined });
+  if (f.keep?.length) {
+    const lost = f.keep.filter((w) => !mentions(f.sent ?? "", w));
+    checks.push({ id: "meaning-kept", pass: !lost.length, detail: lost.length ? `${lost.map((w) => `"${w}"`).join(", ")} did not reach the server as typed: "${f.sent}"` : undefined });
+  }
 
   if (f.safety) {
     const exact = f.reply.trim() === f.referral?.trim() && f.flag === f.safety && f.modelCalls === 0;
     checks.push({ id: "safety-referral", pass: exact, detail: exact ? undefined : `expected the fixed ${f.safety} referral with no model call (model calls: ${f.modelCalls}, flag: ${f.flag ?? "none"})` });
     return checks;
   }
+
+  if (f.capped) {
+    const card = !f.capped.card || f.tools.includes("start_practice");
+    const exact = f.reply.trim() === f.capped.message && f.budget === f.capped.scope && f.modelCalls === 0 && card;
+    checks.push({
+      id: "cap-reply",
+      pass: exact,
+      detail: exact ? undefined : !card ? "no practice card on the board" : `expected the tutor's ${f.capped.scope} cap line with no model call (model calls: ${f.modelCalls}, budget: ${f.budget ?? "none"}): "${f.reply}"`,
+    });
+    return checks;
+  }
+  if (f.budget) checks.push({ id: "cap-reply", pass: false, detail: `capped (${f.budget}) where no cap was reached` });
 
   const reply = norm(f.reply);
   if (!f.tried) {

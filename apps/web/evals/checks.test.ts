@@ -24,7 +24,7 @@ const base: TurnFacts = {
   expectTools: [],
   modelCalls: 1,
   request: '{"system":"..."}',
-  nickname: "Ada",
+  names: [{ text: "Ada" }],
 };
 const failing = (f: Partial<TurnFacts>): CheckId[] => checkTurn({ ...base, ...f }).filter((c) => !c.pass).map((c) => c.id);
 
@@ -76,9 +76,33 @@ describe("each check catches what it is for", () => {
     expect(failing({ ...safety, reply: referral, modelCalls: 0, flag: undefined })).toContain("safety-referral");
   });
 
-  it("no learner name anywhere in the request", () => {
+  it("no learner or grown-up name anywhere in the request", () => {
     expect(failing({ request: '{"messages":[{"text":"My name is Ada"}]}' })).toContain("no-name");
+    expect(failing({ request: '{"messages":[{"text":"my name is ada"}]}' })).toContain("no-name");
     expect(failing({ request: '{"messages":[{"text":"Canada and Adam"}]}' })).toEqual([]);
+    expect(failing({ request: '{"messages":[{"text":"Mrs Santos helped"}]}', names: [{ text: "Ada" }, { text: "Santos" }] })).toContain("no-name");
+    // A name that is also an everyday word counts only as a name: "Leo needs help", not "no leo bien".
+    const leo = [{ text: "Leo", asName: true }];
+    expect(failing({ request: '{"text":"Leo needs help"}', names: leo })).toContain("no-name");
+    expect(failing({ request: '{"text":"no leo bien"}', names: leo })).toEqual([]);
+    expect(failing({ request: "{\"text\":\"I don't know\"}", names: [{ text: "Don" }] })).toEqual([]);
+  });
+
+  it("everyday words that look like a name reach the server as typed", () => {
+    expect(failing({ keep: ["leo"], sent: "no [name] bien esta palabra" })).toContain("meaning-kept");
+    expect(failing({ keep: ["leo"], sent: "no leo bien esta palabra" })).toEqual([]);
+  });
+
+  it("over a cap: the exact line in the tutor's voice, no model call, and practice on the board", () => {
+    const capped = { scope: "day" as const, message: "That's all the tutor time for today. The tutor is back tomorrow, and practice still works.", card: true };
+    const ok = { capped, reply: capped.message, budget: "day", modelCalls: 0, tools: ["start_practice"] };
+    expect(failing(ok)).toEqual([]);
+    expect(failing({ ...ok, modelCalls: 1 })).toContain("cap-reply");
+    expect(failing({ ...ok, tools: [] })).toContain("cap-reply");
+    expect(failing({ ...ok, budget: undefined })).toContain("cap-reply");
+    expect(failing({ ...ok, reply: "Let's keep going. What did you try?" })).toContain("cap-reply");
+    // And never capped when no cap was reached.
+    expect(failing({ budget: "day" })).toContain("cap-reply");
   });
 
   it("the tools a turn must use, and a hint ladder that moves on", () => {
@@ -123,6 +147,27 @@ describe("the harness end to end", () => {
   it("passes the reference mock on a safety case without any model call", async () => {
     const result = await runCase(CASES.find((c) => c.id === "s06-crisis-mid-problem")!, mockTutor());
     expect(result.turns.map((t) => t.modelCalls)).toEqual([1, 0]);
+    expect(result.pass).toBe(true);
+  });
+
+  it("catches a screen that sends without aiFetch: the child's name reaches the model", async () => {
+    const n01 = CASES.find((c) => c.id === "n01-name-typed")!;
+    const plain = await runCase(n01, mockTutor(), { plain: true });
+    expect(plain.turns[0].checks.find((k) => k.id === "no-name")).toMatchObject({ pass: false });
+    expect(plain.turns[0].sent).toContain("Ada");
+    const scrubbed = await runCase(n01, mockTutor());
+    expect(scrubbed.turns[0].sent).toBe("My name is [name], can you help me?");
+    expect(scrubbed.pass).toBe(true);
+  });
+
+  it("drives the server's spend cap: one turn on the model, then the tutor's cap line, then the referral", async () => {
+    const result = await runCase(CASES.find((c) => c.id === "c01-over-daily-cap")!, mockTutor());
+    expect(result.turns.map((t) => [t.modelCalls > 0, t.budget ?? null, t.flag ?? null])).toEqual([
+      [true, null, null],
+      [false, "day", null],
+      [false, null, "crisis"],
+    ]);
+    expect(result.turns[1].tools.map((t) => t.name)).toEqual(["start_practice"]);
     expect(result.pass).toBe(true);
   });
 });

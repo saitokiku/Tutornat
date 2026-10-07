@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-// Reports go to evals/out/ (ignored by git: the repo's .gitignore already ignores every out/ folder):
+// Reports go to evals/out/ (kept out of git by the repo's generic out/ rule; an explicit line is requested):
 // <suite>.json with everything, <suite>.md to read, and one line per run in history.jsonl so tuning
 // can be compared across runs.
 

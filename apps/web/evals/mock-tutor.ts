@@ -137,11 +137,13 @@ export function mockTutor() {
   return new MockLanguageModelV4({
     provider: "mock",
     modelId: "mock-tutor",
-    doStream: async ({ prompt }) => {
+    doStream: async ({ prompt, tools }) => {
       const step = decide(prompt);
       const id = `call-${++call}`;
       const out = "text" in step ? step.text : JSON.stringify(step.input);
-      const usage = { inputTokens: { total: tokens(JSON.stringify(prompt).length), noCache: tokens(JSON.stringify(prompt).length), cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: tokens(out.length), text: tokens(out.length), reasoning: 0 } };
+      // Rough counts of what a real call carries: the prompt and the tool definitions, at four characters a token.
+      const sent = tokens(JSON.stringify(prompt).length + JSON.stringify(tools ?? []).length);
+      const usage = { inputTokens: { total: sent, noCache: sent, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: tokens(out.length), text: tokens(out.length), reasoning: 0 } };
       const chunks: Chunk[] =
         "text" in step
           ? [{ type: "text-start", id }, { type: "text-delta", id, delta: step.text }, { type: "text-end", id }, { type: "finish", finishReason: { unified: "stop", raw: undefined }, usage }]
