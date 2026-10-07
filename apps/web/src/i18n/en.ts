@@ -2092,6 +2092,7 @@ const en = {
   "trust.review.exportNone": "Nothing approved here that the code doesn't already list.",
   "trust.review.copy": "Copy lines",
   "trust.review.copied": "Copied",
+  "trust.review.copyFailed": "This browser didn't allow copying. Select the lines above and copy them instead.",
 
   "trust.email.subject": "Your KaizenEDU week: {range}",
   "trust.email.intro": "The week of {range}, with the same numbers as the Family page",

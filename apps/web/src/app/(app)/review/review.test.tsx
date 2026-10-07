@@ -222,6 +222,13 @@ describe("ReviewTool", () => {
     reviewSkill("e.rhyme", "approved");
     render(<ReviewTool />);
     expect(screen.getByLabelText("Approved on this device", { selector: "pre" })).toHaveTextContent('"e.rhyme",');
-    expect(screen.getByRole("button", { name: "Copy lines" })).toBeInTheDocument();
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText");
+    await user.click(screen.getByRole("button", { name: "Copy lines" }));
+    expect(writeText).toHaveBeenCalledWith('  "e.rhyme",');
+    expect(screen.getByText("Copied")).toBeInTheDocument();
+    writeText.mockRejectedValueOnce(new Error("denied"));
+    await user.click(screen.getByRole("button", { name: "Copy lines" }));
+    expect(screen.getByText(/didn't allow copying/)).toBeInTheDocument();
   });
 });

@@ -2094,6 +2094,7 @@ const es: Record<Key, string> = {
   "trust.review.exportNone": "No hay nada aprobado aquí que el código no tenga ya.",
   "trust.review.copy": "Copiar líneas",
   "trust.review.copied": "Copiado",
+  "trust.review.copyFailed": "Este navegador no permitió copiar. Selecciona las líneas de arriba y cópialas.",
 
   "trust.email.subject": "Tu semana en KaizenEDU: {range}",
   "trust.email.intro": "La semana del {range}, con los mismos números de la página Familia",

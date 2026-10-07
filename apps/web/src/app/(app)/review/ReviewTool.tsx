@@ -49,7 +49,7 @@ function SkillList() {
   const [strand, setStrand] = useState("all");
   const [filter, setFilter] = useState<Filter>("draft");
   const [query, setQuery] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"yes" | "no" | null>(null);
   const q = query.trim().toLowerCase();
   const strandOptions = STRANDS.filter((st) => subject === "all" || st.subject === subject);
   const inStrand = new Set(strandOptions.find((st) => st.key === strand)?.ids ?? []);
@@ -65,9 +65,9 @@ function SkillList() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
-      setCopied(true);
+      setCopied("yes");
     } catch {
-      setCopied(false);
+      setCopied("no");
     }
   };
 
@@ -161,8 +161,8 @@ function SkillList() {
               <Button variant="secondary" onClick={copy}>
                 {t("trust.review.copy")}
               </Button>
-              <span role="status" className="text-xs text-good">
-                {copied ? t("trust.review.copied") : ""}
+              <span role="status" className={`text-xs ${copied === "no" ? "text-warn" : "text-good"}`}>
+                {copied === "yes" ? t("trust.review.copied") : copied === "no" ? t("trust.review.copyFailed") : ""}
               </span>
             </div>
           </>
