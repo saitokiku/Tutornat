@@ -14,14 +14,13 @@ export const TAGS: Record<string, string> = {
   V: "wrong-vowel",
   C: "wrong-consonant",
   Y: "sound-alike-spelling",
-  E: "dropped-silent-e",
-  A: "added-silent-e",
+  E: "dropped-silent-letter",
+  A: "added-silent-letter",
+  J: "h-as-j",
   T: "wrong-team",
   R: "wrong-r-vowel",
   K: "hard-for-soft",
   F: "soft-for-hard",
-  U: "missing-silent-letter",
-  H: "missing-h",
   M: "wrong-ending",
   G: "missing-accent",
   Z: "split-wrong",
@@ -45,14 +44,13 @@ const MISS: Record<string, [string, string]> = {
   "wrong-vowel": ["has a different vowel.", "tiene otra vocal."],
   "wrong-consonant": ["has a different consonant.", "tiene otra consonante."],
   "sound-alike-spelling": ["sounds right, but is not spelled that way.", "suena igual, pero no se escribe así."],
-  "dropped-silent-e": ["has no silent e, so the vowel is short.", "no lleva la letra que no suena."],
-  "added-silent-e": ["has a silent e, so the vowel is long.", "lleva una letra de más."],
+  "dropped-silent-letter": ["is missing a letter you do not hear.", "le falta una letra que no suena."],
+  "added-silent-letter": ["has an extra silent letter.", "lleva una letra muda de más."],
+  "h-as-j": ["uses j where the silent h belongs.", "usa j, pero la h no suena."],
   "wrong-team": ["uses a different vowel team.", "usa otro par de vocales."],
-  "wrong-r-vowel": ["has a different vowel before the r.", "tiene otra r."],
+  "wrong-r-vowel": ["has a different vowel before the r.", "tiene otra vocal antes de la r."],
   "hard-for-soft": ["has a hard sound where a soft one belongs.", "tiene el sonido fuerte donde va el suave."],
   "soft-for-hard": ["has a soft sound where a hard one belongs.", "tiene el sonido suave donde va el fuerte."],
-  "missing-silent-letter": ["is missing a letter you do not hear.", "le falta una letra que no se oye."],
-  "missing-h": ["is missing a letter you do not hear.", "le falta la h, que no suena."],
   "wrong-ending": ["has a different ending.", "tiene otra terminación."],
   "missing-accent": ["is missing its accent mark.", "no lleva la tilde que necesita."],
   "split-wrong": ["is split in the wrong place.", "está separada en un lugar equivocado."],
@@ -62,12 +60,16 @@ export const missHint = (locale: Locale, label: string, why: string) => {
   return tr(locale, `${cap(label)} ${en}`, `${cap(label)} ${es}`);
 };
 
-/** Picture shown, written words to choose from: "Which word names the picture?" */
-export function readQ(locale: Locale, w: string, picture: string, spec: string, strategy: [string, string]): Q {
+/** Asks for the correct spelling of the pictured word, when a misspelling would sound the same. */
+export const SPELLED: [string, string] = ["Which word is spelled right?", "¿Cuál está bien escrita?"];
+
+/** Picture shown, written words to choose from: "Which word names the picture?" (or `ask`). */
+export function readQ(locale: Locale, w: string, picture: string, spec: string, strategy: [string, string], ask?: [string, string]): Q {
   const others = wrongs(spec);
+  const question = ask ? tr(locale, ...ask) : tr(locale, "Which word names the picture?", "¿Qué palabra va con el dibujo?");
   return {
-    prompt: tr(locale, "Which word names the picture?", "¿Qué palabra va con el dibujo?"),
-    say: tr(locale, "Read each word. Which one names the picture?", "Lee cada palabra. ¿Cuál va con el dibujo?"),
+    prompt: question,
+    say: ask ? `${tr(locale, "Read each word.", "Lee cada palabra.")} ${question}` : tr(locale, "Read each word. Which one names the picture?", "Lee cada palabra. ¿Cuál va con el dibujo?"),
     picture,
     alt: altFor(locale, w),
     choices: [word(w), ...others],
@@ -95,5 +97,22 @@ export function gapQ(locale: Locale, w: string, picture: string, shown: string, 
       tr(locale, `With ${others[0].label}, it would say ${shown.replace("___", others[0].label)}.`, `Con ${others[0].label} diría ${shown.replace("___", others[0].label)}.`),
     ],
     steps: [tr(locale, `The missing part is ${key}: ${w}.`, `Falta ${key}: ${w}.`)],
+  };
+}
+
+/** A sentence with ___, read aloud with a pause; written choices, only one fits. */
+export function sentenceQ(locale: Locale, s: string, key: string, spec: string, strategy: [string, string]): Q {
+  const others = wrongs(spec);
+  const fill = (x: string) => s.replace("___", x);
+  return {
+    prompt: s,
+    say: `${s.replace("___", "…")} ${tr(locale, "Which word fits?", "¿Qué palabra va?")}`,
+    choices: [word(key), ...others],
+    hints: [
+      tr(locale, "Read the sentence with each word.", "Lee la oración con cada palabra."),
+      tr(locale, ...strategy),
+      tr(locale, `“${fill(others[0].label)}” does not make sense.`, `“${fill(others[0].label)}” no está bien.`),
+    ],
+    steps: [fill(key)],
   };
 }

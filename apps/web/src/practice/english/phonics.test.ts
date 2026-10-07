@@ -22,12 +22,16 @@ const TABLE: [id: string, grade: string, standard: string, prereqs: string[], le
   ["e.digraphs", "1", "RF.1.3a", ["e.short.vowels"], 2],
   ["e.blends.initial", "1", "RF.1.2b", ["e.short.vowels"], 2],
   ["e.blends.final", "1", "RF.1.3b", ["e.blends.initial"], 2],
+  ["e.silent.e", "1", "RF.1.3c", ["e.short.vowels"], 2],
+  ["e.vowel.teams", "1", "RF.1.3c", ["e.silent.e"], 2],
+  ["e.ending.ed", "1", "RF.1.3f", ["e.short.vowels"], 2],
+  ["e.ending.ing", "1", "RF.1.3f", ["e.ending.ed"], 2],
   ["e.sight.grade1", "1", "RF.1.3g", ["e.sight.primer"], 2],
   ["e.sight.grade2", "2", "RF.2.3f", ["e.sight.grade1"], 2],
 ];
 
 /** Reading skills built from the shared gap (level 1) and picture-word (level 2) shapes. */
-const READING = ["e.digraphs", "e.blends.initial", "e.blends.final"];
+const READING = ["e.digraphs", "e.blends.initial", "e.blends.final", "e.vowel.teams"];
 const SIGHT = ["e.sight.preprimer", "e.sight.primer", "e.sight.grade1", "e.sight.grade2"];
 /** Levels a pre-reader answers by listening: every choice is a spoken picture. */
 const LISTENING: [string, number][] = [
@@ -38,6 +42,7 @@ const SILENT: [string, number][] = [
   ["e.letter.names", 1], ["e.letter.names", 2], ["e.word.families", 2], ["e.blend.onset", 2], ["e.sound.swap", 2],
   ...SIGHT.flatMap((id): [string, number][] => [[id, 1], [id, 2]]),
   ["e.short.vowels", 1], ...READING.flatMap((id): [string, number][] => [[id, 1], [id, 2]]),
+  ["e.silent.e", 1], ["e.silent.e", 2], ["e.ending.ed", 2], ["e.ending.ing", 1], ["e.ending.ing", 2],
 ];
 
 const LOCALES = ["en", "es"] as const;
@@ -389,6 +394,7 @@ describe("answer keys, checked another way (sight words)", () => {
 // ---- Reading patterns: every miss is re-derived from the key and the wrong word ----
 
 const PAIRS = ["sh", "ch", "th", "wh", "ck", "ng", "ll", "rr"];
+const TEAMS = ["ai", "ay", "ee", "ea", "oa", "ow", "oi", "oy", "ou", "au", "aw", "ew", "ue", "ua", "ui", "ie", "ia", "io", "ei", "eu", "oo"];
 const isVowel = (c: string) => "aeiou".includes(c);
 /** Every misconception a wrong word could show, worked out from the two spellings. */
 function kinds(key: string, wrong: string): Set<string> {
@@ -401,6 +407,11 @@ function kinds(key: string, wrong: string): Set<string> {
     if (diff.length === 1 && !isVowel(k[diff[0]]) && !isVowel(d[diff[0]])) out.add("wrong-consonant").add("wrong-blend");
   }
   if (frame(k) === frame(d) && vowels(k) !== vowels(d)) out.add("wrong-vowel");
+  for (const g of TEAMS)
+    for (let i = k.indexOf(g); i >= 0; i = k.indexOf(g, i + 1)) {
+      const put = d.slice(i, d.length - (k.length - i - 2));
+      if (d.startsWith(k.slice(0, i)) && d.endsWith(k.slice(i + 2)) && put !== g && TEAMS.includes(put)) out.add("wrong-team");
+    }
   for (const g of PAIRS)
     for (let i = k.indexOf(g); i >= 0; i = k.indexOf(g, i + 1)) {
       const [before, after] = [k.slice(0, i), k.slice(i + 2)];
@@ -461,5 +472,122 @@ describe("answer keys, checked another way (grade 1 reading)", () => {
           expect(norm(q.alt!).split(" ").at(-1), q.alt).toBe(norm(key(q)));
           for (const c of q.choices.slice(1)) expect(kinds(key(q), c.label).has(c.why!), `${key(q)} → ${c.label} (${c.why})`).toBe(true);
         }
+  });
+});
+
+describe("answer keys, checked another way (silent letters and endings)", () => {
+  const noH = (w: string) => norm(w).replace(/(?<!c)h/g, "");
+  /** Spellings that sound the same in Spanish: hue/güe, hie/ye, c/s before e, hay/ay/ahí. */
+  const soundsSame = (a: string, b: string) => {
+    const say = (w: string) => noH(w).replace(/^ue/, "gue").replace(/^ie/, "ye").replace(/ce/g, "se").replace(/^ay$|^ai$/, "ai");
+    return say(a) === say(b) || [["hay", "ay", "ahi"]].some((g) => g.includes(norm(a)) && g.includes(norm(b)));
+  };
+
+  it("silent e and silent h: each tag matches how the wrong spelling differs", () => {
+    for (const locale of LOCALES)
+      for (const level of [1, 2])
+        for (const q of lv("e.silent.e", level, locale))
+          for (const c of q.choices.slice(1)) {
+            const [k, d] = [key(q), c.label];
+            const where = `${k} → ${d} (${c.why})`;
+            if (locale === "en" && c.why === "dropped-silent-letter") expect(d, where).toBe(k.replace(/e$/, ""));
+            else if (locale === "en" && c.why === "added-silent-letter") expect(d, where).toBe(`${k}e`);
+            else if (c.why === "dropped-silent-letter") expect(norm(d), where).toBe(noH(k));
+            else if (c.why === "added-silent-letter") expect(noH(d), where).toBe(norm(k));
+            else if (c.why === "h-as-j") expect(norm(d), where).toBe(norm(k).replace("h", "j"));
+            else if (c.why === "sound-alike-spelling") expect(soundsSame(k, d), where).toBe(true);
+            else if (c.why === "wrong-ending") expect(norm(d).startsWith(norm(k)), where).toBe(true);
+            else expect(kinds(k, d).has(c.why!), where).toBe(true);
+          }
+    for (const q of lv("e.silent.e", 1, "es")) expect(norm(key(q)), q.alt).toContain("h");
+  });
+
+  it("-ed sounds follow the last sound of the base word", () => {
+    const edSound = (w: string) => {
+      const stem = w.slice(0, -2);
+      if (/[td]$/.test(stem)) return "id";
+      return /([pkfsx]|sh|ch|gh)$/.test(stem) ? "t" : "d";
+    };
+    const TAG: Record<string, string> = { t: "ed-as-t", d: "ed-as-d", id: "ed-as-extra-syllable" };
+    for (const q of lv("e.ending.ed", 1, "en")) {
+      const t = /like (\S+)\?$/.exec(q.prompt)![1];
+      expect(edSound(key(q)), q.prompt).toBe(edSound(t));
+      for (const c of q.choices.slice(1)) expect(c.why, `${t} ${c.label}`).toBe(TAG[edSound(c.label)]);
+      expect(new Set(q.choices.map((c) => edSound(c.label))).size, q.prompt).toBe(3);
+    }
+    for (const q of lv("e.ending.ed", 1, "es")) {
+      const t = norm(/que (\S+)\?$/.exec(q.prompt)![1]);
+      const end = (w: string) => norm(w).slice(-3);
+      expect(end(key(q)), q.prompt).toBe(end(t));
+      expect(["ado", "ido"], t).toContain(end(t));
+      expect(end(label(q, "other-participle-ending")), q.prompt).toBe(end(t) === "ado" ? "ido" : "ado");
+      expect(norm(label(q, "gerund-ending")).endsWith("ndo"), q.prompt).toBe(true);
+    }
+  });
+
+  it("-ed and -ing spellings follow the spelling rules; each wrong spelling's tag fits", () => {
+    const doubles = (b: string) => /^[^aeiou]*[aeiou][^aeiouwxy]$/.test(b);
+    const ed = (b: string) => (b.endsWith("e") ? `${b}d` : /[^aeiou]y$/.test(b) ? `${b.slice(0, -1)}ied` : doubles(b) ? `${b}${b.at(-1)}ed` : `${b}ed`);
+    const ing = (b: string) => (/[^e]e$/.test(b) ? `${b.slice(0, -1)}ing` : doubles(b) ? `${b}${b.at(-1)}ing` : `${b}ing`);
+    for (const [id, end, make] of [["e.ending.ed", "ed", ed], ["e.ending.ing", "ing", ing]] as const)
+      for (const level of id === "e.ending.ed" ? [2] : [1, 2])
+        for (const q of lv(id, level, "en")) {
+          const base = q.prompt.split(" + ")[0];
+          expect(key(q), q.prompt).toBe(make(base));
+          for (const c of q.choices.slice(1)) {
+            const d = c.label;
+            const why = {
+              "did-not-double": d === base + end && doubles(base),
+              "doubled-wrongly": !doubles(base) && (d === base + base.at(-1) + end || d === base.replace(/e$/, "") + base.replace(/e$/, "").at(-1) + end),
+              "kept-silent-e": base.endsWith("e") && d === base + end,
+              "kept-y": /[^aeiou]y$/.test(base) && d === base + end,
+              "changed-y-wrongly": base.endsWith("y") && d.includes("i") && !key(q).includes(`${base.slice(0, -1)}i`),
+              "spelled-by-sound": !d.endsWith(end),
+              "dropped-g": d === key(q).slice(0, -1),
+              "dropped-letter": kinds(key(q), d).has("dropped-letter") || kinds(base, d.slice(0, -end.length)).has("dropped-letter"),
+            }[c.why!];
+            expect(why, `${base}: ${d} (${c.why})`).toBe(true);
+          }
+        }
+  });
+
+  it("Spanish participles and gerunds match the tables; each wrong form's tag fits", () => {
+    const PARTICIPLE: Record<string, string> = { escribir: "escrito", abrir: "abierto", romper: "roto", poner: "puesto", hacer: "hecho", ver: "visto", decir: "dicho", volver: "vuelto", cubrir: "cubierto" };
+    const GERUND: Record<string, string> = {
+      dormir: "durmiendo", pedir: "pidiendo", decir: "diciendo", venir: "viniendo", leer: "leyendo", oir: "oyendo", caer: "cayendo", traer: "trayendo",
+      construir: "construyendo", ir: "yendo", sentir: "sintiendo", servir: "sirviendo", seguir: "siguiendo", poder: "pudiendo", reir: "riendo", repetir: "repitiendo",
+    };
+    const regular = (inf: string, ar: string, erir: string) => inf.slice(0, -2) + (inf.endsWith("ar") ? ar : erir);
+    for (const q of lv("e.ending.ed", 2, "es")) {
+      const inf = /\((\S+)\)$/.exec(q.prompt)![1];
+      expect(norm(key(q)), inf).toBe(PARTICIPLE[inf] ?? regular(inf, "ado", "ido"));
+      for (const c of q.choices.slice(1)) {
+        const d = norm(c.label);
+        const ok = {
+          "ado-for-ido": !inf.endsWith("ar") && d === inf.slice(0, -2) + "ado",
+          "ido-for-ado": inf.endsWith("ar") && d === inf.slice(0, -2) + "ido",
+          "regular-for-irregular": !!PARTICIPLE[inf] && d === inf.slice(0, -2) + "ido",
+          "gerund-for-participle": d.endsWith("ndo"),
+        }[c.why!];
+        expect(ok, `${inf}: ${d} (${c.why})`).toBe(true);
+      }
+    }
+    for (const level of [1, 2])
+      for (const q of lv("e.ending.ing", level, "es")) {
+        const inf = norm(/\((\S+)\)$/.exec(q.prompt)![1]);
+        const want = GERUND[inf] ?? regular(inf, "ando", "iendo");
+        expect(norm(key(q)), inf).toBe(want);
+        expect(!!GERUND[inf], `${inf} on level ${level}`).toBe(level === 2);
+        for (const c of q.choices.slice(1)) {
+          const d = norm(c.label);
+          const ok = {
+            "wrong-ending": d === inf.slice(0, -2) + (inf.endsWith("ar") ? "iendo" : "ando"),
+            "participle-for-gerund": /(ado|ido|to|cho)$/.test(d),
+            "no-stem-change": d === inf.slice(0, -2) + "iendo" && !want.includes("yendo"),
+            "i-for-y": d === inf.slice(0, -2) + "iendo" && want.includes("yendo"),
+          }[c.why!];
+          expect(ok, `${inf}: ${d} (${c.why})`).toBe(true);
+        }
+      }
   });
 });

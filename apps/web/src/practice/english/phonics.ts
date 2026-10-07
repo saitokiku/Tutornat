@@ -2,8 +2,10 @@ import type { Skill } from "../types";
 import { BLEND_ONSET, SEGMENT_SOUNDS, SOUND_SWAP } from "./phonics/blend";
 import type { Entry } from "./phonics/core";
 import { skill } from "./phonics/core";
+import { ENDING_ED, ENDING_ING } from "./phonics/endings";
 import { SHORT_VOWELS } from "./phonics/grade1a";
 import { BLENDS_FINAL, BLENDS_INITIAL, DIGRAPHS } from "./phonics/grade1b";
+import { SILENT_E, VOWEL_TEAMS } from "./phonics/grade1c";
 import { FINAL_SOUND, FIRST_SOUND, LETTER_NAMES } from "./phonics/letters";
 import { SIGHT_GRADE1, SIGHT_GRADE2, SIGHT_PREPRIMER, SIGHT_PRIMER } from "./phonics/sight";
 import { MIDDLE_VOWEL, WORD_FAMILIES } from "./phonics/sounds";
@@ -32,6 +34,10 @@ export const PHONICS_BANKS: Record<string, Entry[][]> = {
   "e.digraphs": DIGRAPHS,
   "e.blends.initial": BLENDS_INITIAL,
   "e.blends.final": BLENDS_FINAL,
+  "e.silent.e": SILENT_E,
+  "e.vowel.teams": VOWEL_TEAMS,
+  "e.ending.ed": ENDING_ED,
+  "e.ending.ing": ENDING_ING,
   "e.sight.grade1": SIGHT_GRADE1,
   "e.sight.grade2": SIGHT_GRADE2,
 };
@@ -55,6 +61,10 @@ export const ENGLISH_PHONICS: Skill[] = [
   skill({ id: "e.digraphs", grade: "1", title: { en: "Letter pairs: sh, ch, th", es: "Pares de letras: ch, ll, rr" }, standard: "RF.1.3a", prereqs: ["e.short.vowels"] }, bank("e.digraphs"), [10, 12]),
   skill({ id: "e.blends.initial", grade: "1", title: { en: "Blends at the start", es: "Sílabas trabadas" }, standard: "RF.1.2b", prereqs: ["e.short.vowels"] }, bank("e.blends.initial"), [10, 12]),
   skill({ id: "e.blends.final", grade: "1", title: { en: "Blends at the end", es: "Sílabas inversas" }, standard: "RF.1.3b", prereqs: ["e.blends.initial"] }, bank("e.blends.final"), [10, 12]),
+  skill({ id: "e.silent.e", grade: "1", title: { en: "Silent e", es: "La h muda" }, standard: "RF.1.3c", prereqs: ["e.short.vowels"] }, bank("e.silent.e"), [10, 15]),
+  skill({ id: "e.vowel.teams", grade: "1", title: { en: "Vowel teams", es: "Diptongos" }, standard: "RF.1.3c", prereqs: ["e.silent.e"] }, bank("e.vowel.teams"), [10, 10]),
+  skill({ id: "e.ending.ed", grade: "1", title: { en: "Endings: -ed", es: "Terminaciones: -ado, -ido" }, standard: "RF.1.3f", prereqs: ["e.short.vowels"] }, bank("e.ending.ed"), [10, 12]),
+  skill({ id: "e.ending.ing", grade: "1", title: { en: "Endings: -ing", es: "Terminaciones: -ando, -iendo" }, standard: "RF.1.3f", prereqs: ["e.ending.ed"] }, bank("e.ending.ing"), [10, 12]),
   skill({ id: "e.sight.grade1", grade: "1", title: { en: "Sight words: grade 1", es: "Palabras frecuentes 3" }, standard: "RF.1.3g", prereqs: ["e.sight.primer"] }, bank("e.sight.grade1"), [6, 15]),
   // Grade 2
   skill({ id: "e.sight.grade2", grade: "2", title: { en: "Sight words: grade 2", es: "Palabras frecuentes 4" }, standard: "RF.2.3f", prereqs: ["e.sight.grade1"] }, bank("e.sight.grade2"), [6, 15]),
