@@ -8,7 +8,7 @@ import { newId, read, resetMemory, update } from "@/lib/store";
 import type { Grade, Profile } from "@/lib/types";
 import { makeItem } from "@/practice/skills";
 import type { Item } from "@/practice/types";
-import { Runner } from "./Runner";
+import { Runner, speakableSteps } from "./Runner";
 
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -55,6 +55,16 @@ function seedWhere(skillId: string, level: number, fits: (it: Item) => boolean) 
   for (let seed = 1; seed < 5000; seed++) if (fits(makeItem(skillId, level, seed, "en"))) return seed;
   throw new Error(`no seed for ${skillId}`);
 }
+
+describe("reading worked steps aloud", () => {
+  it("is offered for plain steps, not for notation a voice would garble", () => {
+    expect(speakableSteps(["Start at 7, count on 3: 10."])).toBe(true);
+    expect(speakableSteps(["5 − 2 = 3", "3 × 4 = 12"])).toBe(true);
+    expect(speakableSteps(["3/4 of the bar is shaded."])).toBe(false);
+    expect(speakableSteps(["|−7| = 7"])).toBe(false);
+    expect(speakableSteps(["x^2 + 1"])).toBe(false);
+  });
+});
 
 describe("Runner", () => {
   it("K counting: mark the dots while counting, tap the number; marking is not help", async () => {

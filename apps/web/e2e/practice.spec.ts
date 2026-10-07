@@ -89,6 +89,45 @@ test("a clock set with the keyboard alone", async ({ page }) => {
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
+test("at 320 px wide: K counters are 56 px squares, the clock's steppers stay whole, nothing scrolls sideways", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 320, height: 720 });
+  await family(page, "pr-320", [["Leo", "K"]]);
+  await page.getByRole("button", { name: /Leo/ }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await page.goto("/practice");
+  await noOverflow(page);
+  await page.getByRole("button", { name: /^Start/ }).click();
+  await expect(page).toHaveURL(/\/practice\/.+/);
+
+  const problem = page.locator('section[aria-labelledby="problem"]');
+  const dot = problem.getByRole("button", { name: "Dot 1", exact: true });
+  await expect(dot).toBeVisible();
+  const box = (await dot.boundingBox())!;
+  expect(Math.round(box.width)).toBeGreaterThanOrEqual(56);
+  expect(Math.round(box.height)).toBeGreaterThanOrEqual(56);
+  // The whole picture sits inside the problem card.
+  const card = (await problem.boundingBox())!;
+  const picture = (await problem.getByRole("group", { name: "Tap to mark each one as you count" }).boundingBox())!;
+  expect(picture.x).toBeGreaterThanOrEqual(card.x);
+  expect(picture.x + picture.width).toBeLessThanOrEqual(card.x + card.width);
+  await noOverflow(page);
+  await audit(page, "tap-to-mark 320");
+
+  // m.time.clock level 3, seed 8 (pinned in touch-skills.test.ts) at K–2 sizes: − value + on one line.
+  await seedSet(page, { id: "e2e-clock-320", skillId: "m.time.clock", seed: 8, level: 3 });
+  await page.goto("/practice/e2e-clock-320");
+  const back = page.getByRole("button", { name: "Move the long hand back" });
+  const forward = page.getByRole("button", { name: "Move the long hand forward" });
+  await expect(forward).toBeVisible();
+  const [b, f] = [(await back.boundingBox())!, (await forward.boundingBox())!];
+  expect(Math.abs(b.y - f.y)).toBeLessThan(2);
+  expect(Math.round(f.width)).toBeGreaterThanOrEqual(56);
+  await noOverflow(page);
+  await audit(page, "clock 320");
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
 test("finishing a set is a clean stop: nothing opens on its own, and done for today goes to Today", async ({ page }) => {
   const errors = collectErrors(page);
   await family(page, "pr-finish", [["Leo", "K"]]);
