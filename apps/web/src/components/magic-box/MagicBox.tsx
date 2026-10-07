@@ -159,7 +159,7 @@ export function MagicBox({ learner, variant = "compact", initialGoal = "" }: { l
         <Button variant="ghost" size="sm" aria-expanded={showOptions} onClick={() => setShowOptions(!showOptions)}>
           {t("box.options")} <IconChevronDown size={14} className={`transition-transform ${showOptions ? "rotate-180" : ""}`} />
         </Button>
-        {band !== "k2" && <span className="ml-auto hidden font-opmono text-xs text-muted sm:inline">{t("box.shortcut")}</span>}
+        {band !== "k2" && <span className="ml-auto hidden font-opmono text-xs text-muted sm:inline">{t(/Mac|iPhone|iPad/.test(navigator.platform) ? "box.shortcut" : "box.shortcutPc")}</span>}
         {band === "k2" && <span className="ml-auto" />}
         <Button type="submit" disabled={!ready}>
           {t("box.submit")} <IconArrowRight size={16} />

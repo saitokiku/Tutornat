@@ -82,6 +82,8 @@ export type Course = {
   length: CourseLength;
   sources: SourceItem[];
   lessons: Lesson[];
+  /** Added for the learner by a grown-up from the Family view. */
+  assigned?: boolean;
   /** True when the outline came from the demo template generator rather than a model. */
   template: boolean;
   createdAt: number;

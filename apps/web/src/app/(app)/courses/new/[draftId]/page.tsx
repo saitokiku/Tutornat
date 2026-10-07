@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { matchEntry } from "@/catalogue";
+import { CourseArt } from "@/components/courses/CourseArt";
 import { NotFound } from "@/components/courses/NotFound";
 import { Guard } from "@/components/gate";
 import { OutlineEditor } from "@/components/generation/OutlineEditor";
@@ -10,7 +12,7 @@ import { IconArrowLeft, IconArrowRight, IconCheck, IconRefresh } from "@/compone
 import { Badge, Button, Notice, Spinner, SubjectDot } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
-import { getCourse, removeCourse, saveCourse } from "@/lib/courses";
+import { addFromCatalogue, getCourse, removeCourse, saveCourse } from "@/lib/courses";
 import { generateOutline } from "@/lib/generate";
 import { KIND_TAG } from "@/lib/files";
 import { currentLearner } from "@/lib/profiles";
@@ -97,6 +99,14 @@ function Draft() {
   };
 
   const stale = !running && lessons.length === 0;
+  const match = matchEntry(draft.goal, draft.grade, learner.locale);
+  const useMatch = () => {
+    if (!match) return;
+    const id = addFromCatalogue(match.id, learner.id);
+    if (!id) return;
+    router.push(`/learn/${id}/${match.lessons[0].id}`);
+    removeCourse(draft.id);
+  };
   const elapsed = Math.max(0, Math.round(((running ? now : (steps.at(-1)?.at ?? started)) - started) / 1000));
 
   return (
@@ -172,6 +182,30 @@ function Draft() {
         >
           {t("gen.stale")}
         </Notice>
+      )}
+
+      {match && !running && (
+        <section aria-labelledby="match" className="rounded-md border border-good/30 bg-good/5 p-4">
+          <h2 id="match" className="text-sm font-semibold text-ink">
+            {t("gen.match")}
+          </h2>
+          <div className="mt-3 flex flex-wrap items-center gap-4 sm:flex-nowrap">
+            <div className="w-24 shrink-0">
+              <CourseArt lessons={match.lessons} subject={match.subject} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ink" lang={match.locale}>
+                {match.title}
+              </p>
+              <p className="mt-1 text-xs text-muted" lang={match.locale}>
+                {match.summary}
+              </p>
+            </div>
+            <Button size="sm" onClick={useMatch}>
+              {t("gen.useMatch")} <IconArrowRight size={14} />
+            </Button>
+          </div>
+        </section>
       )}
 
       {lessons.length > 0 && (

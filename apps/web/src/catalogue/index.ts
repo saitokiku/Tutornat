@@ -51,3 +51,18 @@ export function relatedEntry(subject: Subject, grade: Grade, locale: Locale): Ca
   const pool = catalogueFor(grade, locale).filter((c) => subject === "other" || c.subject === subject);
   return [...pool].sort((a, b) => Math.abs(n(a.grade) - n(grade)) - Math.abs(n(b.grade) - n(grade)))[0] ?? null;
 }
+
+/** A ready-made course that already covers what was asked for, if one does (word match on title/summary). */
+export function matchEntry(goal: string, grade: Grade, locale: Locale): CatalogueEntry | null {
+  const words = goal.toLowerCase().match(/[a-záéíóúñü]{4,}/g) ?? [];
+  if (!words.length) return null;
+  const stem = (w: string) => w.replace(/(es|s)$/, "");
+  const hits = catalogueFor(grade, locale)
+    .map((c) => {
+      const text = `${c.title} ${c.summary}`.toLowerCase();
+      return { c, score: words.filter((w) => text.includes(stem(w))).length };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return hits[0]?.c ?? null;
+}

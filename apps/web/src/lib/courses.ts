@@ -60,7 +60,7 @@ export function createDraft(req: GenerationRequest, profileId: string): Course {
 }
 
 /** Adds a ready-made course for a learner, or returns the one they already have. */
-export function addFromCatalogue(catalogueId: string, profileId: string): string | null {
+export function addFromCatalogue(catalogueId: string, profileId: string, opts: { assigned?: boolean } = {}): string | null {
   const entry = catalogueEntry(catalogueId);
   if (!entry) return null;
   let id: string | null = null;
@@ -82,6 +82,7 @@ export function addFromCatalogue(catalogueId: string, profileId: string): string
       locale: entry.locale,
       origin: "catalogue",
       catalogueId,
+      assigned: opts.assigned,
       status: "ready",
       length: entry.lessons.length > 1 ? "short" : "lesson",
       sources: [],

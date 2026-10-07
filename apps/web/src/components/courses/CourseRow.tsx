@@ -22,6 +22,7 @@ export function CourseRow({ course, events }: { course: Course; events: Activity
           <span className="mt-0.5 block font-opmono text-xs tabular-nums text-muted">{t("courses.progress", { done: p.done, total: p.total })}</span>
         </span>
         <LangTag course={course.locale} learner={locale} />
+        {course.assigned && <Badge tone="good">{t("course.fromGrownUp")}</Badge>}
         {course.status === "outlining" ? (
           <Badge tone="warn">{t("course.unfinishedOutline")}</Badge>
         ) : course.origin === "catalogue" ? (

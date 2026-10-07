@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CATALOGUE, catalogueFor, relatedEntry } from ".";
+import { CATALOGUE, catalogueFor, matchEntry, relatedEntry } from ".";
 
 const onStep = (v: number, min: number, step: number) => Math.abs((v - min) / step - Math.round((v - min) / step)) < 1e-9;
 
@@ -44,5 +44,11 @@ describe("catalogue", () => {
     expect(relatedEntry("science", "1", "en")?.id).toBe("science-matter");
     expect(relatedEntry("math", "8", "en")?.subject).toBe("math");
     expect(relatedEntry("math", "3", "es")?.id).toBe("math-fractions-es");
+  });
+
+  it("notices when a request is already covered by a ready-made course", () => {
+    expect(matchEntry("I want to learn fractions", "3", "en")?.id).toBe("math-fractions");
+    expect(matchEntry("why does the moon change shape", "5", "en")?.id).toBe("science-moon");
+    expect(matchEntry("knitting socks", "5", "en")).toBeNull();
   });
 });

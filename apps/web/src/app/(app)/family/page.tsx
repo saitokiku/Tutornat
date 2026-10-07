@@ -140,7 +140,7 @@ function ChildCard({ child, now }: { child: Profile; now: number }) {
                     </option>
                   ))}
                 </select>
-                <Button size="sm" variant="secondary" disabled={!assignId} onClick={() => (addFromCatalogue(assignId, child.id), setAssignId(""), setAssigned(true))}>
+                <Button size="sm" variant="secondary" disabled={!assignId} onClick={() => (addFromCatalogue(assignId, child.id, { assigned: true }), setAssignId(""), setAssigned(true))}>
                   {t("family.assignTo", { name: child.nickname })}
                 </Button>
               </div>
