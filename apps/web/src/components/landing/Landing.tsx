@@ -6,10 +6,11 @@ import { KaizenLogo } from "@/components/brand";
 import { CourseArt } from "@/components/courses/CourseArt";
 import { IconArrowRight, IconPaperclip } from "@/components/icons";
 import { FractionBar } from "@/components/stage/widgets/FractionBar";
+import { LangToggle } from "@/components/LangToggle";
 import { MoonVisual } from "@/components/stage/visuals";
 import { SubjectDot, btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
-import { update, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import type { Locale } from "@/lib/types";
 
 export function Landing() {
@@ -125,27 +126,6 @@ export function Landing() {
         <KaizenLogo size={26} />
         <span>{t("landing.footer")}</span>
       </footer>
-    </div>
-  );
-}
-
-function LangToggle() {
-  const locale = useLocale();
-  const set = (l: Locale) => update((s) => void (s.prefs.locale = l));
-  return (
-    <div className="inline-flex rounded-full border border-border bg-panel p-0.5 text-xs font-semibold">
-      {(["en", "es"] as const).map((l) => (
-        <button
-          key={l}
-          type="button"
-          lang={l}
-          aria-pressed={locale === l}
-          onClick={() => set(l)}
-          className={`min-h-8 rounded-full px-2.5 uppercase ${locale === l ? "bg-ink text-paper" : "text-muted hover:text-ink"}`}
-        >
-          {l}
-        </button>
-      ))}
     </div>
   );
 }

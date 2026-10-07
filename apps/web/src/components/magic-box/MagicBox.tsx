@@ -152,7 +152,7 @@ export function MagicBox({ learner, variant = "compact", initialGoal = "" }: { l
       )}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-3 sm:px-5">
-        <input ref={fileInput} type="file" multiple accept={ACCEPT} className="sr-only" tabIndex={-1} onChange={(e) => (take(e.target.files), (e.target.value = ""))} />
+        <input ref={fileInput} type="file" multiple accept={ACCEPT} aria-label={t("box.attach")} className="sr-only" tabIndex={-1} onChange={(e) => (take(e.target.files), (e.target.value = ""))} />
         <Button variant="ghost" size="sm" onClick={() => fileInput.current?.click()}>
           <IconPaperclip size={16} /> {t("box.attach")}
         </Button>

@@ -3,14 +3,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { KaizenLogo } from "@/components/brand";
+import { LangToggle } from "@/components/LangToggle";
 import { useT } from "@/i18n";
 
 export function AuthFrame({ children }: { children: ReactNode }) {
   const t = useT();
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
-      <header className="px-5 py-5 sm:px-8">
+      <header className="flex items-center justify-between px-5 py-5 sm:px-8">
         <KaizenLogo size={32} href="/" />
+        <LangToggle />
       </header>
       <main className="flex flex-1 items-start justify-center px-5 pb-16 pt-6 sm:items-center sm:pt-0">
         <div className="w-full max-w-[26rem]">{children}</div>
