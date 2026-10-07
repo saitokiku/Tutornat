@@ -33,6 +33,7 @@ export function StatesOfMatter({ widget, onCheck }: Props) {
   const [result, setResult] = useState<boolean | null>(null);
   const set = (i: number) => (setIndex(Math.max(0, Math.min(COUNT - 1, i))), setResult(null));
   const temp = MIN + index * STEP;
+  const shown = String(temp).replace("-", "\u2212");
   const state = stateAt(temp);
   const stateLabel = t(`w.matter.${state}` as const);
   const warmth = index / (COUNT - 1);
@@ -62,7 +63,7 @@ export function StatesOfMatter({ widget, onCheck }: Props) {
           ))}
         </svg>
         <div className="flex min-w-40 flex-1 flex-col justify-center gap-3">
-          <p className="font-brand text-d3 font-semibold tabular-nums text-ink">{temp} °C</p>
+          <p className="font-brand text-d3 font-semibold tabular-nums text-ink">{shown} °C</p>
           <p className="font-brand text-t2 font-semibold capitalize text-science">{stateLabel}</p>
           <input
             type="range"
@@ -90,10 +91,10 @@ export function StatesOfMatter({ widget, onCheck }: Props) {
           prevDisabled={index === 0}
           nextDisabled={index === COUNT - 1}
         >
-          <span className="min-w-16 text-center font-opmono text-sm tabular-nums text-ink">{temp} °C</span>
+          <span className="min-w-16 text-center font-opmono text-sm tabular-nums text-ink">{shown} °C</span>
         </StepButtons>
         <p aria-live="polite" className="text-sm text-muted">
-          {t("w.matter.readout", { t: temp, state: stateLabel })}
+          {t("w.matter.readout", { t: shown, state: stateLabel })}
         </p>
       </div>
       {widget.target && (

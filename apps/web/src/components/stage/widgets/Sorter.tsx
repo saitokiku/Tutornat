@@ -48,7 +48,7 @@ export function Sorter({ widget, onCheck, lang }: Props) {
                     aria-pressed={pick === ci}
                     aria-label={t("w.sort.put", { item: item.text, category: c })}
                     onClick={() => (setPicks({ ...picks, [item.id]: ci }), setChecked(false), setResult(null))}
-                    className={`k-chip px-4 ${young ? "min-h-12 text-body" : "min-h-10 text-sm"}`}
+                    className={`k-chip border-border bg-panel px-4 font-semibold text-ink hover:border-ink/40 aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper ${young ? "min-h-12 text-body" : "min-h-10 text-sm"}`}
                   >
                     <span aria-hidden="true">{c}</span>
                   </button>

@@ -94,6 +94,7 @@ export function FractionBar({ widget, onCheck, tint = "var(--color-math)" }: Pro
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+        <span className="text-xs font-medium text-muted">{t("w.fraction.parts")}</span>
         <div className="inline-flex items-center rounded-full border border-border bg-panel">
           <button type="button" onClick={() => changeParts(parts - 1)} disabled={parts <= MIN} aria-label={t("w.fraction.fewer")} className="grid size-11 place-items-center rounded-full text-ink hover:bg-panel2 disabled:opacity-30">
             <IconMinus size={18} />

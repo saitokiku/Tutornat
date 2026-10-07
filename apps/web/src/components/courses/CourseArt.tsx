@@ -50,7 +50,7 @@ export function CourseArt({ lessons, subject, size = "md" }: { lessons: Lesson[]
         <span className="flex items-center justify-center gap-[6%]">
           {[0.15, 0.3, 0.5].map((p) => (
             <span key={p} className="w-[28%]">
-              <MoonVisual phase={p} alt="" size={100} />
+              <MoonVisual phase={p} alt="" />
             </span>
           ))}
         </span>

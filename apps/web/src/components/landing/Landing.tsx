@@ -101,7 +101,7 @@ export function Landing() {
 
             <div className="mt-16 rounded-lg bg-panel2 px-6 py-6 sm:px-8">
               <p className="font-brand text-t3 font-semibold text-ink">{t("landing.honest.title")}</p>
-              <p className="mt-2 max-w-prose text-sm text-muted">{t("landing.honest.body")}</p>
+              <p className="mt-2 max-w-[62ch] text-sm text-muted">{t("landing.honest.body")}</p>
             </div>
           </div>
         </section>
@@ -149,7 +149,7 @@ function LangToggle() {
 function HeroStage() {
   const t = useT();
   return (
-    <figure className="rounded-lg border border-border bg-panel shadow-lift">
+    <figure className="rounded-lg bg-panel shadow-lift ring-1 ring-ink/[0.04]">
       <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3 text-xs text-muted">
         <span className="flex items-center gap-2 font-medium text-ink">
           <SubjectDot subject="math" />
@@ -172,11 +172,11 @@ const heroPrompt = (l: Locale) =>
 function Row({ title, body, art, flip }: { title: string; body: string; art: React.ReactNode; flip?: boolean }) {
   return (
     <div className="grid items-center gap-8 md:grid-cols-2 md:gap-16">
-      <div className={flip ? "md:order-2" : ""}>
+      <div className={`min-w-0 ${flip ? "md:order-2" : ""}`}>
         <h3 className="font-brand text-t2 font-semibold text-ink">{title}</h3>
         <p className="mt-3 max-w-[30rem] text-body text-muted">{body}</p>
       </div>
-      <div className={flip ? "md:order-1" : ""}>{art}</div>
+      <div className={`min-w-0 ${flip ? "md:order-1" : ""}`}>{art}</div>
     </div>
   );
 }
@@ -186,13 +186,13 @@ function Row({ title, body, art, flip }: { title: string; body: string; art: Rea
 function BoxArt() {
   const t = useT();
   return (
-    <div aria-hidden="true" className="rounded-md border border-border bg-paper p-5 shadow-soft">
-      <p className="text-sm font-medium text-ink">{t("box.label")}</p>
-      <div className="mt-3 rounded-sm border border-accent bg-panel px-4 py-3 text-body text-ink ring-2 ring-accent/20">
+    <div aria-hidden="true" className="rounded-lg border border-border bg-panel p-5 shadow-soft">
+      <p className="font-brand text-t3 font-semibold text-ink">{t("box.label")}</p>
+      <div className="mt-3 text-t3 text-ink">
         {useLocale() === "es" ? "¿Por qué la Luna cambia de forma?" : "Why does the Moon change shape?"}
         <span className="ml-0.5 inline-block h-5 w-px translate-y-1 animate-pulse bg-ink" />
       </div>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <span className="inline-flex items-center gap-2 text-xs text-muted">
           <IconPaperclip size={16} /> {t("box.attach")}
         </span>
@@ -223,9 +223,9 @@ function OutlineArt() {
 function MoonArt() {
   const phases = [0.12, 0.25, 0.38, 0.5, 0.75];
   return (
-    <div aria-hidden="true" className="flex items-end justify-between gap-2 rounded-md border border-border bg-paper px-5 py-6 shadow-soft">
+    <div aria-hidden="true" className="grid grid-cols-5 items-end gap-2 rounded-md border border-border bg-paper px-4 py-6 shadow-soft sm:gap-4 sm:px-6">
       {phases.map((p) => (
-        <MoonVisual key={p} phase={p} alt="" size={64} />
+        <MoonVisual key={p} phase={p} alt="" />
       ))}
     </div>
   );
@@ -251,8 +251,9 @@ function FamilyArt() {
         <p className="text-xs font-semibold text-muted">{es ? "Necesitó ayuda con" : "Needed help with"}</p>
         <p className="mt-1 text-sm text-ink">{es ? "Comparar fracciones" : "Comparing fractions"}</p>
       </div>
-      <div className="mt-4 rounded-sm bg-panel2 px-4 py-3 text-sm text-ink">
-        {es ? "Practicar con tiras de papel el sábado." : "Try paper strips together on Saturday."}
+      <div className="mt-4 border-t border-border pt-4">
+        <p className="text-xs font-semibold text-muted">{es ? "Tu nota" : "Your note"}</p>
+        <p className="mt-1 text-sm italic text-ink">{es ? "Practicar con tiras de papel el sábado." : "Try paper strips together on Saturday."}</p>
       </div>
     </div>
   );

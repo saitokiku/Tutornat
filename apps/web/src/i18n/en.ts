@@ -247,6 +247,8 @@ const en = {
   "tutor.hide": "Hide tutor",
 
   "w.fraction.readout": "{shaded} of {parts} parts shaded = {shaded}/{parts}",
+  "w.fraction.readout_one": "{shaded} of 1 part shaded = {shaded}/1",
+  "w.fraction.parts": "Parts",
   "w.fraction.more": "More parts",
   "w.fraction.fewer": "Fewer parts",
   "w.fraction.part": "Part {n}, {state}",

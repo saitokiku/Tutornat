@@ -15,7 +15,7 @@ export function VisualView({ visual, alt, tint = "var(--color-math)" }: { visual
     case "particles":
       return <ParticlesVisual state={visual.state} alt={alt} tint={tint} />;
     case "moon":
-      return <MoonVisual phase={visual.phase} alt={alt} />;
+      return <MoonVisual phase={visual.phase} alt={alt} size={140} />;
     case "line-graph":
       return <LineGraphVisual {...visual} alt={alt} tint={tint} />;
   }
@@ -41,11 +41,13 @@ export function FractionVisual({ parts, shaded, alt, tint }: { parts: number; sh
   );
 }
 
+/** A number as a learner reads it: true minus sign, fractions when a denominator is given. */
 export function fractionLabel(value: number, denominator?: number) {
-  if (!denominator) return String(Math.round(value * 100) / 100);
+  const minus = (s: string) => s.replace("-", "\u2212");
+  if (!denominator) return minus(String(Math.round(value * 100) / 100));
   const num = Math.round(value * denominator);
-  if (num % denominator === 0) return String(num / denominator);
-  return `${num}/${denominator}`;
+  if (num % denominator === 0) return minus(String(num / denominator));
+  return minus(`${num}/${denominator}`);
 }
 
 export function NumberLineVisual({
@@ -118,9 +120,10 @@ export function moonPath(phase: number, r = 40, cx = 50, cy = 50) {
   return `M ${top} A ${r} ${r} 0 0 0 ${bottom} A ${rx} ${r} 0 0 ${k > 0 ? 1 : 0} ${top} Z`;
 }
 
-export function MoonVisual({ phase, alt, size = 120 }: { phase: number; alt: string; size?: number }) {
+/** `size` in px; omit it to fill the parent's width. */
+export function MoonVisual({ phase, alt, size }: { phase: number; alt: string; size?: number }) {
   return (
-    <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={alt}>
+    <svg viewBox="0 0 100 100" width={size ?? "100%"} height={size} role="img" aria-label={alt} className={size ? undefined : "h-auto w-full"}>
       <circle cx={50} cy={50} r={40} fill="#2b2a27" />
       <path d={moonPath(phase)} fill="#f3eee2" />
       <circle cx={50} cy={50} r={40} fill="none" stroke={LINE} strokeWidth={1} />

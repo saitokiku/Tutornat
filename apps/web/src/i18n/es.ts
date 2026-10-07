@@ -249,6 +249,8 @@ const es: Record<Key, string> = {
   "tutor.hide": "Ocultar tutor",
 
   "w.fraction.readout": "{shaded} de {parts} partes pintadas = {shaded}/{parts}",
+  "w.fraction.readout_one": "{shaded} de 1 parte pintada = {shaded}/1",
+  "w.fraction.parts": "Partes",
   "w.fraction.more": "Más partes",
   "w.fraction.fewer": "Menos partes",
   "w.fraction.part": "Parte {n}, {state}",
