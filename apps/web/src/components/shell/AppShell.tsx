@@ -10,10 +10,12 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, ViewTransition, type CSSProperties, type ReactNode } from "react";
 import { KaizenLogo, KaizenMark, KaizenWordmark } from "@/components/brand";
+import { HandoverScope } from "@/components/family/Handover";
 import { StoreHealthNotice } from "@/components/gate";
 import { IconBook, IconCalendar, IconFamily, IconHome, IconPlus, IconPractice, IconSettings, IconSprout, IconTutor } from "@/components/icons";
 import { Kbd, Spinner, announce, btn, useBand } from "@/components/ui";
 import { useT } from "@/i18n";
+import { useWeeklyEmail } from "@/lib/email/weekly";
 import { currentLearner } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -72,6 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const k2 = useBand() === "k2";
   const online = useOnline();
   useConnectionNews(online);
+  useWeeklyEmail();
 
   const rail = learner ? LEARNER_TABS : PARENT_TABS;
   const bar = barTabs(Boolean(learner));
@@ -254,9 +257,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <StoreHealthNotice />
           </div>
           <ViewTransition update={{ "k-tab": "k-tab", default: "none" }} default="none">
-            <div key={scope} className={scope !== firstScope ? "k-enter" : undefined}>
-              {children}
-            </div>
+            <HandoverScope>
+              <div key={scope} className={scope !== firstScope ? "k-enter" : undefined}>
+                {children}
+              </div>
+            </HandoverScope>
           </ViewTransition>
         </main>
       </div>
@@ -302,4 +307,3 @@ export function AppShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

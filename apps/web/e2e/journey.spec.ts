@@ -30,12 +30,13 @@ test("a family's first evening", async ({ page }, info) => {
 
   // Two learners.
   await page.getByLabel("Name or nickname").fill("Leo");
-  await page.getByLabel("Grade").selectOption("K");
+  await page.getByRole("combobox", { name: "Grade", exact: true }).selectOption("K");
   await page.getByRole("button", { name: "Add learner" }).click();
   await page.getByRole("button", { name: /Add a learner/ }).click();
   await page.getByLabel("Name or nickname").fill("Sofía");
-  await page.getByLabel("Grade").selectOption("6");
-  await page.getByText("Español").click();
+  await page.getByRole("combobox", { name: "Grade", exact: true }).selectOption("6");
+  await page.getByRole("radio", { name: "Español", exact: true }).press("Space");
+  await expect(page.getByRole("radio", { name: "Español", exact: true })).toBeChecked();
   await page.getByRole("button", { name: "Add learner" }).click();
   await noOverflow(page);
 

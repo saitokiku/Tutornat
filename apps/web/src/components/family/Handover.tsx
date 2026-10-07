@@ -1,21 +1,25 @@
 "use client";
 
-import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { selectLearner } from "@/lib/profiles";
+import { useStore } from "@/lib/store";
 
 // Handing the device to a child from a grown-up page. The link switches the session to the child
 // and navigates; the page's grown-ups-only Guard would see the child's session first and send them to
-// Today, overriding a link to Practice. Inside a HandoverScope the page steps aside while the
-// navigation runs, so the link lands where it says.
+// Today, overriding a link to Practice. The shell owns the handover boundary above its learner key:
+// it survives switching learners, steps aside on the originating route, and clears on navigation.
 
 const Leave = createContext<(() => void) | null>(null);
 
-/** Put this outside a grown-up page's Guard when the page has hand-over links. */
+/** Keep above the shell's learner-keyed pages so navigation owns its lifetime, not a cached page. */
 export function HandoverScope({ children }: { children: ReactNode }) {
-  const [leaving, setLeaving] = useState(false);
-  // Next keeps a visited page alive but hidden (Activity); when the grown-up comes back, it shows again.
-  useLayoutEffect(() => () => setLeaving(false), []);
-  return <Leave.Provider value={() => setLeaving(true)}>{leaving ? null : children}</Leave.Provider>;
+  const path = usePathname();
+  const parent = useStore((s) => s.session.profileId === "parent");
+  const [from, setFrom] = useState<string | null>(null);
+  const leaving = from === path && !parent;
+  if (from !== null && (parent || from !== path)) setFrom(null);
+  return <Leave.Provider value={() => setFrom(path)}>{leaving ? null : children}</Leave.Provider>;
 }
 
 /** The `onNavigate` for a link that hands the device to this child. */

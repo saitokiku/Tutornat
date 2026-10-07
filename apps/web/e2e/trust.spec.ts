@@ -11,7 +11,7 @@ test.use({ reducedMotion: "reduce" });
 async function audit(page: Page, label: string) {
   const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   const bad = r.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-  expect(bad.map((v) => `${label}: ${v.id} — ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")}`)).toEqual([]);
+  expect(bad.map((v) => `${label}: ${v.id} — ${v.nodes.map((n) => `${n.target.join(" ")}: ${n.failureSummary}`).slice(0, 3).join(" | ")}`)).toEqual([]);
 }
 
 test("policies: privacy, terms and retention are public, marked draft, and readable in Spanish", async ({ page }) => {
@@ -219,9 +219,7 @@ test("weekly email: opening Settings after Sunday sends last week's email, once"
   expect(posts.filter((p) => p.action === "send")).toHaveLength(1);
 });
 
-// Needs the app shell to call useWeeklyEmail() (requested from the shell's owner). Until it does, only
-// Settings sends, Settings says so, and this journey fails on purpose: the email isn't weekly for a
-// parent who never opens Settings.
+// A confirmed weekly email is sent from every Parent view screen, including Family.
 test("weekly email: opening the Family page after Sunday sends last week's email", async ({ page }) => {
   const posts = await emailServer(page, "send");
   await family(page, "weekly-family", [["Ada", "3"]]);

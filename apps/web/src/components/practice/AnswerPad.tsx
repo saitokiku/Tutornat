@@ -73,6 +73,7 @@ function useTyping(active: boolean, onKey: (k: string) => void, onSubmit: (() =>
   useEffect(() => {
     if (!active) return;
     const h = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -102,12 +103,17 @@ const DIGITS_ALL = /^[0-9.-]$/;
 
 export function Keypad({ value, onChange, onSubmit, disabled, young, keys = [] }: PadProps & { keys?: ("-" | ".")[] }) {
   const t = useT();
+  const answer = useRef<HTMLOutputElement>(null);
   const press = (k: string) => onChange(apply(value, k));
   const allowed = keys.includes("-") && keys.includes(".") ? DIGITS_ALL : keys.includes("-") ? DIGITS_NEG : keys.includes(".") ? DIGITS_DOT : DIGITS;
-  useTyping(!disabled, press, onSubmit, allowed);
+  useTyping(!disabled, (k) => {
+    press(k);
+    const target = document.activeElement;
+    if (target?.closest(OWN_ENTER) && !target.closest("[data-answers]")) answer.current?.focus();
+  }, onSubmit, allowed);
   return (
     <div className="mx-auto w-full max-w-xs space-y-3">
-      <output aria-live="polite" aria-label={t("practice.yourAnswer")} className={`flex items-center justify-center rounded-md border-2 border-ink/80 bg-panel px-4 font-opmono tabular-nums text-ink ${young ? "h-20 text-4xl" : "h-16 text-3xl"}`}>
+      <output ref={answer} tabIndex={-1} aria-live="polite" aria-label={t("practice.yourAnswer")} className={`flex items-center justify-center rounded-md border-2 border-ink/80 bg-panel px-4 font-opmono tabular-nums text-ink ${young ? "h-20 text-4xl" : "h-16 text-3xl"}`}>
         {value ? value.replace("-", "−") : <span className="text-muted/50">?</span>}
       </output>
       <Keys onKey={press} extra={keys} disabled={disabled} young={young} />
@@ -125,6 +131,7 @@ export function FractionPad({ value, onChange, onSubmit, disabled, young }: PadP
   };
   const [focus, setFocus] = useState<"whole" | "num" | "den">("num");
   const [mixed, setMixed] = useState(false);
+  const fields = useRef<Partial<Record<"whole" | "num" | "den", HTMLButtonElement | null>>>({});
   const parts = parse(value);
   const write = (p: { whole: string; num: string; den: string }) => onChange(p.whole ? `${p.whole} ${p.num}/${p.den}` : `${p.num}/${p.den}`);
   const press = (k: string) => {
@@ -135,12 +142,23 @@ export function FractionPad({ value, onChange, onSubmit, disabled, young }: PadP
     } else next[focus] = apply(next[focus], k, 5);
     write(next);
   };
-  useTyping(!disabled, (k) => (k === "/" ? setFocus("den") : press(k)), onSubmit, /^[0-9/-]$/);
+  useTyping(!disabled, (k) => {
+    if (k === "/") {
+      setFocus("den");
+      fields.current.den?.focus();
+    } else {
+      press(k);
+      // Once typing starts, Enter belongs to the answer, even after a hint was focused.
+      fields.current[focus]?.focus();
+    }
+  }, onSubmit, /^[0-9/-]$/);
   const box = (field: "whole" | "num" | "den", label: string) => (
     <button
       type="button"
+      ref={(el) => { fields.current[field] = el; }}
       disabled={disabled}
       onClick={() => setFocus(field)}
+      onFocus={() => setFocus(field)}
       aria-label={`${label}: ${parts[field] || t("practice.empty")}`}
       aria-pressed={focus === field}
       className={`grid min-w-16 place-items-center rounded-md border-2 bg-panel px-3 font-opmono tabular-nums ${young ? "h-16 text-3xl" : "h-14 text-2xl"} ${
@@ -161,11 +179,12 @@ export function FractionPad({ value, onChange, onSubmit, disabled, young }: PadP
         </div>
       </div>
       <div className="flex justify-center gap-2">
-        <button type="button" onClick={() => setFocus(focus === "num" ? "den" : "num")} className="k-btn-ghost text-xs">
+        <button type="button" disabled={disabled} onClick={() => setFocus(focus === "num" ? "den" : "num")} className="k-btn-ghost text-xs">
           {focus === "num" ? t("practice.toBottom") : t("practice.toTop")}
         </button>
         <button
           type="button"
+          disabled={disabled}
           aria-pressed={mixed}
           onClick={() => {
             setMixed(!mixed);
@@ -186,13 +205,25 @@ export function RemainderPad({ value, onChange, onSubmit, disabled, young }: Pad
   const t = useT();
   const [q, r = ""] = value.split(" R ");
   const [focus, setFocus] = useState<"q" | "r">("q");
+  const fields = useRef<Partial<Record<"q" | "r", HTMLButtonElement | null>>>({});
   const write = (nq: string, nr: string) => onChange(nr ? `${nq} R ${nr}` : nq);
   const press = (k: string) => (focus === "q" ? write(apply(q, k, 6), r) : write(q, apply(r, k, 4)));
-  useTyping(!disabled, (k) => (k === "r" || k === "R" ? setFocus("r") : press(k)), onSubmit, /^[0-9rR]$/);
+  useTyping(!disabled, (k) => {
+    if (k === "r" || k === "R") {
+      setFocus("r");
+      fields.current.r?.focus();
+    } else {
+      press(k);
+      fields.current[focus]?.focus();
+    }
+  }, onSubmit, /^[0-9rR]$/);
   const box = (field: "q" | "r", text: string, label: string) => (
     <button
       type="button"
+      ref={(el) => { fields.current[field] = el; }}
+      disabled={disabled}
       onClick={() => setFocus(field)}
+      onFocus={() => setFocus(field)}
       aria-label={`${label}: ${text || t("practice.empty")}`}
       aria-pressed={focus === field}
       className={`grid min-w-20 place-items-center rounded-md border-2 bg-panel px-3 font-opmono tabular-nums ${young ? "h-16 text-3xl" : "h-14 text-2xl"} ${focus === field ? "border-accent" : "border-border"}`}
@@ -276,7 +307,7 @@ export function TextAnswer({ value, onChange, onSubmit, disabled, algebra, label
         disabled={disabled}
         onChange={(e) => onChange(e.target.value.slice(0, 80))}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
+          if (e.key === "Enter" && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) {
             e.preventDefault();
             onSubmit();
           }

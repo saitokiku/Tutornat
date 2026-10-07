@@ -2,9 +2,42 @@
 
 What the owner actually said, in order, with the date. Newest wins when they conflict. Quotes are
 verbatim (typos kept). Sources: Hermes session history (`~/.hermes/state.db`, clarify answers and
-messages, 2026-09-30 → 10-04) and the Claude Code session of 2026-10-07.
+messages, 2026-09-30 → 10-04), the Claude Code session of 2026-10-07, and the subsequent Codex review.
 
-## 2026-10-07 (night) — the learning fabric (current)
+## 2026-10-07 — integrated product review (newest)
+
+- Main repository: “Tutornat is the main repo as of now. kaizen-ai used to be the other main repo,
+  the other two are just side attmpts that didnt turn out great, but had decent info in there”.
+- Task order: “first you read everything and get the lay of the land. then your job is to plan out
+  an exact document for what next set of agent will do”; “and then we will build”.
+- Process: “push to github as you finish mergable section thats robust and functional.”
+- Unified ages, superseding the earlier adults-last ordering: “it has to be built with all in fusion
+  and actually well working toghether becuase each will support each other. like if you build an
+  intuitive product for a kid, then adult translate much easier, and if its technially strong enoughof
+  a harness to teach and adult then child shouldnt have any issues with lack of learning space atleast.”
+- Future sensing: “its so integrated that later the plan is also to add visual features like aface
+  and eye tracking to help with attention and create a better learning environment. and more like
+  that. so build the plan with those sorts of intents”.
+- Modalities: “and oviously natural low latency voice and that interaction too, so visual which is
+  the largest cause using styles animations, demos renders emotional etc., then hearing/ speaking
+  and touch and HID etc they all work togehter to form one chesive teacehr program”.
+- “We will later also ornament the website to a decent extent but thats later”.
+- “and also plan for which is the best mdoel or array of models, and incorporate jev for better
+  overall intellgence build around the latest systems”.
+- Cost/quality answer: **“Max quality i will burn cash first need best proof”.**
+- Selection method: “use benchmarks to pick models not just genreal \"oh this is better says the
+  comapny\" cause opus has been better at coding than claude, and some other models at tutoring  etc”.
+
+Implementation interpretation, proposed for review: one durable session/workspace; independently
+adaptive support; honest assistance/assessment provenance; reciprocal pointing and one voice owner;
+optional avatar/gaze extension; independent benchmark shortlist followed by frozen, blinded
+role-specific model/voice comparison, with bounded Jev roles. Coding success does not establish tutoring success.
+See [product specification](specs/2026-10-07-one-learning-workspace.md),
+[model strategy](specs/2026-10-07-models-voice-and-jev.md) and
+[agent plan](plans/2026-10-07-integrated-learning-release.md). No implementation or camera activation
+is implied by recording these decisions. Numeric mastery policy is unchanged.
+
+## 2026-10-07 (night) — the learning fabric (earlier)
 
 - "okay let focus on getting the tutor part and dashboard and academic integration and calendar organizations, basically at home kumon with on demand practice gernetor and kumon at home generate lessons catered to you. and also talks and teaches naturally. and ai works to interface, help grow, track shadow work etc and keep your growth aligned and happening. ready all the ai strategy docs, now feel free to diverge and have full creative freedom, use old stuff as refernce. not bad on the demo but farrrrrr from a complete product."
 - "This product should also be marketed and catered for home schooling and parents who need homework/ test / tutoring help immediately and also students who are already good this should ease their life a lot either staying managed etc"

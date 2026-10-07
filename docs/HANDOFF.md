@@ -1,6 +1,35 @@
-# Handoff — KaizenEDU 1.0 build, stopped 2026-10-07 (out of tokens)
+# Handoff — next integrated learning release
 
-Read this first, then [STATUS.md](STATUS.md) Queue 4 and [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md).
+**Newest direction:** one fused learning environment across ages, visual work first, natural
+low-latency voice/touch/keyboard together, future optional face/gaze, and maximum model quality before
+cost optimization. Website ornamentation is later. Owner requested this planning pass before building.
+
+Start with [the implementation plan](plans/2026-10-07-integrated-learning-release.md), then its
+[product spec](specs/2026-10-07-one-learning-workspace.md),
+[model/voice/Jev spec](specs/2026-10-07-models-voice-and-jev.md), and
+[audit](reviews/2026-10-07-system-audit.md). T01–T13 are **not started**.
+Model selection uses [independent benchmark evidence](reviews/2026-10-07-model-benchmark-evidence.md)
+to shortlist, then frozen blinded product tests to choose each role. No hosted winner is claimed.
+
+Fresh base `d8d8166`: verify passed (2,372 tests); Playwright **148 passed, 22 failed, 16 skipped**.
+Remote `main` and `foundation` both pointed at that SHA during review; local `main` was stale.
+Check remote state before building. Documentation lives on `codex/integrated-learning-plan`.
+
+Preserve all Claude worktrees. The numbers-speller WIP includes untracked implementation/tests despite
+the earlier “not started” label below. Recover selected polish/content fixes using the audit's table;
+do not merge `content-merge` wholesale. Fresh audit evidence supersedes historical counts below.
+
+**Completed:** review, real local browser walk, fresh checks, product/model design and exact build plan.
+**Next:** T01–T04 reliability/authority, then shared workspace/attention/voice and creation.
+**External dependencies:** production credentials/entitlements, child-data review, teacher/Spanish
+review, device voice audition and pilot participants. These do not block synthetic/local implementation.
+
+---
+
+# Earlier handoff — KaizenEDU 1.0 build, stopped 2026-10-07
+
+Historical build record; use the current sequence above where priorities conflict.
+Earlier plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md).
 
 ## Where things are
 

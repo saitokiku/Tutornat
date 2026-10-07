@@ -40,6 +40,7 @@ export function WeeklyEmail({ account }: { account: Account }) {
   const [mode, setMode] = useState<EmailMode | null>(null);
   const [ask, setAsk] = useState<AskResult | null>(null);
   const [asking, setAsking] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [link, setLink] = useState<"ok" | "bad" | null>(null);
   const shellSends = useSentFromParentView();
   const lastSend = useLastSend();
@@ -103,7 +104,7 @@ export function WeeklyEmail({ account }: { account: Account }) {
         {message}
       </p>
 
-      <details className="group rounded-md border border-border bg-panel">
+      <details className="group rounded-md border border-border bg-panel" onToggle={(e) => setPreviewOpen(e.currentTarget.open)}>
         <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 text-sm font-medium text-ink">
           {t("trust.weekly.previewTitle")}
           <span aria-hidden="true" className="ml-auto text-muted transition-transform group-open:rotate-90">
@@ -126,7 +127,7 @@ export function WeeklyEmail({ account }: { account: Account }) {
               </div>
               <div>
                 <h3 className="text-xs font-semibold text-muted">{t("trust.weekly.inbox")}</h3>
-                <iframe title={t("trust.weekly.frame")} srcDoc={preview.html} sandbox="" className="mt-1 h-96 w-full rounded-md border border-border bg-paper" />
+                {previewOpen && <iframe title={t("trust.weekly.frame")} srcDoc={preview.html} sandbox="" className="mt-1 h-96 w-full rounded-md border border-border bg-paper" />}
               </div>
             </>
           ) : (

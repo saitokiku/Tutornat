@@ -65,6 +65,7 @@ export function ClockPad({ pad = DEFAULT_PADS.clock, value, onChange, onSubmit, 
     else set(h, minuteAt(deg, step));
   };
   const onKey = (which: Hand) => (e: KeyboardEvent) => {
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
     const big = which === "hour" ? 3 : Math.max(1, Math.round(15 / step));
     const by: Record<string, number> = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: big, PageDown: -big };
     if (e.key === "Enter") {

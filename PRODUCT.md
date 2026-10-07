@@ -7,6 +7,11 @@ owner messages of 2026-10-07, recorded verbatim in [docs/DECISIONS.md](docs/DECI
 Claude to decide from that history rather than re-interview; facts marked *(inferred)* follow from it but
 were not asked directly.
 
+Next-build direction: [one learning workspace](docs/specs/2026-10-07-one-learning-workspace.md),
+[models/voice/Jev](docs/specs/2026-10-07-models-voice-and-jev.md), and the
+[implementation plan](docs/plans/2026-10-07-integrated-learning-release.md). These are proposed build
+specifications; [the audit](docs/reviews/2026-10-07-system-audit.md) describes what currently works.
+
 ## Platform
 
 web
@@ -23,8 +28,9 @@ attempt, not a reference.
   English/rhetoric at home — including children who can't yet rely on reading.
 - **Parents/guardians:** own the account, add each child as a learner, follow what each child actually
   did, and act on it (notes, assigning courses). Parents are active participants, not passive viewers.
-- **Later:** adults. The long-term goal is a teacher machine for any learner, literate or not ("K–99").
-  Adult profiles must keep working, but no adult-specific work happens now.
+- **Same integrated product:** adults and children use the same capable learning workspace. The
+  owner superseded “adults last”: substantive adult-owned use and child-intuitive/non-reading use
+  must both work in the next release. K–9 remains the reviewed curriculum focus, not a capability ceiling.
 - Human tutors are a later add-on; the product must stand alone without them.
 
 ## Jobs (2026-10-07)
@@ -35,11 +41,12 @@ that schedules itself). One product; the family's setup answer changes emphasis 
 
 ## Product Purpose
 
-Turn anything a learner wants to learn into a short, ordered course, then teach it on a visual stage
-where the learner sees the idea, manipulates it, and checks it — with text as backup, not the workload.
-Around the stage sits a dashboard: the learner's courses and continue point, a parent view per child,
-and an honest record of activity. Success = a child can go from "I want to learn X" to doing and
-checking X with little reading, and a parent can see truthfully what happened.
+Help a person understand and do something more independently. A question opens useful teaching;
+a request for a course opens an ordered course. One visual workspace connects demonstrations,
+manipulation, natural low-latency voice, touch/keyboard input, creation and fresh practice. It retains
+the goal and work across tools and visits. The same evidence supports continuation, self review and
+the family view. Engagement should produce knowledge, capability and creative work, measured beyond
+the performance achieved while the tutor is helping.
 
 ## Positioning
 
@@ -54,22 +61,28 @@ Claims discipline: the landing promises only what works that day.
 
 - Entry: the **magic box** — type a goal, a homework question or an upcoming test; optionally drop
   a syllabus, worksheet or notes.
-- Output: an editable course outline → lessons → scenes (slides with pictures, interactive
-  manipulatives, quick checks with hints, at-home projects).
+- Output follows intent: immediate help in shared work, practice, an editable course, or organization
+  around a real deadline. A course is one path, not an obligatory form before answering a question.
 - Parent loop: Family view per child — this week's activity, where they needed hints or missed checks,
   notes, assign a course.
-- Engine roadmap: OpenMAIC's generation pipeline and teaching stage (`modules/openmaic-classroom`) become
-  the engine behind the same screens; one learner-facing tutor; voice after chat is proven.
+- Engine roadmap: port verified OpenMAIC capabilities through the shared workspace contracts where
+  they improve the accepted journeys. Preserve its useful depth without adding another application.
 
 ## Capabilities and Constraints
 
-- Today: no backend; everything saves in the browser. AI runs only when the deployment has a provider
-  (Anthropic key, or AI Gateway); otherwise the demo tutor and template outlines, labelled as such.
+- Today: browser storage plus server auth/Postgres/sync/consent scaffolding exist. Production authority
+  and data-lifecycle gates remain incomplete; the current backend is not a verified family launch.
+  AI runs only when configured (Anthropic or AI Gateway); otherwise labelled demo/template behavior.
 - Practice answers are checked by code. The tutor teaches with tools and has no answer keys.
-- Model policy when AI connects: native Anthropic, server-side only, no client-supplied keys, no silent
-  fallback provider *(from Hermes-era policy; re-confirm before wiring)*.
+- Current model route: Anthropic, server-side, no client keys or silent provider fallback. The owner
+  now requests the best current model array and Jev, with **maximum quality before cost optimization**.
+  Use [independent role-specific benchmarks](docs/reviews/2026-10-07-model-benchmark-evidence.md) to
+  shortlist tutoring, reasoning, coding and voice models separately; frozen blinded product tests
+  select production roles. Explicit processor permissions remain required. Code retains correctness/evidence authority.
 - EN and ES across the interface; Spanish needs native-speaker review before launch.
-- Camera off. Microphone/playback only by explicit action with visible state and a typed alternative.
+- Camera off in the current/next integrated release. Later optional tutor face and face/gaze assistance
+  connect through the same attention contract; they are separately evaluated and permissioned.
+  Microphone/playback starts by explicit action with visible state, stop and a typed alternative.
 - Privacy: learner nicknames are local labels and never go to a model; learner conversations and answers
   never enter shared lesson content.
 - Undecided: pricing, real accounts/consent for children (COPPA), retention, which curriculum sources
@@ -81,6 +94,7 @@ Claims discipline: the landing promises only what works that day.
 - Interior look: the Kaizen-AI dashboard the owner liked — see DESIGN.md.
 - Top rule, owner's words: "dont make anything look or sound or feel like AI slop."
 - Voice: plain, warm, specific. No canned praise, no hype, no "AI-powered" badges.
+- Meaningful visual teaching and natural voice are core. Website ornamentation comes later.
 
 ## Evidence on Hand
 
@@ -95,7 +109,8 @@ Claims discipline: the landing promises only what works that day.
 2. Honest records: completion, answers and hints are activity, never mastery.
 3. One clear next step on every screen; no organizer clutter in front of learning.
 4. Parents are partners with real information, not surveillance and not scores.
-5. Reuse the strongest existing engine (OpenMAIC) behind our own screens rather than rebuilding it.
+5. Port verified OpenMAIC capabilities through shared workspace contracts where they improve the
+   accepted journeys; preserve the existing practice, learning and planner domains.
 
 ## Accessibility & Inclusion
 
