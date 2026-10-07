@@ -12,6 +12,7 @@ import { SYLLABLE_SPLIT, SYLLABLE_TYPES } from "./phonics/grade2c";
 import { FINAL_SOUND, FIRST_SOUND, LETTER_NAMES } from "./phonics/letters";
 import { SIGHT_GRADE1, SIGHT_GRADE2, SIGHT_PREPRIMER, SIGHT_PRIMER } from "./phonics/sight";
 import { MIDDLE_VOWEL, WORD_FAMILIES } from "./phonics/sounds";
+import { Y_VOWEL } from "./phonics/yvowel";
 
 // K–2 phonics in teaching order: letters, sounds heard in words, blending and swapping, then reading
 // patterns. A pre-reader can do every listening level by hearing the read-aloud line and looking at the
@@ -39,6 +40,7 @@ export const PHONICS_BANKS: Record<string, Entry[][]> = {
   "e.blends.final": BLENDS_FINAL,
   "e.silent.e": SILENT_E,
   "e.vowel.teams": VOWEL_TEAMS,
+  "e.y.vowel": Y_VOWEL,
   "e.ending.ed": ENDING_ED,
   "e.ending.ing": ENDING_ING,
   "e.sight.grade1": SIGHT_GRADE1,
@@ -73,6 +75,7 @@ export const ENGLISH_PHONICS: Skill[] = [
   skill({ id: "e.blends.final", grade: "1", title: { en: "Blends at the end", es: "Sílabas inversas" }, standard: "RF.1.3b", prereqs: ["e.blends.initial"] }, bank("e.blends.final"), [10, 12]),
   skill({ id: "e.silent.e", grade: "1", title: { en: "Silent e", es: "La h muda" }, standard: "RF.1.3c", prereqs: ["e.short.vowels"] }, bank("e.silent.e"), [10, 15]),
   skill({ id: "e.vowel.teams", grade: "1", title: { en: "Vowel teams", es: "Diptongos" }, standard: "RF.1.3c", prereqs: ["e.silent.e"] }, bank("e.vowel.teams"), [10, 10]),
+  skill({ id: "e.y.vowel", grade: "1", title: { en: "Y as a vowel", es: "La y como vocal" }, standard: "RF.1.3", prereqs: ["e.vowel.teams"] }, bank("e.y.vowel"), [10, 10]),
   skill({ id: "e.ending.ed", grade: "1", title: { en: "Endings: -ed", es: "Terminaciones: -ado, -ido" }, standard: "RF.1.3f", prereqs: ["e.short.vowels"] }, bank("e.ending.ed"), [10, 12]),
   skill({ id: "e.ending.ing", grade: "1", title: { en: "Endings: -ing", es: "Terminaciones: -ando, -iendo" }, standard: "RF.1.3f", prereqs: ["e.ending.ed"] }, bank("e.ending.ing"), [10, 12]),
   skill({ id: "e.sight.grade1", grade: "1", title: { en: "Sight words: grade 1", es: "Palabras frecuentes 3" }, standard: "RF.1.3g", prereqs: ["e.sight.primer"] }, bank("e.sight.grade1"), [6, 15]),

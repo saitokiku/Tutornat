@@ -24,6 +24,7 @@ const TABLE: [id: string, grade: string, standard: string, prereqs: string[], le
   ["e.blends.final", "1", "RF.1.3b", ["e.blends.initial"], 2],
   ["e.silent.e", "1", "RF.1.3c", ["e.short.vowels"], 2],
   ["e.vowel.teams", "1", "RF.1.3c", ["e.silent.e"], 2],
+  ["e.y.vowel", "1", "RF.1.3", ["e.vowel.teams"], 2],
   ["e.ending.ed", "1", "RF.1.3f", ["e.short.vowels"], 2],
   ["e.ending.ing", "1", "RF.1.3f", ["e.ending.ed"], 2],
   ["e.sight.grade1", "1", "RF.1.3g", ["e.sight.primer"], 2],
@@ -814,6 +815,47 @@ describe("answer keys, checked another way (grade 2 word study)", () => {
       const last = q.steps[0].split(":")[0].split("-");
       const strong = /[áéíóú]/.test(word) ? last.findIndex((p) => /[áéíóú]/.test(p)) : /[aeiouns]$/.test(word) ? last.length - 2 : last.length - 1;
       expect(["aguda", "llana", "esdrújula"][last.length - 1 - strong], w).toBe(key(q));
+    }
+  });
+});
+
+describe("answer keys, checked another way (y as a vowel)", () => {
+  /** English: y at the start is a consonant; at the end of a one-syllable word it says long i, else long e. */
+  const ySound = (w: string) => (w.startsWith("y") ? "y" : w === "butterfly" || !/[aeiou]/.test(w.slice(0, -1)) ? "i" : "e");
+  it("English: the key ends with the target's y sound; wrong sounds are tagged", () => {
+    const TAG: Record<string, string> = { i: "y-as-long-i", e: "y-as-long-e", y: "y-as-consonant" };
+    for (const q of lv("e.y.vowel", 1, "en")) {
+      const t = /like (\S+)\?$/.exec(q.prompt)![1];
+      expect(ySound(key(q)), q.prompt).toBe(ySound(t));
+      for (const c of q.choices.slice(1)) expect(c.why, `${t} ${c.label}`).toBe(TAG[ySound(c.label)]);
+    }
+    const NAME: Record<string, string> = { i: "long-i", e: "long-e", y: "consonant" };
+    for (const q of lv("e.y.vowel", 2, "en")) {
+      const w = /in (\S+)\?$/.exec(q.prompt)![1];
+      expect(key(q)[0], w).toBe(ySound(w));
+      for (const c of q.choices.slice(1)) expect(c.why, `${w} ${c.label}`).toBe(`${NAME[ySound(w)]}-as-${NAME[c.label[0]]}`);
+    }
+  });
+
+  it("Spanish: y at the end sounds like i; inside, the i sound is written i; each wrong spelling is tagged", () => {
+    for (const q of lv("e.y.vowel", 1, "es")) {
+      const w = /en (\S+)\?$/.exec(q.prompt)![1];
+      expect(key(q), w).toBe(w.endsWith("y") ? "como la vocal i" : "como en yoyó");
+    }
+    for (const q of lv("e.y.vowel", 2, "es")) {
+      const k = key(q);
+      expect(/y$/.test(k) || /i/.test(k.replace(/y/g, "")) || /y[aeiou]/.test(k), k).toBe(true);
+      for (const c of q.choices.slice(1)) {
+        const d = c.label;
+        const ok = {
+          "i-for-y": d === k.replace("y", "i"),
+          "y-for-i": d === k.replace("i", "y"),
+          "ll-for-y": d === k.replace("y", "ll"),
+          "dropped-letter": kinds(k, d).has("dropped-letter"),
+          "dropped-silent-letter": d === k.replace(/^h/, ""),
+        }[c.why!];
+        expect(ok, `${k}: ${d} (${c.why})`).toBe(true);
+      }
     }
   });
 });
