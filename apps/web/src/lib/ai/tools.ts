@@ -4,7 +4,7 @@ import { check } from "@/practice/answer";
 import { randomSeed } from "@/practice/rng";
 import { getSkill, makeItem, SKILLS } from "@/practice/skills";
 import { matchSkills } from "@/planner/skillmatch";
-import { resourcesFor } from "@/resources";
+import { linkOf, resourcesFor } from "@/resources";
 import type { TutorContext } from "./context";
 
 // The tutor's tools. Everything that must be correct is code: checking an answer, the vetted hint,
@@ -83,7 +83,7 @@ export function tutorTools(ctx: TutorContext) {
       execute: async ({ skillId, topic }) => ({
         resources: resourcesFor({ skillId, topic, grade: ctx.grade, locale: ctx.locale })
           .slice(0, 4)
-          .map((r) => ({ title: r.title, source: r.source, url: r.url, kind: r.kind })),
+          .map((r) => ({ title: r.title, source: r.source, url: linkOf(r, ctx.locale), kind: r.kind })),
       }),
     }),
     show_visual: tool({

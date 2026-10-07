@@ -14,6 +14,8 @@ import { useTitle } from "@/components/LangSync";
 import { HearContext } from "./hear";
 import { TutorPanel } from "./TutorPanel";
 import { useSpeech } from "./useSpeech";
+import { ResourceList } from "@/components/resources/ResourceList";
+import { resourcesFor } from "@/resources";
 
 const MAX_SECONDS = 2 * 60 * 60;
 const KIND_ICON: Record<Scene["kind"], typeof IconEye> = { slide: IconEye, interactive: IconHand, quiz: IconCheckCircle, project: IconHome };
@@ -211,6 +213,9 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                     </Link>
                   )}
                 </div>
+                <div className="mx-auto mt-10 max-w-md text-left">
+                  <ResourceList list={resourcesFor({ topic: `${course.title} ${course.goal} ${lesson.title}`, subject: course.subject, grade: course.grade, locale: learner.locale })} locale={learner.locale} />
+                </div>
               </div>
             ) : (
               <>
@@ -249,7 +254,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
 
         {showTutor && (
           <div className="lg:col-start-2 xl:sticky xl:top-4 xl:col-start-auto xl:self-start">
-            <TutorPanel />
+            <TutorPanel learner={learner} lessonTitle={lesson.title} scene={scene ?? lesson.scenes[0]} />
           </div>
         )}
       </div>

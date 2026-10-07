@@ -693,6 +693,16 @@ const es: Record<Key, string> = {
   "import.photoTooBig": "Esa foto es demasiado grande (más de 6 MB). Prueba con una más pequeña.",
   "import.aiFailed": "La IA no pudo leerlo. Inténtalo de nuevo o pega el texto.",
   "import.aiGuesses": "Lo que la IA tuvo que adivinar; revísalo:",
+
+  "resources.title": "Lee, mira o prueba más",
+  "resources.why": "Fuentes gratis de otros sitios. Se abren en otra pestaña.",
+  "resources.kind.video": "videos",
+  "resources.kind.simulation": "simulación",
+  "resources.kind.book": "libro gratis",
+  "resources.kind.text": "lectura",
+  "resources.kind.practice": "práctica",
+  "resources.kind.library": "biblioteca gratis",
+  "resources.kind.tool": "herramienta",
 };
 
 export default es;

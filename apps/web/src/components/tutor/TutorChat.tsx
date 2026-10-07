@@ -24,7 +24,7 @@ import type { EventKind, TutorThread } from "@/planner/types";
 import { matchSkills } from "@/planner/skillmatch";
 import { getSkill, makeItem, SKILLS } from "@/practice/skills";
 import type { Item } from "@/practice/types";
-import { resourcesFor } from "@/resources";
+import { linkOf, resourcesFor } from "@/resources";
 import { useListen, useSpeakStream } from "./useVoice";
 
 // The tutor conversation, used beside a problem (drawer) and full screen (Talk). With AI connected it
@@ -170,7 +170,7 @@ function DemoChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
     const ids = [...new Set([...matchSkills(about), ...byTitle])].slice(0, 3);
     const sources = resourcesFor({ topic: about, grade: learner.grade, locale }).slice(0, 3);
     const cards: Card[] = ids.map((id) => ({ type: "practice", skillId: id }));
-    if (sources.length) cards.push({ type: "resources", list: sources.map((r) => ({ title: r.title, source: r.source, url: r.url })) });
+    if (sources.length) cards.push({ type: "resources", list: sources.map((r) => ({ title: r.title, source: r.source, url: linkOf(r, locale) })) });
     return { text: cards.length ? t("tutor.demo.found") : t("tutor.demo.talkOther"), cards };
   };
 

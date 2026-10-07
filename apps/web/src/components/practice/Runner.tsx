@@ -18,6 +18,7 @@ import { check, type Verdict } from "@/practice/answer";
 import { randomSeed } from "@/practice/rng";
 import { getSkill, makeItem } from "@/practice/skills";
 import type { Item } from "@/practice/types";
+import { SkillResources } from "@/components/resources/ResourceList";
 import { AnswerInput } from "./AnswerPad";
 import { MathText } from "./MathText";
 import { useTutorDock } from "./tutor-dock";
@@ -415,6 +416,11 @@ function Finish({
         </dl>
       )}
       {set.kind !== "check" && set.kind !== "placement" && <p className="mt-4 text-sm text-muted">{t("practice.honest")}</p>}
+      {skill && set.kind !== "placement" && (
+        <div className="mt-8">
+          <SkillResources skillId={skill.id} locale={learner.locale} max={2} />
+        </div>
+      )}
       <div className="mt-8 flex flex-wrap gap-3">
         <Link href={exitHref} className={btn("primary")}>
           {exitHref === "/home" ? t("practice.backToday") : t("practice.backPractice")}

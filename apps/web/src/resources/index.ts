@@ -11,6 +11,8 @@ export type Resource = {
   title: string;
   source: string;
   url: string;
+  /** The Spanish version, when the source has one. */
+  urlEs?: string;
   kind: ResourceKind;
   subject: Subject;
   /** Inclusive grade band, e.g. ["K", "2"]. */
@@ -37,11 +39,18 @@ export function resourcesFor(q: { skillId?: string; topic?: string; subject?: Su
     let score = 0;
     if (subject && r.subject !== subject) return [r, -1] as const;
     if (grade && (gi(grade) < gi(r.grades[0]) - 1 || gi(grade) > gi(r.grades[1]) + 1)) return [r, -1] as const;
-    if (skill) for (const f of r.fits) if (f === skill.id || (f.endsWith(".") && skill.id.startsWith(f))) score += 5;
+    if (skill)
+      for (const f of r.fits) {
+        if (f === skill.id || (f.endsWith(".") && skill.id.startsWith(f))) score += 5;
+        else if (f === `grade:${skill.grade}`) score += 3;
+      }
     for (const w of words) if (r.fits.some((f) => f.includes(w)) || r.title.toLowerCase().includes(w)) score += 2;
-    if (q.locale && r.languages.includes(q.locale)) score += 1;
+    if (q.locale && (r.languages.includes(q.locale) || (q.locale === "es" && r.urlEs))) score += 1;
     if (!skill && !words.length) score += 1;
     return [r, score] as const;
   });
   return scored.filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).map(([r]) => r);
 }
+
+/** The link to open for this learner: the Spanish version when there is one and they learn in Spanish. */
+export const linkOf = (r: Resource, locale: Locale) => (locale === "es" && r.urlEs ? r.urlEs : r.url);

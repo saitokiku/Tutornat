@@ -691,6 +691,16 @@ const en = {
   "import.photoTooBig": "That photo is too big (over 6 MB). Try a smaller one.",
   "import.aiFailed": "The AI couldn't read that. Try again, or paste the text instead.",
   "import.aiGuesses": "What the AI had to guess — check these:",
+
+  "resources.title": "Read, watch or try more",
+  "resources.why": "Free sources from other sites. They open in a new tab.",
+  "resources.kind.video": "videos",
+  "resources.kind.simulation": "simulation",
+  "resources.kind.book": "free book",
+  "resources.kind.text": "reading",
+  "resources.kind.practice": "practice",
+  "resources.kind.library": "free library",
+  "resources.kind.tool": "tool",
 } as const;
 
 export default en;

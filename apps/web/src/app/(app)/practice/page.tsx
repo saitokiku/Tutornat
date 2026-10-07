@@ -6,6 +6,7 @@ import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { IconArrowRight, IconCheckCircle, IconLayers } from "@/components/icons";
 import { checkOpen, STATUS_DOT, statusLine } from "@/components/practice/status";
+import { SkillResources } from "@/components/resources/ResourceList";
 import { Badge, Button, SubjectDot } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
 import { gradeIndex, skillsFor } from "@/practice/skills";
@@ -136,6 +137,11 @@ function Practice() {
             </Button>
             <span className="text-xs text-muted">{t("practice.setSize", { n: ["K", "1", "2"].includes(learner.grade) ? 6 : 10 })}</span>
           </div>
+          {!["K", "1", "2"].includes(learner.grade) && (
+            <div className="mt-6 border-t border-border pt-5">
+              <SkillResources skillId={nextSkill.id} locale={locale} max={2} />
+            </div>
+          )}
         </section>
       )}
 
