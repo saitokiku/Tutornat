@@ -269,7 +269,9 @@ async function findTerms(head: string, extract: string | null, need: string[], f
     seen.add(stem(w));
     others.push(w);
   }
-  const ask = (w: string, needed: string[] = []): Promise<Defined> => f.define(w).then((d) => ({ m: meaning(d, context, needed, fine) }), (e: unknown) => ({ e }));
+  // async, so a fetcher that throws instead of rejecting (a bug, not a source that's down) fails the
+  // whole build cleanly rather than leaving a stray rejection behind.
+  const ask = async (w: string, needed: string[] = []): Promise<Defined> => f.define(w).then((d) => ({ m: meaning(d, context, needed, fine) }), (e: unknown) => ({ e }));
   const askHead = async (): Promise<Defined[]> => {
     const out: Defined[] = [];
     for (const w of heads) {
