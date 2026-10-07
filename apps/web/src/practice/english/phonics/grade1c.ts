@@ -37,7 +37,7 @@ const EN_SE_FIT: Fit[] = [
 ];
 const ES_SE_FIT: Fit[] = [
   ["Mira la ___ del mar.", "ola", "hola:A ala:V"], ["___, ¿cómo estás?", "Hola", "Ola:E Hora:C"], ["___ un gato en el patio.", "Hay", "Ay:E Ahí:Y"],
-  ["¡___, me duele!", "Ay", "Hay:A Ahí:Y"], ["Tu mochila está ___.", "ahí", "hay:Y ay:Y"], ["Mi mamá ___ la basura al bote.", "echa", "hecha:A echo:V"],
+  ["___, me duele el pie.", "Ay", "Hay:A Ahí:Y"], ["Tu mochila está ___.", "ahí", "hay:Y ay:Y"], ["Mi mamá ___ la basura al bote.", "echa", "hecha:A echo:V"],
   ["La tarea ya está ___.", "hecha", "echa:E hecho:V"], ["Voy a ___ la tarea.", "hacer", "acer:E haser:Y"], ["Hoy ___ mucho calor.", "hace", "ace:E hase:Y"],
   ["Caminamos ___ el parque.", "hasta", "asta:E basta:C"], ["La bandera está en el ___.", "asta", "hasta:A esta:V"], ["Me gusta el ___ del pan.", "olor", "holor:A olar:V"],
   ["Mi ___ tiene cinco años.", "hermano", "ermano:E jermano:J"], ["Tengo mucha ___.", "hambre", "ambre:E jambre:J"], ["Abre los ___.", "ojos", "hojos:A ajos:V"],

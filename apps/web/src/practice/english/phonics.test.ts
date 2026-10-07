@@ -106,7 +106,7 @@ describe.each(TABLE.map((t) => [t[0]] as const))("%s bank", (id) => {
         expect(norm(q.steps.at(-1)!), `${where} last step names the answer`).toContain(norm(key(q)));
         if (q.picture) expect(q.alt?.trim(), `${where} alt`).toBeTruthy();
         for (const s of strings(q)) expect(s, `${where} filler`).not.toMatch(/great job|good job|awesome|well done|amazing|let's dive|excelente|genial|buen trabajo|muy bien/i);
-        if (locale === "en") for (const s of strings(q)) expect(s, `${where} exclamation`).not.toContain("!");
+        for (const s of strings(q)) expect(s, `${where} exclamation`).not.toMatch(/[!¡]/);
       }
   });
 
