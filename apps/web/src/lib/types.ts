@@ -35,13 +35,27 @@ export type Block =
   | { type: "points"; items: string[] }
   | { type: "visual"; visual: Visual; alt: string };
 
-/** Static teaching pictures drawn in SVG (not text rendered into an image). */
+/** Static teaching pictures drawn in SVG (not text rendered into an image). Shared by lessons, practice and the tutor. */
 export type Visual =
   | { kind: "fraction"; parts: number; shaded: number }
-  | { kind: "number-line"; min: number; max: number; marks: number[]; denominator?: number }
+  | { kind: "number-line"; min: number; max: number; marks: number[]; denominator?: number; marker?: number }
   | { kind: "particles"; state: "solid" | "liquid" | "gas" }
   | { kind: "moon"; phase: number } // 0 = new, 0.5 = full, 0..1
-  | { kind: "line-graph"; points: [number, number][]; xLabel: string; yLabel: string };
+  | { kind: "line-graph"; points: [number, number][]; xLabel: string; yLabel: string }
+  /** Groups of counters in tidy rows of five; `crossed` counters in the last group are taken away. */
+  | { kind: "dots"; groups: number[]; crossed?: number }
+  | { kind: "ten-frame"; filled: number; frames?: 1 | 2 }
+  | { kind: "base-ten"; hundreds?: number; tens: number; ones: number }
+  | { kind: "clock"; h: number; m: number }
+  | { kind: "array"; rows: number; cols: number }
+  /** Kumon-style vertical arithmetic with the answer row left empty. */
+  | { kind: "column"; op: "+" | "−" | "×"; top: number; bottom: number }
+  | { kind: "rect"; w: number; h: number; unit: string }
+  | { kind: "triangle"; base: number; height: number; unit: string }
+  | { kind: "circle"; r: number; show: "r" | "d"; unit: string }
+  | { kind: "right-triangle"; a: number | null; b: number | null; c: number | null; unit: string }
+  | { kind: "prism"; l: number; w: number; h: number; unit: string }
+  | { kind: "coord"; points: [number, number][]; line?: boolean };
 
 export type Widget =
   | { kind: "fraction-bar"; parts: number; shaded: number; target?: { parts: number; shaded: number } }
