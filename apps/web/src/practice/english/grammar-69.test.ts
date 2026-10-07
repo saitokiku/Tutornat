@@ -158,19 +158,53 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
     });
   });
 
-  it("vague pronouns: both possible antecedents come before the pronoun, in the order the tags claim", () => {
-    each("e.vague.pronouns", 1, ([shown, right, wrong, , , target]) => {
-      const first = tagged([shown, right, wrong, "", ""], "assumed-first-noun")[0].replace(/^(Only|Solo) /, "");
-      const nearest = tagged([shown, right, wrong, "", ""], "assumed-nearest-noun")[0].replace(/^(Only|Solo) /, "");
-      const at = (s: string) => lc(shown).indexOf(lc(s));
+  it("vague pronouns: both possible antecedents come before the pronoun; a clear pronoun agrees with only one", () => {
+    // Pronoun → gender and number it can stand for (m, f, n = thing; s, p). English he/she only for people.
+    const AGREES: Record<string, string[]> = {
+      he: ["ms"], she: ["fs"], it: ["ns"], them: ["mp", "fp", "np"], they: ["mp", "fp", "np"], their: ["mp", "fp", "np"],
+      él: ["ms"], ella: ["fs"], lo: ["ms"], la: ["fs"], ellos: ["mp"], las: ["fp"],
+    };
+    // Gender and number of every noun used in the clear entries, written down here, not in the bank.
+    const NOUNS: Record<string, string> = {
+      marco: "ms", "his sister": "fs", "the batteries": "np", "the remote": "ns", "the coach": "ms", "the players": "mp", "aunt rosa": "fs",
+      "uncle leo": "ms", "the books": "np", "the shelf": "ns", "the girl": "fs", "her brother": "ms", "ms. ortiz": "fs", "the students": "mp",
+      jamal: "ms", "his grandmother": "fs", "the cake": "ns", "the cookies": "np", "his keys": "np", "the backpack": "ns",
+      marcos: "ms", "su hermana": "fs", "el cuaderno": "ms", "la mochila": "fs", "la entrenadora": "fs", "los jugadores": "mp", "la tía rosa": "fs",
+      "el tío leo": "ms", "su caja": "fs", "el estante": "ms", "la niña": "fs", "su hermano": "ms", "la maestra ortiz": "fs", "los estudiantes": "mp",
+      "su abuela": "fs", "el melón": "ms", "la bolsa": "fs", "sus llaves": "fp", "el estuche": "ms",
+    };
+    let clear = 0;
+    each("e.vague.pronouns", 1, (e) => {
+      const [shown, right, , , , target] = e;
+      const single = (tag: string) => tagged(e, tag).map((l) => l.replace(/^(Only|Solo) /, ""));
+      const ambiguous = single("assumed-first-noun").length > 0;
+      const [first, nearest] = ambiguous ? [single("assumed-first-noun")[0], single("assumed-nearest-noun")[0]] : [right.replace(/^(Only|Solo) /, ""), single("pronoun-mismatch")[0]];
+      // "el tío Leo" appears as "al tío Leo" after a preposition, so the article is not searched for.
+      const at = (s: string) => lc(shown).indexOf(lc(s).replace(/^(el|la|los|las) /, ""));
       expect(at(first), `${shown} has ${first}`).toBeGreaterThanOrEqual(0);
-      expect(at(nearest), `${nearest} after ${first}`).toBeGreaterThan(at(first));
+      expect(at(nearest), `${shown} has ${nearest}`).toBeGreaterThanOrEqual(0);
       const pronoun = new RegExp(`(?<![\\p{L}])${esc(target!)}(?![\\p{L}])`, "gu");
-      const after = [...lc(shown).matchAll(pronoun)].map((m) => m.index!);
-      expect(after.some((i) => i > at(nearest)), `${shown} pronoun after both nouns`).toBe(true);
-      expect(lc(right), right).toContain(lc(first));
-      expect(lc(right), right).toContain(lc(nearest));
+      const found = [...lc(shown).matchAll(pronoun)].map((m) => m.index!);
+      expect(found.length, `${shown}: the pronoun ${target} appears once`).toBe(1);
+      expect(found[0] > Math.max(at(first), at(nearest)), `${shown} pronoun after both nouns`).toBe(true);
+      if (ambiguous) {
+        expect(at(nearest), `${nearest} after ${first}`).toBeGreaterThan(at(first));
+        expect(lc(right), right).toContain(lc(first));
+        expect(lc(right), right).toContain(lc(nearest));
+        return;
+      }
+      clear++;
+      const fits = AGREES[lc(target!)];
+      expect(fits, `${target} agreement known`).toBeTruthy();
+      expect(fits, `${shown}: ${target} fits ${first}`).toContain(NOUNS[lc(first)]);
+      expect(fits, `${shown}: ${target} does not fit ${nearest}`).not.toContain(NOUNS[lc(nearest)]);
+      const either = tagged(e, "missed-agreement-clue")[0];
+      expect(lc(either).includes(lc(first)) && lc(either).includes(lc(nearest)), either).toBe(true);
     });
+    expect(clear, "clear pronouns in the bank").toBeGreaterThanOrEqual(16);
+  });
+
+  it("vague pronouns, later levels: revisions differ from the original", () => {
     each("e.vague.pronouns", 2, ([shown, right, wrong]) => {
       expect(right, shown).not.toBe(shown);
       for (const [w] of wrong) expect(w, shown).not.toBe(shown);

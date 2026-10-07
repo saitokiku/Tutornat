@@ -26,11 +26,11 @@ const SELF_FORMS: Bi<Entry>[] = [
   },
   {
     en: ["We painted the mural in the hallway ___.", "ourselves", [["ourself", "number-mismatch"], ["themselves", "wrong-person"]], "The pronoun points back to “we.”", "“We” is plural and first person, so use “ourselves.”"],
-    es: ["Después del desmayo, Carlos volvió en ___.", "sí", [["él", "not-reflexive"], ["si", "missing-accent"]], "La palabra se refiere al mismo Carlos, quien hace la acción.", "Cuando se refiere al sujeto, va el reflexivo “sí”, con tilde: “volvió en sí”."],
+    es: ["Después del desmayo, volví en ___ en la enfermería.", "mí", [["sí", "wrong-person"], ["mi", "missing-accent"]], "El verbo “volví” está en primera persona: yo.", "Con “yo” se dice “volví en mí”, con tilde. “Volver en sí” solo va con él, ella, usted o ellos."],
   },
   {
     en: ["The robot vacuum turned ___ off when the battery ran low.", "itself", [["itsself", "nonstandard-form"], ["themselves", "number-mismatch"]], "The pronoun points back to “the robot vacuum,” one thing.", "One thing takes “itself,” spelled with one s."],
-    es: ["Pedro habla ___ mismo cuando repasa para un examen.", "consigo", [["con él", "not-reflexive"], ["contigo", "wrong-person"]], "La palabra se refiere al mismo Pedro.", "Para decir “con él mismo” cuando se habla del sujeto, se usa “consigo”: “habla consigo mismo”."],
+    es: ["Pedro habla ___ mismo cuando repasa para un examen.", "consigo", [["contigo", "wrong-person"], ["conmigo", "wrong-person"]], "La palabra se refiere al mismo Pedro.", "Para decir “con él mismo” cuando se habla del sujeto, se usa “consigo”: “habla consigo mismo”."],
   },
   {
     en: ["My grandmother ___ sewed this quilt by hand.", "herself", [["her", "not-a-self-pronoun"], ["themselves", "number-mismatch"]], "The word right after “my grandmother” adds emphasis: she did it, no one else.", "A pronoun that stresses “my grandmother” is “herself.”"],
@@ -58,7 +58,7 @@ const SELF_FORMS: Bi<Entry>[] = [
   },
   {
     en: ["He and ___ have been friends since kindergarten.", "I", [["myself", "reflexive-as-subject"], ["me", "object-as-subject"]], "Drop “He and”: “___ have been friends since kindergarten.”", "The word is part of the subject, so use the subject form."],
-    es: ["Mi primo solo piensa en ___ mismo.", "sí", [["él", "not-reflexive"], ["si", "missing-accent"]], "La palabra se refiere al mismo primo, quien piensa.", "Cuando se refiere al sujeto, va el reflexivo “sí”, con tilde: “en sí mismo”."],
+    es: ["Mi primo solo piensa en ___ mismo.", "sí", [["ti", "wrong-person"], ["si", "missing-accent"]], "La palabra se refiere al mismo primo, quien piensa.", "Cuando se refiere al sujeto, va el reflexivo “sí”, con tilde: “en sí mismo”."],
   },
   {
     en: ["The kids made ___ a snack after school.", "themselves", [["theirselves", "nonstandard-form"], ["themself", "number-mismatch"]], "The pronoun points back to “the kids.”", "The kids made the snack for the kids, so use “themselves.”"],
@@ -220,6 +220,48 @@ const AMBIGUOUS: Bi<Entry>[] = [
     en: ["Ms. Ortiz reminded Ms. Hall that her class had the gym first.", "Either one: Ms. Ortiz or Ms. Hall", [["Only Ms. Ortiz", "assumed-first-noun"], ["Only Ms. Hall", "assumed-nearest-noun"]], "Try “Ms. Ortiz's class.” Then try “Ms. Hall's class.”", "The class could belong to either teacher, so “her” is unclear.", "her"],
     es: ["Luisa habló con su prima mientras ella preparaba la cena.", "Cualquiera de las dos: Luisa o su prima", [["Solo Luisa", "assumed-first-noun"], ["Solo su prima", "assumed-nearest-noun"]], "Prueba “Luisa preparaba la cena” y luego “su prima preparaba la cena”.", "Cualquiera de las dos podía estar cocinando, así que “ella” es ambiguo.", "ella"],
   },
+  // Clear pronouns: the pronoun's gender or number fits only one of the nouns, so the answer is not
+  // always "either one".
+  {
+    en: ["Marco told his sister that he needed a new phone.", "Only Marco", [["Only his sister", "pronoun-mismatch"], ["Either one: Marco or his sister", "missed-agreement-clue"]], "Try “Marco needed a new phone.” Then try “his sister needed a new phone.” Which one fits “he”?", "“He” fits Marco but not his sister, so this pronoun is clear.", "he"],
+    es: ["Marcos le dijo a su hermana que él necesitaba un teléfono nuevo.", "Solo Marcos", [["Solo su hermana", "pronoun-mismatch"], ["Cualquiera de los dos: Marcos o su hermana", "missed-agreement-clue"]], "Prueba “Marcos necesitaba un teléfono” y luego “su hermana necesitaba un teléfono”. ¿Cuál concuerda con “él”?", "“Él” concuerda con Marcos, no con su hermana, así que este pronombre es claro.", "él"],
+  },
+  {
+    en: ["Take the batteries out of the remote and recycle them.", "Only the batteries", [["Only the remote", "pronoun-mismatch"], ["Either one: the batteries or the remote", "missed-agreement-clue"]], "“Them” means more than one. Which of the two nouns is plural?", "“Them” is plural, and only “the batteries” is plural, so this pronoun is clear.", "them"],
+    es: ["Lili guardó el cuaderno en la mochila y después lo buscó por toda la casa.", "Solo el cuaderno", [["Solo la mochila", "pronoun-mismatch"], ["Cualquiera de los dos: el cuaderno o la mochila", "missed-agreement-clue"]], "“Lo” es masculino. ¿Cuál de los dos sustantivos es masculino?", "“Lo” solo concuerda con “el cuaderno”, así que este pronombre es claro.", "lo"],
+  },
+  {
+    en: ["The coach thanked the players because they had worked hard all season.", "Only the players", [["Only the coach", "pronoun-mismatch"], ["Either one: the coach or the players", "missed-agreement-clue"]], "“They” means more than one. Is the coach one person or many?", "“They” is plural, and only “the players” is plural, so this pronoun is clear.", "they"],
+    es: ["La entrenadora les dio las gracias a los jugadores porque ellos se habían esforzado toda la temporada.", "Solo los jugadores", [["Solo la entrenadora", "pronoun-mismatch"], ["Cualquiera de los dos: la entrenadora o los jugadores", "missed-agreement-clue"]], "“Ellos” es plural. ¿La entrenadora es una persona o varias?", "“Ellos” es plural, y solo “los jugadores” es plural, así que este pronombre es claro.", "ellos"],
+  },
+  {
+    en: ["Aunt Rosa called Uncle Leo because she had good news.", "Only Aunt Rosa", [["Only Uncle Leo", "pronoun-mismatch"], ["Either one: Aunt Rosa or Uncle Leo", "missed-agreement-clue"]], "Try “Aunt Rosa had good news.” Then try “Uncle Leo had good news.” Which one fits “she”?", "“She” fits Aunt Rosa but not Uncle Leo, so this pronoun is clear.", "she"],
+    es: ["La tía Rosa llamó al tío Leo porque ella tenía buenas noticias.", "Solo la tía Rosa", [["Solo el tío Leo", "pronoun-mismatch"], ["Cualquiera de los dos: la tía Rosa o el tío Leo", "missed-agreement-clue"]], "Prueba “la tía Rosa tenía buenas noticias” y luego “el tío Leo tenía buenas noticias”. ¿Cuál concuerda con “ella”?", "“Ella” concuerda con la tía Rosa, no con el tío Leo, así que este pronombre es claro.", "ella"],
+  },
+  {
+    en: ["Lily put the books on the shelf, and then they fell.", "Only the books", [["Only the shelf", "pronoun-mismatch"], ["Either one: the books or the shelf", "missed-agreement-clue"]], "“They” means more than one. Which of the two nouns is plural?", "“They” is plural, and only “the books” is plural, so this pronoun is clear.", "they"],
+    es: ["Ana puso su caja sobre el estante y luego la abrió.", "Solo su caja", [["Solo el estante", "pronoun-mismatch"], ["Cualquiera de los dos: su caja o el estante", "missed-agreement-clue"]], "“La” es femenino. ¿Cuál de los dos sustantivos es femenino?", "“La” solo concuerda con “su caja”, así que este pronombre es claro.", "la"],
+  },
+  {
+    en: ["The girl asked her brother for the ball, but he would not share it.", "Only her brother", [["Only the girl", "pronoun-mismatch"], ["Either one: the girl or her brother", "missed-agreement-clue"]], "Try “the girl would not share it.” Then try “her brother would not share it.” Which one fits “he”?", "“He” fits her brother but not the girl, so this pronoun is clear.", "he"],
+    es: ["La niña le pidió el balón a su hermano, pero él no se lo prestó.", "Solo su hermano", [["Solo la niña", "pronoun-mismatch"], ["Cualquiera de los dos: la niña o su hermano", "missed-agreement-clue"]], "Prueba “la niña no se lo prestó” y luego “su hermano no se lo prestó”. ¿Cuál concuerda con “él”?", "“Él” concuerda con su hermano, no con la niña, así que este pronombre es claro.", "él"],
+  },
+  {
+    en: ["Ms. Ortiz reminded the students that their projects were due Friday.", "Only the students", [["Only Ms. Ortiz", "pronoun-mismatch"], ["Either one: Ms. Ortiz or the students", "missed-agreement-clue"]], "“Their” points to more than one person. Is Ms. Ortiz one person or many?", "“Their” is plural, and only “the students” is plural, so this pronoun is clear.", "their"],
+    es: ["La maestra Ortiz les recordó a los estudiantes que ellos debían entregar el proyecto el viernes.", "Solo los estudiantes", [["Solo la maestra Ortiz", "pronoun-mismatch"], ["Cualquiera de los dos: la maestra Ortiz o los estudiantes", "missed-agreement-clue"]], "“Ellos” es plural. ¿La maestra Ortiz es una persona o varias?", "“Ellos” es plural, y solo “los estudiantes” es plural, así que este pronombre es claro.", "ellos"],
+  },
+  {
+    en: ["Jamal waved to his grandmother while she was crossing the street.", "Only his grandmother", [["Only Jamal", "pronoun-mismatch"], ["Either one: Jamal or his grandmother", "missed-agreement-clue"]], "Try “Jamal was crossing.” Then try “his grandmother was crossing.” Which one fits “she”?", "“She” fits his grandmother but not Jamal, so this pronoun is clear.", "she"],
+    es: ["Jamal saludó a su abuela mientras ella cruzaba la calle.", "Solo su abuela", [["Solo Jamal", "pronoun-mismatch"], ["Cualquiera de los dos: Jamal o su abuela", "missed-agreement-clue"]], "Prueba “Jamal cruzaba la calle” y luego “su abuela cruzaba la calle”. ¿Cuál concuerda con “ella”?", "“Ella” concuerda con su abuela, no con Jamal, así que este pronombre es claro.", "ella"],
+  },
+  {
+    en: ["Mom moved the cake away from the cookies because it was still hot.", "Only the cake", [["Only the cookies", "pronoun-mismatch"], ["Either one: the cake or the cookies", "missed-agreement-clue"]], "“It” means one thing. Which of the two nouns is singular?", "“It” is singular, and only “the cake” is singular, so this pronoun is clear.", "it"],
+    es: ["Mamá sacó el melón de la bolsa y lo cortó.", "Solo el melón", [["Solo la bolsa", "pronoun-mismatch"], ["Cualquiera de los dos: el melón o la bolsa", "missed-agreement-clue"]], "“Lo” es masculino. ¿Cuál de los dos sustantivos es masculino?", "“Lo” solo concuerda con “el melón”, así que este pronombre es claro.", "lo"],
+  },
+  {
+    en: ["Sam put his keys in the backpack, but now he can't find them.", "Only his keys", [["Only the backpack", "pronoun-mismatch"], ["Either one: his keys or the backpack", "missed-agreement-clue"]], "“Them” means more than one. Which of the two nouns is plural?", "“Them” is plural, and only “his keys” is plural, so this pronoun is clear.", "them"],
+    es: ["Sam guardó sus llaves en el estuche, pero ahora no las encuentra.", "Solo sus llaves", [["Solo el estuche", "pronoun-mismatch"], ["Cualquiera de los dos: sus llaves o el estuche", "missed-agreement-clue"]], "“Las” es femenino y plural. ¿Cuál de los dos sustantivos lo es?", "“Las” solo concuerda con “sus llaves”, así que este pronombre es claro.", "las"],
+  },
 ];
 
 const CLEAR_REVISION: Bi<Entry>[] = [
@@ -351,8 +393,8 @@ const VAGUE_PRONOUNS = skill(
       bank: AMBIGUOUS,
       ask: { en: "Who or what could {t} refer to?", es: "¿A quién o a qué podría referirse {t}?" },
       hints: {
-        en: ["Look at every noun that comes before the pronoun.", "Put each noun in place of the pronoun. If more than one still makes sense, the pronoun is unclear."],
-        es: ["Fíjate en todos los sustantivos que aparecen antes del pronombre.", "Pon cada sustantivo en lugar del pronombre. Si más de uno tiene sentido, el pronombre es ambiguo."],
+        en: ["Look at every noun that comes before the pronoun.", "Put each noun in place of the pronoun, and check that it matches: he, she, it, or they. If only one fits, the pronoun is clear. If more than one still makes sense, it is unclear."],
+        es: ["Fíjate en todos los sustantivos que aparecen antes del pronombre.", "Pon cada sustantivo en lugar del pronombre y revisa que concuerde en género y número (él, ella, lo, la, ellos, las). Si solo uno concuerda, el pronombre es claro. Si más de uno tiene sentido, es ambiguo."],
       },
       seconds: 20,
     },
