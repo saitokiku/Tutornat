@@ -96,7 +96,7 @@ describe("Runner", () => {
 
   it("a wrong answer in a check is stored with the misconception it shows", async () => {
     const p = await learner("3");
-    const seed = seedWhere("m.frac.numberline", 3, (it) => it.answer.kind === "fraction" && it.answer.n >= 2 && it.answer.n < it.answer.d);
+    const seed = seedWhere("m.frac.numberline", 3, (it) => it.input === "number-line" && it.answer.kind === "fraction" && it.answer.n >= 2 && it.answer.n < it.answer.d);
     const item = makeItem("m.frac.numberline", 3, seed, "en");
     const { n, d } = item.answer as { n: number; d: number };
     const set = setOf(p, "check", [{ skillId: "m.frac.numberline", seed, role: "check", level: 3 }]);

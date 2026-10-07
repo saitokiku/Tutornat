@@ -29,17 +29,22 @@ const clockTime = (h: number, m: number) => `${h}:${String(m).padStart(2, "0")}`
 
 /**
  * Set the hands to a time on the clock pad: level 1 o'clock, level 2 half hours, level 3 five minutes.
- * The answer is "h:mm"; the two classic slips (long hand on the minutes' number, hands swapped) are tagged.
+ * The answer is "h:mm". Tagged slips: the long hand on the minutes' number, the hands swapped, the
+ * short hand one hour off, and, from half past on, the short hand on the next hour (it is past half
+ * way there, so the next number looks like the hour).
  */
 function setTheClock(h: number, m: number, level: number, locale: Locale): ItemBody {
   const time = clockTime(h, m);
   const step = level === 1 ? 60 : level === 2 ? 30 : 5;
   const where = m === 0 ? 12 : m / 5; // the number the long hand points to
   const next = h === 12 ? 1 : h + 1;
+  const prev = h === 1 ? 12 : h - 1;
   const wrong: { value: string; why: string }[] = [];
-  if (m > 0 && m <= 12 && (m * 5) % step === 0) wrong.push({ value: clockTime(h, (m * 5) % 60), why: "minutes-as-number" });
-  const swapped = clockTime(where, (h * 5) % 60);
-  if ((h * 5) % step === 0 && swapped !== time && !wrong.some((w) => w.value === swapped)) wrong.push({ value: swapped, why: "swapped-hands" });
+  const tag = (value: string, why: string) => value !== time && !wrong.some((w) => w.value === value) && wrong.push({ value, why });
+  if (m > 0 && m <= 12 && (m * 5) % step === 0) tag(clockTime(h, (m * 5) % 60), "minutes-as-number");
+  if ((h * 5) % step === 0) tag(clockTime(where, (h * 5) % 60), "swapped-hands");
+  tag(clockTime(next, m), m >= 30 ? "hour-hand-next-hour" : "hour-off-by-one");
+  tag(clockTime(prev, m), "hour-off-by-one");
   const la = h === 1 ? "la" : "las";
   const spoken = m === 0 ? tr(locale, `${h} o'clock`, `${la} ${h} en punto`) : tr(locale, time, `${la} ${time}`);
   const side =
@@ -50,7 +55,7 @@ function setTheClock(h: number, m: number, level: number, locale: Locale): ItemB
     input: "clock",
     pad: { kind: "clock", stepMinutes: step },
     answer: { kind: "text", accept: [time] },
-    ...(wrong.length ? { wrong } : {}),
+    wrong,
     hints:
       level === 1
         ? [
@@ -182,12 +187,23 @@ export const EARLY_MATH: Skill[] = [
       const after = r.bool(0.65);
       const n = after ? r.int(1, max - 1) : r.int(2, max);
       const want = after ? n + 1 : n - 1;
+      // Answered on a number line of ten jumps that holds both numbers (0–10, 10–20, … 90–100), every
+      // number labelled, the way a kindergarten wall line is. Tagged slips: the other side, the same number.
+      const lo = Math.floor(Math.min(n, want) / 10) * 10;
+      const wrong = [
+        { value: String(after ? n - 1 : n + 1), why: "before-after-mixed" },
+        { value: String(n), why: "picked-the-same-number" },
+      ].filter((w) => Number(w.value) >= lo && Number(w.value) <= lo + 10);
       return {
         prompt: after
-          ? [tr(locale, `What number comes after ${n}?`, `¿Qué número viene después del ${n}?`)]
-          : [tr(locale, `What number comes just before ${n}?`, `¿Qué número viene justo antes del ${n}?`)],
-        say: after ? tr(locale, `What number comes after ${n}?`, `¿Qué número viene después del ${n}?`) : tr(locale, `What number comes just before ${n}?`, `¿Qué número viene justo antes del ${n}?`),
-        input: "keypad",
+          ? [tr(locale, `Tap the number that comes after ${n}.`, `Toca el número que viene después del ${n}.`)]
+          : [tr(locale, `Tap the number that comes just before ${n}.`, `Toca el número que viene justo antes del ${n}.`)],
+        say: after
+          ? tr(locale, `Tap the number that comes after ${n}.`, `Toca el número que viene después del ${n}.`)
+          : tr(locale, `Tap the number that comes just before ${n}.`, `Toca el número que viene justo antes del ${n}.`),
+        input: "number-line",
+        pad: { kind: "number-line", min: lo, max: lo + 10, step: 1 },
+        wrong,
         answer: { kind: "number", value: want },
         hints: [
           tr(locale, "Count out loud and listen for it.", "Cuenta en voz alta y escúchalo."),
@@ -195,7 +211,7 @@ export const EARLY_MATH: Skill[] = [
           after ? tr(locale, `After means one more than ${n}.`, `Después significa uno más que ${n}.`) : tr(locale, `Before means one less than ${n}.`, `Antes significa uno menos que ${n}.`),
         ],
         steps: [after ? tr(locale, `${n}, ${want}. ${want} comes after ${n}.`, `${n}, ${want}. El ${want} viene después del ${n}.`) : tr(locale, `${want}, ${n}. ${want} comes before ${n}.`, `${want}, ${n}. El ${want} viene antes del ${n}.`)],
-        seconds: 6,
+        seconds: 10,
       };
     },
   },

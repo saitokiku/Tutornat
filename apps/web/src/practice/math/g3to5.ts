@@ -413,7 +413,7 @@ function parenExpr(r: Rng): OpsExpr {
 }
 
 /**
- * m.frac.unit level 3, on the fraction-bar pad: split the bar into equal parts and shade a fraction of
+ * m.frac.unit level 3 (half its items), on the fraction-bar pad: split the bar into equal parts and shade a fraction of
  * it. Any equal amount is right (6/8 shows 3/4). Tagged slips: shading the rest, part-to-part.
  */
 function buildFraction(r: Rng, locale: Locale): ItemBody {
@@ -444,7 +444,7 @@ function buildFraction(r: Rng, locale: Locale): ItemBody {
 }
 
 /**
- * m.frac.numberline level 3, on the number-line pad: put a point at a fraction (3.NF.A.2 asks for both
+ * m.frac.numberline level 3 (half its items), on the number-line pad: put a point at a fraction (3.NF.A.2 asks for both
  * reading and placing). Tagged slips: counting tick marks instead of jumps, losing the first whole.
  */
 function placeFraction(r: Rng, locale: Locale): ItemBody {
@@ -663,7 +663,8 @@ export const MATH_3_5: Skill[] = [
     content: "computed",
     levels: 3,
     generate(r, level, locale) {
-      if (level === 3) return buildFraction(r, locale);
+      // Level 3 mixes both directions, so its checks ask for naming a fraction and for building one.
+      if (level === 3 && r.bool()) return buildFraction(r, locale);
       const d = level === 1 ? r.pick([2, 3, 4, 6, 8]) : r.pick([3, 4, 5, 6, 8]);
       const n = level === 1 ? 1 : r.int(2, d - 1);
       return {
@@ -697,7 +698,8 @@ export const MATH_3_5: Skill[] = [
     content: "computed",
     levels: 3,
     generate(r, level, locale) {
-      if (level === 3) return placeFraction(r, locale);
+      // Level 3 mixes both directions, so its checks ask for reading a point and for placing one.
+      if (level === 3 && r.bool()) return placeFraction(r, locale);
       const max = level === 1 ? 1 : 2;
       const d = level === 1 ? r.pick([2, 3, 4, 6, 8]) : r.pick([2, 3, 4, 6]);
       const n = level === 1 || !r.bool(0.65) ? r.int(1, d - 1) : r.int(d + 1, 2 * d - 1);

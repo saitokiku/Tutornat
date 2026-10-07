@@ -723,16 +723,23 @@ function intNumberLine(r: Rng, level: number, locale: Locale): ItemBody {
   if (kind < 6) {
     const n = nonzero(r, -25, 25);
     const symbolic = n < 0 && r.bool();
-    // In words, the opposite is found on a number line (6.NS.C.6a): a symmetric line, so its ends give nothing away.
-    const lim = Math.max(10, Math.ceil(Math.abs(n) / 5) * 5);
+    // In words, the opposite is found on a number line (6.NS.C.6a): −10 to 10, symmetric so its ends
+    // give nothing away, and short enough that every point is a fair tap on a phone. Larger numbers
+    // are typed.
+    const line = !symbolic && Math.abs(n) <= 10;
     return {
-      prompt: symbolic ? [`−(${show(n)}) = `, { blank: true }] : [tr(locale, `Put a point at the opposite of ${show(n)}.`, `Coloca un punto en el opuesto de ${show(n)}.`)],
-      say: symbolic
-        ? tr(locale, `What is the opposite of ${sayInt(n, locale)}?`, `¿Cuál es el opuesto de ${sayInt(n, locale)}?`)
-        : tr(locale, `Put a point at the opposite of ${sayInt(n, locale)} on the number line.`, `Coloca un punto en el opuesto de ${sayInt(n, locale)} sobre la recta numérica.`),
-      ...(symbolic
-        ? { input: "keypad" as const, keys: ["-" as const] }
-        : { input: "number-line" as const, pad: { kind: "number-line" as const, min: -lim, max: lim, step: 1 }, wrong: [{ value: String(n), why: "kept-the-sign" }] }),
+      prompt: symbolic
+        ? [`−(${show(n)}) = `, { blank: true }]
+        : line
+          ? [tr(locale, `Put a point at the opposite of ${show(n)}.`, `Coloca un punto en el opuesto de ${show(n)}.`)]
+          : [tr(locale, `What is the opposite of ${show(n)}?`, `¿Cuál es el opuesto de ${show(n)}?`)],
+      say: line
+        ? tr(locale, `Put a point at the opposite of ${sayInt(n, locale)} on the number line.`, `Coloca un punto en el opuesto de ${sayInt(n, locale)} sobre la recta numérica.`)
+        : tr(locale, `What is the opposite of ${sayInt(n, locale)}?`, `¿Cuál es el opuesto de ${sayInt(n, locale)}?`),
+      ...(line
+        ? { input: "number-line" as const, pad: { kind: "number-line" as const, min: -10, max: 10, step: 1 } }
+        : { input: "keypad" as const, keys: ["-" as const] }),
+      wrong: [{ value: String(n), why: "kept-the-sign" }],
       answer: { kind: "number", value: -n },
       hints: [
         symbolic
@@ -742,7 +749,8 @@ function intNumberLine(r: Rng, level: number, locale: Locale): ItemBody {
         tr(locale, `${show(n)} is ${place(n)}.`, `${show(n)} está ${place(n)}.`),
       ],
       steps: [tr(locale, `${show(n)} is ${place(n)}. Its opposite is ${place(-n)}.`, `${show(n)} está ${place(n)}. Su opuesto está ${place(-n)}.`), show(-n)],
-      seconds: 8,
+      // Placing a point takes a few seconds longer than typing a remembered fact.
+      seconds: line ? 12 : 8,
     };
   }
   if (kind < 8) {
