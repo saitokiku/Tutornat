@@ -110,7 +110,7 @@ function Practice() {
                       <span className="block font-medium text-ink">{s.title[locale]}</span>
                       <span className="block text-xs text-muted">{statusLine(statuses[s.id], now, locale)}</span>
                     </span>
-                    <Button onClick={() => go("check", s.id)} aria-label={`${t("practice.startCheck")}: ${s.title[locale]}`}>
+                    <Button variant="secondary" onClick={() => go("check", s.id)} aria-label={`${t("practice.startCheck")}: ${s.title[locale]}`}>
                       {t("practice.startCheck")}
                     </Button>
                   </li>
