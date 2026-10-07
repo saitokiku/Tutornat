@@ -78,7 +78,7 @@ then open each learner's Today.
 4. **Reviews:** a teacher for the draft English/science banks (each marked "Draft questions"), a
    native speaker for Spanish (the authors flagged choices to check, e.g. "guisante" vs "chícharo").
 
-**Next:** ROADMAP → "Next — make it real for families".
+**Next:** the review and plan in [plans/2026-10-07-real-product-plan.md](plans/2026-10-07-real-product-plan.md); waiting on the owner's go and the "needs you" list.
 
 ## Foundation build (done)
 
