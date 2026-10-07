@@ -34,8 +34,9 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
   const majors = points.flatMap((p, i) => (p.major ? [i] : []));
   // PageUp/PageDown jump from one labelled point to the next.
   const jump = majors.length > 1 ? majors[1] - majors[0] : Math.max(1, Math.round(count / 10));
-  // With many labels, a phone shows every other one so the numbers never collide.
+  // With many labels, a phone shows every other one so the numbers never collide, always keeping 0.
   const crowded = majors.length > 6;
+  const anchor = Math.max(0, majors.indexOf(start));
 
   const place = (i: number) => {
     if (disabled) return;
@@ -85,7 +86,8 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
         aria-describedby={desc}
         aria-valuemin={points[0].value}
         aria-valuemax={points[count - 1].value}
-        aria-valuenow={placed ? points[index].value : undefined}
+        // A slider must have a value; before a point is placed the text says so.
+        aria-valuenow={points[placed ? index : start].value}
         aria-valuetext={placed ? label : t("pr.line.none")}
         aria-disabled={disabled || undefined}
         onKeyDown={onKey}
@@ -119,7 +121,7 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
           {majors.map((i, k) => (
             <span
               key={i}
-              className={`absolute -translate-x-1/2 font-opmono text-xs tabular-nums text-muted sm:text-sm ${crowded && k % 2 === 1 ? "hidden sm:block" : ""}`}
+              className={`absolute -translate-x-1/2 font-opmono text-xs tabular-nums text-muted sm:text-sm ${crowded && Math.abs(k - anchor) % 2 === 1 ? "hidden sm:block" : ""}`}
               style={{ left: pct(i, count) }}
             >
               {points[i].label}

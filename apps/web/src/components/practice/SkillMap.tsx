@@ -1,5 +1,6 @@
 "use client";
 
+import { useId, useState } from "react";
 import { STATUS_DOT, statusLine } from "@/components/practice/status";
 import { Badge, Button } from "@/components/ui";
 import { gradeLabel, useT, type Key } from "@/i18n";
@@ -9,7 +10,7 @@ import { useStore } from "@/lib/store";
 import type { Grade, Locale } from "@/lib/types";
 import { gradeIndex } from "@/practice/skills";
 import type { Skill } from "@/practice/types";
-import { StandardCode } from "./StandardText";
+import { StandardButton, StandardPanel } from "./StandardText";
 
 // The full skill map for one subject, by grade: a status dot and an honest status line per skill,
 // the standard behind it (its wording on tap), and a way to practice any of them.
@@ -41,18 +42,24 @@ export function SkillRow({ skill, statuses, now, locale, onPractice }: { skill: 
   const t = useT();
   const reviewed = useStore((s) => isReviewed(s, skill));
   const status = statuses[skill.id];
+  const panel = useId();
+  const [open, setOpen] = useState(false);
   return (
+    // Phones: title on its own line, then the standard and the button beneath it. Wider: one row.
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:px-5">
       <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${STATUS_DOT[status?.state ?? "new"]}`} />
-      <span className="min-w-0 flex-1">
+      <span className="min-w-0 flex-1 basis-[calc(100%-1.5rem)] sm:basis-0">
         <span className="block text-sm font-medium text-ink">{skill.title[locale]}</span>
         <span className="block text-xs text-muted">{statusLine(status, now, locale)}</span>
       </span>
-      {!reviewed && <Badge>{t("practice.draft")}</Badge>}
-      {skill.standard && <StandardCode code={skill.standard} locale={locale} />}
-      <Button variant="secondary" onClick={onPractice} aria-label={`${t("practice.practiceThis")}: ${skill.title[locale]}`}>
+      <span className="ml-5 flex items-center gap-2 sm:ml-0">
+        {!reviewed && <Badge>{t("practice.draft")}</Badge>}
+        {skill.standard && <StandardButton code={skill.standard} open={open} onToggle={() => setOpen(!open)} panelId={panel} />}
+      </span>
+      <Button variant="secondary" onClick={onPractice} aria-label={`${t("practice.practiceThis")}: ${skill.title[locale]}`} className="ml-auto sm:ml-0">
         {t("practice.practiceThis")}
       </Button>
+      {open && skill.standard && <StandardPanel code={skill.standard} locale={locale} id={panel} />}
     </li>
   );
 }

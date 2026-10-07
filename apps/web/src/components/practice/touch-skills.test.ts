@@ -95,6 +95,12 @@ describe("m.time.clock: set the hands", () => {
     expect(seen).toBeGreaterThan(300);
   });
 
+  it("the e2e fixture (level 3, seed 8) is a set-the-clock problem", () => {
+    const it8 = makeItem("m.time.clock", 3, 8, "en");
+    expect(it8.input).toBe("clock");
+    expect(text(it8)).toMatch(/^Set the clock to \d{1,2}:\d{2}\.$/);
+  });
+
   it("reading problems are still there", () => {
     expect(items("m.time.clock", 2).some((it) => it.input === "choices" && it.visual?.kind === "clock")).toBe(true);
   });

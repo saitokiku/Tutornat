@@ -128,10 +128,10 @@ export function FractionBarPad({ pad = DEFAULT_PADS.bar, value, onChange, young,
       {parts > 6 && (
         // Thin parts on a phone: one-tap buttons with full-size targets do the same thing.
         <div className="flex flex-wrap justify-center gap-2 sm:hidden">
-          <button type="button" onClick={shadeOneMore} disabled={disabled || count === parts} className="k-btn-secondary">
+          <button type="button" onClick={shadeOneMore} disabled={disabled || count === parts} className={`k-btn-secondary ${young ? "min-h-14" : ""}`}>
             {t("pr.bar.shadeOne")}
           </button>
-          <button type="button" onClick={unshadeOne} disabled={disabled || count === 0} className="k-btn-secondary">
+          <button type="button" onClick={unshadeOne} disabled={disabled || count === 0} className={`k-btn-secondary ${young ? "min-h-14" : ""}`}>
             {t("pr.bar.unshadeOne")}
           </button>
         </div>

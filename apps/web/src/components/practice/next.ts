@@ -42,7 +42,7 @@ export function offerTitle(offer: Offer, locale: Locale): string {
     case "lesson":
       return item.lesson?.title ?? "";
     case "daily":
-      return skill(item.skillIds[0]);
+      return item.subject ? `${t(locale, `subject.${item.subject}`)}: ${skill(item.skillIds[0])}` : skill(item.skillIds[0]);
     case "due":
       return item.event?.title ?? "";
   }

@@ -265,7 +265,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
             <div className="flex items-start justify-center gap-3">
               <h1 id="problem" tabIndex={-1} className={`text-center font-brand font-semibold text-ink outline-none ${young ? "text-t1 sm:text-d3" : "text-t2 sm:text-t1"}`}>
                 <span className="sr-only">{t("practice.problemN", { n: index + 1, total: liveSet.slots.length })}. </span>
-                <MathText parts={item.prompt} blank={feedback?.kind === "right" ? <span className="font-opmono text-good">{typeof picked === "number" ? item.choices?.[picked]?.label : value}</span> : undefined} />
+                <MathText center parts={item.prompt} blank={feedback?.kind === "right" ? <span className="font-opmono text-good">{typeof picked === "number" ? item.choices?.[picked]?.label : value}</span> : undefined} />
               </h1>
               <Hear text={item.say} className="mt-1" />
             </div>
@@ -509,11 +509,6 @@ function Finish({
       {practiceSet && <p className="mt-4 text-sm text-muted">{t("practice.honest")}</p>}
       {draft && <p className="mt-2 text-sm text-muted">{t("pr.finish.draft")}</p>}
       {set.ai && <p className="mt-2 text-sm text-muted">{t("practice.aiNote")}</p>}
-      {skill && set.kind !== "placement" && !young && (
-        <div className="mt-8">
-          <SkillResources skillId={skill.id} locale={learner.locale} max={2} />
-        </div>
-      )}
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Link href="/home" className={btn("primary", "md", big)}>
@@ -528,6 +523,7 @@ function Finish({
         {offer ? (
           <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-panel px-5 py-4">
             <p className="min-w-0 flex-1 font-semibold text-ink">{offerTitle(offer, learner.locale)}</p>
+            {young && <Hear text={offerTitle(offer, learner.locale)} />}
             <Button variant="secondary" loading={starting} onClick={start} className={big}>
               {t("practice.start")}
             </Button>
@@ -545,6 +541,11 @@ function Finish({
             </Link>
           )}
         </div>
+        {skill && set.kind !== "placement" && !young && (
+          <div className="mt-8">
+            <SkillResources skillId={skill.id} locale={learner.locale} max={2} />
+          </div>
+        )}
       </section>
     </main>
   );

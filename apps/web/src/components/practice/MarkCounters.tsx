@@ -190,10 +190,11 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
                 style={{ left: c.x, top: c.y, width: cell, height: cell }}
               >
                 {on && (
+                  // A pencil-like mark: an ink ring around the counter and a tick on it; the counter stays visible.
                   <span
                     aria-hidden="true"
-                    className="grid place-items-center rounded-full border-[3px] border-ink bg-panel/85 text-ink shadow-soft"
-                    style={{ width: r * 2 + 6, height: r * 2 + 6 }}
+                    className={`grid place-items-center rounded-full border-[3px] border-ink ${c.filled ? "text-paper" : "text-ink"}`}
+                    style={{ width: r * 2 + 10, height: r * 2 + 10 }}
                   >
                     <IconCheck size={Math.round(r * 1.1)} strokeWidth={3} />
                   </span>

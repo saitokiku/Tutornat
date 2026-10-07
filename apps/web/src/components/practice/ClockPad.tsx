@@ -2,6 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { IconMinus, IconPlus } from "@/components/icons";
+import { Hear } from "@/components/stage/hear";
 import { useT } from "@/i18n";
 import { angleAt, clockText, DEFAULT_PADS, handAngles, hourAt, minuteAt, stepHour, stepMinute, type ClockPadSettings } from "./pad-math";
 
@@ -81,7 +82,7 @@ export function ClockPad({ pad = DEFAULT_PADS.clock, value, onChange, onSubmit, 
 
   const angles = handAngles(h, m);
   const [hx, hy] = tip(angles.hour, R * 0.5);
-  const [mx, my] = tip(angles.minute, R * 0.8);
+  const [mx, my] = tip(angles.minute, R * 0.86);
   const size = young ? "w-64" : "w-56";
   const stepBtn = `grid shrink-0 place-items-center rounded-full border border-border bg-panel text-ink shadow-soft hover:border-ink/30 disabled:opacity-30 ${young ? "size-14" : "size-11"}`;
 
@@ -148,7 +149,7 @@ export function ClockPad({ pad = DEFAULT_PADS.clock, value, onChange, onSubmit, 
           return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={i % 5 === 0 ? "var(--color-ink)" : "var(--color-border)"} strokeWidth={i % 5 === 0 ? 2.2 : 1.2} />;
         })}
         {Array.from({ length: 12 }, (_, i) => {
-          const [x, y] = tip((i + 1) * 30, R - 26);
+          const [x, y] = tip((i + 1) * 30, R - 30);
           return (
             <text key={i} x={x} y={y + 6} textAnchor="middle" fontSize="17" fontWeight={600} fill="var(--color-ink)" fontFamily="var(--font-brand)">
               {i + 1}
@@ -163,7 +164,12 @@ export function ClockPad({ pad = DEFAULT_PADS.clock, value, onChange, onSubmit, 
       <output aria-live="polite" className={`font-opmono font-semibold tabular-nums ${young ? "text-d3" : "text-t1"} ${touched ? "text-ink" : "text-muted"}`}>
         {time}
       </output>
-      {!touched && <p className={`text-center text-muted ${young ? "text-t3" : "text-sm"}`}>{t(minutesMove ? "pr.clock.how" : "pr.clock.howHour")}</p>}
+      {!touched && (
+        <div className="flex items-center justify-center gap-2">
+          <p className={`text-center text-muted ${young ? "text-t3" : "text-sm"}`}>{t(minutesMove ? "pr.clock.how" : "pr.clock.howHour")}</p>
+          <Hear text={t(minutesMove ? "pr.clock.how" : "pr.clock.howHour")} />
+        </div>
+      )}
       <div className="flex flex-col items-center gap-3">
         {row("hour")}
         {minutesMove && row("minute")}

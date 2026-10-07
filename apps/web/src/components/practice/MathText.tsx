@@ -1,9 +1,9 @@
 import type { MathPart } from "@/practice/types";
 
 /** Renders a practice prompt: text, stacked fractions, powers and the answer blank. */
-export function MathText({ parts, blank }: { parts: MathPart[]; blank?: React.ReactNode }) {
+export function MathText({ parts, blank, center }: { parts: MathPart[]; blank?: React.ReactNode; center?: boolean }) {
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-2">
+    <span className={`inline-flex flex-wrap items-center gap-x-1 gap-y-2 ${center ? "justify-center" : ""}`}>
       {parts.map((p, i) => {
         if (typeof p === "string") return <span key={i} className="whitespace-pre-wrap">{p}</span>;
         if ("frac" in p)

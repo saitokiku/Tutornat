@@ -423,7 +423,7 @@ function buildFraction(r: Rng, locale: Locale): ItemBody {
   if (d - n !== n) wrong.push({ value: ft(d - n, d), why: "shaded-the-rest" });
   if (n + d <= 12) wrong.push({ value: ft(n, n + d), why: "part-to-part" });
   return {
-    prompt: [tr(locale, "Split the bar into equal parts. Shade ", "Divide la barra en partes iguales. Sombrea "), fr(n, d), tr(locale, " of it.", " de la barra.")],
+    prompt: [tr(locale, "Split the bar into equal parts.", "Divide la barra en partes iguales."), tr(locale, " Shade ", " Sombrea "), fr(n, d), tr(locale, " of it.", " de la barra.")],
     say: tr(locale, `Split the bar into equal parts. Shade ${sayFrac(n, d, locale)} of it.`, `Divide la barra en partes iguales. Sombrea ${sayFrac(n, d, locale)} de la barra.`),
     input: "fraction-bar",
     pad: { kind: "fraction-bar", maxParts: 12 },
@@ -456,8 +456,8 @@ function placeFraction(r: Rng, locale: Locale): ItemBody {
   if (n >= 2) wrong.push({ value: ft(n - 1, d), why: "counted-ticks-not-jumps" });
   if (past) wrong.push({ value: ft(n - d, d), why: "forgot-the-whole" });
   return {
-    prompt: [tr(locale, "Put a point at ", "Coloca un punto en "), fr(n, d), tr(locale, " on the number line.", " en la recta numérica.")],
-    say: tr(locale, `Put a point at ${sayFrac(n, d, locale)} on the number line.`, `Coloca un punto en ${sayFrac(n, d, locale)} en la recta numérica.`),
+    prompt: [tr(locale, "Put a point at ", "Coloca un punto en "), fr(n, d), tr(locale, " on the number line.", " sobre la recta numérica.")],
+    say: tr(locale, `Put a point at ${sayFrac(n, d, locale)} on the number line.`, `Coloca un punto en ${sayFrac(n, d, locale)} sobre la recta numérica.`),
     input: "number-line",
     pad: { kind: "number-line", min: 0, max, step: 1, denominator: d },
     answer: { kind: "fraction", n, d },

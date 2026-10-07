@@ -729,7 +729,7 @@ function intNumberLine(r: Rng, level: number, locale: Locale): ItemBody {
       prompt: symbolic ? [`−(${show(n)}) = `, { blank: true }] : [tr(locale, `Put a point at the opposite of ${show(n)}.`, `Coloca un punto en el opuesto de ${show(n)}.`)],
       say: symbolic
         ? tr(locale, `What is the opposite of ${sayInt(n, locale)}?`, `¿Cuál es el opuesto de ${sayInt(n, locale)}?`)
-        : tr(locale, `Put a point at the opposite of ${sayInt(n, locale)} on the number line.`, `Coloca un punto en el opuesto de ${sayInt(n, locale)} en la recta numérica.`),
+        : tr(locale, `Put a point at the opposite of ${sayInt(n, locale)} on the number line.`, `Coloca un punto en el opuesto de ${sayInt(n, locale)} sobre la recta numérica.`),
       ...(symbolic
         ? { input: "keypad" as const, keys: ["-" as const] }
         : { input: "number-line" as const, pad: { kind: "number-line" as const, min: -lim, max: lim, step: 1 }, wrong: [{ value: String(n), why: "kept-the-sign" }] }),
