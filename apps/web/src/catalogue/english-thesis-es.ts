@@ -251,7 +251,7 @@ const tesisEs: CatalogueEntry = {
               { id: "bullying", text: "El acoso escolar lastima a las personas.", answer: 0 },
               { id: "schedule", text: "El nuevo horario tiene cosas buenas y cosas malas.", answer: 1 },
               { id: "cafeteria", text: "La comida de la cafetería podría mejorar en algunos aspectos.", answer: 1 },
-              { id: "games", text: "Los videojuegos le han hecho más daño que bien al mundo.", answer: 2 },
+              { id: "four-day", text: "Todos los países deberían cambiar a una semana escolar de cuatro días.", answer: 2 },
               { id: "homework", text: "Todas las escuelas del mundo deberían eliminar la tarea.", answer: 2 },
               {
                 id: "library",

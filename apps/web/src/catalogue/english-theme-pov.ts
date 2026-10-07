@@ -220,7 +220,7 @@ const themePov: CatalogueEntry = {
               { id: "talent", text: "Talent without practice can let a whole team down.", answer: 0 },
               { id: "drops", text: "Marco drops the baton.", answer: 1 },
               { id: "teamwork", text: "Teamwork", answer: 1 },
-              { id: "mistake", text: "Admitting a mistake is the first step to fixing it.", answer: 0 },
+              { id: "failure", text: "A failure can push a person to change their habits.", answer: 0 },
               { id: "command", text: "Always practice your baton drills.", answer: 1 },
               { id: "pride", text: "Pride can keep people from preparing for what matters.", answer: 0 },
             ],

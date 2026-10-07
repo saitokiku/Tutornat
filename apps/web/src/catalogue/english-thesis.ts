@@ -248,7 +248,7 @@ const thesis: CatalogueEntry = {
               { id: "bullying", text: "Bullying hurts people.", answer: 0 },
               { id: "schedule", text: "The new schedule has some good and bad things about it.", answer: 1 },
               { id: "cafeteria", text: "Our cafeteria's food could be better in some ways.", answer: 1 },
-              { id: "games", text: "Video games have done more harm than good to the world.", answer: 2 },
+              { id: "four-day", text: "Every country should switch to a four-day school week.", answer: 2 },
               { id: "homework", text: "Every school in the world should get rid of homework.", answer: 2 },
               {
                 id: "library",

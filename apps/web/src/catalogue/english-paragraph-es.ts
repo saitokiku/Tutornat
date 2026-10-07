@@ -398,12 +398,12 @@ const parrafoEs: CatalogueEntry = {
           prompt: "A cada par de oraciones le falta un conector en el hueco. Clasifica cada par según el conector que encaja.",
           widget: {
             kind: "sorter",
-            categories: ["Sin embargo", "Por ejemplo", "Por eso"],
+            categories: ["Sin embargo", "Por ejemplo", "Por lo tanto"],
             items: [
-              { id: "torneo", text: "Entrenamos todos los días durante un mes. ___ ganamos el torneo.", answer: 2 },
+              { id: "torneo", text: "Entrenamos todos los días durante un mes. ___, ganamos el torneo.", answer: 2 },
               { id: "tomate", text: "Muchas verduras necesitan mucho sol. ___, el tomate crece mejor con al menos seis horas de sol directo al día.", answer: 1 },
               { id: "zoologico", text: "Casi todo el grupo votó por ir al zoológico. ___, algunos querían ir al museo.", answer: 0 },
-              { id: "puente", text: "El puente estaba cerrado por reparaciones. ___ el autobús tomó un camino más largo.", answer: 2 },
+              { id: "puente", text: "El puente estaba cerrado por reparaciones. ___, el autobús tomó un camino más largo.", answer: 2 },
               { id: "zorro", text: "Algunos animales cambian de color con las estaciones. ___, muchos zorros árticos son blancos en invierno y pardos en verano.", answer: 1 },
               { id: "pelicula", text: "La película tuvo muy buenas críticas. ___, a mí me pareció lenta.", answer: 0 },
             ],
@@ -417,10 +417,10 @@ const parrafoEs: CatalogueEntry = {
             {
               id: "q1",
               prompt: "“La biblioteca estaba cerrada el lunes. ___ estudié en la mesa de la cocina”. ¿Qué conector encaja mejor?",
-              choices: ["Por ejemplo,", "Además,", "Por eso", "En cambio,"],
+              choices: ["Por ejemplo,", "Además,", "Por lo tanto,", "En cambio,"],
               answer: 2,
               hint: "¿La segunda oración agrega algo, da un ejemplo, contrasta o cuenta lo que pasó a causa de la primera?",
-              explain: "Estudiar en casa pasó porque la biblioteca estaba cerrada. Es una consecuencia, así que encaja “Por eso”.",
+              explain: "Estudiar en casa pasó porque la biblioteca estaba cerrada. Es una consecuencia, así que encaja “Por lo tanto”.",
             },
             {
               id: "q2",
