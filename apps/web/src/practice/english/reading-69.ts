@@ -195,11 +195,20 @@ export function locate(passage: Passage, quote: string, locale: Locale, article:
   // A poem's stanzas hold line breaks, also when the poem is one of a pair.
   const unit = texts[t].paras.some((x) => x.includes("\n")) ? tr(locale, "stanza", "estrofa") : tr(locale, "paragraph", "párrafo");
   const where = texts.length > 1 ? `${tr(locale, "Text", "texto")} ${t + 1}, ${unit} ${p + 1}` : `${unit} ${p + 1}`;
-  if (article) return locale === "es" ? `el ${where}` : where;
+  // "el texto 2, …", "el párrafo 3", but "la estrofa 3".
+  if (article) return locale === "es" ? `${texts.length === 1 && unit === "estrofa" ? "la" : "el"} ${where}` : where;
   return where.charAt(0).toUpperCase() + where.slice(1);
 }
 
 const inPassage = (passage: Passage, locale: Locale, s: string) => lang(locale, passage).some((t) => t.paras.some((p) => p.includes(s)));
+
+/** A quote that ends a sentence: the period goes inside the marks in English and after them in Spanish. */
+function qEnd(locale: Locale, s: string) {
+  const t = s.replace(/[,;:]$/, "");
+  return locale === "es" ? `${q(t.replace(/\.$/, ""))}.` : q(/[.?!]”?$/.test(t) ? t : `${t}.`);
+}
+/** A quote in the middle of a sentence, without its own final punctuation. */
+const qMid = (s: string) => q(s.replace(/[.,;:]$/, ""));
 
 function structureItem(passage: Passage, locale: Locale, shown: string, spoken: string, seconds: number): ItemBody {
   const { kind } = passage.structure!;
@@ -230,12 +239,13 @@ function itemFor({ passage, question }: Entry, r: Rng, level: number, locale: Lo
   const options: Choice[] = [{ label: right }, ...wrong.map((label, i): Choice => ({ label, why: question.tags[i] }))];
   const choices = r.shuffle(options);
   const [h1, h2] = lang(locale, HINTS[question.ask]);
-  const ruleOut = `${tr(locale, "Rule out", "Descarta")} ${q(wrong[0])}. ${lang(locale, TAG_TEXT[question.tags[0]])}`;
+  const ruleOut = `${tr(locale, "Rule out", "Descarta")} ${qEnd(locale, wrong[0])} ${lang(locale, TAG_TEXT[question.tags[0]])}`;
   // When the choices are quotes from the passage, pointing at the evidence would hand over the key.
   const quoted = inPassage(passage, locale, right);
   const and = tr(locale, " and ", " y ");
-  const reread = `${tr(locale, "Reread", "Vuelve a leer")} ${evidence.map((e) => `${locate(passage, e, locale, true)}: ${q(e)}`).join(and)}`;
-  const cited = evidence.map((e) => `${locate(passage, e, locale, false)}: ${q(e)}`).join(" ");
+  const last = evidence.length - 1;
+  const reread = `${tr(locale, "Reread", "Vuelve a leer")} ${evidence.map((e, i) => `${locate(passage, e, locale, true)}: ${i === last ? qEnd(locale, e) : qMid(e)}`).join(and)}`;
+  const cited = evidence.map((e) => `${locate(passage, e, locale, false)}: ${qEnd(locale, e)}`).join(" ");
   return {
     prompt: [`${shown}\n\n${ask}`],
     say: `${spoken} ${ask}`,

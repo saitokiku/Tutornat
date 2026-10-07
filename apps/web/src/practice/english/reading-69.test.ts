@@ -10,8 +10,8 @@ import { ENGLISH_READING_6_9, POOLS, STRUCTURE_LABELS, TAG_TEXT } from "./readin
 // found in the passage, in the same paragraph in both languages; every phrase an ask quotes is really
 // in the text (and in the paragraph it names); choices that quote the passage either all do or none
 // do; the overall-structure answer agrees with signal words counted from an independent word list; the
-// right answer is not given away by being the longest choice; and every built item's key is re-found
-// from the prompt text alone. Then it builds 240 seeds per level in both languages.
+// right answer is not given away by being the longest or the shortest choice; and every built item's
+// key is re-found from the prompt text alone. Then it builds 240 seeds per level in both languages.
 
 const SEEDS = Array.from({ length: 240 }, (_, i) => i * 104729 + 11);
 const LOCALES = ["en", "es"] as const;
@@ -133,6 +133,8 @@ describe("grades 6–9 reading: passages", () => {
     }
     const questions = p.qs.length + (p.structure ? 1 : 0);
     expect(questions >= 3 && questions <= 5, `${id} has ${questions} questions`).toBe(true);
+    // Each question in a passage asks something different, so a prompt names exactly one question.
+    for (const l of LOCALES) expect(new Set(p.qs.map((x) => x[l][0])).size, `${id} ${l} repeats a question`).toBe(p.qs.length);
     if (p.structure) expect(["informational", "argument"]).toContain(p.genre);
   });
 });
@@ -210,17 +212,23 @@ describe("grades 6–9 reading: questions", () => {
     }
   });
 
-  it("each skill has at least 12 questions per level, and the key is not usually the longest choice", () => {
+  it("each skill has at least 12 questions per level, and length never gives the key away", () => {
     for (const [f, levels] of Object.entries(POOLS)) {
       for (const [i, pool] of levels.entries()) {
         expect(pool.length, `${f} L${i + 1}`).toBeGreaterThanOrEqual(12);
         const authored = pool.flatMap((e) => (e.question ? [e.question] : []));
         for (const l of LOCALES) {
-          const longest = authored.filter((x) => {
-            const [right, ...wrong] = choicesOf(x, l);
-            return wrong.every((w) => right.length > w.length);
-          }).length;
-          expect(longest / authored.length, `${f} L${i + 1} ${l}: key is the longest choice in ${longest} of ${authored.length}`).toBeLessThanOrEqual(0.5);
+          // A learner who always picks the longest (or the shortest) choice must not do well.
+          for (const [name, beats] of [
+            ["longest", (a: number, b: number) => a > b],
+            ["shortest", (a: number, b: number) => a < b],
+          ] as const) {
+            const n = authored.filter((x) => {
+              const [right, ...wrong] = choicesOf(x, l);
+              return wrong.every((w) => beats(right.length, w.length));
+            }).length;
+            expect(n / authored.length, `${f} L${i + 1} ${l}: key is the ${name} choice in ${n} of ${authored.length}`).toBeLessThanOrEqual(1 / 3);
+          }
         }
       }
     }
@@ -263,6 +271,8 @@ describe.each(ENGLISH_READING_6_9.map((s) => [s.id, s] as const))("%s items", (i
           for (const h of item.hints) expect(lc(h), `${where} hint gives away ${right}`).not.toContain(lc(right));
           expect(item.say, where).not.toMatch(/\^|\d\/\d|\{|\}/);
           for (const t of [promptText(item), item.say, ...item.hints, ...item.steps, ...labels]) expect(t, `${where} "${t}"`).not.toMatch(/[!¡]|\p{Extended_Pictographic}/u);
+          // Spanish articles agree with the place named: "la estrofa", "el párrafo"; no doubled period after a quote.
+          for (const t of [...item.hints, ...item.steps]) expect(t, `${where} "${t}"`).not.toMatch(/\bel estrofa|\bla párrafo|\.”\./);
           // The same seed asks the same question in both languages: same key position, same tags.
           const other = makeItem(id, level, seed, l === "en" ? "es" : "en");
           expect(other.answer, where).toEqual(item.answer);
