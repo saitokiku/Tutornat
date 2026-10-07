@@ -37,7 +37,7 @@ function Learn() {
     <div className="space-y-12">
       <div className="space-y-6">
         <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("crs.title")}</h1>
-        <MagicBox learner={learner} />
+        <MagicBox learner={learner} mode="course" />
       </div>
 
       <section aria-labelledby="path" className="space-y-8">
