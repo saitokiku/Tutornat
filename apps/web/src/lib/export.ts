@@ -156,3 +156,9 @@ export function downloadFile(name: string, text: string, type = "application/jso
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/** A full page load to the landing page, so nothing from a deleted family stays in memory on a shared device. */
+export function reloadHome() {
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload
+  window.location.assign("/");
+}

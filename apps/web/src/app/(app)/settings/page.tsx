@@ -1,22 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { PolicyLinks, CONTACT_EMAIL } from "@/app/(legal)/legal";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { IconLogout } from "@/components/icons";
-import { Avatar } from "@/components/profiles/Avatar";
-import { Button, Field, btn } from "@/components/ui";
-import { gradeLabel, useLocale, useT } from "@/i18n";
-import { signOut } from "@/lib/auth";
-import { currentAccount, currentLearner, learnersOf, renameAccount, updateLearner } from "@/lib/profiles";
-import { clearAll, update, useStore } from "@/lib/store";
-import { useAiMode } from "@/lib/ai/client";
-import { goalsOf } from "@/lib/family";
 import { GoalsPicker } from "@/components/profiles/GoalsPicker";
-import type { Account } from "@/lib/types";
+import { Button, Field, Notice, btn } from "@/components/ui";
+import { useT } from "@/i18n";
+import { useAiMode } from "@/lib/ai/client";
+import { signOut } from "@/lib/auth";
+import { goalsOf } from "@/lib/family";
+import { currentAccount, currentLearner, renameAccount, updateLearner } from "@/lib/profiles";
+import { update, useStore } from "@/lib/store";
+import type { Account, Locale } from "@/lib/types";
+import { DataSection } from "./DataSection";
+import { LearnersSection } from "./LearnersSection";
+import { Section } from "./parts";
+import { WeeklyEmail } from "./WeeklyEmail";
 
-function AiStatusLine() {
+export default function SettingsPage() {
+  return (
+    <Guard need="selected">
+      <Settings />
+    </Guard>
+  );
+}
+
+function LanguageChoice({ value, onPick }: { value: Locale; onPick: (l: Locale) => void }) {
+  const t = useT();
+  return (
+    <div className="flex flex-wrap gap-2">
+      {(["en", "es"] as const).map((l) => (
+        <button key={l} type="button" lang={l} aria-pressed={value === l} onClick={() => onPick(l)} className="k-chip min-h-11 px-5 text-sm">
+          {t(`lang.${l}` as const)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AiStatus() {
   const t = useT();
   const mode = useAiMode();
   if (!mode) return <p className="text-sm text-muted">{t("common.loading")}</p>;
@@ -27,77 +53,72 @@ function AiStatusLine() {
         {mode === "demo" ? t("settings.aiDemo") : t("settings.aiOn")}
       </p>
       <p className="max-w-prose text-sm text-muted">{mode === "demo" ? t("settings.aiDemoBody") : t("settings.aiOnBody")}</p>
+      <Link href="/privacy#ai" className="inline-flex min-h-11 items-center text-sm font-medium text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
+        {t("trust.settings.aiPrivacy")}
+      </Link>
     </div>
   );
 }
 
-export default function SettingsPage() {
+function About() {
+  const t = useT();
+  const [before, after] = t("trust.legal.contact", { email: "\u0000" }).split("\u0000");
   return (
-    <Guard need="selected">
-      <Settings />
-    </Guard>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="grid gap-4 border-t border-border py-7 md:grid-cols-[14rem_1fr]">
-      <h2 className="font-brand text-t3 font-semibold text-ink">{title}</h2>
-      <div className="min-w-0 space-y-4">{children}</div>
-    </section>
+    <Section id="about" title={t("trust.about.title")}>
+      <p className="max-w-prose text-sm text-muted">{t("trust.about.body")}</p>
+      <PolicyLinks />
+      <p className="text-sm text-muted">
+        {before}
+        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
+          {CONTACT_EMAIL}
+        </a>
+        {after}
+      </p>
+    </Section>
   );
 }
 
 function Settings() {
   const t = useT();
   useTitle(t("settings.title"));
-  const locale = useLocale();
-  const account = useStore(currentAccount) as Account;
   const learner = useStore(currentLearner);
-  const kids = useStore(learnersOf);
-  const goals = useStore(goalsOf);
-  const prefLocale = useStore((s) => s.prefs.locale);
-  const [name, setName] = useState(account.displayName);
-  const [saved, setSaved] = useState(false);
-  const [confirm, setConfirm] = useState("");
+  const confirming = useSearchParams().has("weekly");
 
+  // A learner is using the app: only their language here; the rest is the grown-up's.
   if (learner)
     return (
       <div>
         <h1 className="mb-6 font-brand text-t1 font-semibold text-ink sm:text-d3">{t("settings.title")}</h1>
-        <Section title={t("settings.learnerLanguage", { name: learner.nickname })}>
-          <div className="flex gap-2">
-            {(["en", "es"] as const).map((l) => (
-              <button
-                key={l}
-                type="button"
-                lang={l}
-                aria-pressed={learner.locale === l}
-                onClick={() => updateLearner(learner.id, { nickname: learner.nickname, grade: learner.grade, locale: l })}
-                className="k-chip min-h-11 px-5 text-sm"
-              >
-                {t(`lang.${l}` as const)}
-              </button>
-            ))}
-          </div>
+        {confirming && <Notice tone="warn">{t("trust.weekly.parentFirst")}</Notice>}
+        <Section id="language" title={t("settings.learnerLanguage", { name: learner.nickname })}>
+          <LanguageChoice value={learner.locale} onPick={(l) => updateLearner(learner.id, { nickname: learner.nickname, grade: learner.grade, locale: l })} />
         </Section>
-        <Section title={t("settings.account")}>
+        <Section id="account" title={t("settings.account")}>
           <p className="text-sm text-muted">{t("settings.grownUps")}</p>
-          <Link href="/profiles" className={btn("secondary", "sm")}>
+          <Link href="/profiles" className={btn("secondary", "sm", "min-h-11")}>
             {t("nav.switch")}
           </Link>
         </Section>
-        <Section title={t("settings.about")}>
-          <p className="max-w-prose text-sm text-muted">{t("settings.aboutBody")}</p>
-        </Section>
+        <About />
       </div>
     );
+
+  return <GrownUpSettings />;
+}
+
+function GrownUpSettings() {
+  const t = useT();
+  const account = useStore(currentAccount) as Account;
+  const goals = useStore(goalsOf);
+  const prefLocale = useStore((s) => s.prefs.locale);
+  const [name, setName] = useState(account.displayName);
+  const [saved, setSaved] = useState(false);
 
   return (
     <div>
       <h1 className="mb-6 font-brand text-t1 font-semibold text-ink sm:text-d3">{t("settings.title")}</h1>
 
-      <Section title={t("settings.account")}>
+      <Section id="account" title={t("settings.account")}>
         <p className="text-sm text-muted">{t("settings.signedInAs", { email: account.email })}</p>
         <form
           className="flex flex-wrap items-end gap-3"
@@ -107,7 +128,7 @@ function Settings() {
             setSaved(true);
           }}
         >
-          <div className="min-w-56 flex-1">
+          <div className="min-w-0 flex-1 basis-56">
             <Field label={t("auth.name")}>{(a) => <input {...a} className="k-input" maxLength={80} value={name} onChange={(e) => (setName(e.target.value), setSaved(false))} />}</Field>
           </div>
           <Button type="submit" variant="secondary" disabled={!name.trim() || name.trim() === account.displayName}>
@@ -117,76 +138,36 @@ function Settings() {
             {saved ? t("settings.saved") : ""}
           </span>
         </form>
-        <Button variant="ghost" size="sm" onClick={signOut}>
+        <Button variant="ghost" size="sm" className="min-h-11" onClick={signOut}>
           <IconLogout size={16} /> {t("nav.signOut")}
         </Button>
       </Section>
 
-      <Section title={t("settings.language")}>
+      <Section id="language" title={t("settings.language")}>
         <p className="text-sm text-muted">{t("settings.languageBody")}</p>
-        <div className="flex gap-2">
-          {(["en", "es"] as const).map((l) => (
-            <button key={l} type="button" lang={l} aria-pressed={prefLocale === l} onClick={() => update((s) => void (s.prefs.locale = l))} className="k-chip min-h-10 px-4 text-sm">
-              {t(`lang.${l}` as const)}
-            </button>
-          ))}
-        </div>
+        <LanguageChoice value={prefLocale} onPick={(l) => update((s) => void (s.prefs.locale = l))} />
       </Section>
 
-      <Section title={t("settings.goals")}>
+      <Section id="goals" title={t("settings.goals")}>
         <GoalsPicker key={(goals ?? []).join()} initial={goals ?? []} compact />
       </Section>
 
-      <Section title={t("settings.ai")}>
-        <AiStatusLine />
+      <Section id="ai" title={t("settings.ai")}>
+        <AiStatus />
       </Section>
 
-      <Section title={t("settings.learners")}>
-        <ul className="space-y-2">
-          {kids.map((k) => (
-            <li key={k.id} className="flex flex-wrap items-center gap-3 text-sm text-ink">
-              <Avatar profile={k} size="sm" />
-              {k.nickname}
-              <span className="text-muted">
-                · {gradeLabel(locale, k.grade)} · {t(`lang.${k.locale}` as const)}
-              </span>
-              <Link href={`/family/${k.id}`} className="ml-auto text-xs font-medium text-muted underline underline-offset-4 hover:text-ink">
-                {t("settings.learnerSettings")}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <Link href="/profiles" className={btn("secondary", "sm")}>
-          {t("settings.manageLearners")}
+      <LearnersSection />
+      <WeeklyEmail account={account} />
+      <DataSection accountId={account.id} />
+
+      <Section id="review" title={t("trust.settings.reviewTitle")}>
+        <p className="max-w-prose text-sm text-muted">{t("trust.settings.reviewBody")}</p>
+        <Link href="/review" className={btn("secondary", "sm", "min-h-11")}>
+          {t("trust.settings.reviewOpen")}
         </Link>
       </Section>
 
-      <Section title={t("settings.data")}>
-        <p className="text-sm text-muted">{t("settings.dataBody")}</p>
-        <form
-          className="flex flex-wrap items-end gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (confirm !== "DELETE") return;
-            // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload after wiping data
-            window.location.assign("/");
-            clearAll();
-          }}
-        >
-          <div className="min-w-56 flex-1">
-            <Field label={t("settings.deleteType")}>
-              {(a) => <input {...a} className="k-input" autoComplete="off" value={confirm} onChange={(e) => setConfirm(e.target.value)} />}
-            </Field>
-          </div>
-          <button type="submit" disabled={confirm !== "DELETE"} className="k-btn bg-bad text-paper hover:bg-bad/90">
-            {t("settings.deleteAll")}
-          </button>
-        </form>
-      </Section>
-
-      <Section title={t("settings.about")}>
-        <p className="max-w-prose text-sm text-muted">{t("settings.aboutBody")}</p>
-      </Section>
+      <About />
     </div>
   );
 }

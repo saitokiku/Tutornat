@@ -1,0 +1,119 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button, Notice } from "@/components/ui";
+import { useLocale, useT } from "@/i18n";
+import { askConfirmation, confirmWeekly, emailMode, previewWeekly, sendDueWeekly, setWeeklyOn, weeklyOf, type AskResult, type EmailMode } from "@/lib/email/weekly";
+import { shortDate } from "@/lib/format";
+import { useStore } from "@/lib/store";
+import type { Account } from "@/lib/types";
+import { Section, Switch } from "./parts";
+
+const ASK_MESSAGE = { rate: "trust.weekly.rate", failed: "trust.weekly.failed", preview: "trust.weekly.notConnected" } as const;
+
+/** Opt-in weekly email: the switch, confirming the address, and a preview of exactly what goes out. */
+export function WeeklyEmail({ account }: { account: Account }) {
+  const t = useT();
+  const locale = useLocale();
+  const router = useRouter();
+  const token = useSearchParams().get("weekly");
+  const w = useStore((s) => weeklyOf(s, account.id));
+  const [now] = useState(() => Date.now());
+  const [origin] = useState(() => window.location.origin);
+  const preview = useStore((s) => previewWeekly(s, account.id, now, origin));
+  const [mode, setMode] = useState<EmailMode | null>(null);
+  const [ask, setAsk] = useState<AskResult | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [link, setLink] = useState<"ok" | "bad" | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    emailMode().then((m) => live && setMode(m));
+    // Last week's email, if it is due (see lib/email/weekly.ts for why the browser sends it).
+    void sendDueWeekly();
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // The confirmation link from the email lands here: check it, keep it, tidy the address bar.
+  useEffect(() => {
+    if (!token) return;
+    confirmWeekly(token).then((ok) => setLink(ok ? "ok" : "bad"));
+    router.replace("/settings#weekly");
+  }, [token, router]);
+
+  const request = async () => {
+    setAsking(true);
+    setAsk(await askConfirmation());
+    setAsking(false);
+  };
+  const toggle = (on: boolean) => {
+    setWeeklyOn(on);
+    setAsk(null);
+    if (on && mode === "send" && !w?.confirmed) void request();
+  };
+  const on = Boolean(w?.on);
+  const sentLink = ask === "sent" || (ask === null && Boolean(w?.askedAt));
+
+  return (
+    <Section id="weekly" title={t("trust.weekly.title")}>
+      <p className="max-w-prose text-sm text-ink">{t("trust.weekly.body", { email: account.email })}</p>
+      {link && <Notice tone={link === "ok" ? "good" : "warn"}>{t(link === "ok" ? "trust.weekly.confirmed" : "trust.weekly.badLink")}</Notice>}
+      <Switch on={on} onChange={toggle} label={t("trust.weekly.toggle")} body={t("trust.weekly.toggleBody")} disabled={mode === null} />
+
+      <div role="status" className="space-y-3 text-sm">
+        {mode === "preview" && <p className="max-w-prose text-muted">{t("trust.weekly.notConnected")}</p>}
+        {mode === "send" && on && w?.confirmed && (
+          <>
+            <p className="text-ink">{t("trust.weekly.on", { email: account.email })}</p>
+            <p className="max-w-prose text-muted">{t("trust.weekly.how")}</p>
+            {w.lastSentAt && <p className="text-muted">{t("trust.weekly.lastSent", { date: shortDate(w.lastSentAt, locale) })}</p>}
+          </>
+        )}
+        {mode === "send" && on && !w?.confirmed && (
+          <div className="space-y-3">
+            <p className="max-w-prose text-ink">{sentLink ? t("trust.weekly.linkSent", { email: account.email }) : t("trust.weekly.confirmNeeded", { email: account.email })}</p>
+            {ask && ask !== "sent" && <p className="max-w-prose text-warn">{t(ASK_MESSAGE[ask])}</p>}
+            <Button variant="secondary" loading={asking} onClick={request}>
+              {sentLink ? t("trust.weekly.sendAgain") : t("trust.weekly.sendLink")}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <details className="group rounded-md border border-border bg-panel">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 text-sm font-medium text-ink">
+          {t("trust.weekly.previewTitle")}
+          <span aria-hidden="true" className="ml-auto text-muted transition-transform group-open:rotate-90">
+            ›
+          </span>
+        </summary>
+        <div className="space-y-4 border-t border-border px-4 py-4">
+          {preview ? (
+            <>
+              <p className="text-xs text-muted">{t("trust.weekly.previewNote")}</p>
+              <p className="text-sm">
+                <span className="text-xs font-semibold text-muted">{t("trust.weekly.subject")}: </span>
+                <span className="text-ink">{preview.subject}</span>
+              </p>
+              <div>
+                <h3 className="text-xs font-semibold text-muted">{t("trust.weekly.plain")}</h3>
+                <pre tabIndex={0} aria-label={t("trust.weekly.plain")} className="k-well mt-1 whitespace-pre-wrap px-4 py-3 font-body text-sm text-ink [overflow-wrap:anywhere]">
+                  {preview.text}
+                </pre>
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-muted">{t("trust.weekly.inbox")}</h3>
+                <iframe title={t("trust.weekly.frame")} srcDoc={preview.html} sandbox="" className="mt-1 h-96 w-full rounded-md border border-border bg-paper" />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted">{t("trust.weekly.previewEmpty")}</p>
+          )}
+        </div>
+      </details>
+    </Section>
+  );
+}
