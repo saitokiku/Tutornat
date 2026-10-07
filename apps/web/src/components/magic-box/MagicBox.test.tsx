@@ -71,6 +71,18 @@ describe("MagicBox as the course builder", () => {
     expect(draft).toMatchObject({ status: "outlining", subject: "science", grade: "4", profileId: "p1" });
     expect(push).toHaveBeenCalledWith(`/courses/new/${draft.id}?fresh=1`);
   });
+
+  it("starts over after a submit, so the page kept behind the builder can build another", async () => {
+    render(<MagicBox learner={learner} mode="course" />);
+    await userEvent.type(screen.getByLabelText("What do you want to learn?"), "volcanoes");
+    await userEvent.click(submit());
+    expect(screen.getByLabelText("What do you want to learn?")).toHaveValue("");
+    expect(submit()).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("What do you want to learn?"), "dinosaurs");
+    await userEvent.click(submit());
+    expect(read().courses.map((c) => c.goal)).toEqual(["volcanoes", "dinosaurs"]);
+    expect(push).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("MagicBox as the universal intake", () => {
@@ -302,6 +314,17 @@ describe("MagicBox as the universal intake", () => {
     expect(push).not.toHaveBeenCalled();
     expect(read().events).toHaveLength(0);
     expect(read().courses).toHaveLength(0);
+  });
+
+  it("starts over once an item is made, so Today (kept behind the item page) is empty and ready", async () => {
+    render(<MagicBox learner={learner} />);
+    await userEvent.type(box(), "fractions worksheet due Friday");
+    await userEvent.click(screen.getByRole("button", { name: /Add homework/ }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/calendar/${read().events[0].id}`));
+    expect(box()).toHaveValue("");
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    await userEvent.type(box(), "spelling test Friday");
+    expect(screen.getByRole("button", { name: /Add test/ })).toBeEnabled();
   });
 });
 

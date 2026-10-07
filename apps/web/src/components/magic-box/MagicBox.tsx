@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { startTransition, useEffect, useId, useRef, useState } from "react";
 import { bandOf } from "@/catalogue";
 import { IconArrowRight, IconChevronDown, IconPaperclip, IconX } from "@/components/icons";
 import { Button, Notice } from "@/components/ui";
@@ -55,11 +55,21 @@ function CourseBox({ learner, variant, initialGoal }: { learner: Profile; varian
   };
 
   const submitting = useRef(false);
+  // Once the box changes (emptied after a submit, or typed in again) it can be submitted again.
+  useEffect(() => {
+    submitting.current = false;
+  }, [goal, files]);
   const submit = () => {
     if (!ready || submitting.current) return;
     submitting.current = true;
     const draft = createDraft({ goal: goal.trim(), grade: learner.grade, subject: effectiveSubject, length, locale, sources: files }, learner.id);
-    router.push(`/courses/new/${draft.id}?fresh=1`);
+    // The page stays mounted, hidden, behind the builder, so the box starts over with the navigation.
+    startTransition(() => {
+      router.push(`/courses/new/${draft.id}?fresh=1`);
+      setGoal("");
+      setFiles([]);
+      setErrors([]);
+    });
   };
 
   return (

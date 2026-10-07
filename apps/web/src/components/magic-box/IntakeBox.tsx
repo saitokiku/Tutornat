@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { startTransition, useEffect, useId, useRef, useState } from "react";
 import { bandOf } from "@/catalogue";
 import { IconArrowRight, IconPaperclip, IconX } from "@/components/icons";
 import { statusLine } from "@/components/practice/status";
@@ -207,6 +207,19 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     setPersist(await blobPersistence());
   };
 
+  // Next keeps Today mounted, hidden, behind the page the box opens. Once something is made or opened
+  // the box starts over (with the navigation, so it never flashes empty first): coming back finds it
+  // empty and ready, not holding the last request behind a busy button.
+  const open = (href: string) =>
+    startTransition(() => {
+      router.push(href);
+      setText("");
+      setFile(null);
+      setFileError(null);
+      setBusy(false);
+      resetChoices();
+    });
+
   const removeFile = () => {
     setFile(null);
     setFileError(null);
@@ -233,7 +246,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
         // "Read by the AI tutor" only when the name, day and kind saved are all the reader's.
         source: readByAi(aiNow, { kind, title: titleValue, date: dateValue }) ? "ai" : "typed",
       });
-      if (typeof made !== "string") return router.push(`/calendar/${made.id}`);
+      if (typeof made !== "string") return open(`/calendar/${made.id}`);
       setBusy(false);
       if (made === "err.file") setFileError("save");
       else setErrors({ title: made === "err.title", date: made === "err.date" });
@@ -242,21 +255,21 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     if (kind === "practice") {
       if (skillId) {
         const set = startSet(read(), { profile: learner, kind: "pick", skillIds: [skillId], now });
-        if (set) return router.push(`/practice/${set}`);
+        if (set) return open(`/practice/${set}`);
       }
       if (!topic) return setNeed("practice");
-      if (!aiOn) return router.push(practiceSearchHref(topic, guess.subject));
+      if (!aiOn) return open(practiceSearchHref(topic, guess.subject));
       setBusy(true);
       setQuestionsFailed(false);
       // The topic goes to the model without anyone's name in it; the set keeps the words as typed.
       const questions = await aiQuestions(redactNames(topic, privateNames()).text, learner.grade, locale);
       const set = questions && startAiSet(learner, topic, questions, now);
-      if (set) return router.push(`/practice/${set}`);
+      if (set) return open(`/practice/${set}`);
       setBusy(false);
       return setQuestionsFailed(true);
     }
     if (!goal) return setNeed("learn");
-    router.push(builderHref(goal));
+    open(builderHref(goal));
   };
 
   const submit = () => form.current?.requestSubmit();
@@ -494,7 +507,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
                 <Notice
                   tone="warn"
                   action={
-                    <Button variant="secondary" className="px-4 text-xs" onClick={() => router.push(practiceSearchHref(topic, guess.subject))}>
+                    <Button variant="secondary" className="px-4 text-xs" onClick={() => open(practiceSearchHref(topic, guess.subject))}>
                       {t("intake.practice.searchInstead")}
                     </Button>
                   }
