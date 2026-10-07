@@ -37,6 +37,7 @@ import partsOfSpeechEs from "./english-parts-of-speech-es";
 import figurative from "./english-figurative";
 import figurativeEs from "./english-figurative-es";
 import factOpinion from "./english-fact-opinion";
+import paragraph from "./english-paragraph";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -77,4 +78,5 @@ export const REGISTRY: CatalogueEntry[] = [
   figurative,
   figurativeEs,
   factOpinion,
+  paragraph,
 ];

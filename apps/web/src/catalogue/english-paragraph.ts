@@ -1,5 +1,7 @@
 import type { CatalogueEntry } from "./types";
 
+// Practice skills this course teaches toward: e.main.idea (topic sentence), e.transitions.
+
 const paragraph: CatalogueEntry = {
   id: "english-paragraph",
   title: "Writing a strong paragraph",
@@ -425,7 +427,7 @@ const paragraph: CatalogueEntry = {
               prompt: "Which pair uses a transition incorrectly?",
               choices: [
                 "I love winter. However, I hate shoveling snow.",
-                "Some birds can't fly. For example, penguins swim instead.",
+                "Some birds can't fly. For example, penguins use their wings to swim.",
                 "Our dog is twelve years old. As a result, she still loves to run.",
                 "We packed sandwiches. In addition, we brought water.",
               ],
