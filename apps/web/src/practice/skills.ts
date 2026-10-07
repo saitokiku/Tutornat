@@ -1,12 +1,28 @@
 import type { Grade, Locale, Subject } from "@/lib/types";
+import { ENGLISH_K_4 } from "./english/early";
+import { ENGLISH_5_9 } from "./english/upper";
 import { EARLY_MATH } from "./math/early";
+import { MATH_3_5 } from "./math/g3to5";
+import { MATH_6_7 } from "./math/g6to7";
+import { MATH_8_9 } from "./math/g8to9";
 import { rng } from "./rng";
+import { SCIENCE_K_5 } from "./science/early";
+import { SCIENCE_6_9 } from "./science/upper";
 import type { Item, Skill } from "./types";
 
 // The skill map: every practicable skill, its prerequisites (the lattice) and its generator.
 // Order inside a subject is teaching order; the planner walks it to find what comes next.
 
-export const SKILLS: Skill[] = [...EARLY_MATH];
+export const SKILLS: Skill[] = [
+  ...EARLY_MATH,
+  ...MATH_3_5,
+  ...MATH_6_7,
+  ...MATH_8_9,
+  ...ENGLISH_K_4,
+  ...ENGLISH_5_9,
+  ...SCIENCE_K_5,
+  ...SCIENCE_6_9,
+];
 
 const BY_ID = new Map(SKILLS.map((s) => [s.id, s]));
 
