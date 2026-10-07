@@ -39,6 +39,7 @@ In progress: 6 (depth, background agent) · started: 03:45 · check-ins without 
 4. [x] Journey test in repo: move the persona walkthrough into `apps/web/e2e/` (Playwright, local Chrome), run at 390 and 1440, review screenshots, fix what it shows.
 5. [x] Polish pass, screen by screen (impeccable polish + craft floor): landing, auth, profiles, home, magic box, generation, courses, course page, stage + each widget, growth, family, settings — desktop and phone.
 6. [ ] Depth: write lessons 2–4 for every catalogue course; add a grade 9 science course; keep the catalogue integrity test green.
+6b. [x] Review fixes: 14 findings from the independent review (multi-tab store, gate bypass on profiles, repeat Check inflation, assisted carry-forward, builder Back deleting a course, redo finished lesson, gated delete, html lang, page titles + focus, open redirect, reorder focus, store shape validation, DST week stepping, double submit, landing strings).
 7. [ ] Final: `npm run verify`, journey test, last screenshot review, update README/STATUS, write the Morning report below, delete the cron job.
 
 ## Morning report

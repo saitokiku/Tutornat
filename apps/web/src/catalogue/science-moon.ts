@@ -210,14 +210,267 @@ const moon: CatalogueEntry = {
       title: "The Moon in the daytime",
       summary: "Why the Moon rises at a different time each day, and why you can often see it in a daytime sky.",
       minutes: 10,
-      scenes: [],
+      scenes: [
+        {
+          id: "s1",
+          kind: "slide",
+          title: "A little later each day",
+          blocks: [
+            {
+              type: "text",
+              text: "Earth spins once a day. As it turns, the Sun and the Moon seem to rise in the east and set in the west.",
+            },
+            {
+              type: "text",
+              text: "While Earth spins, the Moon also moves along its path around Earth, in the same direction Earth spins.",
+            },
+            {
+              type: "text",
+              text: "So after each spin, Earth has to turn a little extra to catch up with the Moon. On average, the Moon rises about 50 minutes later each day.",
+            },
+          ],
+        },
+        {
+          id: "s2",
+          kind: "slide",
+          title: "When each phase is up",
+          blocks: [
+            {
+              type: "visual",
+              visual: { kind: "moon", phase: 0.25 },
+              alt: "A first quarter moon: the right half of the face is lit and the left half is dark.",
+            },
+            {
+              type: "points",
+              items: [
+                "First quarter: rises around noon and sets around midnight. Look for it in the afternoon and evening.",
+                "Full moon: rises around sunset and sets around sunrise. It's up all night.",
+                "Last quarter: rises around midnight and sets around noon. Look for it in the morning.",
+                "New moon: rises and sets with the Sun. Its lit half faces away from us, so we can't see it.",
+              ],
+            },
+            { type: "text", text: "These times are approximate. They shift with the seasons and with where you live." },
+          ],
+        },
+        {
+          id: "s3",
+          kind: "slide",
+          title: "The Moon in a blue sky",
+          blocks: [
+            {
+              type: "text",
+              text: "The Moon is bright enough to shine through the blue daytime sky. Stars are much fainter, so the bright sky hides them.",
+            },
+            {
+              type: "points",
+              items: [
+                "Near new moon, the Moon is too close to the Sun in the sky to see.",
+                "Near full moon, it's up mostly at night.",
+                "On many of the days in between, you can spot it in daylight.",
+              ],
+            },
+            { type: "text", text: "Never look straight at the Sun while you search." },
+          ],
+        },
+        {
+          id: "s4",
+          kind: "interactive",
+          title: "Find an afternoon moon",
+          prompt:
+            "A few days after first quarter, the Moon rises in the middle of the afternoon, so you can see it before sunset. Find a day like that.",
+          widget: { kind: "moon-phases", target: 10 },
+        },
+        {
+          id: "s5",
+          kind: "quiz",
+          title: "Check what you know",
+          questions: [
+            {
+              id: "q1",
+              prompt: "On average, about how much later does the Moon rise each day?",
+              choices: ["About 5 minutes", "About 50 minutes", "About 5 hours", "It rises at the same time every day"],
+              answer: 1,
+              hint: "Over the 29.5-day cycle of phases, the daily delays add up to about one whole day.",
+              explain:
+                "The Moon rises about 50 minutes later each day, on average, because it moves along its path while Earth spins.",
+            },
+            {
+              id: "q2",
+              prompt: "Why does the Moon rise later each day?",
+              choices: [
+                "The Moon moves along its path, so Earth has to turn a little extra to face it again.",
+                "Earth spins more slowly each day.",
+                "The Moon gets farther from Earth each day.",
+              ],
+              answer: 0,
+              hint: "Two things are moving: Earth is spinning, and the Moon is traveling around Earth.",
+              explain:
+                "Earth's spin stays the same. The Moon moves ahead on its path each day, so Earth needs about 50 extra minutes to bring it back into view.",
+            },
+            {
+              id: "q3",
+              prompt: "At 4 p.m., you see a half-lit moon in the sky. Which phase is it most likely to be?",
+              choices: ["First quarter", "Last quarter"],
+              answer: 0,
+              hint: "Think about when each half-lit moon rises and when it sets.",
+              explain:
+                "A first quarter moon rises around noon, so it's in the sky at 4 p.m. A last quarter moon sets around noon, so it's already gone.",
+            },
+          ],
+        },
+        {
+          id: "s6",
+          kind: "project",
+          title: "Keep a moon log",
+          brief: "Look for the Moon at the same time each evening for five days, and record what changes.",
+          steps: [
+            "Find the date of the next first quarter moon on a calendar or in a weather app.",
+            "Starting that day, go outside at the same time each evening, such as 7 p.m., and stand in the same spot.",
+            "Sketch the Moon's shape. Draw what it's near, like a tree, a roof or a pole.",
+            "Each night, compare with the night before. Is the Moon in the same place? Is more or less of it lit?",
+            "After five nights, explain to someone why the Moon was in a different place and why its shape changed.",
+          ],
+        },
+      ],
     },
     {
       id: "eclipses",
       title: "Eclipses are different",
       summary: "What happens on the rare nights when Earth's shadow really does fall on the Moon.",
       minutes: 12,
-      scenes: [],
+      scenes: [
+        {
+          id: "s1",
+          kind: "slide",
+          title: "Two kinds of eclipse",
+          blocks: [
+            {
+              type: "text",
+              text: "Phases happen because we see different amounts of the Moon's sunlit half. Earth's shadow has nothing to do with them.",
+            },
+            {
+              type: "text",
+              text: "In a lunar eclipse, Earth passes directly between the Sun and the Moon. Earth's shadow falls on the Moon.",
+            },
+            {
+              type: "text",
+              text: "In a solar eclipse, the Moon passes directly between the Sun and Earth. The Moon's shadow falls on Earth.",
+            },
+            { type: "points", items: ["A lunar eclipse can only happen at full moon.", "A solar eclipse can only happen at new moon."] },
+          ],
+        },
+        {
+          id: "s2",
+          kind: "slide",
+          title: "Why not every month?",
+          blocks: [
+            { type: "visual", visual: { kind: "moon", phase: 0.5 }, alt: "A full moon: the whole round face is lit." },
+            { type: "text", text: "There's a full moon about every 29.5 days, but most full moons have no eclipse." },
+            {
+              type: "text",
+              text: "The Moon's path around Earth is tilted by about 5 degrees. Most months, the full moon passes just above or below Earth's shadow.",
+            },
+            { type: "text", text: "An eclipse happens only in the months when the Sun, Earth and Moon line up closely enough." },
+          ],
+        },
+        {
+          id: "s3",
+          kind: "slide",
+          title: "A red moon",
+          blocks: [
+            {
+              type: "text",
+              text: "During a total lunar eclipse, the Moon doesn't disappear. It usually turns a dark, coppery red.",
+            },
+            { type: "text", text: "Some sunlight bends as it passes through Earth's air, and it still reaches the Moon." },
+            {
+              type: "text",
+              text: "The air scatters away most of the blue light, so the light that gets through is mostly red. It's the same reason sunsets look red.",
+            },
+            {
+              type: "points",
+              items: [
+                "A lunar eclipse is safe to watch with your eyes alone.",
+                "Anyone who can see the Moon during the eclipse can watch it.",
+                "A solar eclipse is different: looking at the Sun without eclipse glasses can hurt your eyes.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "s4",
+          kind: "interactive",
+          title: "Lunar or solar?",
+          prompt: "Sort each fact. Is it about a lunar eclipse or a solar eclipse?",
+          widget: {
+            kind: "sorter",
+            categories: ["Lunar eclipse", "Solar eclipse"],
+            items: [
+              { id: "earth-shadow", text: "Earth's shadow falls on the Moon.", answer: 0 },
+              { id: "moon-shadow", text: "The Moon's shadow falls on Earth.", answer: 1 },
+              { id: "full", text: "It can only happen at full moon.", answer: 0 },
+              { id: "new", text: "It can only happen at new moon.", answer: 1 },
+              { id: "red", text: "The Moon may turn a dark coppery red.", answer: 0 },
+              { id: "glasses", text: "Looking at it without eclipse glasses can hurt your eyes.", answer: 1 },
+              { id: "safe", text: "It's safe to watch with your eyes alone.", answer: 0 },
+            ],
+          },
+        },
+        {
+          id: "s5",
+          kind: "quiz",
+          title: "Check what you know",
+          questions: [
+            {
+              id: "q1",
+              prompt: "During a lunar eclipse, whose shadow falls on the Moon?",
+              choices: ["The Moon's own shadow", "Earth's shadow", "A cloud's shadow", "The Sun's shadow"],
+              answer: 1,
+              hint: "Which one moves between the Sun and the Moon?",
+              explain: "In a lunar eclipse, Earth is directly between the Sun and the Moon, so Earth's shadow falls on the Moon.",
+            },
+            {
+              id: "q2",
+              prompt: "Why isn't there a lunar eclipse at every full moon?",
+              choices: [
+                "The Moon's path is tilted, so it usually passes above or below Earth's shadow.",
+                "The Sun is too far away most months.",
+                "Earth only has a shadow in winter.",
+              ],
+              answer: 0,
+              hint: "Picture the Moon's path around Earth. Does it line up exactly with the Sun and Earth every month?",
+              explain:
+                "The Moon's path is tilted by about 5 degrees. Most months, the full moon slips past just above or below Earth's shadow.",
+            },
+            {
+              id: "q3",
+              prompt: "Your friend says the Moon is a crescent tonight because Earth's shadow covers most of it. What's wrong?",
+              choices: [
+                "Nothing. That's right.",
+                "A crescent means we see only a small part of the Moon's sunlit half.",
+                "Crescents happen only during solar eclipses.",
+              ],
+              answer: 1,
+              hint: "Earth's shadow reaches the Moon only during an eclipse, and only at one phase.",
+              explain:
+                "A crescent is a phase: most of the sunlit half faces away from us. Earth's shadow falls on the Moon only in a lunar eclipse, at full moon.",
+            },
+          ],
+        },
+        {
+          id: "s6",
+          kind: "project",
+          title: "Model an eclipse with a lamp",
+          brief: "Use the lamp, the ball on a pencil and your own head again, this time to make eclipses.",
+          steps: [
+            "Set up as in the phases activity: a lamp without its shade in a dark room is the Sun, the ball is the Moon, and your head is Earth. Don't touch the bulb; it can get hot.",
+            "Stand with your back to the lamp. Hold the Moon in front of you, a little above your head, so its face is fully lit. That's full moon.",
+            "Slowly lower the Moon until your head's shadow covers it. That's a lunar eclipse.",
+            "Raise the Moon until it's just above the shadow again. That's what happens at most full moons.",
+            "Now face the lamp and move the Moon between the bulb and your eyes, so its shadow falls on your face. That's a model of a solar eclipse.",
+          ],
+        },
+      ],
     },
   ],
 };

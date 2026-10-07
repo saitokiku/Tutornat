@@ -7,6 +7,7 @@ import { CourseArt } from "@/components/courses/CourseArt";
 import { CourseRow } from "@/components/courses/CourseRow";
 import { LangTag } from "@/components/courses/LangTag";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { IconArrowRight } from "@/components/icons";
 import { MagicBox } from "@/components/magic-box/MagicBox";
 import { Hear, HearContext } from "@/components/stage/hear";
@@ -28,6 +29,7 @@ export default function HomePage() {
 
 function Home() {
   const t = useT();
+  useTitle(t("nav.home"));
   const learner = useStore(currentLearner) as Profile;
   const courses = useStore((s) => coursesOf(s, learner.id));
   const events = useStore((s) => s.activity.filter((e) => e.profileId === learner.id));

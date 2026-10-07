@@ -52,7 +52,7 @@ function load(): StoreState {
   if (!raw) return emptyState();
   try {
     const parsed = JSON.parse(raw) as StoreState;
-    if (parsed?.version !== 1 || !Array.isArray(parsed.accounts)) throw new Error("shape");
+    if (!validShape(parsed)) throw new Error("shape");
     return { ...emptyState(), ...parsed };
   } catch {
     health = "reset";
@@ -60,12 +60,36 @@ function load(): StoreState {
   }
 }
 
+const LISTS = ["accounts", "profiles", "courses", "activity", "notes", "resets"] as const;
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** Everything a screen reads must be the right kind of value, or the whole document is reset. */
+function validShape(p: unknown): p is StoreState {
+  if (!isObj(p) || p.version !== 1) return false;
+  if (!LISTS.every((k) => p[k] === undefined || Array.isArray(p[k]))) return false;
+  if (!Array.isArray(p.accounts)) return false;
+  if (p.session !== undefined && !isObj(p.session)) return false;
+  if (p.prefs !== undefined && (!isObj(p.prefs) || (p.prefs.locale !== "en" && p.prefs.locale !== "es"))) return false;
+  return true;
+}
+
 export function read(): StoreState {
   if (typeof window === "undefined") return SERVER_SNAPSHOT;
   return (state ??= load());
 }
 
+// Another tab changed the document: drop the cached copy so the next read sees it.
+if (typeof window !== "undefined")
+  window.addEventListener("storage", (e) => {
+    if (e.key !== STORE_KEY && e.key !== null) return;
+    state = null;
+    listeners.forEach((fn) => fn());
+  });
+
 export function update(change: (draft: StoreState) => void): StoreState {
+  // Start from what is saved now, not this tab's cached copy, so two open tabs never undo each other.
+  // ponytail: last write wins within one change; a real backend gives per-record merges.
+  if (typeof window !== "undefined" && health !== "memory") state = load();
   const draft = structuredClone(read());
   change(draft);
   state = draft;

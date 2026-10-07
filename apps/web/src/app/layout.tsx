@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Instrument_Sans, Schibsted_Grotesk } from "next/font/google";
+import { LangSync } from "@/components/LangSync";
 import "./globals.css";
 
 const brand = Schibsted_Grotesk({ variable: "--font-schibsted", subsets: ["latin"] });
@@ -14,7 +15,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${brand.variable} ${body.variable} ${mono.variable}`}>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        <LangSync />
+        {children}
+      </body>
     </html>
   );
 }

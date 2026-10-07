@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { NotFound } from "@/components/courses/NotFound";
 import { Stage } from "@/components/stage/Stage";
 import { getCourse } from "@/lib/courses";
@@ -10,6 +10,8 @@ import type { Profile } from "@/lib/types";
 
 export default function LearnPage() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
+  // New visit (link or push) = a fresh lesson; back/forward restores where the learner was.
+  const { bfcacheId } = useRouter();
   const learner = useStore(currentLearner) as Profile;
   const course = useStore((s) => getCourse(s, courseId, learner.id));
   const lesson = course?.status === "ready" ? course.lessons.find((l) => l.id === lessonId) : undefined;
@@ -19,5 +21,5 @@ export default function LearnPage() {
         <NotFound />
       </main>
     );
-  return <Stage key={`${course.id}:${lesson.id}`} course={course} lesson={lesson} learner={learner} />;
+  return <Stage key={`${course.id}:${lesson.id}:${bfcacheId}`} course={course} lesson={lesson} learner={learner} />;
 }

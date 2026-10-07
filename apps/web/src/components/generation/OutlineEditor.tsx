@@ -13,6 +13,12 @@ export function OutlineEditor({ lessons, onChange, locked }: { lessons: Lesson[]
     const next = [...lessons];
     [next[i], next[i + d]] = [next[i + d], next[i]];
     onChange(next);
+    // Reordering moves the row's DOM node, which drops focus; put it back on the same control.
+    const [same, other] = d < 0 ? ["up", "down"] : ["down", "up"];
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`${lessons[i].id}-${same}`) as HTMLButtonElement | null;
+      (el && !el.disabled ? el : document.getElementById(`${lessons[i].id}-${other}`))?.focus();
+    });
   };
   return (
     <div>
@@ -33,10 +39,10 @@ export function OutlineEditor({ lessons, onChange, locked }: { lessons: Lesson[]
             </div>
             {!locked && (
               <div className="flex shrink-0 items-center gap-0.5">
-                <IconButton label={t("gen.moveUp", { title: l.title })} disabled={i === 0} onClick={() => move(i, -1)}>
+                <IconButton id={`${l.id}-up`} label={t("gen.moveUp", { title: l.title })} disabled={i === 0} onClick={() => move(i, -1)}>
                   <IconChevronUp size={16} />
                 </IconButton>
-                <IconButton label={t("gen.moveDown", { title: l.title })} disabled={i === lessons.length - 1} onClick={() => move(i, 1)}>
+                <IconButton id={`${l.id}-down`} label={t("gen.moveDown", { title: l.title })} disabled={i === lessons.length - 1} onClick={() => move(i, 1)}>
                   <IconChevronDown size={16} />
                 </IconButton>
                 <IconButton label={t("gen.remove", { title: l.title })} disabled={lessons.length === 1} onClick={() => onChange(lessons.filter((x) => x.id !== l.id))}>
@@ -63,7 +69,7 @@ export function OutlineEditor({ lessons, onChange, locked }: { lessons: Lesson[]
   );
 }
 
-function IconButton({ label, children, ...props }: { label: string; children: React.ReactNode; disabled?: boolean; onClick: () => void }) {
+function IconButton({ label, children, ...props }: { label: string; children: React.ReactNode; disabled?: boolean; onClick: () => void; id?: string }) {
   return (
     <button
       type="button"

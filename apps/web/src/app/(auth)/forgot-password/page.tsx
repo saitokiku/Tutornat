@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { AuthCard, TextLink } from "@/components/auth/AuthFrame";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { Button, Field, Notice, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { requestReset, validate } from "@/lib/auth";
 
 export default function ForgotPasswordPage() {
   const t = useT();
+  useTitle(t("auth.forgotTitle"));
   const [email, setEmail] = useState("");
   const [error, setError] = useState(false);
   const [sent, setSent] = useState<{ token: string | null } | null>(null);

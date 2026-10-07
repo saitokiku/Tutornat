@@ -7,6 +7,7 @@ import { CourseArt } from "@/components/courses/CourseArt";
 import { CourseRow } from "@/components/courses/CourseRow";
 import { LangTag } from "@/components/courses/LangTag";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { IconCheck, IconPlus } from "@/components/icons";
 import { Button, EmptyState } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
@@ -29,6 +30,7 @@ const BANDS: Band[] = ["k2", "35", "68", "9"];
 
 function Courses() {
   const t = useT();
+  useTitle(t("courses.title"));
   const learner = useStore(currentLearner) as Profile;
   const courses = useStore((s) => coursesOf(s, learner.id));
   const events = useStore((s) => s.activity.filter((e) => e.profileId === learner.id));

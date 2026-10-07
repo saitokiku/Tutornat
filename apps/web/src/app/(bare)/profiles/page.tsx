@@ -1,5 +1,6 @@
 "use client";
 
+import { useTitle } from "@/components/LangSync";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { KaizenLogo } from "@/components/brand";
@@ -15,6 +16,7 @@ import { read, useStore } from "@/lib/store";
 
 export default function ProfilesPage() {
   const t = useT();
+  useTitle(t("profiles.title"));
   const locale = useLocale();
   const router = useRouter();
   const learners = useStore(learnersOf);
@@ -24,7 +26,9 @@ export default function ProfilesPage() {
   const unlocked = useStore((s) => Boolean(s.session.unlocked));
   // Parent-only actions wait behind the grown-up gate when a child was the last one using the app.
   const [gate, setGate] = useState<"parent" | "manage" | "add" | null>(null);
-  const showForm = form ?? (learners.length === 0 && unlocked ? "add" : null);
+  // Forms and manage mode are grown-up only; a kept-alive page must not reopen them for a child.
+  const showForm = unlocked ? (form ?? (learners.length === 0 ? "add" : null)) : null;
+  const managing = unlocked && mode === "manage";
   const editing = learners.find((l) => l.id === showForm);
   const pendingGate = gate ?? (learners.length === 0 && !unlocked ? "add" : null);
 
@@ -34,6 +38,10 @@ export default function ProfilesPage() {
   }, []);
 
   const open = (id: string | "parent") => {
+    setForm(null);
+    setMode("pick");
+    setGate(null);
+    setConfirm(null);
     selectLearner(id);
     router.push(id === "parent" ? "/family" : "/home");
   };
@@ -62,10 +70,10 @@ export default function ProfilesPage() {
           <ul className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
             {learners.map((p) => (
               <li key={p.id} className="relative">
-                <Tile onClick={() => mode === "pick" && open(p.id)} disabled={mode === "manage"} label={p.nickname} sub={gradeLabel(locale, p.grade)}>
+                <Tile onClick={() => !managing && open(p.id)} disabled={managing} label={p.nickname} sub={gradeLabel(locale, p.grade)}>
                   <Avatar profile={p} />
                 </Tile>
-                {mode === "manage" && (
+                {managing && (
                   <div className="absolute inset-x-3 bottom-3 flex justify-center gap-2">
                     {confirm === p.id ? (
                       <div className="w-full rounded-sm border border-bad/30 bg-panel p-2 text-center shadow-soft">
@@ -74,7 +82,7 @@ export default function ProfilesPage() {
                           <Button size="sm" variant="ghost" onClick={() => setConfirm(null)}>
                             {t("common.cancel")}
                           </Button>
-                          <button type="button" onClick={() => (removeLearner(p.id), setConfirm(null))} className="k-btn min-h-9 bg-bad px-3.5 text-xs text-paper hover:bg-bad/90">
+                          <button type="button" autoFocus onClick={() => (removeLearner(p.id), setConfirm(null))} className="k-btn min-h-9 bg-bad px-3.5 text-xs text-paper hover:bg-bad/90">
                             {t("common.confirmDelete")}
                           </button>
                         </div>
@@ -93,7 +101,7 @@ export default function ProfilesPage() {
                 )}
               </li>
             ))}
-            {mode === "pick" && (
+            {!managing && (
               <li>
                 <Tile onClick={() => guarded("parent")} label={t("profiles.parent")} sub={t("profiles.parentHint")}>
                   <span className="grid size-16 place-items-center rounded-full border border-border bg-panel2 text-ink sm:size-20">
@@ -114,8 +122,8 @@ export default function ProfilesPage() {
 
         {learners.length > 0 && (
           <div className="mt-6 text-center">
-            <Button variant="ghost" size="sm" onClick={() => (mode === "manage" ? setMode("pick") : guarded("manage"), setConfirm(null))}>
-              {mode === "pick" ? t("profiles.manage") : t("profiles.doneManaging")}
+            <Button variant="ghost" size="sm" onClick={() => (managing ? (setMode("pick"), setForm(null)) : guarded("manage"), setConfirm(null))}>
+              {managing ? t("profiles.doneManaging") : t("profiles.manage")}
             </Button>
           </div>
         )}

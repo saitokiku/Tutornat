@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { EventMark, eventText } from "@/components/growth/events";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 import { EmptyState, btn } from "@/components/ui";
@@ -21,10 +22,12 @@ export default function GrowthPage() {
   );
 }
 
-const WEEK = 7 * 864e5;
+// Step weeks by landing mid-week and snapping to Monday, so clock changes never shift the week.
+const DAY = 864e5;
 
 function Growth() {
   const t = useT();
+  useTitle(t("growth.title"));
   const locale = useLocale();
   const router = useRouter();
   const params = useSearchParams();
@@ -75,13 +78,13 @@ function Growth() {
       </div>
 
       <div className="flex items-center gap-2">
-        <button type="button" onClick={() => setWeek(week - WEEK)} aria-label={t("growth.prev")} className="grid size-10 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30">
+        <button type="button" onClick={() => setWeek(startOfWeek(week - 3 * DAY))} aria-label={t("growth.prev")} className="grid size-10 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30">
           <IconChevronLeft size={18} />
         </button>
         <p className="min-w-44 text-center text-sm font-medium text-ink">{t("growth.weekOf", { date: shortDate(week, locale) })}</p>
         <button
           type="button"
-          onClick={() => setWeek(week + WEEK)}
+          onClick={() => setWeek(startOfWeek(week + 10 * DAY))}
           disabled={week >= thisWeek}
           aria-label={t("growth.next")}
           className="grid size-10 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30 disabled:opacity-30"

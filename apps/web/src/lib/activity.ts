@@ -81,3 +81,30 @@ export function continueTarget(courses: Course[], events: ActivityEvent[]) {
   }
   return null;
 }
+
+/**
+ * One lesson visit's memory of checks, so the record stays honest when a learner retries or comes back
+ * to a scene: the first answer counts as on-own or not-yet; a later correct answer after a miss, a hint
+ * or an explanation counts as helped; nothing is recorded twice.
+ */
+export function checkMemory() {
+  const state = new Map<string, "missed" | "done">();
+  const helped = new Set<string>();
+  return {
+    help(id: string) {
+      helped.add(id);
+    },
+    judge(id: string, correct: boolean, assisted: boolean): { record: boolean; assisted: boolean } {
+      const prev = state.get(id);
+      const wasHelped = assisted || helped.has(id) || prev === "missed";
+      if (prev === "done") return { record: false, assisted: wasHelped };
+      if (correct) {
+        state.set(id, "done");
+        return { record: true, assisted: wasHelped };
+      }
+      if (prev === "missed") return { record: false, assisted: wasHelped };
+      state.set(id, "missed");
+      return { record: true, assisted: wasHelped };
+    },
+  };
+}

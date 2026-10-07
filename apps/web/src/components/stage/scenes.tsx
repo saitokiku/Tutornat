@@ -17,6 +17,8 @@ export const TINT: Record<Subject, string> = SUBJECT_TINT;
 
 /** Everything a learner checks reports here: right or not, and whether help was used. */
 export type OnAnswer = (a: { sceneId: string; correct: boolean; assisted: boolean }) => void;
+/** Reports that help was shown for a check (a hint), so a later answer counts as helped. */
+export type OnHelp = (sceneId: string) => void;
 
 /** Body copy sized for the learner: larger for K–2. */
 function useBody() {
@@ -84,7 +86,7 @@ export function InteractiveView({ scene, subject, onAnswer, lang }: { scene: Int
 }
 
 /** One question at a time. A hint, or reading the explanation after a miss, marks the answer as helped. */
-export function QuizView({ scene, onAnswer, onSpeakText }: { scene: QuizScene; onAnswer: OnAnswer; onSpeakText: (text: string) => void }) {
+export function QuizView({ scene, onAnswer, onSpeakText, onHelp }: { scene: QuizScene; onAnswer: OnAnswer; onSpeakText: (text: string) => void; onHelp?: OnHelp }) {
   const t = useT();
   const { young } = useHear();
   const [qi, setQi] = useState(0);
@@ -161,11 +163,11 @@ export function QuizView({ scene, onAnswer, onSpeakText }: { scene: QuizScene; o
       <div className="flex flex-wrap items-center gap-3">
         {result !== true && (
           <>
-            <Button onClick={check} disabled={choice === null}>
+            <Button onClick={check} disabled={choice === null || result !== null}>
               {t("stage.check")}
             </Button>
             {!hint && (
-              <Button variant="ghost" onClick={() => setHint(true)}>
+              <Button variant="ghost" onClick={() => (setHint(true), onHelp?.(`${scene.id}:${q.id}`))}>
                 <IconLightbulb size={16} /> {t("stage.hint")}
               </Button>
             )}
@@ -175,7 +177,7 @@ export function QuizView({ scene, onAnswer, onSpeakText }: { scene: QuizScene; o
           {result === null ? "" : result ? (assisted ? t("stage.correctHelped") : t("stage.correct")) : t("stage.incorrect")}
         </p>
         {result === false && !why && (
-          <Button variant="ghost" size="sm" onClick={() => setWhy(true)}>
+          <Button variant="ghost" size="sm" onClick={() => (setWhy(true), onHelp?.(`${scene.id}:${q.id}`))}>
             {t("stage.why")}
           </Button>
         )}

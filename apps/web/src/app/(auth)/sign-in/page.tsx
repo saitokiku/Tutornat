@@ -4,13 +4,26 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AuthCard, TextLink } from "@/components/auth/AuthFrame";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { Button, Field, Notice } from "@/components/ui";
 import { useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
 import { signIn } from "@/lib/auth";
 
+/** Only follow a ?next= that stays on this site (blocks //evil and /\\evil tricks). */
+function sameSite(next: string | null) {
+  if (!next) return null;
+  try {
+    const u = new URL(next, window.location.origin);
+    return u.origin === window.location.origin ? u.pathname + u.search : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function SignInPage() {
   const t = useT();
+  useTitle(t("auth.signIn"));
   const router = useRouter();
   const next = useSearchParams().get("next");
   const [email, setEmail] = useState("");
@@ -24,7 +37,7 @@ export default function SignInPage() {
     const r = await signIn(email, password);
     setBusy(false);
     if (!r.ok) return setError(r.error ?? "err.badLogin");
-    router.push(next?.startsWith("/") && !next.startsWith("//") ? next : "/profiles");
+    router.push(sameSite(next) ?? "/profiles");
   }
 
   return (

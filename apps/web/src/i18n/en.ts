@@ -384,6 +384,17 @@ const en = {
   "landing.subjects.english": "Main idea, building an argument, claim and evidence",
   "landing.honest.title": "Where things stand",
   "landing.honest.body": "This is an early demo. The ready-made lessons, course builder and progress record work today in your browser. The AI tutor that writes lessons and answers questions is being connected next.",
+  "landing.demo.prompt": "Cut the bar into 4 equal parts. Then shade 3.",
+  "landing.demo.goal": "Why does the Moon change shape?",
+  "landing.demo.l1": "The Moon doesn't glow",
+  "landing.demo.l2": "Always half lit",
+  "landing.demo.l3": "One trip around Earth",
+  "landing.demo.l4": "Name the phases",
+  "landing.demo.child": "Grade 4 · example",
+  "landing.demo.week": "This week she finished 3 lessons. She got 7 checks right on her own and 2 with a hint.",
+  "landing.demo.help": "Comparing fractions",
+  "landing.demo.noteLabel": "Your note",
+  "landing.demo.note": "Try paper strips together on Saturday.",
   "landing.footer": "KaizenEDU · small steps, every day",
 } as const;
 

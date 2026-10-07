@@ -11,7 +11,6 @@ import { MoonVisual } from "@/components/stage/visuals";
 import { SubjectDot, btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
 import { useStore } from "@/lib/store";
-import type { Locale } from "@/lib/types";
 
 export function Landing() {
   const t = useT();
@@ -142,16 +141,13 @@ function HeroStage() {
         <span className="font-opmono tabular-nums">{t("stage.sceneOf", { n: 3, total: 6 })}</span>
       </div>
       <div className="space-y-6 px-5 py-7 sm:px-8">
-        <p className="font-brand text-t2 font-semibold text-ink">{heroPrompt(useLocale())}</p>
+        <p className="font-brand text-t2 font-semibold text-ink">{t("landing.demo.prompt")}</p>
         <FractionBar widget={{ kind: "fraction-bar", parts: 2, shaded: 1, target: { parts: 4, shaded: 3 } }} />
       </div>
       <figcaption className="border-t border-border px-5 py-3 text-xs text-muted sm:px-8">{t("landing.try")}</figcaption>
     </figure>
   );
 }
-
-const heroPrompt = (l: Locale) =>
-  l === "es" ? "Corta la barra en 4 partes iguales. Luego pinta 3." : "Cut the bar into 4 equal parts. Then shade 3.";
 
 function Row({ title, body, art, flip }: { title: string; body: string; art: React.ReactNode; flip?: boolean }) {
   return (
@@ -173,7 +169,7 @@ function BoxArt() {
     <div aria-hidden="true" className="rounded-lg border border-border bg-panel p-5 shadow-soft">
       <p className="font-brand text-t3 font-semibold text-ink">{t("box.label")}</p>
       <div className="mt-3 text-t3 text-ink">
-        {useLocale() === "es" ? "¿Por qué la Luna cambia de forma?" : "Why does the Moon change shape?"}
+        {t("landing.demo.goal")}
         <span className="ml-0.5 inline-block h-5 w-px translate-y-1 animate-pulse bg-ink" />
       </div>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
@@ -187,17 +183,15 @@ function BoxArt() {
 }
 
 function OutlineArt() {
-  const es = useLocale() === "es";
-  const lessons = es
-    ? ["La Luna no brilla sola", "Siempre medio iluminada", "Una vuelta a la Tierra", "Nombra las fases"]
-    : ["The Moon doesn't glow", "Always half lit", "One trip around Earth", "Name the phases"];
+  const t = useT();
+  const lessons = [t("landing.demo.l1"), t("landing.demo.l2"), t("landing.demo.l3"), t("landing.demo.l4")];
   return (
     <ol aria-hidden="true" className="divide-y divide-border rounded-md border border-border bg-paper shadow-soft">
       {lessons.map((l, i) => (
         <li key={l} className="flex items-center gap-4 px-5 py-3.5 animate-fade-up" style={{ animationDelay: `${i * 90}ms` }}>
           <span className="font-opmono text-xs tabular-nums text-muted">{i + 1}</span>
           <span className="text-sm font-medium text-ink">{l}</span>
-          <span className="ml-auto font-opmono text-xs text-muted">10 min</span>
+          <span className="ml-auto font-opmono text-xs text-muted">{t("common.minutes", { n: 10 })}</span>
         </li>
       ))}
     </ol>
@@ -216,28 +210,24 @@ function MoonArt() {
 }
 
 function FamilyArt() {
-  const es = useLocale() === "es";
+  const t = useT();
   return (
     <div aria-hidden="true" className="rounded-lg border border-border bg-panel p-6 shadow-soft">
       <div className="flex items-center gap-3">
         <span className="grid size-10 place-items-center rounded-full bg-math font-brand text-sm font-semibold text-paper">M</span>
         <div>
           <p className="font-brand text-t3 font-semibold text-ink">Maya</p>
-          <p className="text-xs text-muted">{es ? "Grado 4 · ejemplo" : "Grade 4 · example"}</p>
+          <p className="text-xs text-muted">{t("landing.demo.child")}</p>
         </div>
       </div>
-      <p className="mt-5 text-sm text-ink">
-        {es
-          ? "Esta semana terminó 3 lecciones. Acertó 7 preguntas sola y 2 con una pista."
-          : "This week she finished 3 lessons. She got 7 checks right on her own and 2 with a hint."}
-      </p>
+      <p className="mt-5 text-sm text-ink">{t("landing.demo.week")}</p>
       <div className="mt-5 border-t border-border pt-4">
-        <p className="text-xs font-semibold text-muted">{es ? "Necesitó ayuda con" : "Needed help with"}</p>
-        <p className="mt-1 text-sm text-ink">{es ? "Comparar fracciones" : "Comparing fractions"}</p>
+        <p className="text-xs font-semibold text-muted">{t("family.neededHelp")}</p>
+        <p className="mt-1 text-sm text-ink">{t("landing.demo.help")}</p>
       </div>
       <div className="mt-4 border-t border-border pt-4">
-        <p className="text-xs font-semibold text-muted">{es ? "Tu nota" : "Your note"}</p>
-        <p className="mt-1 text-sm italic text-ink">{es ? "Practicar con tiras de papel el sábado." : "Try paper strips together on Saturday."}</p>
+        <p className="text-xs font-semibold text-muted">{t("landing.demo.noteLabel")}</p>
+        <p className="mt-1 text-sm italic text-ink">{t("landing.demo.note")}</p>
       </div>
     </div>
   );

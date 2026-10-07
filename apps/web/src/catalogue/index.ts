@@ -11,6 +11,7 @@ import slope from "./math-slope";
 import changes from "./science-changes";
 import matter from "./science-matter";
 import moon from "./science-moon";
+import motion from "./science-motion";
 import type { CatalogueEntry } from "./types";
 
 export type { CatalogueEntry };
@@ -21,7 +22,7 @@ export const CATALOGUE: CatalogueEntry[] = [
   storyOrder, addNumberLine, matter,
   fractions, fractionsEs, moon, mainIdea,
   negative, changes, argument,
-  slope, rhetoric,
+  slope, motion, rhetoric,
 ];
 
 export function bandOf(grade: Grade): Band {

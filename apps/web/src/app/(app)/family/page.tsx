@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { catalogueFor } from "@/catalogue";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { IconArrowRight, IconTrash } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
 import { Button, EmptyState, Notice, btn } from "@/components/ui";
@@ -26,6 +27,7 @@ export default function FamilyPage() {
 
 function Family() {
   const t = useT();
+  useTitle(t("family.title"));
   const kids = useStore(learnersOf);
   const [now] = useState(() => Date.now());
   return (

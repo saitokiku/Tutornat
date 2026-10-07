@@ -5,12 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AuthCard, TextLink } from "@/components/auth/AuthFrame";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { Button, Field, Notice, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { resetPassword, resetTokenValid } from "@/lib/auth";
 
 export default function ResetPasswordPage() {
   const t = useT();
+  useTitle(t("auth.resetTitle"));
   const token = useSearchParams().get("token") ?? "";
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

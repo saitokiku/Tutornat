@@ -128,3 +128,17 @@ describe("activity", () => {
     expect(courseProgress(course, read().activity)).toMatchObject({ done: 1, total: 4 });
   });
 });
+
+describe("checkMemory", () => {
+  it("first try counts on its own; a fix after a miss counts as helped; repeats are not recorded", async () => {
+    const { checkMemory } = await import("./activity");
+    const m = checkMemory();
+    expect(m.judge("q1", false, false)).toEqual({ record: true, assisted: false });
+    expect(m.judge("q1", false, false)).toMatchObject({ record: false });
+    expect(m.judge("q1", true, false)).toEqual({ record: true, assisted: true });
+    expect(m.judge("q1", true, false)).toMatchObject({ record: false });
+    expect(m.judge("q2", true, false)).toEqual({ record: true, assisted: false });
+    m.help("q3");
+    expect(m.judge("q3", true, false)).toEqual({ record: true, assisted: true });
+  });
+});

@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthCard, TextLink } from "@/components/auth/AuthFrame";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { Button, Field } from "@/components/ui";
 import { useT } from "@/i18n";
 import { signUp, type FieldErrors } from "@/lib/auth";
 
 export default function SignUpPage() {
   const t = useT();
+  useTitle(t("auth.signUp"));
   const router = useRouter();
   const [form, setForm] = useState({ displayName: "", email: "", password: "" });
   const [errors, setErrors] = useState<FieldErrors>({});

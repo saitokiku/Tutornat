@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { IconLogout } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
 import { Button, Field, btn } from "@/components/ui";
@@ -31,6 +32,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 function Settings() {
   const t = useT();
+  useTitle(t("settings.title"));
   const locale = useLocale();
   const account = useStore(currentAccount) as Account;
   const learner = useStore(currentLearner);

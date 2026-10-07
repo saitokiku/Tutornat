@@ -9,7 +9,7 @@ export function CheckRow({ result, onCheck, disabled }: { result: boolean | null
   const t = useT();
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button variant="primary" onClick={onCheck} disabled={disabled}>
+      <Button variant="primary" onClick={onCheck} disabled={disabled || result !== null}>
         {t("w.check")}
       </Button>
       <p role="status" className={`text-sm font-medium ${result === null ? "sr-only" : result ? "text-good" : "text-bad"}`}>

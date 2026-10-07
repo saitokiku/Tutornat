@@ -386,6 +386,17 @@ const es: Record<Key, string> = {
   "landing.subjects.english": "Idea principal, armar un argumento, afirmación y evidencia",
   "landing.honest.title": "Dónde estamos",
   "landing.honest.body": "Esta es una demo temprana. Las lecciones listas, el creador de cursos y el registro de progreso ya funcionan en tu navegador. El tutor con IA que escribe lecciones y responde preguntas se conecta después.",
+  "landing.demo.prompt": "Corta la barra en 4 partes iguales. Luego sombrea 3.",
+  "landing.demo.goal": "¿Por qué la Luna cambia de forma?",
+  "landing.demo.l1": "La Luna no brilla sola",
+  "landing.demo.l2": "Siempre medio iluminada",
+  "landing.demo.l3": "Una vuelta a la Tierra",
+  "landing.demo.l4": "Nombra las fases",
+  "landing.demo.child": "Grado 4 · ejemplo",
+  "landing.demo.week": "Esta semana terminó 3 lecciones. Acertó 7 preguntas sola y 2 con una pista.",
+  "landing.demo.help": "Comparar fracciones",
+  "landing.demo.noteLabel": "Tu nota",
+  "landing.demo.note": "Practicar con tiras de papel el sábado.",
   "landing.footer": "KaizenEDU · pasos pequeños, todos los días",
 };
 

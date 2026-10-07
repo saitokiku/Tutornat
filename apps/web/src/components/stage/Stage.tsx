@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { IconArrowLeft, IconArrowRight, IconBoard, IconCheck, IconCheckCircle, IconChat, IconEye, IconHand, IconHome, IconLayers, IconSpeaker, IconStop } from "@/components/icons";
 import { Button, EmptyState, Notice, SubjectDot, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { Related } from "@/components/courses/Related";
-import { lessonState, record } from "@/lib/activity";
+import { checkMemory, lessonState, record } from "@/lib/activity";
 import { read } from "@/lib/store";
 import type { Course, Lesson, Profile, Scene } from "@/lib/types";
 import { InteractiveView, ProjectView, QuizView, SlideView, sceneSpeech, type OnAnswer } from "./scenes";
+import { useTitle } from "@/components/LangSync";
 import { HearContext } from "./hear";
 import { TutorPanel } from "./TutorPanel";
 import { useSpeech } from "./useSpeech";
@@ -20,6 +21,7 @@ const isYoung = (p: Profile) => p.grade === "K" || p.grade === "1" || p.grade ==
 
 export function Stage({ course, lesson, learner }: { course: Course; lesson: Lesson; learner: Profile }) {
   const t = useT();
+  useTitle(lesson.title);
   const [index, setIndex] = useState(0);
   const [visited, setVisited] = useState<Set<number>>(() => new Set([0]));
   const [tally, setTally] = useState({ own: 0, help: 0, missed: 0 });
@@ -40,21 +42,28 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per lesson
   }, [course.id, lesson.id]);
 
+  const focusTitle = () => requestAnimationFrame(() => document.getElementById("scene-title")?.focus());
   const go = (i: number) => {
+    focusTitle();
     setIndex(i);
     setVisited((v) => new Set(v).add(i));
     setShowScenes(false);
     setBoardNote(false);
   };
-  const onAnswer: OnAnswer = ({ sceneId, correct, assisted }) => {
+  const memory = useRef(checkMemory());
+  const onAnswer: OnAnswer = ({ sceneId, correct, assisted: shown }) => {
+    const { record: fresh, assisted } = memory.current.judge(sceneId, correct, shown);
+    if (!fresh) return;
     record({ ...base, type: "quiz_answered", sceneId, correct, assisted });
     setTally((s) => (correct ? (assisted ? { ...s, help: s.help + 1 } : { ...s, own: s.own + 1 }) : { ...s, missed: s.missed + 1 }));
   };
+  const onHelp = useCallback((id: string) => memory.current.help(id), []);
   const finish = () => {
     const seconds = Math.min(MAX_SECONDS, Math.round((Date.now() - startedAt) / 1000));
     record({ ...base, type: "lesson_completed", seconds });
     setFinished(seconds);
     speech.stop();
+    focusTitle();
   };
   const onSpeakText = useCallback((text: string) => setQuizText(text), []);
 
@@ -184,7 +193,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                 <span className="mx-auto grid size-12 place-items-center rounded-full bg-good text-paper">
                   <IconCheck size={24} />
                 </span>
-                <h2 id="scene-title" className="mt-4 font-brand text-t1 font-semibold text-ink">
+                <h2 id="scene-title" tabIndex={-1} className="mt-4 font-brand text-t1 font-semibold text-ink focus:outline-none">
                   {t("stage.finished")}
                 </h2>
                 <p className="mt-2 text-sm text-muted">{t("stage.finishedBody")}</p>
@@ -210,13 +219,13 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                   <span className="hidden font-opmono text-xs tabular-nums text-muted lg:inline">{t("stage.sceneOf", { n: index + 1, total: lesson.scenes.length })}</span>
                 </div>
                 <div key={scene.id} className="min-h-[22rem] animate-fade-up space-y-6 px-5 py-7 sm:px-8 sm:py-9" lang={course.locale}>
-                  <h2 id="scene-title" className="font-brand text-t1 font-semibold text-balance text-ink">
+                  <h2 id="scene-title" tabIndex={-1} className="font-brand text-t1 font-semibold text-balance text-ink focus:outline-none">
                     {scene.title}
                   </h2>
                   {boardNote && <Notice>{t("stage.whiteboardOff")}</Notice>}
                   {scene.kind === "slide" && <SlideView scene={scene} subject={course.subject} />}
                   {scene.kind === "interactive" && <InteractiveView scene={scene} subject={course.subject} onAnswer={onAnswer} lang={course.locale} />}
-                  {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSpeakText={onSpeakText} />}
+                  {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSpeakText={onSpeakText} onHelp={onHelp} />}
                   {scene.kind === "project" && <ProjectView scene={scene} />}
                 </div>
                 <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">

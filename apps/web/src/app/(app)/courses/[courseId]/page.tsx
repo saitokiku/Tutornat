@@ -6,7 +6,9 @@ import { useState } from "react";
 import { LangTag } from "@/components/courses/LangTag";
 import { NotFound } from "@/components/courses/NotFound";
 import { Related } from "@/components/courses/Related";
+import { ParentGate } from "@/components/profiles/ParentGate";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { IconArrowLeft, IconArrowRight, IconCheck, IconTrash } from "@/components/icons";
 import { Badge, Button, Notice, SubjectDot, btn } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
@@ -31,8 +33,11 @@ function CourseView() {
   const { courseId } = useParams<{ courseId: string }>();
   const learner = useStore(currentLearner) as Profile;
   const course = useStore((s) => getCourse(s, courseId, learner.id));
+  useTitle(course?.title ?? t("common.notFound.title"));
   const events = useStore((s) => s.activity.filter((e) => e.profileId === learner.id && e.courseId === courseId));
   const [confirm, setConfirm] = useState(false);
+  const [gate, setGate] = useState(false);
+  const unlocked = useStore((s) => Boolean(s.session.unlocked));
 
   if (!course) return <NotFound />;
   if (course.status === "outlining")
@@ -154,14 +159,17 @@ function CourseView() {
             </Button>
             <button
               type="button"
+              autoFocus
               onClick={() => (router.push("/courses"), removeCourse(course.id))}
               className="k-btn min-h-9 bg-bad px-3.5 text-xs text-paper hover:bg-bad/90"
             >
               {t("common.confirmDelete")}
             </button>
           </div>
+        ) : gate ? (
+          <ParentGate onPass={() => (setGate(false), setConfirm(true))} onCancel={() => setGate(false)} />
         ) : (
-          <Button variant="ghost" size="sm" onClick={() => setConfirm(true)}>
+          <Button variant="ghost" size="sm" onClick={() => (unlocked ? setConfirm(true) : setGate(true))}>
             <IconTrash size={14} /> {t("course.delete")}
           </Button>
         )}

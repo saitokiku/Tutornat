@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { IconArrowLeft } from "@/components/icons";
 import { MagicBox } from "@/components/magic-box/MagicBox";
 import { useT } from "@/i18n";
@@ -20,6 +21,7 @@ export default function NewCoursePage() {
 
 function NewCourse() {
   const t = useT();
+  useTitle(t("nav.new"));
   const learner = useStore(currentLearner) as Profile;
   const goal = useSearchParams().get("goal") ?? "";
   return (

@@ -7,6 +7,7 @@ import { matchEntry } from "@/catalogue";
 import { CourseArt } from "@/components/courses/CourseArt";
 import { NotFound } from "@/components/courses/NotFound";
 import { Guard } from "@/components/gate";
+import { useTitle } from "@/components/LangSync";
 import { OutlineEditor } from "@/components/generation/OutlineEditor";
 import { IconArrowLeft, IconArrowRight, IconCheck, IconRefresh } from "@/components/icons";
 import { Badge, Button, Notice, Spinner, SubjectDot } from "@/components/ui";
@@ -31,6 +32,7 @@ type Step = { key: Key; vars?: Record<string, number>; at: number };
 
 function Draft() {
   const t = useT();
+  useTitle(t("gen.title"));
   const router = useRouter();
   const { draftId } = useParams<{ draftId: string }>();
   const fresh = useSearchParams().get("fresh") === "1";
@@ -79,6 +81,12 @@ function Draft() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per arrival
   }, [draftId, fresh]);
 
+  // A course that was already created is not a draft any more (e.g. reached again with Back).
+  const ready = draft?.status === "ready";
+  useEffect(() => {
+    if (ready) router.replace(`/courses/${draftId}`);
+  }, [ready, draftId, router]);
+
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -86,11 +94,12 @@ function Draft() {
   }, [running]);
 
   if (!draft) return <NotFound />;
+  if (ready) return null;
 
   const backToBox = () => {
     ctrl.current?.abort();
     router.push(`/courses/new?goal=${encodeURIComponent(draft.goal)}`);
-    removeCourse(draft.id);
+    if (draft.status === "outlining") removeCourse(draft.id);
   };
   const create = () => {
     const clean = lessons.map((l) => ({ ...l, title: l.title.trim() || t("gen.newLesson") }));
@@ -105,7 +114,7 @@ function Draft() {
     const id = addFromCatalogue(match.id, learner.id);
     if (!id) return;
     router.push(`/learn/${id}/${match.lessons[0].id}`);
-    removeCourse(draft.id);
+    if (draft.status === "outlining") removeCourse(draft.id);
   };
   const elapsed = Math.max(0, Math.round(((running ? now : (steps.at(-1)?.at ?? started)) - started) / 1000));
 
