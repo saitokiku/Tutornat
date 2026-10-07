@@ -1,8 +1,21 @@
 # Status
 
-> **Stopped 2026-10-07 (out of tokens). Start with [HANDOFF.md](HANDOFF.md).**
+> **2026-10-07 review complete; next implementation wave not started.** Start with
+> [HANDOFF.md](HANDOFF.md) and [the integrated release plan](plans/2026-10-07-integrated-learning-release.md).
 
-## Queue 4 — the 1.0 build, in order (started 2026-10-07; owner: "build it all now", come back at the end)
+Current review base: `d8d8166`. Fresh verify: **PASS, 2,372 tests**. Full browser suite:
+**148 passed / 22 failed / 16 skipped**; see [baseline](reviews/2026-10-07-baseline.json).
+The [audit](reviews/2026-10-07-system-audit.md) separates working pieces from integration gaps.
+
+- **Done:** system/predecessor review, hands-on synthetic journey, product spec, current model/voice/Jev
+  research, task contracts and dependency order.
+- **Not started:** integrated release T01–T13. Earlier Queue 4 ordering below is superseded by the new plan.
+- **External gates:** deployment credentials/provider access, child-data and content/Spanish review,
+  real-device audio and pilot participants. No owner decision blocks local implementation planning.
+- **Owner direction:** fused child/adult capability, multimodal teaching, optional future face/gaze,
+  maximum quality before cost, ornamentation later. No product code changed in this review.
+
+## Earlier Queue 4 — the 1.0 build (historical order)
 
 Plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md). One sequence, no side
 quests. Each stage starts only when the stage before it is merged and `npm run verify` is green.

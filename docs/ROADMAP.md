@@ -2,6 +2,30 @@
 
 Each phase swaps what's behind the screens, not the screens. Status lives in [STATUS.md](STATUS.md).
 
+## Current next-build sequence — integrated learning
+
+The owner requested an audit and exact next-agent plan before the next implementation wave.
+Read [the audit](reviews/2026-10-07-system-audit.md),
+[product design](specs/2026-10-07-one-learning-workspace.md),
+[model/voice/Jev strategy](specs/2026-10-07-models-voice-and-jev.md) and
+[implementation plan](plans/2026-10-07-integrated-learning-release.md).
+
+1. Repair current journeys, durable help, account authority and verified checks (T01–T04).
+2. Connect one resumable visual workspace, reciprocal attention, natural voice and learner-created
+   work; demonstrate child-intuitive and substantive adult use (T05–T09).
+3. Shortlist by independent role-specific benchmarks, then compare model/voice combinations on frozen
+   blinded product tasks and add bounded Jev judgments; promote
+   reviewed subject/EN/ES journeys (T10–T11). Maximum quality and convincing proof precede cost tuning.
+4. Complete production data lifecycle and cross-age/device/human release evidence (T12–T13).
+5. Extend the same system with richer scenes, optional tutor face, evaluated gaze assistance and
+   further input devices. Website ornamentation is later.
+
+This supersedes the earlier adults-last and content-merge-first ordering. Existing capabilities and
+the longer-term OpenMAIC ambition remain; optional sensors and a full content expansion do not block
+the bounded integrated release. No tasks in this new plan are claimed implemented yet.
+
+## Earlier roadmap — retained as history
+
 ## Done — foundation and learning fabric (2026-10-07)
 
 - Frontend foundation: landing, family account + learner profiles, grown-up gate, lesson stage with
@@ -41,5 +65,5 @@ The plan for 1.0: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaiz
 
 ## Later
 
-Adults (profiles already support it), more subjects, curated open curriculum with per-item rights checks
+Broader adult curriculum (shared adult use is now in the integrated release), more subjects, curated open curriculum with per-item rights checks
 (`docs/history/discovery/delivery/fullstack/research/oer-20261003/`), human tutors as an add-on.
