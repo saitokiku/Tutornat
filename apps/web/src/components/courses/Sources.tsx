@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { STATUS_DOT, statusLine } from "@/components/practice/status";
 import { Badge, Button } from "@/components/ui";
-import { useT } from "@/i18n";
+import { gradeLabel, useT } from "@/i18n";
 import { startSet, statusesOf } from "@/lib/practice";
 import { isReviewed } from "@/lib/review";
 import { citationGroups, isWebLink, practiceSkillsFor, topicOf } from "@/lib/source-course";
@@ -13,6 +13,9 @@ import type { Course, Profile } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
 
 type Citation = NonNullable<Course["citations"]>[number];
+
+/** Wikipedia's text licence; attribution links to it. */
+const LICENSE = "https://creativecommons.org/licenses/by-sa/4.0/";
 
 function SourceLink({ c, lang }: { c: Citation; lang?: string }) {
   const t = useT();
@@ -35,7 +38,7 @@ function Group({ title, children, note }: { title: string; children: React.React
     <div className="px-4 py-3.5 sm:px-5">
       <h3 className="text-xs font-semibold text-muted">{title}</h3>
       <div className="mt-1">{children}</div>
-      {note && <p className="mt-1 text-xs text-muted">{note}</p>}
+      {note && <p className="text-xs text-muted">{note}</p>}
     </div>
   );
 }
@@ -56,7 +59,10 @@ export function CourseSources({ course }: { course: Course }) {
       <div className="divide-y divide-border rounded-md border border-border bg-panel">
         {g.article && (
           <Group title={t("crs.wikiFrom")} note={t("crs.wikiLicense")}>
-            <SourceLink c={g.article} lang={course.locale} />
+            <p className="flex flex-wrap gap-x-5">
+              <SourceLink c={g.article} lang={course.locale} />
+              <SourceLink c={{ title: t("crs.licenseLink"), url: LICENSE, source: "" }} />
+            </p>
           </Group>
         )}
         {g.words.length > 0 && (
@@ -106,7 +112,10 @@ export function CoursePractice({ course, learner }: { course: Course; learner: P
   const statuses = useStore((s) => statusesOf(s, learner.id, now));
   const store = useStore((s) => s);
   const article = course.citations ? citationGroups(course.citations).article?.title : undefined;
-  const skills = practiceSkillsFor(topicOf(course.goal), article, course.subject).flatMap((id) => getSkill(id) ?? []);
+  const skills = practiceSkillsFor(topicOf(course.goal), article, course.subject, course.grade).flatMap((m) => {
+    const skill = getSkill(m.skillId);
+    return skill ? [{ skill, fits: m.fits }] : [];
+  });
   if (!skills.length) return null;
   const go = (skillId: string) => {
     const id = startSet(read(), { profile: learner, kind: "pick", skillIds: [skillId], now });
@@ -121,12 +130,13 @@ export function CoursePractice({ course, learner }: { course: Course; learner: P
         <p className="mt-1 max-w-prose text-sm text-muted">{t("crs.practiceBody")}</p>
       </div>
       <ul className="divide-y divide-border rounded-md border border-border bg-panel">
-        {skills.map((skill) => (
+        {skills.map(({ skill, fits }) => (
           <li key={skill.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
             <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${STATUS_DOT[statuses[skill.id]?.state ?? "new"]}`} />
-            <span className="min-w-0 flex-1">
+            <span className="min-w-0 flex-1 basis-40">
               <span className="block text-sm font-medium text-ink">{skill.title[learner.locale]}</span>
               <span className="block text-xs text-muted">{statusLine(statuses[skill.id], now, learner.locale)}</span>
+              {!fits && <span className="block text-xs text-muted">{t("crs.skillGrade", { grade: gradeLabel(learner.locale, skill.grade) })}</span>}
             </span>
             {!isReviewed(store, skill) && <Badge>{t("practice.draft")}</Badge>}
             <Button variant="secondary" aria-label={t("crs.practiceNamed", { skill: skill.title[learner.locale] })} onClick={() => go(skill.id)}>

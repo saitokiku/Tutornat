@@ -81,9 +81,20 @@ describe("SubjectPath", () => {
     expect(screen.getByRole("button", { name: "Add to my path: Negative numbers and the number line" })).toBeInTheDocument();
   });
 
-  it("K–2 learners get a bigger start button", () => {
+  it("K–2 learners get 56px targets: start, move, add and the skill map", () => {
     addFromCatalogue("math-add-number-line", "k1");
     render(<SubjectPath subject="math" learner={{ ...learner, id: "k1", grade: "1" }} now={0} />);
     expect(screen.getByRole("link", { name: "Start: Adding on the number line" }).className).toContain("min-h-14");
+    expect(screen.getByRole("button", { name: "Move “Adding on the number line” up" }).className).toContain("size-14");
+    expect(screen.getByRole("button", { name: "Move “Adding on the number line” down" }).className).toContain("size-14");
+    expect(screen.getByRole("button", { name: /^Add to my path: / }).className).toContain("min-h-14");
+    expect(screen.getByRole("link", { name: "Math skill map" }).className).toContain("min-h-14");
+  });
+
+  it("older learners keep 44px targets", () => {
+    addFromCatalogue("math-add-number-line", learner.id);
+    render(<SubjectPath subject="math" learner={learner} now={0} />);
+    expect(screen.getByRole("button", { name: "Move “Adding on the number line” up" }).className).toContain("size-11");
+    expect(screen.getByRole("link", { name: "Math skill map" }).className).toContain("min-h-11");
   });
 });

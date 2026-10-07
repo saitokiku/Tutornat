@@ -42,7 +42,7 @@ export function Related({ course, learner }: { course: Course; learner: Profile 
             {entry.summary}
           </p>
         </div>
-        <Button size="sm" onClick={start}>
+        <Button onClick={start}>
           {t("course.start")} <IconArrowRight size={14} />
         </Button>
       </div>

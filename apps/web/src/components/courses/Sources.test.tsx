@@ -45,7 +45,8 @@ describe("CourseSources", () => {
     expect(wiki).toHaveAttribute("href", "https://en.wikipedia.org/wiki/Volcano");
     expect(wiki).toHaveAttribute("target", "_blank");
     expect(wiki).toHaveAttribute("rel", "noopener noreferrer");
-    expect(screen.getByText(/shared under CC BY-SA 4.0/)).toBeInTheDocument();
+    expect(screen.getByText("The overview quotes the opening of the article as written.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^License: CC BY-SA 4.0/ })).toHaveAttribute("href", "https://creativecommons.org/licenses/by-sa/4.0/");
     expect(screen.getByRole("heading", { name: "Definitions from Wiktionary, through Datamuse" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^magma/ })).toHaveAttribute("href", "https://en.wiktionary.org/wiki/magma");
     expect(screen.getByRole("link", { name: /^Volcanoes, Seymour Simon/ })).toHaveAttribute("href", "https://openlibrary.org/works/OL1W");
@@ -74,9 +75,14 @@ describe("OriginBadge", () => {
 });
 
 describe("CoursePractice", () => {
-  it("lists the matching skill with its status and a draft label, and starts a set", async () => {
+  it("lists the skills that fit, nearest the learner's grade first, with status, draft label and a way to practice", async () => {
     render(<CoursePractice course={course} learner={learner} />);
+    const rows = screen.getAllByRole("listitem");
+    expect(within(rows[0]).getByText("Rocks, fossils and erosion")).toBeInTheDocument();
+    expect(within(rows[0]).queryByText(/Usually taught in/)).toBeNull();
+    // Plate boundaries is a grade 7 skill: still offered, and labelled with its grade.
     const row = screen.getByText("Plate boundaries").closest("li")!;
+    expect(within(row).getByText("Usually taught in Grade 7")).toBeInTheDocument();
     expect(within(row).getByText("Not started")).toBeInTheDocument();
     expect(within(row).getByText("Draft questions")).toBeInTheDocument();
     await userEvent.click(within(row).getByRole("button", { name: "Practice Plate boundaries" }));
@@ -105,19 +111,31 @@ describe("Catalogue", () => {
 });
 
 describe("sourceLine", () => {
-  const say = (s: Parameters<typeof sourceLine>[0]) => {
-    const l = sourceLine(s, "volcanoes");
-    return [t("en", l.key, l.vars), l.tone];
+  const say = (s: Parameters<typeof sourceLine>[0], locale: "en" | "es" = "en") => {
+    const l = sourceLine(s, "volcanoes", locale);
+    return [t(locale, l.key, l.vars), l.tone];
   };
   it("says what was found, what wasn't, and why", () => {
     expect(say({ part: "article", title: "Volcano" })).toEqual(["Found Wikipedia's article “Volcano”", "found"]);
+    expect(say({ part: "article", title: "Volcano", withheld: true })).toEqual(["Left out Wikipedia's article “Volcano”: it covers things that aren't for children", "none"]);
     expect(say({ part: "article" })).toEqual(["Wikipedia has no article that matches “volcanoes”", "none"]);
     expect(say({ part: "article", failed: "offline" })).toEqual(["Couldn't reach Wikipedia: this device seems to be offline", "failed"]);
     expect(say({ part: "terms", count: 1 })).toEqual(["Found 1 key word with a definition", "found"]);
     expect(say({ part: "terms", count: 0, englishOnly: true })[0]).toMatch(/English only/);
     expect(say({ part: "terms", count: 0, failed: "unavailable" })).toEqual(["Datamuse didn't answer just now", "failed"]);
-    expect(say({ part: "lesson" })[1]).toBe("none");
-    expect(say({ part: "practice", skill: "Plate boundaries", questions: 0 })[0]).toBe("Matched the skill map: Plate boundaries");
-    expect(say({ part: "books", count: 3 })[0]).toBe("Found 3 books to borrow");
+    expect(say({ part: "lesson", titles: [] })).toEqual(["No ready-made lesson is close enough to add", "none"]);
+    expect(say({ part: "lesson", titles: ["Melting and freezing"] })).toEqual(["Added the ready-made lesson “Melting and freezing”", "found"]);
+    expect(say({ part: "lesson", titles: ["A", "B"] })[0]).toBe("Added the ready-made lessons “A” and “B”");
+    expect(say({ part: "lesson", titles: ["A", "B"] }, "es")[0]).toBe("Se agregaron las lecciones listas “A” y “B”");
+    expect(say({ part: "lesson", titles: ["A"], leftOut: true })).toEqual(["Left out the ready-made lesson “A”: it's a whole lesson, and this course is one sitting", "none"]);
+    expect(say({ part: "practice", skills: ["Rocks, fossils and erosion"], questions: 3 })).toEqual(["Added questions from the skill map: Rocks, fossils and erosion", "found"]);
+    expect(say({ part: "practice", skills: ["Plate boundaries"], questions: 0 })[0]).toBe("Matched the skill map: Plate boundaries. Practice it from the course page.");
+    expect(say({ part: "practice", skills: ["Plate boundaries"], questions: 0, grade: "7" })).toEqual([
+      "The closest skill on the map, Plate boundaries, is usually taught in Grade 7, so its questions aren't in the lessons. It's on the course page.",
+      "none",
+    ]);
+    expect(say({ part: "practice", skills: [], questions: 0 })[1]).toBe("none");
+    expect(say({ part: "books", count: 3 })[0]).toBe("Found 3 children's books to borrow");
+    expect(say({ part: "books", count: 0 })[0]).toBe("No children's books found to borrow");
   });
 });

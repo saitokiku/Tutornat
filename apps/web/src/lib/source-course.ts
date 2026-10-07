@@ -1,21 +1,24 @@
 import { catalogueFor, type CatalogueEntry } from "@/catalogue";
-import { t } from "@/i18n";
+import { t, type Key } from "@/i18n";
 import type { Book, Definition, WikiSummary } from "@/knowledge";
+import { topicsIn } from "@/knowledge/topics";
 import { matchSkills } from "@/planner/skillmatch";
 import { answerText, check } from "@/practice/answer";
 import { REVIEWED } from "@/practice/reviewed";
 import { getSkill, makeItem } from "@/practice/skills";
 import type { ItemBody, MathPart } from "@/practice/types";
 import { linkOf, resourcesFor } from "@/resources";
+import { screen } from "./ai/safety";
 import { titleFromGoal } from "./courses";
 import { guessSubject } from "./generate";
-import { newId } from "./store";
+import { newId, type StoreState } from "./store";
 import type { Course, CourseLength, Grade, Lesson, Locale, QuizQuestion, Scene, Subject } from "./types";
 
 // Source-built courses: a course for any topic, made without AI from things we can name and link.
 // An overview quoted from Wikipedia, key words with dictionary definitions, the closest lesson a person
-// wrote for our catalogue, questions from the skill map (checked by code), and books and sites to find
-// out more. Same inputs, same course. Sourced text is shown as written and credited, never as ours.
+// wrote for our catalogue, questions from the skill map (checked by code), and children's books and
+// sites to find out more. Same inputs, same course. Sourced text is shown as written and credited,
+// never as ours, and anything that fails the safety screen is left out.
 
 /** Where the knowledge comes from. Injected so the builder runs in tests without a network. */
 export type Fetchers = {
@@ -25,7 +28,7 @@ export type Fetchers = {
   related: (word: string) => Promise<string[]>;
   /** Dictionary definitions (Wiktionary through Datamuse); empty when the word has none. */
   define: (word: string) => Promise<Definition[]>;
-  /** Books a family can borrow (Open Library). */
+  /** Books a family can borrow (Open Library); the query may use Open Library's field filters. */
   books: (q: string) => Promise<Book[]>;
 };
 
@@ -40,10 +43,13 @@ const failure = (e: unknown): Failure => (e instanceof SourceError ? e.code : "u
 
 /** What the builder found, part by part, so the screen can say it plainly (and say what it didn't find). */
 export type SourceStep =
-  | { part: "article"; title?: string; failed?: Failure }
+  /** `withheld`: an article was found but its text failed the safety screen, so it is not used. */
+  | { part: "article"; title?: string; failed?: Failure; withheld?: boolean }
   | { part: "terms"; count: number; failed?: Failure; englishOnly?: boolean }
-  | { part: "lesson"; title?: string; course?: string }
-  | { part: "practice"; skill?: string; questions: number }
+  /** `leftOut`: a lesson matched, but a one-lesson course has no room for a whole second lesson. */
+  | { part: "lesson"; titles: string[]; leftOut?: boolean }
+  /** `grade`: the closest skill is too far from the learner's grade for questions (it is still on the course page). */
+  | { part: "practice"; skills: string[]; questions: number; grade?: Grade }
   | { part: "books"; count: number; failed?: Failure };
 
 /** The `source` of each citation the builder writes; the course page groups links by it. */
@@ -54,7 +60,7 @@ export type BuildOptions = {
   id?: string;
   subject?: Subject;
   length?: CourseLength;
-  /** Words that must never leave the device (the learner's name), removed from every query. */
+  /** Words that must never leave the device (every name on the account), removed from every query. */
   avoid?: string[];
   signal?: AbortSignal;
   onStep?: (step: SourceStep) => void;
@@ -69,6 +75,11 @@ const reviewedByDefault = (skillId: string) => {
   return !!skill && (skill.content === "computed" || REVIEWED.includes(skillId));
 };
 
+const gradeN = (g: Grade) => (g === "K" ? 0 : g === "adult" ? 10 : Number(g));
+const isYoung = (g: Grade) => gradeN(g) <= 2;
+/** A K–2 sitting is ten minutes (plan 2.10): a one-lesson course for them stops there. */
+const YOUNG_SITTING = 10;
+
 // ── Words ──────────────────────────────────────────────────────────────────────────────────────
 
 const STOP = new Set(
@@ -81,6 +92,7 @@ const STOP = new Set(
 );
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** A rough stem so "melted", "melting" and "melts" meet, and "volcanoes" meets "volcano". */
 export function stem(word: string) {
@@ -104,89 +116,175 @@ export function words(text: string): string[] {
   return out;
 }
 
-/** The topic a learner asked about, without their name and without "I want to learn about". */
+/** Every word of a text as stems, short ones too. */
+const tokens = (text: string) => new Set((norm(text).match(/[a-zñ]+/g) ?? []).map(stem));
+
+/** Words about school logistics: a line made of them ("Science test on Friday") says when, not what. */
+const LOGISTICS = new Set(
+  "test tests quiz exam homework class grade chapter unit page worksheet study review tomorrow today tonight week friday monday tuesday wednesday thursday saturday sunday prueba examen tarea clase grado capitulo unidad pagina repasar estudiar manana semana viernes lunes martes miercoles jueves sabado domingo"
+    .split(" ")
+    .map(stem),
+);
+
+const LEAD_IN =
+  /^(i (want|would like|need) to (learn|know|understand)( more)?( about)?|teach me( about)?|tell me about|learn about|help me (with|understand)|how (do|does|to)|what (is|are)|quiero (aprender|saber)( m[aá]s)?( sobre| de)?|ens[eé][ñn]ame( sobre)?|qu[eé] (es|son)|c[oó]mo)\s+/i;
+
+/** Removes each name (and its possessive) as a whole word; longer names first, so "Ana María" goes before "Ana". */
+function withoutNames(text: string, avoid: string[]) {
+  const names = [...new Set(avoid.map((n) => n.trim()).filter((n) => n.length > 1))].sort((a, b) => b.length - a.length);
+  for (const name of names) text = text.replace(new RegExp(`(^|[^\\p{L}])${escapeRe(name)}(['’]s)?(?=$|[^\\p{L}])`, "giu"), "$1");
+  return text;
+}
+
+/**
+ * The topic a learner asked about: names taken out first, then "I want to learn about" and the like.
+ * A request over several lines uses the line that says the most (not the one that says when the test is).
+ */
 export function topicOf(goal: string, avoid: string[] = []) {
-  let topic = titleFromGoal(goal);
-  for (const name of avoid.map((n) => n.trim()).filter((n) => n.length > 1)) {
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    topic = topic.replace(new RegExp(`(^|[^\\p{L}])${escaped}('s)?(?=$|[^\\p{L}])`, "giu"), "$1");
-  }
-  return topic.replace(/\s+/g, " ").replace(/^[\s,.:;-]+|[\s,.:;-]+$/g, "").slice(0, 100);
+  const lines = withoutNames(goal, avoid)
+    .split(/\n+/)
+    .map((l) =>
+      l
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(LEAD_IN, "")
+        .replace(/^[\s,.:;!?¿¡-]+|[\s,.:;!?¿¡-]+$/g, ""),
+    )
+    .filter(Boolean);
+  const say = (l: string) => words(l).filter((w) => !LOGISTICS.has(w)).length;
+  let topic = lines.reduce<string>((best, l) => (say(l) > say(best) ? l : best), lines[0] ?? "");
+  if (topic.length > 100) topic = topic.slice(0, Math.max(topic.lastIndexOf(" ", 100), 40)).replace(/[\s,.:;-]+$/, "");
+  return topic ? topic[0].toUpperCase() + topic.slice(1) : "";
+}
+
+/** Every name on the account (each learner's nickname, the grown-up's name and its parts), so none of them leaves the device. */
+export function namesOnAccount(s: Pick<StoreState, "profiles" | "accounts">, accountId: string): string[] {
+  const names = [...s.profiles.filter((p) => p.accountId === accountId).map((p) => p.nickname), s.accounts.find((a) => a.id === accountId)?.displayName ?? ""];
+  return [...new Set(names.flatMap((n) => [n, ...n.split(/\s+/)]).map((n) => n.trim()).filter((n) => n.length > 1))];
 }
 
 // ── The overview ───────────────────────────────────────────────────────────────────────────────
 
-/** Wikipedia's opening as written, ending on a whole sentence, in short paragraphs to read (or hear) one at a time. */
-export function paragraphs(extract: string): string[] {
+function sentences(extract: string): string[] {
   let text = extract.trim();
   if (!/[.!?"”)]$/.test(text)) {
     const end = Math.max(text.lastIndexOf(". "), text.lastIndexOf("? "), text.lastIndexOf("! "));
     text = end > 120 ? text.slice(0, end + 1) : `${text}…`;
   }
-  const sentences = text.split(/(?<=[.!?])\s+(?=[\p{Lu}¿¡"“(])/u);
+  return text.split(/(?<=[.!?])\s+(?=[\p{Lu}¿¡"“(])/u);
+}
+
+/** Wikipedia's opening as written, ending on a whole sentence, in short paragraphs to read (or hear) one at a time. */
+export function paragraphs(extract: string): string[] {
+  const all = sentences(extract);
   const out: string[] = [];
-  for (let i = 0; i < sentences.length; i += 2) out.push(sentences.slice(i, i + 2).join(" "));
+  for (let i = 0; i < all.length; i += 2) out.push(all.slice(i, i + 2).join(" "));
   return out;
 }
+
+/** The article's first sentence only: for K–2, whose sitting is short and whose listening comes first. */
+export const firstSentence = (extract: string) => sentences(extract)[0] ?? "";
 
 // ── Key words ──────────────────────────────────────────────────────────────────────────────────
 
 export type Term = { word: string; partOfSpeech: string; text: string };
 
 const NOT_A_MEANING = /^(plural of|simple past|past participle|present participle|third-person singular|alternative (form|spelling|letter-case form) of|obsolete|archaic|misspelling of|abbreviation of|initialism of|synonym of)/i;
+/** "A native of Africa": a word for people from a place, not a key word. */
+const DEMONYM = /^(a|an|the|one)\s+(native|inhabitant|resident|citizen|person|people|member)s?\s+(of|from)\b/i;
+/** Real words that a dictionary has and a child's word list does not. */
+const NOT_FOR_A_WORD_LIST = new Set(["ass", "jackass", "bitch", "cock", "pussy", "booby", "tit", "dick", "hooker", "screw", "bastard", "crap", "damn", "hell", "piss", "sex"]);
+/** A definition longer than this is left out rather than cut off. */
 const MAX_DEF = 200;
 
-function meaning(defs: Definition[]): Definition | null {
-  const d = defs.find((x) => (x.partOfSpeech === "noun" || x.partOfSpeech === "verb") && x.text && !NOT_A_MEANING.test(x.text));
-  if (!d) return null;
-  if (d.text.length <= MAX_DEF) return d;
-  const cut = d.text.slice(0, MAX_DEF);
-  return { ...d, text: `${cut.slice(0, cut.lastIndexOf(" "))}…` };
+/**
+ * The sense of a word to show: a noun or verb with a real meaning, short enough to read whole, fit for
+ * children, and sharing the most words with the article (at least one, when there is an article).
+ * `need`: words the sense must contain (the article's disambiguator, so "Mercury (planet)" never gets
+ * the metal).
+ */
+function meaning(defs: Definition[], context: Set<string>, need: string[], fine: (s: string) => boolean): Definition | null {
+  let best: { d: Definition; overlap: number } | null = null;
+  for (const d of defs) {
+    const text = d.text?.trim();
+    if ((d.partOfSpeech !== "noun" && d.partOfSpeech !== "verb") || !text || text.length > MAX_DEF) continue;
+    if (NOT_A_MEANING.test(text) || DEMONYM.test(text) || !fine(text) || NOT_FOR_A_WORD_LIST.has(d.word.toLowerCase())) continue;
+    const said = words(text);
+    if (need.length && !need.some((n) => said.includes(n))) continue;
+    const overlap = said.filter((w) => context.has(w)).length;
+    // Next to an article, a sense that shares nothing with it is another meaning ("volcano": a firework).
+    if (context.size && !overlap) continue;
+    if (!best || overlap > best.overlap) best = { d: { ...d, text }, overlap };
+  }
+  return best?.d ?? null;
 }
 
+/** True when the article writes the word only with a capital letter mid-sentence: a name (Africa, Jurassic), not a key word. */
+function nameInText(word: string, extract: string) {
+  const s = stem(word);
+  let named = false;
+  for (const m of extract.matchAll(/\p{L}+/gu)) {
+    if (stem(m[0]) !== s) continue;
+    if (m[0][0] === m[0][0].toLowerCase()) return false;
+    const before = extract.slice(0, m.index).trimEnd();
+    if (before && !/[.!?:]$/.test(before)) named = true;
+  }
+  return named;
+}
+
+type Defined = { m: Definition | null } | { e: unknown };
+
 /**
- * Up to four key words with definitions: the topic itself, then words that mean something like it and
- * also appear in the article, then the article's other long words. Only nouns and verbs with a real
- * meaning count. English only: the dictionary is English.
+ * Key words with definitions: the topic itself, then words Datamuse relates to it that the article also
+ * uses (never a name, never a word that isn't for children). With no article there is nothing to check
+ * related words against, so only the topic word is looked up. The dictionary is English.
  */
-async function findTerms(topic: string, extract: string | null, f: Fetchers): Promise<{ terms: Term[]; failed?: Failure }> {
-  const inText = new Set(extract ? words(extract) : []);
+async function findTerms(head: string, extract: string | null, need: string[], f: Fetchers, max: number, fine: (s: string) => boolean): Promise<{ terms: Term[]; failed?: Failure }> {
+  const context = new Set(extract ? words(extract) : []);
+  const inText = extract ? tokens(extract) : new Set<string>();
+  const lower = head.toLowerCase().trim();
   let related: string[] = [];
   let failed: Failure | undefined;
-  try {
-    related = await f.related(topic.toLowerCase());
-  } catch (e) {
-    failed = failure(e);
-    if (failed === "offline") return { terms: [], failed };
+  if (extract) {
+    try {
+      related = await f.related(lower);
+    } catch (e) {
+      failed = failure(e);
+      if (failed === "offline") return { terms: [], failed };
+    }
   }
-  const single = related.map((w) => w.toLowerCase().trim()).filter((w) => /^[a-z]{3,}$/.test(w));
-  const head = topic.toLowerCase().split(" ").length <= 2 ? [topic.toLowerCase()] : [];
-  const fromText = extract ? (norm(extract).match(/[a-z]{6,}/g) ?? []).filter((w) => !STOP.has(w)) : [];
-  const candidates: string[] = [];
-  const seen = new Set<string>();
-  const add = (w: string) => {
-    const s = stem(w);
-    if (seen.has(s) || candidates.length >= 7) return;
-    seen.add(s);
-    candidates.push(w);
+  // Without an article the topic is as typed ("volcanoes"): try it, then without its plural ending.
+  const heads = lower.split(" ").length <= 2 ? [...new Set([lower, ...(extract ? [] : [lower.replace(/es$/, ""), lower.replace(/s$/, "")])])].filter((w) => w.length >= 3) : [];
+  // A related word that is part of the topic ("tectonics" for "plate tectonics") would only repeat it.
+  const seen = new Set([...heads, ...lower.split(" ")].map(stem));
+  const others: string[] = [];
+  for (const w of related.map((x) => x.toLowerCase().trim())) {
+    if (others.length >= 6 || !/^[a-z]{3,}$/.test(w) || NOT_FOR_A_WORD_LIST.has(w) || seen.has(stem(w)) || !inText.has(stem(w)) || nameInText(w, extract!)) continue;
+    seen.add(stem(w));
+    others.push(w);
+  }
+  const ask = (w: string, needed: string[] = []): Promise<Defined> => f.define(w).then((d) => ({ m: meaning(d, context, needed, fine) }), (e: unknown) => ({ e }));
+  const askHead = async (): Promise<Defined[]> => {
+    const out: Defined[] = [];
+    for (const w of heads) {
+      const a = await ask(w, need);
+      out.push(a);
+      if ("m" in a && a.m) break;
+    }
+    return out;
   };
-  head.forEach(add);
-  single.filter((w) => !extract || inText.has(stem(w))).forEach(add);
-  if (extract) fromText.forEach(add);
-  else single.forEach(add);
-
-  const answers = await Promise.all(candidates.map((w) => f.define(w).then((d) => ({ d }), (e: unknown) => ({ e }))));
-  if (candidates.length && answers.every((a) => "e" in a)) return { terms: [], failed: failure((answers[0] as { e: unknown }).e) };
+  const [headAnswers, ...rest] = await Promise.all([askHead(), ...others.map((w) => ask(w))]);
+  const answers = [...headAnswers, ...rest];
+  if (answers.length && answers.every((a) => "e" in a)) return { terms: [], failed: failure((answers[0] as { e: unknown }).e) };
   const terms: Term[] = [];
   for (const a of answers) {
-    if (!("d" in a) || terms.length >= 4) continue;
-    const m = meaning(a.d);
-    if (m && !terms.some((x) => stem(x.word) === stem(m.word))) terms.push({ word: m.word, partOfSpeech: m.partOfSpeech, text: m.text });
+    if (!("m" in a) || !a.m || terms.length >= max || terms.some((x) => stem(x.word) === stem(a.m!.word))) continue;
+    terms.push({ word: a.m.word, partOfSpeech: a.m.partOfSpeech, text: a.m.text });
   }
   return { terms, failed: terms.length ? undefined : failed };
 }
 
-// ── The closest ready-made lesson ──────────────────────────────────────────────────────────────
+// ── The closest ready-made lessons ─────────────────────────────────────────────────────────────
 
 function lessonText(l: Lesson): string {
   const parts: string[] = [l.summary];
@@ -200,29 +298,46 @@ function lessonText(l: Lesson): string {
   return parts.join(" ");
 }
 
-const gradeN = (g: Grade) => (g === "K" ? 0 : g === "adult" ? 10 : Number(g));
+/** A catalogue lesson to borrow; `topic` when people bridged it (knowledge/topics), which has a line saying why it fits. */
+export type RelatedLesson = { entry: CatalogueEntry; lesson: Lesson; topic?: string };
 
 /**
- * The catalogue lesson (in the course's language) that shares the most words with the request and the
- * article. Words from the request and the article title weigh most; a match in the lesson title counts
- * double. Too weak a match returns null rather than a lesson about something else.
+ * Ready-made lessons (in the course's language, within three grades) that teach what was asked.
+ * First the ones people bridged to the topic ("volcanoes" → melting and freezing), then the ones that
+ * share words with the request, the article and its key words. A word match needs at least one of the
+ * request's own words (or a key word) in the lesson's title or summary: words that only the article
+ * uses are too weak alone, so "sharks" never borrows a lesson because both mention a head and fish.
  */
-export function closestLesson(query: { goal: string; title?: string; extract?: string; terms?: string[] }, subject: Subject, grade: Grade, locale: Locale) {
+export function relatedLessons(query: { goal: string; title?: string; extract?: string; terms?: string[] }, subject: Subject, grade: Grade, locale: Locale, max = 1): RelatedLesson[] {
+  const pool = catalogueFor(grade, locale).filter((e) => e.locale === locale && Math.abs(gradeN(e.grade) - gradeN(grade)) <= 3);
+  const out: RelatedLesson[] = [];
+  const add = (r: RelatedLesson) => {
+    if (out.length < max && !out.some((x) => x.entry.id === r.entry.id && x.lesson.id === r.lesson.id)) out.push(r);
+  };
+  for (const topic of topicsIn(`${query.goal} ${query.title ?? ""}`))
+    for (const ref of topic.lessons ?? []) {
+      const [entryId, lessonId] = ref.split("/");
+      const entry = pool.find((e) => e.id === entryId);
+      const lesson = entry?.lessons.find((l) => l.id === lessonId);
+      if (entry && lesson) add({ entry, lesson, topic: topic.id });
+    }
+
   const weight = new Map<string, number>();
   const put = (text: string | undefined, w: number) => words(text ?? "").forEach((s) => weight.set(s, Math.max(weight.get(s) ?? 0, w)));
   put(query.extract, 1);
   put(query.terms?.join(" "), 2);
   put(query.title, 3);
   put(query.goal, 3);
-  let best: { entry: CatalogueEntry; lesson: Lesson; score: number } | null = null;
-  // Same language, and no more than three grades away: a lesson pitched far off the learner's grade doesn't help.
-  for (const entry of catalogueFor(grade, locale).filter((e) => e.locale === locale && Math.abs(gradeN(e.grade) - gradeN(grade)) <= 3)) {
+  const scored: { entry: CatalogueEntry; lesson: Lesson; score: number }[] = [];
+  for (const entry of pool) {
     for (const lesson of entry.lessons) {
       const title = new Set(words(lesson.title));
+      const head = new Set(words(`${lesson.title} ${lesson.summary}`));
       const body = new Set(words(lessonText(lesson)));
       let score = 0;
       let matched = 0;
       let strong = false;
+      let anchored = false;
       for (const [s, w] of weight) {
         if (title.has(s)) {
           score += w * 2;
@@ -232,19 +347,44 @@ export function closestLesson(query: { goal: string; title?: string; extract?: s
           score += w;
           matched++;
         }
+        if (w >= 2 && head.has(s)) anchored = true;
       }
-      if (score < 4 || (matched < 2 && !strong)) continue;
-      const total = score + (entry.subject === subject ? 1 : 0) - Math.abs(gradeN(entry.grade) - gradeN(grade)) * 0.25;
-      if (!best || total > best.score) best = { entry, lesson, score: total };
+      if (!anchored || score < 4 || (matched < 2 && !strong)) continue;
+      scored.push({ entry, lesson, score: score + (entry.subject === subject ? 1 : 0) - Math.abs(gradeN(entry.grade) - gradeN(grade)) * 0.25 });
     }
   }
-  return best && { entry: best.entry, lesson: best.lesson };
+  for (const r of scored.sort((a, b) => b.score - a.score)) add({ entry: r.entry, lesson: r.lesson });
+  return out;
 }
+
+/** The single closest ready-made lesson, or null rather than a lesson about something else. */
+export const closestLesson = (query: Parameters<typeof relatedLessons>[0], subject: Subject, grade: Grade, locale: Locale) => relatedLessons(query, subject, grade, locale, 1)[0] ?? null;
 
 // ── Practice from the skill map ────────────────────────────────────────────────────────────────
 
-/** Skills on the map that fit the request (best first). */
-export const practiceSkillsFor = (goal: string, articleTitle: string | undefined, subject: Subject) => matchSkills(`${goal} ${articleTitle ?? ""}`, subject, 3);
+/** A skill on the map that fits the request; `fits` when it is within two grades of the learner. */
+export type PracticeMatch = { skillId: string; fits: boolean };
+
+/**
+ * Skills on the map that fit the request: the skill-map words (planner/skillmatch) and the topics people
+ * bridged (knowledge/topics). The ones that fit the learner's grade come first, nearest first, a skill
+ * at or below their grade before one above it. A skill far from their grade is kept, marked, so the
+ * course page can still offer it without putting its questions in the lesson.
+ */
+export function practiceSkillsFor(topic: string, articleTitle: string | undefined, subject: Subject, grade: Grade, max = 3): PracticeMatch[] {
+  const text = `${topic} ${articleTitle ?? ""}`;
+  const bridged = topicsIn(text).filter((x) => subject === "other" || x.subject === subject);
+  const ids = [...new Set([...matchSkills(text, subject, 3), ...bridged.flatMap((x) => x.skills)])].filter((id) => getSkill(id));
+  const g = gradeN(grade);
+  return ids
+    .map((skillId, i) => {
+      const d = gradeN(getSkill(skillId)!.grade) - g;
+      return { skillId, fits: Math.abs(d) <= 2, cost: Math.abs(d) * 2 + (d > 0 ? 1 : 0), i };
+    })
+    .sort((a, b) => Number(b.fits) - Number(a.fits) || a.cost - b.cost || a.i - b.i)
+    .slice(0, max)
+    .map(({ skillId, fits }) => ({ skillId, fits }));
+}
 
 const SUP: Record<string, string> = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻", "−": "⁻" };
 
@@ -314,17 +454,44 @@ export function relevantResources(q: { skillId?: string; topic: string; subject:
     .slice(0, max);
 }
 
+// ── Books ──────────────────────────────────────────────────────────────────────────────────────
+
+/** Open Library's query syntax uses these; a title with them is searched as plain words. */
+const QUERY_SYNTAX = /[:()"[\]{}^~*?\\/+!&|-]/g;
+
+/**
+ * The Open Library search for books for children about a topic: only juvenile literature (without it,
+ * "volcano" finds adult novels first), and only books in Spanish for a Spanish course.
+ */
+export function bookQuery(title: string, locale: Locale) {
+  const plain = title.replace(QUERY_SYNTAX, " ").replace(/\s+/g, " ").trim().slice(0, 60).trim();
+  return `${plain} subject_key:juvenile_literature${locale === "es" ? " language:spa" : ""}`;
+}
+
 // ── The builder ────────────────────────────────────────────────────────────────────────────────
+
+/** Which part of a source-built course a lesson (or, in a one-lesson course, a scene) is. Kept in its id. */
+export type Part = "overview" | "words" | "lesson" | "practice" | "more";
+const PART_ID = /^(?:src-)?(overview|words|lesson|practice|more)-/;
 
 const rotate = <T,>(list: T[], k: number) => [...list.slice(k % list.length), ...list.slice(0, k % list.length)];
 const wordCount = (s: string) => s.split(/\s+/).filter(Boolean).length;
 
-/** "Which word means …?" questions from the definitions. A definition that names its own word is not asked. */
+/** Whether a definition says a word (any form of it); multi-word terms need every word. */
+const mentions = (text: string, word: string) => {
+  const said = tokens(text);
+  return word.split(" ").every((w) => said.has(stem(w)));
+};
+
+/**
+ * "Which word means …?" questions from the definitions. A definition that says its own word or another
+ * choice gives the answer away (or muddles it), so it is not asked.
+ */
 function termQuestions(terms: Term[], locale: Locale): QuizQuestion[] {
   if (terms.length < 2) return [];
   const out: QuizQuestion[] = [];
   terms.forEach((term, i) => {
-    if (out.length >= 3 || words(term.text).includes(stem(term.word))) return;
+    if (out.length >= 3 || terms.some((x) => mentions(term.text, x.word))) return;
     const choices = rotate(
       terms.map((x) => x.word),
       i + 1,
@@ -345,10 +512,21 @@ function termQuestions(terms: Term[], locale: Locale): QuizQuestion[] {
 export const isWebLink = (url: string) => /^https?:\/\/[^\s]+$/i.test(url);
 const wiktionary = (word: string) => `https://en.wiktionary.org/wiki/${encodeURIComponent(word.replace(/ /g, "_"))}`;
 const bookLine = (b: Book) => [b.title, b.author].filter(Boolean).join(", ") + (b.year ? ` (${b.year})` : "");
+/** A link as people read it: no scheme, no percent codes. */
+const readableUrl = (url: string) => {
+  let u = url.replace(/^https?:\/\//, "");
+  try {
+    u = decodeURI(u);
+  } catch {
+    // keep it encoded
+  }
+  return u;
+};
 
 /**
  * Builds a course for `goal` from real sources, without AI. Nothing found is never filled with
  * something invented: a part that has no source is left out, and `onStep` says what each part found.
+ * A request that fails the safety screen asks no source anything and builds nothing.
  */
 export async function buildSourceCourse(goal: string, grade: Grade, locale: Locale, fetchers: Fetchers, opts: BuildOptions = {}): Promise<Course> {
   const stop = () => {
@@ -361,137 +539,9 @@ export async function buildSourceCourse(goal: string, grade: Grade, locale: Loca
   stop();
   const subject = opts.subject ?? guessSubject(goal);
   const length = opts.length ?? "short";
-  const topic = topicOf(goal, opts.avoid);
-
-  // 1. The overview: Wikipedia's article, quoted and credited.
-  let article: WikiSummary | null = null;
-  let articleFailed: Failure | undefined;
-  const searchable = topic.length >= 2;
-  try {
-    article = searchable ? await fetchers.wiki(topic, locale) : null;
-  } catch (e) {
-    articleFailed = failure(e);
-  }
-  if (article && (!article.extract?.trim() || !article.title?.trim())) article = null;
-  if (article && !isWebLink(article.url)) article = { ...article, url: `https://${locale}.wikipedia.org/wiki/${encodeURIComponent(article.title.replace(/ /g, "_"))}` };
-  report({ part: "article", title: article?.title, failed: articleFailed });
-  const extract = article ? paragraphs(article.extract) : [];
-
-  // 2. Key words (the dictionary is English) and books, side by side. Offline, nothing more is asked.
-  const offline = articleFailed === "offline";
-  const ask = searchable && !offline;
-  const noTerms = { terms: [] as Term[], failed: offline ? ("offline" as const) : undefined };
-  const noBooks = { books: [] as Book[], failed: offline ? ("offline" as const) : undefined };
-  const [termsFound, booksFound] = await Promise.all([
-    ask && locale === "en" ? findTerms(article?.title.replace(/\s*\(.*\)$/, "") ?? topic, article ? extract.join(" ") : null, fetchers) : noTerms,
-    ask
-      ? fetchers.books(article?.title ?? topic).then(
-          (b) => ({ books: b.filter((x) => x.title && isWebLink(x.url)).slice(0, 3), failed: undefined }),
-          (e: unknown) => ({ books: [] as Book[], failed: failure(e) }),
-        )
-      : noBooks,
-  ]);
-  const terms = termsFound.terms;
-  report({ part: "terms", count: terms.length, failed: termsFound.failed, englishOnly: locale !== "en" || undefined });
-
-  // 3. The closest lesson a person wrote, and 4. questions from the skill map: both local, always there.
-  const match = closestLesson({ goal: topic, title: article?.title, extract: extract.join(" "), terms: terms.map((x) => x.word) }, subject, grade, locale);
-  report({ part: "lesson", title: match?.lesson.title, course: match?.entry.title });
-  const skills = practiceSkillsFor(topic, article?.title, subject);
-  const skillId = skills.find((id) => skillQuestions(id, locale, 2).length >= 2) ?? skills[0];
-  const questions = skillId ? skillQuestions(skillId, locale) : [];
-  const skill = skillId ? getSkill(skillId) : undefined;
-  report({ part: "practice", skill: skill?.title[locale], questions: questions.length });
-
-  // 5. Find out more: books to borrow and checked sites for the subject and grade.
-  const books = booksFound.books;
-  report({ part: "books", count: books.length, failed: booksFound.failed });
-  const resources = relevantResources({ skillId, topic: `${topic} ${article?.title ?? ""}`, subject, grade, locale });
-
-  const tr = (key: Parameters<typeof t>[1], vars?: Record<string, string | number>) => t(locale, key, vars);
-  const lesson = (title: string, summary: string, scenes: Scene[], minutes: number): Lesson => ({ id: newId(), title, summary, minutes, scenes });
-
-  const overview =
-    article &&
-    lesson(
-      tr("crs.src.overview", { title: article.title }),
-      tr("crs.src.overviewSummary", { title: article.title }),
-      [
-        {
-          id: "s1",
-          kind: "slide",
-          title: tr("crs.src.wikiSlide"),
-          blocks: [...extract.map((text) => ({ type: "text" as const, text })), { type: "text", text: tr("crs.src.wikiCredit", { title: article.title }) }],
-        },
-      ],
-      Math.max(2, Math.ceil(wordCount(extract.join(" ")) / 80)),
-    );
-
-  const quiz = termQuestions(terms, locale);
-  const wordsLesson =
-    terms.length > 0 &&
-    lesson(
-      tr("crs.src.words"),
-      tr("crs.src.wordsSummary", { n: terms.length }),
-      [
-        { id: "s1", kind: "slide", title: tr("crs.src.wordsSlide"), blocks: [{ type: "points", items: terms.map((x) => `${x.word} (${x.partOfSpeech}): ${x.text}`) }, { type: "text", text: tr("crs.src.wordsCredit") }] },
-        ...(quiz.length ? [{ id: "s2", kind: "quiz" as const, title: tr("crs.src.wordsQuiz"), questions: quiz }] : []),
-      ],
-      2 + quiz.length,
-    );
-
-  const borrowed = match && { ...structuredClone(match.lesson), id: newId(), summary: `${match.lesson.summary} ${tr("crs.src.fromCourse", { course: match.entry.title })}`.trim() };
-
-  const practice =
-    skill &&
-    questions.length > 0 &&
-    lesson(
-      tr("crs.src.practice", { skill: skill.title[locale] }),
-      tr("crs.src.practiceSummary"),
-      [{ id: "s1", kind: "quiz", title: tr((opts.reviewed ?? reviewedByDefault)(skill.id) ? "crs.src.practiceQuiz" : "crs.src.practiceQuizDraft"), questions }],
-      1 + questions.length,
-    );
-
-  const moreScenes: Scene[] = [];
-  if (books.length) moreScenes.push({ id: "s1", kind: "slide", title: tr("crs.src.booksSlide"), blocks: [{ type: "points", items: books.map(bookLine) }, { type: "text", text: tr("crs.src.booksCredit") }] });
-  if (resources.length)
-    moreScenes.push({ id: "s2", kind: "slide", title: tr("crs.src.sitesSlide"), blocks: [{ type: "points", items: resources.map((r) => `${r.title} (${r.source})`) }, { type: "text", text: tr("crs.src.sitesCredit") }] });
-  const more =
-    (books.length > 0 || resources.length > 0 || article) &&
-    lesson(
-      tr("crs.src.more"),
-      tr("crs.src.moreSummary"),
-      [
-        ...moreScenes,
-        {
-          id: "s3",
-          kind: "project",
-          title: tr("crs.src.projectTitle"),
-          brief: tr("crs.src.projectBrief"),
-          steps: [tr("crs.src.projectStep1"), article ? tr("crs.src.projectStep2Wiki", { title: article.title }) : tr("crs.src.projectStep2"), tr("crs.src.projectStep3")],
-        },
-      ],
-      5,
-    );
-
-  // "One lesson" asks for a single sitting: our own parts as scenes of one lesson. The borrowed
-  // catalogue lesson is a whole lesson of its own, so it is left for a longer course.
-  const own = [overview, wordsLesson, practice, more].filter((l): l is Lesson => Boolean(l));
-  const lessons =
-    length === "lesson"
-      ? own.length
-        ? [lesson(topic, tr("crs.src.oneSummary"), own.flatMap((l, i) => l.scenes.map((sc) => ({ ...sc, id: `${i + 1}-${sc.id}` }))), own.reduce((n, l) => n + l.minutes, 0))]
-        : []
-      : [overview, wordsLesson, borrowed, practice, more].filter((l): l is Lesson => Boolean(l));
-
-  const citations: NonNullable<Course["citations"]> = [];
-  if (article) citations.push({ title: article.title, url: article.url, source: SOURCE.wikipedia });
-  for (const x of terms) citations.push({ title: x.word, url: wiktionary(x.word), source: SOURCE.wiktionary });
-  for (const b of books) citations.push({ title: bookLine(b), url: b.url, source: SOURCE.openLibrary });
-  for (const r of resources) citations.push({ title: r.title, url: linkOf(r, locale), source: r.source });
-
+  const young = isYoung(grade);
   const now = opts.now ?? Date.now();
-  return {
+  const course = (lessons: Lesson[], citations: NonNullable<Course["citations"]>): Course => ({
     id: opts.id ?? newId(),
     profileId: opts.profileId ?? "",
     title: titleFromGoal(goal),
@@ -508,7 +558,232 @@ export async function buildSourceCourse(goal: string, grade: Grade, locale: Loca
     citations,
     createdAt: now,
     updatedAt: now,
-  };
+  });
+  /** Third-party text goes through the same safety screen as what the learner typed. */
+  const fine = (text: string) => screen(text, locale).kind === "ok";
+  if (!fine(goal)) return course([], []);
+  const topic = topicOf(goal, opts.avoid);
+
+  // 1. The overview: Wikipedia's article, quoted and credited.
+  let article: WikiSummary | null = null;
+  let articleFailed: Failure | undefined;
+  const searchable = topic.length >= 2;
+  try {
+    article = searchable ? await fetchers.wiki(topic, locale) : null;
+  } catch (e) {
+    articleFailed = failure(e);
+  }
+  if (article && (!article.extract?.trim() || !article.title?.trim())) article = null;
+  const withheld = !!article && !fine(`${article.title} ${article.extract}`);
+  report({ part: "article", title: article?.title, failed: articleFailed, withheld: withheld || undefined });
+  if (withheld) article = null;
+  if (article && !isWebLink(article.url)) article = { ...article, url: `https://${locale}.wikipedia.org/wiki/${encodeURIComponent(article.title.replace(/ /g, "_"))}` };
+  const extract = article ? (young ? [firstSentence(article.extract)] : paragraphs(article.extract)) : [];
+
+  // 2. Key words (the dictionary is English) and books, side by side. Offline, nothing more is asked.
+  const offline = articleFailed === "offline";
+  const ask = searchable && !offline;
+  const plainTitle = article?.title.replace(/\s*\(.*\)$/, "");
+  const need = article ? words(article.title.match(/\((.*)\)$/)?.[1] ?? "") : [];
+  const noTerms = { terms: [] as Term[], failed: offline ? ("offline" as const) : undefined };
+  const noBooks = { books: [] as Book[], failed: offline ? ("offline" as const) : undefined };
+  const [termsFound, booksFound] = await Promise.all([
+    ask && locale === "en" ? findTerms(plainTitle ?? topic, article ? article.extract : null, need, fetchers, young ? 3 : 4, fine) : noTerms,
+    ask
+      ? fetchers.books(bookQuery(plainTitle ?? topic, locale)).then(
+          (list) => {
+            const books: Book[] = [];
+            for (const b of list) if (b.title?.trim() && isWebLink(b.url) && fine(b.title) && !books.some((x) => x.title === b.title) && books.length < 3) books.push(b);
+            return { books, failed: undefined };
+          },
+          (e: unknown) => ({ books: [] as Book[], failed: failure(e) }),
+        )
+      : noBooks,
+  ]);
+  const terms = termsFound.terms;
+  report({ part: "terms", count: terms.length, failed: termsFound.failed, englishOnly: locale !== "en" || undefined });
+
+  // 3. The closest lessons a person wrote, and 4. questions from the skill map: both on the device.
+  const full = length === "full";
+  const matches = relatedLessons({ goal: topic, title: article?.title, extract: extract.join(" "), terms: terms.map((x) => x.word) }, subject, grade, locale, full ? 2 : 1);
+  const skills = practiceSkillsFor(topic, article?.title, subject, grade);
+  const fitting = skills.filter((m) => m.fits).map((m) => m.skillId);
+  // Questions only from skills that fit the grade; a skill with two or more questions before one with one.
+  const quizzes = fitting
+    .map((id) => ({ id, questions: skillQuestions(id, locale) }))
+    .filter((x) => x.questions.length > 0)
+    .sort((a, b) => Number(b.questions.length >= 2) - Number(a.questions.length >= 2))
+    .slice(0, full ? 2 : 1);
+  const books = booksFound.books;
+  const resources = relevantResources({ skillId: quizzes[0]?.id ?? fitting[0], topic: `${topic} ${article?.title ?? ""}`, subject, grade, locale });
+
+  const tr = (key: Key, vars?: Record<string, string | number>) => t(locale, key, vars);
+  const lesson = (part: Part, title: string, summary: string, scenes: Scene[], minutes: number): Lesson => ({ id: `src-${part}-${newId()}`, title, summary, minutes, scenes });
+
+  const overview =
+    article &&
+    lesson(
+      "overview",
+      tr("crs.src.overview", { title: article.title }),
+      tr(young ? "crs.src.overviewSummaryShort" : "crs.src.overviewSummary", { title: article.title }),
+      [
+        {
+          id: "s1",
+          kind: "slide",
+          title: tr("crs.src.wikiSlide"),
+          blocks: [...extract.map((text) => ({ type: "text" as const, text })), { type: "text", text: tr("crs.src.wikiCredit", { title: article.title, url: readableUrl(article.url) }) }],
+        },
+      ],
+      Math.max(2, Math.ceil(wordCount(extract.join(" ")) / 80)),
+    );
+
+  // K–2 get the word list to hear, without a reading quiz.
+  const quiz = young ? [] : termQuestions(terms, locale);
+  const wordsLesson =
+    terms.length > 0 &&
+    lesson(
+      "words",
+      tr("crs.src.words"),
+      tr("crs.src.wordsSummary", { n: terms.length }),
+      [
+        { id: "s1", kind: "slide", title: tr("crs.src.wordsSlide"), blocks: [{ type: "points", items: terms.map((x) => `${x.word} (${x.partOfSpeech}): ${x.text}`) }, { type: "text", text: tr("crs.src.wordsCredit") }] },
+        ...(quiz.length ? [{ id: "s2", kind: "quiz" as const, title: tr("crs.src.wordsQuiz"), questions: quiz }] : []),
+      ],
+      2 + quiz.length,
+    );
+
+  const borrowed = matches.map((m) => {
+    const why = m.topic ? tr(`crs.why.${m.topic}` as Key) : null;
+    const copy = structuredClone(m.lesson);
+    return {
+      ...copy,
+      id: `src-lesson-${newId()}`,
+      summary: `${why ?? m.lesson.summary} ${tr("crs.src.fromCourse", { course: m.entry.title })}`.trim(),
+      scenes: why ? [{ id: "src-why", kind: "slide" as const, title: tr("crs.src.whyTitle"), blocks: [{ type: "text" as const, text: why }] }, ...copy.scenes] : copy.scenes,
+    } satisfies Lesson;
+  });
+
+  const practices = quizzes.map(({ id, questions }) =>
+    lesson(
+      "practice",
+      tr("crs.src.practice", { skill: getSkill(id)!.title[locale] }),
+      tr("crs.src.practiceSummary"),
+      [{ id: "s1", kind: "quiz", title: tr((opts.reviewed ?? reviewedByDefault)(id) ? "crs.src.practiceQuiz" : "crs.src.practiceQuizDraft"), questions }],
+      1 + questions.length,
+    ),
+  );
+
+  const moreScenes: Scene[] = [];
+  if (books.length) moreScenes.push({ id: "s1", kind: "slide", title: tr("crs.src.booksSlide"), blocks: [{ type: "points", items: books.map(bookLine) }, { type: "text", text: tr("crs.src.booksCredit") }] });
+  if (resources.length)
+    moreScenes.push({ id: "s2", kind: "slide", title: tr("crs.src.sitesSlide"), blocks: [{ type: "points", items: resources.map((r) => `${r.title} (${r.source})`) }, { type: "text", text: tr("crs.src.sitesCredit") }] });
+  const linked = books.length > 0 || resources.length > 0;
+  const more =
+    (linked || article) &&
+    lesson(
+      "more",
+      tr("crs.src.more"),
+      tr(books.length && resources.length ? "crs.src.moreSummary" : books.length ? "crs.src.moreSummaryBooks" : resources.length ? "crs.src.moreSummarySites" : "crs.src.moreSummaryWiki"),
+      [
+        ...moreScenes,
+        {
+          id: "s3",
+          kind: "project",
+          title: tr("crs.src.projectTitle"),
+          brief: tr("crs.src.projectBrief"),
+          steps: [
+            tr(linked ? "crs.src.projectStep1" : "crs.src.projectStep1Wiki"),
+            article ? tr(books.length ? "crs.src.projectStep2Wiki" : "crs.src.projectStep2WikiOnly", { title: article.title }) : tr("crs.src.projectStep2"),
+            tr("crs.src.projectStep3"),
+          ],
+        },
+      ],
+      5,
+    );
+
+  // "One lesson" asks for a single sitting: our own parts as scenes of one lesson (K–2: as many as fit
+  // ten minutes). A borrowed lesson is a whole lesson of its own, so it waits for a longer course, unless
+  // it is the only thing found.
+  const own = [overview, wordsLesson, ...practices, more].filter((l): l is Lesson => Boolean(l));
+  let lessons: Lesson[];
+  let leftOut = false;
+  if (length !== "lesson") lessons = [overview, wordsLesson, borrowed[0], practices[0], borrowed[1], practices[1], more].filter((l): l is Lesson => Boolean(l));
+  else if (!own.length) lessons = borrowed.slice(0, 1);
+  else {
+    leftOut = borrowed.length > 0;
+    const kept = [...own];
+    while (young && kept.length > 1 && kept.reduce((n, l) => n + l.minutes, 0) > YOUNG_SITTING) kept.pop();
+    const dropped = own.filter((l) => !kept.includes(l));
+    const list = (ls: Lesson[]) => new Intl.ListFormat(locale, { type: "conjunction" }).format(ls.map((l) => l.title));
+    const summary = [tr("crs.src.oneSummary", { parts: list(kept) }), dropped.length ? tr("crs.src.leftOut", { parts: list(dropped) }) : ""].filter(Boolean).join(" ");
+    const scenes = kept.flatMap((l) => l.scenes.map((sc) => ({ ...sc, id: `${l.id.split("-")[1]}-${sc.id}` })));
+    lessons = [{ id: `src-one-${newId()}`, title: topic || titleFromGoal(goal), summary, minutes: kept.reduce((n, l) => n + l.minutes, 0), scenes }];
+  }
+
+  report({ part: "lesson", titles: matches.map((m) => m.lesson.title), leftOut: leftOut || undefined });
+  const titleOf = (id: string) => getSkill(id)!.title[locale];
+  const closest = skills[0] && getSkill(skills[0].skillId);
+  report(
+    quizzes.length
+      ? { part: "practice", skills: quizzes.map((q) => titleOf(q.id)), questions: quizzes.reduce((n, q) => n + q.questions.length, 0) }
+      : fitting.length
+        ? { part: "practice", skills: [titleOf(fitting[0])], questions: 0 }
+        : closest
+          ? { part: "practice", skills: [closest.title[locale]], questions: 0, grade: closest.grade }
+          : { part: "practice", skills: [], questions: 0 },
+  );
+  report({ part: "books", count: books.length, failed: booksFound.failed });
+
+  const citations: NonNullable<Course["citations"]> = [];
+  if (article) citations.push({ title: article.title, url: article.url, source: SOURCE.wikipedia });
+  for (const x of terms) citations.push({ title: x.word, url: wiktionary(x.word), source: SOURCE.wiktionary });
+  for (const b of books) citations.push({ title: bookLine(b), url: b.url, source: SOURCE.openLibrary });
+  for (const r of resources) citations.push({ title: r.title, url: linkOf(r, locale), source: r.source });
+
+  return course(lessons, keepCitations(citations, lessons));
+}
+
+// ── After the family edits the outline ─────────────────────────────────────────────────────────
+
+/** The parts a source-built course still has (from the lesson ids, and scene ids in a one-lesson course). */
+export function partsIn(lessons: Lesson[]): Set<Part> {
+  const out = new Set<Part>();
+  for (const l of lessons) {
+    const p = PART_ID.exec(l.id)?.[1] as Part | undefined;
+    if (p) out.add(p);
+    if (l.id.startsWith("src-one-"))
+      for (const sc of l.scenes) {
+        const q = PART_ID.exec(sc.id)?.[1] as Part | undefined;
+        if (q) out.add(q);
+      }
+  }
+  return out;
+}
+
+/**
+ * The citations a lesson still uses: Wikipedia while the overview (or the find-out-more lesson that
+ * points to it) is there, the dictionary while the word list is, books and sites while find-out-more is.
+ */
+export function keepCitations(citations: NonNullable<Course["citations"]>, lessons: Lesson[]): NonNullable<Course["citations"]> {
+  const parts = partsIn(lessons);
+  return citations.filter((c) =>
+    c.source === SOURCE.wikipedia ? parts.has("overview") || parts.has("more") : c.source === SOURCE.wiktionary ? parts.has("words") : parts.has("more"),
+  );
+}
+
+/** What a source-built course was made from, for the one line that says so. In the order the course uses them. */
+export type Used = "wikipedia" | "dictionary" | "catalogue" | "skillMap" | "openLibrary" | "sites";
+export function sourcesUsed(lessons: Lesson[], citations: NonNullable<Course["citations"]>): Used[] {
+  const parts = partsIn(lessons);
+  const g = citationGroups(keepCitations(citations, lessons));
+  const out: Used[] = [];
+  if (g.article) out.push("wikipedia");
+  if (g.words.length) out.push("dictionary");
+  if (parts.has("lesson")) out.push("catalogue");
+  if (parts.has("practice")) out.push("skillMap");
+  if (g.books.length) out.push("openLibrary");
+  if (g.sites.length) out.push("sites");
+  return out;
 }
 
 // ── The browser's fetchers ─────────────────────────────────────────────────────────────────────

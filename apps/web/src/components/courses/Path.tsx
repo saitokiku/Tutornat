@@ -66,7 +66,7 @@ export function SubjectPath({ subject, learner, now }: { subject: Subject; learn
             <Link
               href={`/practice?subject=${subject}`}
               aria-label={t("crs.skillMapFor", { subject: name })}
-              className="inline-flex min-h-11 items-center font-medium text-ink underline decoration-border underline-offset-4 hover:text-accent"
+              className={`inline-flex ${isYoung(learner) ? "min-h-14" : "min-h-11"} items-center font-medium text-ink underline decoration-border underline-offset-4 hover:text-accent`}
             >
               {t("crs.skillMap")}
             </Link>
@@ -125,10 +125,10 @@ function PathRow({
           >
             {course.title}
           </Link>
-          <p className="mt-0.5 font-opmono text-xs tabular-nums text-muted">
-            {t("courses.progress", { done: p.done, total: p.total })}
-            {outlineOnly ? ` · ${t("course.outlineOnly")}` : p.next ? ` · ` : ` · ${t("crs.allDone")}`}
-            {!outlineOnly && p.next && <span lang={course.locale}>{t("crs.next", { lesson: p.next.title })}</span>}
+          <p className="mt-0.5 text-xs text-muted">
+            <span className="font-opmono tabular-nums">{t("courses.progress", { done: p.done, total: p.total })}</span>
+            {" · "}
+            {outlineOnly ? t("course.outlineOnly") : p.next ? <span lang={course.locale}>{t("crs.next", { lesson: p.next.title })}</span> : t("crs.allDone")}
           </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {course.assigned && <Badge tone="good">{t("course.fromGrownUp")}</Badge>}
@@ -147,20 +147,26 @@ function PathRow({
             {action}
           </Link>
         )}
-        <MoveButton id={`move-up-${course.id}`} label={t("gen.moveUp", { title: course.title })} disabled={first} onClick={() => onMove("up")}>
-          <IconChevronUp size={18} />
+        <MoveButton id={`move-up-${course.id}`} big={isYoung(learner)} label={t("gen.moveUp", { title: course.title })} disabled={first} onClick={() => onMove("up")}>
+          <IconChevronUp size={isYoung(learner) ? 22 : 18} />
         </MoveButton>
-        <MoveButton id={`move-down-${course.id}`} label={t("gen.moveDown", { title: course.title })} disabled={last} onClick={() => onMove("down")}>
-          <IconChevronDown size={18} />
+        <MoveButton id={`move-down-${course.id}`} big={isYoung(learner)} label={t("gen.moveDown", { title: course.title })} disabled={last} onClick={() => onMove("down")}>
+          <IconChevronDown size={isYoung(learner) ? 22 : 18} />
         </MoveButton>
       </div>
     </li>
   );
 }
 
-function MoveButton({ label, children, ...props }: { id: string; label: string; disabled: boolean; onClick: () => void; children: React.ReactNode }) {
+/** Up/down for a course on the path: 44px, and 56px for K–2. */
+function MoveButton({ label, big, children, ...props }: { id: string; label: string; big: boolean; disabled: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" aria-label={label} {...props} className="grid size-11 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink disabled:opacity-25">
+    <button
+      type="button"
+      aria-label={label}
+      {...props}
+      className={`grid ${big ? "size-14" : "size-11"} place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink disabled:opacity-25`}
+    >
       {children}
     </button>
   );
@@ -189,7 +195,7 @@ function SuggestRow({ entry, learner, onAdd }: { entry: CatalogueEntry; learner:
           </p>
         </div>
       </div>
-      <Button variant="secondary" className="ml-auto" aria-label={t("crs.addNamed", { title: entry.title })} onClick={onAdd}>
+      <Button variant="secondary" className={`ml-auto ${isYoung(learner) ? "min-h-14 px-6 text-t3" : ""}`} aria-label={t("crs.addNamed", { title: entry.title })} onClick={onAdd}>
         <IconPlus size={16} /> {t("crs.addToPath")}
       </Button>
     </div>

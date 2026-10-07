@@ -1,3 +1,4 @@
+import { topicsIn } from "@/knowledge/topics";
 import { titleFromGoal } from "./courses";
 import { newId } from "./store";
 import type { CourseLength, GenerationEvent, GenerationRequest, Grade, Lesson, Locale, Subject } from "./types";
@@ -14,9 +15,10 @@ const KEYWORDS: Record<Exclude<Subject, "other">, RegExp> = {
     /read|writ|essay|story|poem|grammar|sentence|paragraph|main idea|argument|speech|rhetoric|vocab|spell|phonic|letter|book|character|author|persua|leer|escrib|cuento|ensayo|lectura/i,
 };
 
+/** The school subject a request is most likely about. Animals, plants, weather and the like (knowledge/topics) are science. */
 export function guessSubject(goal: string): Subject {
   for (const s of ["math", "science", "english"] as const) if (KEYWORDS[s].test(goal)) return s;
-  return "other";
+  return topicsIn(goal)[0]?.subject ?? "other";
 }
 
 const TEMPLATES: Record<Locale, Record<CourseLength, [string, string][]>> = {

@@ -65,13 +65,17 @@ export function createDraft(req: GenerationRequest, profileId: string): Course {
 /** The teaching act behind every course a learner gets: added or built, it is meant to be finished. */
 const courseAct = (profileId: string, courseId: string) => logAct({ profileId, kind: "course", intent: "course-finished", ref: courseId }, { once: true });
 
-/** Turns a built outline into a course the learner can take. Does nothing to a course that is already ready. */
-export function finishDraft(id: string, profileId: string, patch: { title: string; lessons: Lesson[] }) {
+/**
+ * Turns a built outline into a course the learner can take. Does nothing to a course that is already
+ * ready. `citations`: what a source-built course still cites after the family edited its outline.
+ */
+export function finishDraft(id: string, profileId: string, patch: { title: string; lessons: Lesson[]; citations?: Course["citations"] }) {
   let done = false;
   update((s) => {
     const c = s.courses.find((x) => x.id === id && x.profileId === profileId);
     if (!c || c.status === "ready") return;
-    Object.assign(c, patch, { status: "ready", updatedAt: Date.now() });
+    const { citations, ...rest } = patch;
+    Object.assign(c, rest, citations ? { citations } : {}, { status: "ready", updatedAt: Date.now() });
     done = true;
   });
   if (done) courseAct(profileId, id);

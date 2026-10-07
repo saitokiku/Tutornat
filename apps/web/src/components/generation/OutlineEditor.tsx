@@ -24,9 +24,9 @@ export function OutlineEditor({ lessons, onChange, locked }: { lessons: Lesson[]
     <div>
       <ol className="divide-y divide-border overflow-hidden rounded-md border border-border bg-panel">
         {lessons.map((l, i) => (
-          <li key={l.id} className="flex items-start gap-3 px-4 py-3.5 animate-fade-up sm:px-5">
+          <li key={l.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 px-4 py-3.5 animate-fade-up sm:flex-nowrap sm:px-5">
             <span className="mt-2.5 w-5 shrink-0 font-opmono text-xs tabular-nums text-muted">{i + 1}</span>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-40">
               <input
                 aria-label={t("gen.lessonTitle", { n: i + 1 })}
                 value={l.title}
@@ -38,7 +38,7 @@ export function OutlineEditor({ lessons, onChange, locked }: { lessons: Lesson[]
               {l.summary && <p className="px-2 text-xs text-muted">{l.summary}</p>}
             </div>
             {!locked && (
-              <div className="flex shrink-0 items-center gap-0.5">
+              <div className="ml-auto flex shrink-0 items-center gap-0.5">
                 <IconButton id={`${l.id}-up`} label={t("gen.moveUp", { title: l.title })} disabled={i === 0} onClick={() => move(i, -1)}>
                   <IconChevronUp size={16} />
                 </IconButton>
@@ -57,7 +57,6 @@ export function OutlineEditor({ lessons, onChange, locked }: { lessons: Lesson[]
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button
             variant="secondary"
-            size="sm"
             onClick={() => onChange([...lessons, { id: newId(), title: t("gen.newLesson"), summary: "", minutes: lessons[0]?.minutes ?? 10, scenes: [] }])}
           >
             <IconPlus size={14} /> {t("gen.addLesson")}
@@ -75,7 +74,7 @@ function IconButton({ label, children, ...props }: { label: string; children: Re
       type="button"
       aria-label={label}
       {...props}
-      className="grid size-9 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink disabled:opacity-25"
+      className="grid size-11 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink disabled:opacity-25"
     >
       {children}
     </button>

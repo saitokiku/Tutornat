@@ -26,7 +26,7 @@ function NewCourse() {
   const goal = useSearchParams().get("goal") ?? "";
   return (
     <div className="space-y-6">
-      <Link href="/home" className="-ml-2 inline-flex min-h-10 items-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink">
+      <Link href="/home" className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink">
         <IconArrowLeft size={16} /> {t("nav.home")}
       </Link>
       <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("nav.new")}</h1>

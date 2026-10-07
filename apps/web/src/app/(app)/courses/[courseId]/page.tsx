@@ -63,8 +63,8 @@ function CourseView() {
 
   return (
     <div className="space-y-10">
-      <Link href="/courses" className="-ml-2 inline-flex min-h-10 items-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink">
-        <IconArrowLeft size={16} /> {t("nav.courses")}
+      <Link href="/courses" className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink">
+        <IconArrowLeft size={16} /> {t("nav.learn")}
       </Link>
 
       <header className="space-y-4">
@@ -159,14 +159,14 @@ function CourseView() {
         {confirm ? (
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm text-ink">{t("course.deleteConfirm")}</p>
-            <Button variant="ghost" size="sm" onClick={() => setConfirm(false)}>
+            <Button variant="ghost" onClick={() => setConfirm(false)}>
               {t("common.cancel")}
             </Button>
             <button
               type="button"
               autoFocus
               onClick={() => (router.push("/courses"), removeCourse(course.id))}
-              className="k-btn min-h-9 bg-bad px-3.5 text-xs text-paper hover:bg-bad/90"
+              className="k-btn bg-bad text-paper hover:bg-bad/90"
             >
               {t("common.confirmDelete")}
             </button>
@@ -174,7 +174,7 @@ function CourseView() {
         ) : gate ? (
           <ParentGate onPass={() => (setGate(false), setConfirm(true))} onCancel={() => setGate(false)} />
         ) : (
-          <Button variant="ghost" size="sm" onClick={() => (unlocked ? setConfirm(true) : setGate(true))}>
+          <Button variant="ghost" onClick={() => (unlocked ? setConfirm(true) : setGate(true))}>
             <IconTrash size={14} /> {t("course.delete")}
           </Button>
         )}
