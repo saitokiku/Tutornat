@@ -77,6 +77,11 @@ const RATES: RateCtx[] = [
     q: bi("How many millimeters of rain fall each hour?", "¿Cuántos milímetros de lluvia caen cada hora?"), per: bi("mm per hour", "mm por hora"), dir: 1,
     l1: [10, 80], start: [0, 5], xs: [1, 2], grid: [2, 5], sx: [1, 2], rate: [1, 10], lift: false,
   },
+  {
+    intro: bi("An art teacher heats a pottery kiln to fire clay bowls.", "Un maestro de arte calienta un horno de cerámica para cocer tazones de barro."), xName: bi("Time", "Tiempo"), yName: bi("Temperature", "Temperatura"), xu: HR, yu: DEG,
+    q: bi("By how many degrees Celsius does the kiln's temperature rise each hour?", "¿Cuántos grados Celsius sube la temperatura del horno cada hora?"), per: bi("°C per hour", "°C por hora"), dir: 1,
+    l1: [500, 1500], start: [20, 25], xs: [1, 2], grid: [50, 100], sx: [1, 2], rate: [50, 150], lift: true,
+  },
 ];
 
 /** Level 2 graphs whose points sit exactly on gridlines: the top point is 6 gridlines up, the line climbs k per step. */
