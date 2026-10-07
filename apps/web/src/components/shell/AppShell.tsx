@@ -1,52 +1,153 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
-import { KaizenLogo } from "@/components/brand";
+// The KaizenEDU shell (DESIGN.md → Composition). Wide screens: a 240px rail on panel2 — logo, the one
+// primary action, the places, then status and who's learning. Phones: a header with who's learning and a
+// bottom bar of four places plus Me. The selection is one rose-marked tile (rail) or rule (bar) that
+// travels to the place you chose the moment you choose it; the page cross-fades in place behind still
+// chrome. K–2 (data-band="k2", set by <BandSync>): bigger pictures, 56px targets, and a speaker that names
+// the tabs. Number keys jump between places (never while typing; can be turned off).
+import Link, { useLinkStatus } from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, ViewTransition, type CSSProperties, type ReactNode } from "react";
+import { KaizenLogo, KaizenMark, KaizenWordmark } from "@/components/brand";
 import { StoreHealthNotice } from "@/components/gate";
-import { IconBook, IconChat, IconClock, IconFamily, IconHome, IconLayers, IconPlus, IconSettings, IconSprout } from "@/components/icons";
-import { Avatar } from "@/components/profiles/Avatar";
-import { btn } from "@/components/ui";
-import { gradeLabel, useLocale, useT } from "@/i18n";
-import type { Key } from "@/i18n/en";
-import { signOut } from "@/lib/auth";
-import { DEMO } from "@/lib/mode";
-import { currentAccount, currentLearner } from "@/lib/profiles";
+import { IconBook, IconCalendar, IconFamily, IconHome, IconPlus, IconPractice, IconSettings, IconSprout, IconTutor } from "@/components/icons";
+import { Kbd, Spinner, announce, btn, useBand } from "@/components/ui";
+import { useT } from "@/i18n";
+import { currentLearner } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
+import type { Profile } from "@/lib/types";
+import { HearTabs } from "./HearTabs";
+import { LEARNER_TABS, PARENT_TABS, barTabs, digitOf, placeOf, type Place } from "./nav";
+import { RouteFocus, SkipLink, useScopeKey } from "./route";
+import { OfflineChip, StatusLines, useConnectionNews, useOnline } from "./Status";
+import { Switcher, WhoButton } from "./Switcher";
+import "./shell.css";
 
-type Tab = { href: string; label: Key; Icon: (p: { size?: number; className?: string }) => ReactNode };
+type IconFn = (p: { size?: number; className?: string }) => ReactNode;
+const ICON: Partial<Record<Place, IconFn>> = {
+  home: IconHome,
+  practice: IconPractice,
+  talk: IconTutor,
+  learn: IconBook,
+  calendar: IconCalendar,
+  growth: IconSprout,
+  family: IconFamily,
+  settings: IconSettings,
+};
+const TAB_TYPES = ["k-tab"];
+const KEYS_PREF = "kaizenedu.tabKeys";
 
-const LEARNER_TABS: Tab[] = [
-  { href: "/home", label: "nav.home", Icon: IconHome },
-  { href: "/practice", label: "nav.practice", Icon: IconLayers },
-  { href: "/talk", label: "nav.talk", Icon: IconChat },
-  { href: "/courses", label: "nav.learn", Icon: IconBook },
-  { href: "/calendar", label: "nav.calendar", Icon: IconClock },
-  { href: "/growth", label: "nav.growth", Icon: IconSprout },
-];
-const PARENT_TABS: Tab[] = [
-  { href: "/family", label: "nav.family", Icon: IconFamily },
-  { href: "/calendar", label: "nav.calendar", Icon: IconClock },
-  { href: "/growth", label: "nav.growth", Icon: IconSprout },
-];
+/** "Me" on the phone bar is the learner's own initial: outlined at rest, filled in their colour when current. */
+function MeMark({ learner, on, size }: { learner: Profile; on: boolean; size: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="k-icon grid place-items-center rounded-full border-[1.5px] font-brand text-xs font-semibold"
+      style={{ "--k-icon-size": `${size}px`, borderColor: learner.color, background: on ? learner.color : undefined, color: on ? "var(--color-paper)" : learner.color } as CSSProperties}
+    >
+      {learner.nickname.slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
+
+/** The trailing slot of a rail link: a spinner while a slow navigation is on its way, else the key hint. */
+function Trail({ digit }: { digit: number | null }) {
+  const { pending } = useLinkStatus();
+  if (pending) return <Spinner className="text-muted" />;
+  if (!digit) return null;
+  return (
+    <span aria-hidden="true" className="opacity-0 transition-opacity duration-(--duration-quick) group-hover:opacity-100 group-focus-visible:opacity-100">
+      <Kbd>{digit}</Kbd>
+    </span>
+  );
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const t = useT();
-  const locale = useLocale();
   const path = usePathname();
+  const router = useRouter();
   const learner = useStore(currentLearner);
-  const account = useStore(currentAccount);
-  const tabs = learner ? LEARNER_TABS : PARENT_TABS;
-  const active = (href: string) => path === href || (href !== "/home" && path.startsWith(`${href}/`));
+  const k2 = useBand() === "k2";
+  const online = useOnline();
+  useConnectionNews(online);
+
+  const rail = learner ? LEARNER_TABS : PARENT_TABS;
+  const bar = barTabs(Boolean(learner));
+  const home = learner ? "/home" : "/family";
+
+  // Optimistic selection: the mark moves on the press; once the path changes, the path decides again.
+  const [pending, setPending] = useState<string | null>(null);
+  const [seen, setSeen] = useState(path);
+  if (seen !== path) {
+    setSeen(path);
+    setPending(null);
+  }
+  const shown = pending ?? path;
+  const railAt = rail.findIndex((tab) => tab.place === placeOf(shown, rail));
+  const barAt = bar.findIndex((tab) => tab.place === placeOf(shown, bar));
+
+  const [speaking, setSpeaking] = useState<{ list: "rail" | "bar"; i: number } | null>(null);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+
+  const [keys, setKeys] = useState(() => {
+    try {
+      return localStorage.getItem(KEYS_PREF) !== "off";
+    } catch {
+      return true;
+    }
+  });
+  const toggleKeys = () => {
+    try {
+      localStorage.setItem(KEYS_PREF, keys ? "off" : "on");
+    } catch {}
+    setKeys(!keys);
+    announce(t(keys ? "shell.keysOffNote" : "shell.keysOnNote", { n: rail.length }));
+  };
+  const shortcuts = keys && !k2;
+
+  // 1–9 jump to the rail's places. Never while typing, with a modifier, or over a dialog or the switcher.
+  useEffect(() => {
+    if (!shortcuts) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || switcherOpen) return;
+      const el = e.target instanceof Element ? e.target : null;
+      if (el?.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='slider'], [role='spinbutton']")) return;
+      if (document.querySelector("dialog[open]")) return;
+      const n = digitOf(e);
+      const tab = n ? rail[n - 1] : undefined;
+      if (!tab || placeOf(path, rail) === tab.place) return;
+      e.preventDefault();
+      setPending(tab.href);
+      router.push(tab.href, { transitionTypes: TAB_TYPES });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [shortcuts, switcherOpen, rail, path, router]);
+
+  // A new learner gets their pages fresh; the arrival rises in (only after a switch, never on first load).
+  const scope = useScopeKey();
+  const [firstScope] = useState(scope);
+
+  const status = <StatusLines online={online} />;
+  const railLabels = rail.map((tab) => t(tab.label));
+  const barLabels = bar.map((tab) => t(tab.label));
+  const iconSize = k2 ? 26 : 20;
 
   return (
     <div className="min-h-dvh bg-paper">
-      {/* The rail sits on panel2 so the chrome reads as furniture and the work reads as paper.
-          Rose marks the selection; ink stays the action color. */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-border bg-panel2 lg:flex">
-        <div className="px-5 pb-5 pt-6">
-          <KaizenLogo size={32} href={learner ? "/home" : "/family"} caption={t("brand.tagline")} />
+      <RouteFocus />
+      <SkipLink to="k-main" />
+
+      {/* Wide screens: the rail. Furniture on panel2; the work sits on paper. */}
+      <header
+        data-k-chrome
+        data-print="hide"
+        className="k-vt-rail fixed inset-y-0 left-0 z-20 hidden w-(--k-rail) flex-col border-r border-border bg-panel2 lg:flex"
+      >
+        <div className="flex items-center justify-between gap-2 px-5 pt-6 pb-5">
+          <KaizenLogo size={32} href={home} caption={k2 ? undefined : t("brand.tagline")} />
+          {k2 && <HearTabs labels={railLabels} onSpeak={(i) => setSpeaking(i === null ? null : { list: "rail", i })} />}
         </div>
         {learner && (
           <div className="px-3 pb-4">
@@ -55,96 +156,145 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           </div>
         )}
-        <nav aria-label={t("nav.main")} className="flex-1 space-y-0.5 px-3">
-          {tabs.map(({ href, label, Icon }) => {
-            const on = active(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={on ? "page" : undefined}
-                className={`group relative flex items-center gap-3 rounded-sm py-2.5 pl-4 pr-3 text-sm font-medium transition-colors ${
-                  on ? "bg-panel text-ink shadow-soft" : "text-muted hover:bg-panel/70 hover:text-ink"
-                }`}
+        <nav aria-label={t("nav.main")} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
+          <div className="k-rail-list" style={{ "--k-i": railAt } as CSSProperties}>
+            {railAt >= 0 && <span aria-hidden="true" className="k-rail-sel" />}
+            <ul>
+              {rail.map((tab, i) => {
+                const on = i === railAt;
+                const Icon = ICON[tab.place]!;
+                const lit = speaking?.list === "rail" && speaking.i === i;
+                return (
+                  <li key={tab.href}>
+                    <Link
+                      href={tab.href}
+                      transitionTypes={TAB_TYPES}
+                      onNavigate={() => setPending(tab.href)}
+                      aria-current={on ? "page" : undefined}
+                      aria-keyshortcuts={shortcuts ? String(i + 1) : undefined}
+                      data-speaking={lit ? "" : undefined}
+                      className={`group relative flex h-(--k-item) items-center gap-3 rounded-sm pr-2 pl-4 text-sm font-medium transition-colors duration-(--duration-quick) ${
+                        on ? "text-ink" : "text-muted hover:bg-panel/55 hover:text-ink active:bg-panel/80"
+                      } data-speaking:bg-accent/10 data-speaking:text-ink`}
+                    >
+                      <Icon size={iconSize} className={on || lit ? "text-accent" : "text-muted transition-colors group-hover:text-ink"} />
+                      <span className="min-w-0 flex-1 truncate">{t(tab.label)}</span>
+                      <Trail digit={shortcuts ? i + 1 : null} />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          {!k2 && (
+            <p className="mt-3 hidden flex-wrap items-center gap-x-2 gap-y-0.5 px-4 text-xs text-muted pointer-fine:flex">
+              {keys ? (
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                  <Kbd>1</Kbd>–<Kbd>{rail.length}</Kbd>
+                  <span className="ml-0.5">{t("shell.keys")}</span>
+                </span>
+              ) : (
+                <span className="whitespace-nowrap">{t("shell.keysOffNote")}</span>
+              )}
+              <button
+                type="button"
+                onClick={toggleKeys}
+                className="inline-flex min-h-6 items-center rounded-sm font-medium whitespace-nowrap underline decoration-border-strong transition-colors hover:text-ink hover:decoration-accent"
               >
-                <span aria-hidden="true" className={`absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full ${on ? "bg-accent" : "bg-transparent"}`} />
-                <Icon size={18} className={on ? "text-accent" : "text-muted group-hover:text-ink"} />
-                {t(label)}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="space-y-3 border-t border-border px-3 pb-4 pt-3">
-          <Link href="/profiles" className="flex items-center gap-2.5 rounded-sm px-2 py-2 hover:bg-panel/70">
-            {learner ? (
-              <Avatar profile={learner} size="sm" />
-            ) : (
-              <span className="grid size-8 place-items-center rounded-full border border-border bg-panel text-ink">
-                <IconFamily size={16} />
-              </span>
-            )}
-            <span className="min-w-0 leading-tight">
-              <span className="block truncate text-sm font-medium text-ink">{learner?.nickname ?? account?.displayName}</span>
-              <span className="block text-xs text-muted">{learner ? gradeLabel(locale, learner.grade) : t("profiles.parent")}</span>
-            </span>
-            <span className="ml-auto text-xs text-muted">{t("nav.switchShort")}</span>
-          </Link>
-          {DEMO && (
-            <p className="flex items-center gap-2 px-2 text-xs text-muted">
-              <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-warn" />
-              {t("demo.status")}
+                {keys ? t("shell.keysOff") : t("shell.keysOn")}
+              </button>
             </p>
           )}
-          <div className="flex items-center gap-1 text-xs">
-            <Link href="/settings" className="inline-flex min-h-10 items-center rounded-sm px-2 text-muted hover:bg-panel/70 hover:text-ink">
-              {t("nav.settings")}
-            </Link>
-            <button type="button" onClick={signOut} className="inline-flex min-h-10 items-center rounded-sm px-2 text-muted hover:bg-panel/70 hover:text-bad">
-              {t("nav.signOut")}
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <main className="lg:pl-60">
-        <div className="mx-auto max-w-4xl px-4 pb-28 pt-5 lg:px-8 lg:pb-16 lg:pt-10">
-          <div className="mb-4 flex items-center justify-between lg:hidden">
-            <KaizenLogo size={28} href={learner ? "/home" : "/family"} />
-            <Link href="/profiles" aria-label={t("nav.switch")} className="rounded-full">
-              {learner ? <Avatar profile={learner} size="sm" /> : <IconFamily size={22} />}
+        </nav>
+        <div className="border-t border-border px-3 pt-3 pb-3">
+          <StatusLines online={online} className="px-2 pb-3" />
+          <div className="flex items-center gap-1">
+            <WhoButton variant="rail" open={switcherOpen} />
+            <Link
+              href="/settings"
+              aria-label={t("nav.settings")}
+              title={t("nav.settings")}
+              aria-current={path === "/settings" ? "page" : undefined}
+              className="k-btn-ghost size-target shrink-0 px-0 py-0 aria-[current=page]:bg-panel aria-[current=page]:text-accent aria-[current=page]:shadow-soft"
+            >
+              <IconSettings size={20} />
             </Link>
           </div>
-          <StoreHealthNotice />
-          {children}
         </div>
-      </main>
+      </header>
 
-      {/* Same selection language as the rail, one rose rule per tab, so phone and laptop read as one product. */}
-      <nav aria-label={t("nav.main")} className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-panel/90 backdrop-blur-xl lg:hidden">
-        <div className={`mx-auto grid max-w-lg ${learner ? "grid-cols-5" : "grid-cols-4"}`}>
-          {(learner
-            ? [LEARNER_TABS[0], LEARNER_TABS[1], LEARNER_TABS[2], LEARNER_TABS[3]]
-            : PARENT_TABS
-          )
-            .concat({ href: learner ? "/me" : "/settings", label: "nav.me", Icon: IconSettings })
-            .map(({ href, label, Icon }) => {
-              const meRoutes = ["/me", "/calendar", "/growth", "/settings", "/courses/new"];
-              const on = href === "/me" ? meRoutes.some((r) => path.startsWith(r)) : active(href) && !(href === "/courses" && path === "/courses/new");
+      {/* Phones: the header carries the logo and who's learning; the places live in the bar below. */}
+      <header data-k-chrome data-print="hide" className="k-vt-header mx-auto flex max-w-4xl items-center gap-2 px-gutter pt-[max(1rem,env(safe-area-inset-top))] pb-1 lg:hidden">
+        <Link href={home} aria-label="KaizenEDU" className="flex min-h-target shrink-0 items-center gap-2 rounded-sm">
+          <KaizenMark size={28} />
+          <KaizenWordmark size={16} className="max-[22.5rem]:hidden" />
+        </Link>
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          {!online && <OfflineChip />}
+          {k2 && <HearTabs labels={barLabels} onSpeak={(i) => setSpeaking(i === null ? null : { list: "bar", i })} />}
+          <WhoButton variant="bar" open={switcherOpen} />
+        </div>
+      </header>
+
+      {/* overflow-x: clip — a page element a few pixels too wide must never widen a phone's viewport
+          (that zooms the whole app out and breaks the tab cross-fade); clip is not a scroll container,
+          so sticky headers inside pages keep working. */}
+      <div className="overflow-x-clip lg:pl-(--k-rail)">
+        <main
+          id="k-main"
+          tabIndex={-1}
+          className="mx-auto max-w-4xl px-gutter pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] outline-none lg:px-8 lg:pt-10 lg:pb-16"
+        >
+          <div className="mb-6 empty:hidden">
+            <StoreHealthNotice />
+          </div>
+          <ViewTransition update={{ "k-tab": "k-tab", default: "none" }} default="none">
+            <div key={scope} className={scope !== firstScope ? "k-enter" : undefined}>
+              {children}
+            </div>
+          </ViewTransition>
+        </main>
+      </div>
+
+      {/* Phones: the same places in a bar, the rose rule riding its hairline. */}
+      <nav
+        data-k-chrome
+        aria-label={t("nav.main")}
+        className="k-vt-tabbar fixed inset-x-0 bottom-0 z-30 border-t border-border bg-panel/90 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] backdrop-blur-xl backdrop-saturate-150 lg:hidden"
+      >
+        <div className="relative mx-auto max-w-lg" style={{ "--k-i": barAt, "--k-n": bar.length } as CSSProperties}>
+          {barAt >= 0 && <span aria-hidden="true" className="k-bar-rule" />}
+          <ul className="grid" style={{ gridTemplateColumns: `repeat(${bar.length}, minmax(0, 1fr))` }}>
+            {bar.map((tab, i) => {
+              const on = i === barAt;
+              const lit = speaking?.list === "bar" && speaking.i === i;
+              const Icon = ICON[tab.place];
               return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={on ? "page" : undefined}
-                  className="relative flex flex-col items-center gap-1 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]"
-                >
-                  <span aria-hidden="true" className={`absolute inset-x-6 top-0 h-0.5 rounded-full ${on ? "bg-accent" : "bg-transparent"}`} />
-                  <Icon size={21} className={on ? "text-accent" : "text-muted"} />
-                  <span className={`text-[11px] font-medium ${on ? "text-accent" : "text-muted"}`}>{t(label)}</span>
-                </Link>
+                <li key={tab.href}>
+                  <Link
+                    href={tab.href}
+                    transitionTypes={TAB_TYPES}
+                    onNavigate={() => setPending(tab.href)}
+                    aria-current={on ? "page" : undefined}
+                    data-speaking={lit ? "" : undefined}
+                    className="k-bar-tab group flex min-h-14 flex-col items-center justify-center gap-1 rounded-sm px-1 pt-2.5 pb-2 text-xs font-medium data-speaking:bg-accent/10"
+                  >
+                    {Icon ? (
+                      <Icon size={k2 ? 28 : 22} className={on || lit ? "text-accent" : "text-muted group-hover:text-ink"} />
+                    ) : (
+                      learner && <MeMark learner={learner} on={on} size={k2 ? 28 : 22} />
+                    )}
+                    <span className={`max-w-full truncate leading-tight ${on ? "text-ink" : "text-muted group-hover:text-ink"}`}>{t(tab.label)}</span>
+                  </Link>
+                </li>
               );
             })}
+          </ul>
         </div>
       </nav>
+
+      <Switcher status={status} onOpenChange={setSwitcherOpen} />
     </div>
   );
 }
+

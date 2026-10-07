@@ -1578,6 +1578,24 @@ const en = {
   "ds.notFound.title": "This page isn't here",
   "ds.notFound.body": "The link may be old, or the page moved.",
   "ds.notFound.home": "Go to KaizenEDU",
+  // -- shell
+  "shell.skip": "Skip to content",
+  "shell.status": "Status",
+  "shell.offline": "Offline · still saving here",
+  "shell.offlineShort": "Offline",
+  "shell.offlineNow": "You're offline. Work still saves on this device; the tutor needs the internet.",
+  "shell.online": "Back online.",
+  "shell.notSaving": "Not saving · this browser blocks it",
+  "shell.hearTabs": "Read the buttons aloud",
+  "shell.switched": "Switched to {name}",
+  "shell.toParent": "Switched to the grown-up view",
+  "shell.locked": "Asks a grown-up question first",
+  "shell.manage": "Add or change learners",
+  "shell.keys": "switch tabs",
+  "shell.keysOff": "Turn off",
+  "shell.keysOn": "Turn on",
+  "shell.keysOffNote": "Number keys are off",
+  "shell.keysOnNote": "Keys 1 to {n} switch tabs",
 } as const;
 
 export default en;

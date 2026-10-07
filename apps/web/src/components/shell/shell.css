@@ -1,0 +1,239 @@
+/* The KaizenEDU shell: the rail's selection, the phone bar's rule, the learner switcher and the tab
+   cross-fade. Tokens come from app/globals.css; DESIGN.md → Composition and Motion are the authority.
+   The one authored moment: the selection travels to the place you chose, on the gentle spring, the
+   instant you choose it, before the page arrives. Everything else here is quiet. */
+
+:root {
+  --k-rail: 15rem;
+}
+/* K–2: the rail widens so the bigger words never wrap or cut. */
+:root[data-band="k2"] {
+  --k-rail: 17rem;
+}
+
+/* —— Rail. One white tile with a 2px rose mark rides behind the links; rows have a fixed height, so the
+   tile's place is arithmetic (no measuring, nothing shifts on first paint) and it grows with K–2. */
+.k-rail-list {
+  --k-item: var(--spacing-target);
+  --k-gap: 2px;
+  position: relative;
+}
+.k-rail-list > ul {
+  display: grid;
+  gap: var(--k-gap);
+}
+.k-rail-sel {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: var(--k-item);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-panel);
+  box-shadow: var(--shadow-soft);
+  translate: 0 calc(var(--k-i, 0) * (var(--k-item) + var(--k-gap)));
+  transition: translate var(--duration-slow) var(--ease-spring);
+  pointer-events: none;
+}
+.k-rail-sel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2px;
+  height: 1.25rem;
+  translate: 0 -50%;
+  border-radius: 999px;
+  background-color: var(--color-accent);
+}
+
+/* —— Phone bar. The rose rule sits on the bar's hairline above the chosen place and slides along it. */
+.k-bar-rule {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: calc(100% / var(--k-n, 5));
+  height: 2px;
+  translate: calc(var(--k-i, 0) * 100%) 0;
+  transition: translate var(--duration-slow) var(--ease-spring);
+  pointer-events: none;
+}
+.k-bar-rule::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 2rem;
+  translate: -50% 0;
+  border-radius: 0 0 999px 999px;
+  background-color: var(--color-accent);
+}
+.k-bar-tab .k-icon {
+  transition: scale var(--duration-instant) var(--ease-out-quart), color var(--duration-quick) var(--ease-out-quart);
+}
+.k-bar-tab:active .k-icon {
+  scale: 0.9;
+}
+/* K–2 on the narrowest phones: the labels give a little size back so "Practice" stays whole under its
+   picture (the pictures keep their size). */
+@media (width < 24rem) {
+  :root[data-band="k2"] .k-bar-tab {
+    font-size: 0.875rem;
+  }
+}
+
+/* —— Learner switcher, on the native popover: top layer, Escape and outside-tap close it, focus returns to
+   the button that opened it. Phones: a sheet from the bottom edge. Wide screens: a panel that rises out
+   of the rail's footer, anchored to the learner it switches from. */
+.k-switcher {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 32rem;
+  max-height: min(85dvh, 40rem);
+  margin: 0 auto;
+  padding: 0 0 env(safe-area-inset-bottom);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--color-border);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background-color: var(--color-panel);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-lift);
+  opacity: 1;
+  translate: 0 0;
+  transition: translate var(--duration-quick) var(--ease-exit), opacity var(--duration-quick) var(--ease-exit),
+    overlay var(--duration-quick) allow-discrete, display var(--duration-quick) allow-discrete;
+}
+.k-switcher:popover-open {
+  transition-duration: var(--duration-slow);
+  transition-timing-function: var(--ease-out-expo);
+}
+.k-switcher:not(:popover-open) {
+  translate: 0 100%;
+}
+.k-switcher::backdrop {
+  background-color: rgb(26 25 23 / 0.32);
+  opacity: 1;
+  transition: opacity var(--duration-base) var(--ease-out-quart), overlay var(--duration-base) allow-discrete,
+    display var(--duration-base) allow-discrete;
+}
+.k-switcher:not(:popover-open)::backdrop {
+  opacity: 0;
+}
+@starting-style {
+  .k-switcher:popover-open {
+    translate: 0 100%;
+  }
+  .k-switcher:popover-open::backdrop {
+    opacity: 0;
+  }
+}
+
+.k-who-anchor {
+  anchor-name: --k-who;
+}
+@media (width >= 64rem) {
+  .k-switcher {
+    inset: auto;
+    left: 0.75rem;
+    bottom: 5.75rem;
+    margin: 0;
+    width: 17.5rem;
+    max-width: none;
+    max-height: min(70dvh, 34rem);
+    padding: 0;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transform-origin: 0 100%;
+  }
+  @supports (position-area: top) {
+    .k-switcher {
+      left: auto;
+      bottom: auto;
+      position-anchor: --k-who;
+      position-area: top span-right;
+      margin: 0 0 0.5rem;
+    }
+  }
+  .k-switcher:not(:popover-open) {
+    translate: 0 var(--rise);
+    scale: 0.98;
+    opacity: 0;
+  }
+  .k-switcher::backdrop {
+    background-color: transparent;
+  }
+  @starting-style {
+    .k-switcher:popover-open {
+      translate: 0 var(--rise);
+      scale: 0.98;
+      opacity: 0;
+    }
+  }
+  :root[data-band="k2"] .k-switcher {
+    width: 20rem;
+  }
+}
+
+/* —— Tab changes from the rail or bar cross-fade the page column in place: the old page lets go fast
+   with a soft blur, the new one rises a few pixels and settles. The rail, the bar and the phone header
+   are named in globals.css and never move. The column itself does not morph. */
+::view-transition-group(.k-tab) {
+  animation-duration: 0s;
+}
+::view-transition-old(.k-tab) {
+  animation: var(--duration-quick) var(--ease-exit) both k-tab-out;
+}
+::view-transition-new(.k-tab) {
+  animation: var(--duration-slow) var(--ease-out-expo) var(--duration-instant) both k-tab-in;
+}
+@keyframes k-tab-out {
+  to {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+@keyframes k-tab-in {
+  from {
+    opacity: 0;
+    translate: 0 var(--rise);
+    filter: blur(2px);
+  }
+}
+
+/* Reduced motion: nothing travels (globals.css limits transitions to colour and opacity and makes view
+   transitions instant). The switcher still fades; the selection simply appears in its new place. */
+@media (prefers-reduced-motion: reduce) {
+  .k-switcher:popover-open {
+    translate: 0 0;
+    scale: 1;
+  }
+  .k-switcher:not(:popover-open) {
+    translate: 0 0;
+    scale: 1;
+    opacity: 0;
+  }
+  @starting-style {
+    .k-switcher:popover-open {
+      translate: 0 0;
+      scale: 1;
+      opacity: 0;
+    }
+  }
+}
+
+/* Forced colours: backgrounds disappear, so the selection draws a real border and the marks use Highlight. */
+@media (forced-colors: active) {
+  .k-rail-sel {
+    border: 2px solid Highlight;
+  }
+  .k-rail-sel::before,
+  .k-bar-rule::before {
+    forced-color-adjust: none;
+    background-color: Highlight;
+  }
+  .k-bar-tab[aria-current="page"] {
+    text-decoration: underline;
+  }
+}

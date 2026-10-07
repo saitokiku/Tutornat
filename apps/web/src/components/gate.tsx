@@ -48,10 +48,11 @@ export function StoreHealthNotice() {
   return <Notice tone="warn">{t(health === "reset" ? "demo.storeReset" : "demo.storeMemory")}</Notice>;
 }
 
+/** While this browser's data is read: the tree draws itself once (trunk, branches, blossoms) and waits. */
 export function PageFallback() {
   return (
     <div aria-busy="true" className="grid min-h-dvh place-items-center bg-paper">
-      <KaizenMark size={40} className="animate-pulse opacity-60" />
+      <KaizenMark size={44} grow />
     </div>
   );
 }

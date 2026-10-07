@@ -1580,6 +1580,24 @@ const es: Record<Key, string> = {
   "ds.notFound.title": "Esta página no está aquí",
   "ds.notFound.body": "Puede que el enlace sea viejo o que la página se haya movido.",
   "ds.notFound.home": "Ir a KaizenEDU",
+  // -- shell
+  "shell.skip": "Saltar al contenido",
+  "shell.status": "Estado",
+  "shell.offline": "Sin conexión · se sigue guardando aquí",
+  "shell.offlineShort": "Sin conexión",
+  "shell.offlineNow": "No hay conexión. Lo que hagas se sigue guardando en este dispositivo; el tutor necesita internet.",
+  "shell.online": "Conexión restablecida.",
+  "shell.notSaving": "No se guarda · este navegador lo bloquea",
+  "shell.hearTabs": "Leer los botones en voz alta",
+  "shell.switched": "Cambiaste a {name}",
+  "shell.toParent": "Cambiaste a la vista de adultos",
+  "shell.locked": "Primero hace una pregunta para adultos",
+  "shell.manage": "Agregar o cambiar estudiantes",
+  "shell.keys": "cambian de pestaña",
+  "shell.keysOff": "Desactivar",
+  "shell.keysOn": "Activar",
+  "shell.keysOffNote": "Teclas numéricas desactivadas",
+  "shell.keysOnNote": "Las teclas del 1 al {n} cambian de pestaña",
 };
 
 export default es;
