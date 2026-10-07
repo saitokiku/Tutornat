@@ -2,12 +2,14 @@
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { readUIMessageStream, simulateReadableStream, type UIMessage, type UIMessageChunk } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cardsOf, skillsIn } from "@/components/tutor/cards";
-import { sameProblem } from "@/components/tutor/similar";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cardsOf, repliesIn, skillsIn } from "@/components/tutor/cards";
+import { sameNumbers, sameProblem } from "@/components/tutor/similar";
 import { clearKnowCache } from "@/knowledge/fetch";
 import type { TutorContext } from "./context";
 import { makeItem } from "@/practice/skills";
+import { sayFrac } from "@/practice/text";
+import { systemPrompt } from "./prompts";
 import { hintsGiven, knowledgeTools, tutorTools } from "./tools";
 import { tutorTurn } from "./tutor";
 
@@ -66,16 +68,24 @@ function stubFetch() {
   });
   return calls;
 }
+beforeEach(() => {
+  // The learner's today and the server's agree (only Date is faked; streams keep real timers).
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 9, 7, 12));
+});
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   answers.clear();
   clearKnowCache();
 });
 
-async function run(toolName: string, input: object, c: TutorContext = ctx) {
+const TODAY = "2026-10-07"; // a Wednesday
+
+async function run(toolName: string, input: object, c: TutorContext = ctx, said = "what is a logical fallacy") {
   const { model, prompts } = toolModel(toolName, input);
-  const m = await reply(await tutorTurn({ messages: [user("what is a logical fallacy")], context: c }, model));
-  return { m, cards: cardsOf(m, c.locale), prompts };
+  const m = await reply(await tutorTurn({ messages: [user(said)], context: c, today: TODAY }, model));
+  return { m, cards: cardsOf(m, c.locale, TODAY), prompts };
 }
 
 describe("knowledge tools, through the tutor turn, onto the board", () => {
@@ -139,6 +149,16 @@ describe("knowledge tools, through the tutor turn, onto the board", () => {
     expect(m.parts.some((p) => p.type === "text" && p.text.includes("card on your board"))).toBe(true);
   });
 
+  it("a source's answer the safety screen turns away is not shown, and the model is told why", async () => {
+    answers.set(/en\.wikipedia\.org\/w\/api\.php.*list=search/, { query: { search: [{ title: "Red-light district", snippet: "" }] } });
+    answers.set(/en\.wikipedia\.org\/api\/rest_v1\/page\/summary\/Red-light/, { type: "standard", title: "Red-light district", extract: "A red-light district is an area with many brothels.", content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Red-light_district" } } });
+    stubFetch();
+    const { cards, prompts } = await run("look_up", { topic: "red light district" });
+    expect(cards).toEqual([]);
+    expect(JSON.stringify(prompts[1])).toMatch(/Nothing suitable to show/);
+    expect(JSON.stringify(prompts[1])).not.toContain("brothels");
+  });
+
   it("practice tools mark the skill the conversation turned to", async () => {
     stubFetch();
     const found = await run("find_skill", { query: "logical fallacy" });
@@ -181,6 +201,23 @@ describe("the hint ladder across turns", () => {
 });
 
 describe("similar_problem", () => {
+  it("never works out a problem the learner typed, whichever turn they typed it in", async () => {
+    // "2 + 3" in Talk: m.add.5 draws those numbers about one time in ten without the guard.
+    let checked = 0;
+    for (let i = 0; i < 60; i++) {
+      const { model } = toolModel("similar_problem", { skillId: "m.add.5" });
+      const earlier: UIMessage = { id: "a0", role: "assistant", parts: [{ type: "text", text: "What did you get?" }] };
+      const m = await reply(await tutorTurn({ messages: [user("2 + 3"), earlier, { id: "u2", role: "user", parts: [{ type: "text", text: "show me one like it" }] }], context: { ...ctx, grade: "K" }, today: TODAY }, model));
+      const worked = cardsOf(m, "en", TODAY).find((c) => c.type === "worked");
+      expect(worked, `run ${i}`).toBeDefined();
+      if (worked?.type === "worked") {
+        checked++;
+        expect(sameNumbers(worked.item, "2 + 3"), `run ${i}: ${worked.item.say}`).toBe(false);
+      }
+    }
+    expect(checked).toBe(60);
+  });
+
   it("never works out the learner's own problem (small skills repeat about one draw in four)", async () => {
     const practice: TutorContext = { locale: "en", grade: "K", surface: "practice", item: { skillId: "m.count.10", level: 1, seed: 1 }, tries: 0 };
     const mine = makeItem("m.count.10", 1, 1, "en");
@@ -210,6 +247,63 @@ describe("knowledge tools directly", () => {
       role: "assistant",
       parts: [{ type: "tool-look_up", toolCallId: "1", state: "output-available", input: { topic: "x" }, output: { found: true, title: "X", extract: "x", url: "javascript:alert(1)", lang: "en" } } as never],
     };
-    expect(cardsOf(m, "en")).toEqual([]);
+    expect(cardsOf(m, "en", TODAY)).toEqual([]);
+  });
+});
+
+describe("dates the AI tutor offers", () => {
+  it("are worked out from the learner's today, which the model is told", async () => {
+    const { prompts, cards } = await run("add_to_calendar", { title: "Fractions test", kind: "test", date: "2026-10-09" }, ctx, "I have a fractions test on Friday");
+    expect(JSON.stringify(prompts[0])).toContain("Today is Wednesday, 2026-10-07.");
+    expect(cards).toEqual([{ type: "calendar", key: "c1", title: "Fractions test", kind: "test", date: "2026-10-09" }]);
+  });
+
+  it("a date in the past or a year off is not offered in one tap: the card asks for the day", async () => {
+    for (const date of ["2025-10-10", "2026-10-06", "2027-12-01", "2026-02-31"]) {
+      const { cards, prompts } = await run("add_to_calendar", { title: "Fractions test", kind: "test", date }, ctx, "I have a fractions test on Friday");
+      expect(cards, date).toEqual([{ type: "calendar", key: "c1", title: "Fractions test", kind: "test", date: undefined }]);
+      expect(JSON.stringify(prompts[1]), date).toMatch(/ask them which day/);
+    }
+  });
+});
+
+describe("tap answers for a young learner", () => {
+  it("a young learner's tutor is told to offer answers to tap; the chips come from offer_replies, screened", async () => {
+    const young = await run("offer_replies", { replies: ["I counted them", "I don't know", "Show me", "I don't know"] }, { ...ctx, grade: "1" }, "how many dots");
+    expect(JSON.stringify(young.prompts[0])).toContain("offer_replies: two to four short answers");
+    expect(repliesIn(young.m)).toEqual(["I counted them", "I don't know", "Show me"]);
+    const older = await run("offer_replies", { replies: ["Yes", "No"] }, ctx, "is 7 prime");
+    expect(JSON.stringify(older.prompts[0])).not.toContain("offer_replies: two to four short answers");
+    const unfit: UIMessage = { id: "a", role: "assistant", parts: [{ type: "tool-offer_replies", toolCallId: "1", state: "output-available", input: { replies: ["Buy a vape", "Count again"] }, output: { shown: true } } as never] };
+    expect(repliesIn(unfit)).toEqual(["Count again"]);
+  });
+});
+
+describe("no answer key reaches the model", () => {
+  it("the prompt beside a problem has the problem but not its answer, written or spoken", () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const item = makeItem("m.frac.addlike", 2, seed, "en");
+      if (item.answer.kind !== "fraction") continue;
+      const { n, d } = item.answer;
+      const prompt = systemPrompt({ locale: "en", grade: "4", surface: "practice", item: { skillId: "m.frac.addlike", level: 2, seed }, tries: 0 });
+      expect(prompt).toContain(item.say);
+      // Apart from the problem itself ("2 fourths minus one fourth" has its answer's words in it).
+      const rest = prompt.replace(item.say, "");
+      expect(rest, `seed ${seed}`).not.toContain(`${n}/${d}`);
+      expect(rest, `seed ${seed}`).not.toContain(sayFrac(n, d, "en"));
+      expect(prompt).toMatch(/have not tried yet: do not reveal the answer/);
+    }
+  });
+
+  it("check_answer tells the model only whether it is right, never what the key is", async () => {
+    const practice: TutorContext = { locale: "en", grade: "4", surface: "practice", item: { skillId: "m.frac.addlike", level: 1, seed: 7 }, tries: 1 };
+    const item = makeItem("m.frac.addlike", 1, 7, "en");
+    if (item.answer.kind !== "fraction") throw new Error("expected a fraction");
+    const key = `${item.answer.n}/${item.answer.d}`;
+    const { m, prompts } = await run("check_answer", { answer: "99/100" }, practice, "is it 99/100");
+    const part = m.parts.find((p) => p.type === "tool-check_answer") as { output?: Record<string, unknown> };
+    expect(Object.keys(part.output ?? {}).sort()).toEqual(["correct", "form"]);
+    expect(part.output?.correct).toBe(false);
+    for (const p of prompts) expect(JSON.stringify(p)).not.toContain(key);
   });
 });

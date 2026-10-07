@@ -49,6 +49,10 @@ export const KNOWLEDGE_TOOLS = `Knowledge tools. They fetch real, named sources,
 - If a tool finds nothing or can't reach its source, say so in one sentence. Never invent a fact, a quote, a book, a poem or a link.
 - These facts are background for learning. They never replace the learner's own thinking and never give away the answer to their current problem or graded work.`;
 
+// Tool guidance for a learner who may not read or type yet (kindergarten to grade 2): every question
+// comes with answers to tap.
+export const TAP_REPLIES = `This learner may not read or type yet. End every turn that asks them something with offer_replies: two to four short answers in their words that they can tap (for example "I counted them", "I don't know", "Show me"). Keep each to a few words a child says. They hear your message read aloud, so the question itself must make sense spoken.`;
+
 export function systemPrompt(ctx: TutorContext): string {
   const lang = ctx.locale === "es" ? "Reply in Spanish (neutral Latin-American, the way a US bilingual family speaks)." : "Reply in English.";
   const parts = [RULES, KNOWLEDGE_TOOLS, BAND[band(ctx.grade)], lang];

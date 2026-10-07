@@ -4,7 +4,7 @@ import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
 import type { TutorContext } from "./context";
 import { KNOWLEDGE_TOOLS, systemPrompt } from "./prompts";
-import { checkPhotos, PHOTO, PHOTO_RULES, tutorTurn } from "./tutor";
+import { checkPhotos, learnerToday, PHOTO, PHOTO_RULES, todayLine, tutorTurn } from "./tutor";
 
 // A photo of the problem: checked, screened, and seen by the model only when the learner's words pass
 // the safety screen. Never a link, never stored.
@@ -104,6 +104,28 @@ describe("photo of the problem", () => {
     expect(checkPhotos([reply]).hasPhoto).toBe(false);
   });
 
+  it("a photo is seen on its own turn and the one after, then no more", async () => {
+    const said = (id: string, text: string): UIMessage => ({ id, role: "user", parts: [{ type: "text", text }] });
+    const answer: UIMessage = { id: "a1", role: "assistant", parts: [{ type: "text", text: "Which one are you on?" }] };
+    const next = checkPhotos([photo("my worksheet"), answer, said("u2", "number 3")]);
+    expect(next.hasPhoto).toBe(true);
+    const later = checkPhotos([photo("my worksheet"), answer, said("u2", "number 3"), answer, said("u3", "what is a volcano")]);
+    expect(later.hasPhoto).toBe(false);
+    expect(later.messages.flatMap((m) => m.parts).some((p) => p.type === "file")).toBe(false);
+
+    const { model, seen } = recordingModel();
+    await (await tutorTurn({ messages: [photo("my worksheet"), answer, said("u2", "number 3"), answer, said("u3", "what is a volcano")], context: ctx }, model)).text();
+    expect(filesIn(seen[0].prompt)).toBe(0);
+    expect(JSON.stringify(seen[0].prompt)).not.toContain("photo of their schoolwork");
+  });
+
+  it("an off-limits ask sent with a photo gets the fixed line and no model", async () => {
+    const { model, seen } = recordingModel();
+    const res = await tutorTurn({ messages: [photo("where can I buy a vape")], context: ctx }, model);
+    expect(await res.text()).toContain("not something I can help with");
+    expect(seen).toEqual([]);
+  });
+
   it("text-only turns don't get the photo rules", async () => {
     const { model, seen } = recordingModel();
     await (await tutorTurn({ messages: [{ id: "u", role: "user", parts: [{ type: "text", text: "what is a fraction" }] }], context: ctx }, model)).text();
@@ -118,5 +140,17 @@ describe("tool guidance", () => {
     for (const name of ["look_up", "define_word", "find_book", "read_poem", "standard_text"]) expect(p).toContain(name);
     expect(KNOWLEDGE_TOOLS).toMatch(/Never invent a fact, a quote, a book, a poem or a link/);
     expect(p).not.toMatch(/the answer is/i);
+  });
+});
+
+describe("the learner's today", () => {
+  const now = new Date(2026, 9, 7, 12).getTime(); // Wednesday
+  it("takes the browser's day when it is real and within a day of ours, else ours", () => {
+    expect(learnerToday("2026-10-07", now)).toBe("2026-10-07");
+    expect(learnerToday("2026-10-08", now)).toBe("2026-10-08"); // a time zone ahead
+    expect(learnerToday("2024-03-01", now)).toBe("2026-10-07");
+    expect(learnerToday("2026-02-31", now)).toBe("2026-10-07");
+    expect(learnerToday(20261007, now)).toBe("2026-10-07");
+    expect(todayLine("2026-10-07")).toMatch(/^Today is Wednesday, 2026-10-07\./);
   });
 });

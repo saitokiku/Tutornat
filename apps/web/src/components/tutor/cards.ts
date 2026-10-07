@@ -1,6 +1,8 @@
 import type { UIMessage } from "ai";
+import { suitable } from "@/lib/ai/safety";
 import type { BoardCard } from "@/lib/tutor";
 import type { Locale, Visual } from "@/lib/types";
+import { daysBetween, fromLocalDate, localDate } from "@/planner/dates";
 import type { EventKind } from "@/planner/types";
 import { getSkill, makeItem } from "@/practice/skills";
 
@@ -15,7 +17,19 @@ const str = (v: unknown, max = 2000) => (typeof v === "string" ? v.slice(0, max)
 /** Links the board opens: our server built them, but only web links are ever drawn. */
 const web = (v: unknown) => (typeof v === "string" && /^https:\/\//.test(v) ? v : null);
 
-export function cardsOf(m: UIMessage, locale: Locale): BoardCard[] {
+/**
+ * A real calendar day from `today` up to a year ahead: the only dates the tutor may offer to add in one
+ * tap. Anything else (a guess in the wrong year, a day already past, "2026-02-31") falls back to asking
+ * the learner to pick the day.
+ */
+export function offerableDate(date: string, today: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || localDate(fromLocalDate(date)) !== date) return false;
+  const ahead = daysBetween(today, date);
+  return ahead >= 0 && ahead <= 366;
+}
+
+/** The board cards for one assistant message. `today` (the learner's) decides which offered dates stand. */
+export function cardsOf(m: UIMessage, locale: Locale, today: string): BoardCard[] {
   const out: BoardCard[] = [];
   for (const raw of m.parts) {
     const p = raw as ToolPart;
@@ -36,7 +50,7 @@ export function cardsOf(m: UIMessage, locale: Locale): BoardCard[] {
         break;
       case "tool-add_to_calendar": {
         const kind = KINDS.includes(input.kind as EventKind) ? (input.kind as EventKind) : "event";
-        const date = /^\d{4}-\d{2}-\d{2}$/.test(str(input.date)) ? str(input.date) : undefined;
+        const date = offerableDate(str(input.date), today) ? str(input.date) : undefined;
         if (str(input.title)) out.push({ type: "calendar", key: p.toolCallId ?? str(input.title), title: str(input.title, 120), kind, date });
         break;
       }
@@ -72,6 +86,20 @@ export function cardsOf(m: UIMessage, locale: Locale): BoardCard[] {
 }
 
 type BookRow = { title: string; author?: string; year?: number; url: string; source: string; kind: string };
+
+/** The short answers the tutor offered to tap (offer_replies), screened like anything the learner sends. */
+export function repliesIn(m: UIMessage | undefined): string[] {
+  const out: string[] = [];
+  for (const raw of m?.parts ?? []) {
+    const p = raw as ToolPart;
+    if (p.type !== "tool-offer_replies" || p.state === "input-streaming" || p.state === "output-error" || !Array.isArray(p.input?.replies)) continue;
+    for (const r of p.input.replies as unknown[]) {
+      const text = str(r, 40).trim();
+      if (text && suitable(text) && !out.includes(text)) out.push(text);
+    }
+  }
+  return out.slice(0, 4);
+}
 
 /** Skills the conversation turned to: what find_skill found, what practice was offered, what was worked. */
 export function skillsIn(m: UIMessage): string[] {

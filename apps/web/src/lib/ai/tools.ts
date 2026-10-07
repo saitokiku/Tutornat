@@ -1,5 +1,6 @@
 import { tool, type UIMessage } from "ai";
 import { z } from "zod";
+import { offerableDate } from "@/components/tutor/cards";
 import { similarItem } from "@/components/tutor/similar";
 import { standardUrl, wiktionaryUrl } from "@/components/tutor/sources";
 import { audiobooks, cleanQuery, define, poemsBy, poemTitled, searchBooks, shortPoems, standardText, wikiSummary } from "@/knowledge";
@@ -10,6 +11,7 @@ import { getSkill, makeItem } from "@/practice/skills";
 import { matchSkills, sameWord } from "@/planner/skillmatch";
 import { linkOf, resourcesFor } from "@/resources";
 import type { TutorContext } from "./context";
+import { suitable } from "./safety";
 
 // The tutor's tools. Everything that must be correct is code: checking an answer, the vetted hint,
 // a worked example of a fresh problem, which skill matches. The model decides when to use them and
@@ -48,7 +50,14 @@ export function hintsGiven(messages: UIMessage[]): number {
   return n;
 }
 
-export function tutorTools(ctx: TutorContext, history: { hintsGiven?: number } = {}) {
+/**
+ * What the tools know about the conversation besides the context: how many hints were already given,
+ * what the learner typed (so a worked example never has the numbers of their own problem), and the
+ * learner's today (so a date offered for the calendar is never in the past or a year off).
+ */
+export type TurnFacts = { hintsGiven?: number; typed?: string[]; today?: string };
+
+export function tutorTools(ctx: TutorContext, history: TurnFacts = {}) {
   const current = () => (ctx.item && getSkill(ctx.item.skillId) ? makeItem(ctx.item.skillId, ctx.item.level, ctx.item.seed, ctx.locale) : null);
   let hintsGiven = history.hintsGiven ?? 0;
   return {
@@ -81,8 +90,8 @@ export function tutorTools(ctx: TutorContext, history: { hintsGiven?: number } =
       execute: async ({ skillId }) => {
         const id = skillId && getSkill(skillId) ? skillId : ctx.item?.skillId;
         if (!id || !getSkill(id)) return { problem: null };
-        // Never the learner's own problem again: its worked steps would give their answer away.
-        const item = similarItem(id, ctx.item?.skillId === id ? ctx.item.level : 1, ctx.locale, randomSeed(), { item: current() });
+        // Never the learner's own problem again, on screen or typed: its worked steps would give their answer away.
+        const item = similarItem(id, ctx.item?.skillId === id ? ctx.item.level : 1, ctx.locale, randomSeed(), { item: current(), typed: history.typed });
         if (!item) return { problem: null, note: "No different problem of this kind. Give the next hint instead." };
         return { skillId: id, level: item.level, seed: item.seed, problem: item.say, steps: item.steps };
       },
@@ -115,14 +124,24 @@ export function tutorTools(ctx: TutorContext, history: { hintsGiven?: number } =
       execute: async ({ skillId }) => ({ offered: !!getSkill(skillId) }),
     }),
     add_to_calendar: tool({
-      description: "Propose adding a school date (test, quiz, homework, project) to the learner's calendar. The learner confirms.",
-      inputSchema: z.object({ title: z.string().max(120), kind: z.enum(["test", "quiz", "homework", "project", "event"]), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }),
-      execute: async () => ({ proposed: true }),
+      description:
+        "Propose adding a school date (test, quiz, homework, project) to the learner's calendar. The learner confirms. Work the date out from today's date in your instructions; if the learner didn't say which day, ask instead of guessing.",
+      inputSchema: z.object({ title: z.string().max(120), kind: z.enum(["test", "quiz", "homework", "project", "event"]), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("YYYY-MM-DD, today or later") }),
+      execute: async ({ date }) =>
+        !history.today || offerableDate(date, history.today)
+          ? { proposed: true }
+          : { proposed: false, note: `${date} is not between today (${history.today}) and a year from now. The card asks the learner to pick the day; ask them which day it is.` },
     }),
     note_for_grownup: tool({
       description: "Leave a short factual note for the learner's grown-ups (what they worked on, where they got stuck). No feelings, no private details.",
       inputSchema: z.object({ text: z.string().max(280) }),
       execute: async () => ({ saved: true }),
+    }),
+    offer_replies: tool({
+      description:
+        "Up to four short answers the learner can tap instead of typing, shown as big buttons under your message; tapping one sends it as their reply. Write each the way the learner would say it, in at most six words, and include one like \"I don't know\". Never use them to hand over the answer to the learner's own problem.",
+      inputSchema: z.object({ replies: z.array(z.string().min(1).max(40)).min(2).max(4) }),
+      execute: async () => ({ shown: true }),
     }),
     ...knowledgeTools(ctx),
   };
@@ -135,6 +154,8 @@ export function tutorTools(ctx: TutorContext, history: { hintsGiven?: number } =
 
 const unavailable = { found: false as const, note: "The source could not be reached. Say you couldn't look it up right now; do not make up the facts." };
 const notFound = { found: false as const, note: "Nothing found. Say so plainly; do not make up an answer." };
+/** A source's answer the safety screen turns away: children see and hear these cards, so it isn't shown. */
+const unsuitable = { found: false as const, note: "Nothing suitable to show here. Say you can't help with that topic and offer to get back to learning." };
 
 async function attempt<T>(run: () => Promise<T>): Promise<T | typeof unavailable> {
   try {
@@ -158,7 +179,9 @@ export function knowledgeTools(ctx: TutorContext) {
         if (!q) return notFound;
         return attempt(async () => {
           const s = await wikiSummary(q, ctx.locale);
-          return s ? { found: true as const, title: s.title, extract: s.extract, url: s.url, lang: s.lang, license: s.license, source: "Wikipedia" } : notFound;
+          if (!s) return notFound;
+          if (!suitable(`${s.title} ${s.extract}`)) return unsuitable;
+          return { found: true as const, title: s.title, extract: s.extract, url: s.url, lang: s.lang, license: s.license, source: "Wikipedia" };
         });
       },
     }),
@@ -171,7 +194,7 @@ export function knowledgeTools(ctx: TutorContext) {
         if (!q) return notFound;
         return attempt(async () => {
           // Only senses of the word asked about, not of one the dictionary thought was spelled like it.
-          const defs = (await define(q)).filter((d) => sameWord(d.word, q));
+          const defs = (await define(q)).filter((d) => sameWord(d.word, q) && suitable(d.text));
           if (!defs.length) return notFound;
           return {
             found: true as const,
@@ -191,7 +214,7 @@ export function knowledgeTools(ctx: TutorContext) {
         const q = cleanQuery(query, 100);
         if (!q) return notFound;
         return attempt(async () => {
-          const books = (audio ? await audiobooks(q, 4) : await searchBooks(q, 4)).slice(0, 4);
+          const books = (audio ? await audiobooks(q, 4) : await searchBooks(q, 4)).filter((b) => suitable(b.title)).slice(0, 4);
           if (!books.length) return notFound;
           return { found: true as const, query: q, books: books.map((b) => ({ title: b.title, author: b.author, year: b.year, url: b.url, source: b.source, kind: b.kind })) };
         });
@@ -207,6 +230,7 @@ export function knowledgeTools(ctx: TutorContext) {
         return attempt(async () => {
           const poem = t ? await poemTitled(t) : a ? (await poemsBy(a))[0] : (await shortPoems(3))[0];
           if (!poem) return notFound;
+          if (!suitable(`${poem.title} ${poem.lines.join(" ")}`)) return unsuitable;
           return { found: true as const, title: poem.title, author: poem.author, lines: poem.lines.slice(0, 40), url: poem.url, source: "PoetryDB" };
         });
       },

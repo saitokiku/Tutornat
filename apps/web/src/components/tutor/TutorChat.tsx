@@ -74,6 +74,8 @@ function AiChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
   const t = useT();
   const { learner } = setup;
   const [working] = useState(() => recentSkills(read(), learner.id, Date.now()).slice(0, 6));
+  // The learner's day for the dates the tutor offers: sent with every turn, and used to check them here.
+  const [today] = useState(() => localDate(Date.now()));
   const context: TutorContext = {
     locale: learner.locale,
     grade: learner.grade,
@@ -100,8 +102,9 @@ function AiChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
   const entries: Entry[] = messages.map((m, i) => ({
     id: m.id,
     role: m.role === "user" ? "learner" : "tutor",
-    text: m.parts.filter((p) => p.type === "text").map((p) => (p as { text: string }).text).join(""),
-    cards: m.role === "user" ? [] : cardsOf(m, learner.locale),
+    // Text before and after a tool call are separate sentences ("Let me look that up." / "A fallacy is…").
+    text: m.parts.filter((p) => p.type === "text").map((p) => (p as { text: string }).text).join("\n"),
+    cards: m.role === "user" ? [] : cardsOf(m, learner.locale, today),
     streaming: i === messages.length - 1 && m.role === "assistant" && (status === "streaming" || status === "submitted"),
     flag: (m.metadata as { flag?: string } | undefined)?.flag,
     photo: m.role === "user" ? photoOf(m) : undefined,
@@ -116,7 +119,7 @@ function AiChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
       entries={entries}
       busy={status === "submitted" || status === "streaming"}
       error={error ? t(/photo_too_big/.test(failure) ? "tut.photo.tooBig" : /bad_photo/.test(failure) ? "tut.photo.unreadable" : "tutor.error") : null}
-      onSend={(text, photo) => sendMessage({ text, files: photo ? [{ type: "file", mediaType: photo.mediaType, url: photo.url, filename: "problem.jpg" }] : undefined }, { body: { context, hintsSeen: setup.hintsSeen } })}
+      onSend={(text, photo) => sendMessage({ text, files: photo ? [{ type: "file", mediaType: photo.mediaType, url: photo.url, filename: "problem.jpg" }] : undefined }, { body: { context, hintsSeen: setup.hintsSeen, today: localDate(Date.now()) } })}
       onStop={stop}
       label={t("tut.label.ai")}
       readsPhotos

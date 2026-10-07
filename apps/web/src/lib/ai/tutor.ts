@@ -8,8 +8,9 @@ import {
   type LanguageModel,
   type UIMessage,
 } from "ai";
+import { daysBetween, fromLocalDate, localDate } from "@/planner/dates";
 import { TutorContext } from "./context";
-import { systemPrompt } from "./prompts";
+import { band, systemPrompt, TAP_REPLIES } from "./prompts";
 import { screen } from "./safety";
 import { hintsGiven, tutorTools } from "./tools";
 
@@ -42,11 +43,14 @@ export function checkPhotos(messages: UIMessage[]): PhotoCheck {
     if (!data || data[1] !== f.mediaType || !(PHOTO.types as readonly string[]).includes(f.mediaType)) return { messages, hasPhoto: false, error: "bad_photo" };
     newest = i;
   }
-  if (newest < 0) return { messages, hasPhoto: false };
-  // Older photos stay out of the model's view; the newest one is what the learner is asking about.
-  const kept = messages.map((m, i) => (i === newest ? m : { ...m, parts: m.parts.filter((p) => p.type !== "file") }));
-  return { messages: kept, hasPhoto: true };
+  // The model sees a photo only on the turn it came with and the one right after (a follow-up about
+  // it); once the learner has moved on, older photos stay out of view and the photo rules stop.
+  const users = messages.flatMap((m, i) => (m.role === "user" ? [i] : []));
+  if (newest < 0 || !users.slice(-2).includes(newest)) return { messages: messages.map(withoutFiles), hasPhoto: false };
+  return { messages: messages.map((m, i) => (i === newest ? m : withoutFiles(m))), hasPhoto: true };
 }
+
+const withoutFiles = (m: UIMessage): UIMessage => (m.parts.some((p) => p.type === "file") ? { ...m, parts: m.parts.filter((p) => p.type !== "file") } : m);
 
 /** Extra rules when the learner sent a photo of their work. */
 export const PHOTO_RULES = `The learner sent a photo of their schoolwork. Read the problem or worksheet in it and help with that.
@@ -75,11 +79,27 @@ const lastText = (m: UIMessage | undefined) =>
     .map((p) => p.text)
     .join(" ");
 
-/** `hintsSeen`: hints the learner already opened on the problem in practice, so next_hint continues past them. */
-export type TutorRequest = { messages: UIMessage[]; context: unknown; hintsSeen?: unknown };
+/**
+ * `hintsSeen`: hints the learner already opened on the problem in practice, so next_hint continues past
+ * them. `today`: the learner's calendar day (YYYY-MM-DD) from their browser, so "on Friday" becomes the
+ * right date.
+ */
+export type TutorRequest = { messages: UIMessage[]; context: unknown; hintsSeen?: unknown; today?: unknown };
 
 /** A count the browser sent, made safe: a whole number from 0 to 5, else 0. */
 const hintCount = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.min(5, Math.max(0, Math.floor(v))) : 0);
+
+/** The learner's day as the browser sent it, if it is a real date within a day of ours (time zones); else ours. */
+export function learnerToday(v: unknown, now = Date.now()): string {
+  const ours = localDate(now);
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v) || localDate(fromLocalDate(v)) !== v) return ours;
+  return Math.abs(daysBetween(ours, v)) <= 1 ? v : ours;
+}
+
+const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+/** Today, for working out the dates the learner mentions. */
+export const todayLine = (today: string) =>
+  `Today is ${WEEKDAY[fromLocalDate(today).getDay()]}, ${today}. Work out any day the learner mentions ("Friday", "tomorrow", "next week") from today. A school date for add_to_calendar is today or later, as YYYY-MM-DD; if they didn't say which day, ask.`;
 
 export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promise<Response> {
   const parsed = TutorContext.safeParse(body.context);
@@ -96,12 +116,15 @@ export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promi
   }
   const photos = checkPhotos(messages);
   if (photos.error) return Response.json({ error: photos.error }, { status: photos.error === "photo_too_big" ? 413 : 400 });
-  const system = photos.hasPhoto ? `${systemPrompt(ctx)}\n\n${PHOTO_RULES}` : systemPrompt(ctx);
+  const today = learnerToday(body.today);
+  const system = [systemPrompt(ctx), todayLine(today), band(ctx.grade) === "young" ? TAP_REPLIES : "", photos.hasPhoto ? PHOTO_RULES : ""].filter(Boolean).join("\n\n");
+  // Everything the learner typed, message by message: a worked example never has the numbers of one.
+  const typed = messages.filter((m) => m.role === "user").map((m) => lastText(m).slice(0, LIMITS.chars)).filter(Boolean);
   const result = streamText({
     model,
     system,
     messages: await convertToModelMessages(photos.messages),
-    tools: tutorTools(ctx, { hintsGiven: (ctx.item ? hintCount(body.hintsSeen) : 0) + hintsGiven(messages) }),
+    tools: tutorTools(ctx, { hintsGiven: (ctx.item ? hintCount(body.hintsSeen) : 0) + hintsGiven(messages), typed, today }),
     stopWhen: isStepCount(5),
     maxOutputTokens: 700,
   });
