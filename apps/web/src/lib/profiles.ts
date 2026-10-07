@@ -1,6 +1,8 @@
 import type { Key } from "@/i18n/en";
+import { REPRESENTATIONS, teachingProfile, type TeachingProfile } from "@/learning/profile";
+import { actsOf, resolvedActsOf } from "./acts";
 import { newId, update, type StoreState } from "./store";
-import { GRADES, type Grade, type Locale, type Profile } from "./types";
+import { GRADES, type Grade, type Locale, type Profile, type TeachingPrefs } from "./types";
 
 const COLORS = ["#A93B5D", "#3E6E8E", "#4F7A5B", "#8A6412", "#6B4E8E", "#B4643A"];
 
@@ -91,4 +93,53 @@ export function renameAccount(displayName: string) {
     const a = s.accounts.find((x) => x.id === s.session.accountId);
     if (a) a.displayName = name;
   });
+}
+
+// ----- "How we teach {name}" -----
+
+export const TEACHING_NOTE_MAX = 400;
+
+/**
+ * A grown-up's corrections to the derived teaching profile. Replaces what was there: pass the whole
+ * set of choices; a missing field goes back to what the record shows, and `{}` clears every edit.
+ */
+export function setTeaching(profileId: string, prefs: TeachingPrefs) {
+  const clean: TeachingPrefs = {};
+  if (prefs.representation && REPRESENTATIONS.includes(prefs.representation)) clean.representation = prefs.representation;
+  if (prefs.leadWith === "hint" || prefs.leadWith === "example") clean.leadWith = prefs.leadWith;
+  const note = prefs.note
+    ?.replace(/[^\S\n]+/g, " ")
+    .replace(/ ?\n ?/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, TEACHING_NOTE_MAX)
+    .trim();
+  if (note) clean.note = note;
+  update((s) => {
+    const p = s.profiles.find((x) => x.id === profileId && x.accountId === s.session.accountId);
+    if (!p) return;
+    if (Object.keys(clean).length) p.teaching = clean;
+    else delete p.teaching;
+  });
+}
+
+let taught: { s: StoreState; profile: Profile; hour: number; out: TeachingProfile } | null = null;
+
+/** How this learner learns, from their record and a grown-up's choices. Cached until the record changes. */
+export function teachingOf(s: StoreState, profile: Profile, now: number): TeachingProfile {
+  const hour = Math.floor(now / 3600_000);
+  if (taught && taught.s === s && taught.profile === profile && taught.hour === hour) return taught.out;
+  const out = teachingProfile(
+    {
+      attempts: s.attempts.filter((a) => a.profileId === profile.id),
+      acts: actsOf(s, profile.id),
+      sets: s.sets.filter((x) => x.profileId === profile.id),
+      prefs: profile.teaching,
+      learner: profile,
+      resolved: resolvedActsOf(s, profile.id, now),
+    },
+    now,
+  );
+  taught = { s, profile, hour, out };
+  return out;
 }

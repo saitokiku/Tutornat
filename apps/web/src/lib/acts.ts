@@ -1,3 +1,4 @@
+import { resolveActs, type ResolvedAct } from "@/learning/outcomes";
 import type { TeachingAct } from "@/learning/types";
 import { newId, update, type StoreState } from "./store";
 
@@ -22,3 +23,16 @@ export function logAct(input: ActInput, opts: { once?: boolean; at?: number } = 
 }
 
 export const actsOf = (s: StoreState, profileId: string) => s.acts.filter((a) => a.profileId === profileId);
+
+// The store hands out a new document on every write, so a one-entry cache by reference recomputes
+// exactly when the record changed (or the hour turned, for windows that close with time).
+let memo: { s: StoreState; profileId: string; hour: number; out: ResolvedAct[] } | null = null;
+
+/** One learner's teaching acts with their outcomes (met / missed / pending), from the record. */
+export function resolvedActsOf(s: StoreState, profileId: string, now: number): ResolvedAct[] {
+  const hour = Math.floor(now / 3600_000);
+  if (memo && memo.s === s && memo.profileId === profileId && memo.hour === hour) return memo.out;
+  const out = resolveActs(actsOf(s, profileId), s, now);
+  memo = { s, profileId, hour, out };
+  return out;
+}

@@ -4,10 +4,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { NotFound } from "@/components/courses/NotFound";
+import { ChildNotes } from "@/components/family/ChildNotes";
 import { ChildSettings } from "@/components/family/ChildSettings";
 import { CoachNote } from "@/components/family/CoachNote";
+import { HowWeTeach } from "@/components/family/HowWeTeach";
+import { IsItWorking } from "@/components/family/IsItWorking";
 import { ReadingLog } from "@/components/family/ReadingLog";
 import { Threads } from "@/components/family/Threads";
+import { CourseRecord, DraftMark, ProvedList, SchoolResults } from "@/components/family/Verified";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { IconArrowLeft, IconArrowRight, IconBook } from "@/components/icons";
@@ -17,12 +21,13 @@ import { ComingUp } from "@/components/today/ComingUp";
 import { itemTitle } from "@/components/today/TodayPlan";
 import { Button, SubjectDot, btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
-import { shortDate } from "@/lib/format";
+import { verifiedEducation } from "@/learning/profile";
+import { scrubName } from "@/lib/ai/context";
 import { subjectProgress, weekFacts } from "@/lib/family";
 import { todayPlan } from "@/lib/plan";
 import { statusesOf } from "@/lib/practice";
-import { learnersOf, removeNote, selectLearner } from "@/lib/profiles";
-import { classesOf } from "@/lib/school";
+import { learnersOf, selectLearner } from "@/lib/profiles";
+import { classesOf, resultsOf } from "@/lib/school";
 import { useStore } from "@/lib/store";
 import type { Profile, Subject } from "@/lib/types";
 import { localDate } from "@/planner/dates";
@@ -57,7 +62,9 @@ function ChildView({ child, now, locale, onOpenAs, t }: { child: Profile; now: n
   const statuses = useStore((s) => statusesOf(s, child.id, now));
   const school = useStore((s) => comingUp(s.events.filter((e) => e.profileId === child.id), localDate(now), 14));
   const classes = useStore((s) => classesOf(s, child.id));
-  const notes = useStore((s) => s.notes.filter((n) => n.profileId === child.id).sort((a, b) => b.at - a.at));
+  const verified = useStore((s) =>
+    verifiedEducation({ statuses, activity: s.activity.filter((e) => e.profileId === child.id), courses: s.courses.filter((c) => c.profileId === child.id), results: resultsOf(s, child.id) }),
+  );
   const items = [...plan.lead, ...plan.more];
   const next = items.find((i) => !i.done);
   const title = (id: string) => getSkill(id)?.title[child.locale] ?? id;
@@ -129,7 +136,8 @@ function ChildView({ child, now, locale, onOpenAs, t }: { child: Profile; now: n
           {facts.stuck.length > 0 && <Fact label={t("child.stuck")} value={list(facts.stuck)} warn />}
           <Fact label={t("child.helpOn")} value={facts.helpOn.length ? list(facts.helpOn) : t("child.none")} />
         </ul>
-        <CoachNote facts={facts} locale={child.locale} comingUp={school.map((e) => `${e.title} (${e.date})`)} />
+        {/* School titles are free text and can carry the child's name; it never goes to a model. */}
+        <CoachNote facts={facts} locale={child.locale} comingUp={school.map((e) => scrubName(`${e.title} (${e.date})`, child.nickname))} />
         <p className="text-xs text-muted">{t("child.honest")}</p>
       </section>
 
@@ -144,45 +152,31 @@ function ChildView({ child, now, locale, onOpenAs, t }: { child: Profile; now: n
             const working = Object.values(statuses).filter((x) => getSkill(x.skillId)?.subject === subject && x.state !== "proved" && x.state !== "new").slice(0, 3);
             return (
               <li key={subject} className="space-y-1 px-4 py-3.5 sm:px-5">
-                <p className="flex items-center gap-2 text-sm font-medium text-ink">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-medium text-ink">
                   <SubjectDot subject={subject} /> {t(`subject.${subject}`)}
                   <span className="ml-auto font-opmono text-xs tabular-nums text-muted">{t("child.progressLine", { proved: p.proved, checking: p.checking, practicing: p.practicing, total: p.total })}</span>
                 </p>
                 {working.map((w) => (
-                  <p key={w.skillId} className="pl-5 text-xs text-muted">
-                    {title(w.skillId)} · {statusLine(w, now, child.locale)}
+                  <p key={w.skillId} className="flex flex-wrap items-center gap-x-2 pl-5 text-xs text-muted">
+                    <span>
+                      {title(w.skillId)} · {statusLine(w, now, child.locale)}
+                    </span>
+                    <DraftMark skillId={w.skillId} />
                   </p>
                 ))}
+                <ProvedList proved={verified.proved.filter((x) => getSkill(x.skillId)?.subject === subject)} locale={child.locale} />
               </li>
             );
           })}
         </ul>
       </section>
 
+      <CourseRecord id={`courses-${child.id}`} courses={verified.courses} />
       <ComingUp events={school} classes={classes} locale={child.locale} now={now} />
-
-      {notes.length > 0 && (
-        <section aria-labelledby="child-notes" className="space-y-3">
-          <h2 id="child-notes" className="font-brand text-t2 font-semibold text-ink">
-            {t("family.notes")}
-          </h2>
-          <ul className="space-y-2">
-            {notes.slice(0, 10).map((n) => (
-              <li key={n.id} className={`flex items-start gap-3 rounded-md px-4 py-3 ${n.from === "safety" ? "border border-accent/60 bg-panel" : "bg-panel2"}`}>
-                <p className="min-w-0 flex-1 whitespace-pre-line break-words text-sm text-ink">
-                  {n.from && <span className="mr-1 font-semibold">{t(n.from === "safety" ? "child.fromSafety" : "child.fromTutor")}</span>}
-                  {n.text}
-                </p>
-                <span className="shrink-0 font-opmono text-xs text-muted">{shortDate(n.at, locale)}</span>
-                <button type="button" onClick={() => removeNote(n.id)} aria-label={t("family.deleteNote")} className="grid size-8 place-items-center rounded-full text-muted hover:bg-panel hover:text-bad">
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
+      <SchoolResults id={`school-${child.id}`} results={verified.school} />
+      <HowWeTeach child={child} now={now} />
+      <IsItWorking child={child} now={now} />
+      <ChildNotes child={child} />
       <Threads child={child} />
       <ReadingLog child={child} now={now} />
       <ChildSettings child={child} />
