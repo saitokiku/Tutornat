@@ -60,16 +60,27 @@ test("a family's first evening", async ({ page }, info) => {
   for (let i = 0; i < 10 && (await page.getByRole("button", { name: /^Next/ }).count()); i++) await page.getByRole("button", { name: /^Next/ }).click();
   await page.getByRole("button", { name: /Finish lesson/ }).click();
   await expect(page.getByRole("heading", { name: "Lesson finished" })).toBeVisible();
-  await expect(page.getByText("1 right on your own · 0 with a hint · 0 not yet")).toBeVisible();
+  // Every check counted once, by how it ended; the ones skipped on the way to the end are not tried.
+  await expect(page.getByRole("region", { name: "Lesson finished" }).locator("dl > div")).toHaveText([
+    /^Right on your own\s*1$/,
+    /^Right with help\s*0$/,
+    /^Not yet\s*0$/,
+    /^Not tried\s*4$/,
+  ]);
 
-  // A course from the magic box; outline-only courses point to something ready now.
+  // A course from the magic box, built without AI from real sources, with something to start right
+  // now. The journey never depends on outside sites: here they find nothing (Wikipedia, word lists and
+  // books are covered in courses.spec.ts), so the course is built from what is on the device, and says so.
+  await page.route("**/api/know/**", (r) => r.fulfill({ json: {} }));
   await page.goto("/courses/new");
-  await page.getByRole("textbox").first().fill("dinosaurs");
+  await page.getByLabel("What do you want to learn?").fill("dinosaurs");
   await page.getByRole("button", { name: /Build my course/ }).click();
   await expect(page.getByRole("button", { name: /Create course/ })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Create course/ }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Dinosaurs" })).toBeVisible();
-  await expect(page.getByText("Ready to learn right now")).toBeVisible();
+  await page.unroute("**/api/know/**");
+  const course = page.locator("header", { has: page.getByRole("heading", { level: 1, name: "Dinosaurs" }) });
+  await expect(course.getByText("Built from real sources", { exact: true })).toBeVisible();
+  await expect(course.getByRole("link", { name: "Start", exact: true })).toHaveAttribute("href", /^\/learn\//);
   await noOverflow(page);
 
   // Growth tells the truth.

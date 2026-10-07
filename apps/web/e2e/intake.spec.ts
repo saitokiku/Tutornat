@@ -76,7 +76,8 @@ test("a typed test lands on an item page showing its skills' statuses and a prep
   await expect(page.getByRole("heading", { level: 1, name: "Multiplication test" })).toBeVisible();
   const skills = page.getByRole("region", { name: "What it covers" });
   await expect(skills.getByText("Multiplication facts to 10 × 10")).toBeVisible();
-  await expect(skills.getByText("Not started")).toBeVisible();
+  // The skill's own row says where it stands (the count above it says "not started" too).
+  await expect(skills.getByRole("listitem").filter({ hasText: "Multiplication facts to 10 × 10" }).getByText("Not started", { exact: true })).toBeVisible();
   await expect(page.getByText("0 proved · 0 practicing · 1 not started")).toBeVisible();
   await noOverflow(page);
   await page.getByRole("button", { name: /Prep for this test/ }).click();
@@ -96,8 +97,10 @@ test("the guess can be changed by keyboard before anything is made, and Enter co
   await expect(page.getByRole("radio", { name: "Test" })).toBeChecked();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/calendar\/[\w-]+$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Spelling words" })).toBeVisible();
-  await expect(page.getByText("Test", { exact: true })).toBeVisible();
+  // The item's own line names its kind. (Today stays mounted, hidden, behind it, and its box and
+  // coming-up list say "Test" too.)
+  const item = page.locator("header", { has: page.getByRole("heading", { level: 1, name: "Spelling words" }) });
+  await expect(item.getByText("Test", { exact: true })).toBeVisible();
   expect(errors, errors.join("\n")).toEqual([]);
 });
 

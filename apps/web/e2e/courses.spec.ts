@@ -103,7 +103,9 @@ test("“volcanoes” becomes a course with a cited overview, key words, a relat
 
   // The course page: labelled, every lesson part there, every source linked.
   await expect(page.getByRole("heading", { level: 1, name: "Ada wants to learn about volcanoes" })).toBeVisible();
-  await expect(page.getByText("Built from Wikipedia and real sources")).toBeVisible();
+  // In the course's own header (Learn stays mounted, hidden, behind it, and its path shows the label too).
+  const header = page.locator("header", { has: page.getByRole("heading", { level: 1, name: "Ada wants to learn about volcanoes" }) });
+  await expect(header.getByText("Built from Wikipedia and real sources")).toBeVisible();
   const lessons = page.getByRole("region", { name: "Lessons", exact: true });
   await expect(lessons.getByText("Start here: Volcano", { exact: true })).toBeVisible();
   await expect(lessons.getByText("Words to know", { exact: true })).toBeVisible();
@@ -212,6 +214,8 @@ test("a course from a grown-up comes first on the learner's path", async ({ page
   await expect(pathTitles(page, "Math")).toHaveText(["Fractions: parts of a whole"]);
 
   await asParent(page);
+  // Assigning sits with the notes, in the card's "Notes and courses" fold.
+  await page.getByRole("article", { name: "Ada" }).locator("summary", { hasText: "Notes and courses" }).click();
   await page.getByLabel("Assign a course").selectOption("math-negative");
   await page.getByRole("button", { name: "Assign to Ada" }).click();
   await expect(page.getByText("Assigned to Ada")).toBeVisible();
