@@ -120,7 +120,7 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
         <Shell id={id} label={label}>
           <figure>
             <div className="flex justify-center">
-              <VisualView visual={card.visual} alt={card.description} tint={SUBJECT_TINT.math} />
+              <VisualView visual={card.visual} alt={card.description} tint={card.visual.kind === "particles" || card.visual.kind === "moon" ? SUBJECT_TINT.science : SUBJECT_TINT.math} />
             </div>
             {card.description && <figcaption className="mt-2 text-xs text-muted">{card.description}</figcaption>}
           </figure>
