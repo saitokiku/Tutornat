@@ -1,6 +1,34 @@
 # Status
 
-Live checklist for the foundation build. Plan: [plans/2026-10-07-foundation-plan.md](plans/2026-10-07-foundation-plan.md) · Spec: [specs/2026-10-07-foundation-design.md](specs/2026-10-07-foundation-design.md)
+## Learning fabric — overnight queue 2 (owner asleep 2026-10-07 → morning)
+
+Spec: [specs/2026-10-07-learning-fabric-design.md](specs/2026-10-07-learning-fabric-design.md).
+Owner: "super detailed codebase … all features you can step by step … the ultimate learning fabric …
+start with k-9 math and English and science … use real sources … work all night … don't ask for
+permission". Work top to bottom. Tick only after `npm run verify` passed and the work is committed.
+Keep production (kaizenedu.net) untouched; preview deploys only.
+
+In progress: Q3 · check-ins without a commit: 0
+
+- [x] Q1. Practice core: types, seeded rng, safe algebra parser, answer checker, K–2 math (19 skills), registry + wide generator test.
+- [ ] Q2. Strands from parallel authors merged and reviewed: math 3–5, 6–7, 8–9; English K–4, 5–9; science K–5, 6–9 (each with independent-verification tests).
+- [ ] Q3. Visuals for practice (dots, ten-frame, base-ten, clock, array, column, rect, triangle, circle, right-triangle, prism, coord) + MathText renderer.
+- [ ] Q4. Learning engine (`learning/`): evidence type + store lists, skill status (practicing/ready/checked/proved/refresh), level stepping, review due, set builder, placement; unit tests.
+- [ ] Q5. Practice UI: `/practice` hub (subjects, skill map with status, "practice anything" search), `/practice/[setId]` runner (keypad, fraction pad, choices, text; hint ladder; steps; read-aloud; corrections; finish summary), check mode; e2e.
+- [ ] Q6. Planner: `planFor` (checks, school prep, due work, daily sets, lesson, more), Today page rewrite, done markers; unit tests.
+- [ ] Q7. School + calendar: classes, events, feedback, results; `/calendar` week/day views; add/edit; ICS parse + export + `/api/ics` feed fetch (SSRF-guarded); paste intake parser with review step; feedback → feedback set.
+- [ ] Q8. AI layer: provider resolution, `/api/ai/status`, safety screen, prompts by band, tutor route with tools, demo tutor; tests with mock model.
+- [ ] Q9. Tutor UI: drawer on practice + lesson stage; `/talk` full-screen with board; voice (read-aloud streaming by sentence, push-to-talk with grown-up permission); transcripts saved.
+- [ ] Q10. AI course generation (Scene schema + quality gates, streamed), AI open-topic practice, AI extract (syllabus/feedback/photo), coach note — all wired into existing screens with demo fallbacks.
+- [ ] Q11. Resources: curated real free sources per skill family/topic (URLs checked), shown on skill pages, lesson ends, tutor tool, parent view; reading log with real free libraries.
+- [ ] Q12. Setup goals (homework help / daily practice / homeschool / stay organized) → defaults; "Get help now" entry everywhere; homeschool records (dated log, CSV, print).
+- [ ] Q13. Family dashboard per child + per-child settings (minutes, subjects, timer, voice), weekly numbers, checks waiting, stuck notes, transcripts.
+- [ ] Q14. Landing for the four jobs; nav update (Today, Practice, Talk, Learn, Calendar, Growth).
+- [ ] Q15. ES pass, e2e journeys (help-now, daily practice, homeschool, school import), axe audit, screenshots, README/STATUS/ROADMAP, preview deploy, morning report.
+
+## Foundation build (done)
+
+Checklist for the foundation build. Plan: [plans/2026-10-07-foundation-plan.md](plans/2026-10-07-foundation-plan.md) · Spec: [specs/2026-10-07-foundation-design.md](specs/2026-10-07-foundation-design.md)
 
 Rule: a box is ticked only after its check actually ran. Note blockers under the task.
 
