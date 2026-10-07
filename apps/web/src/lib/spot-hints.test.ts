@@ -77,7 +77,7 @@ describe("answerSpots", () => {
   });
 
   it("guards the keys wherever the answer is typed, and every point or part of a touch pad", () => {
-    const keys = answerSpots(makeItem("m.next.number", 1, 1, "en"));
+    const keys = answerSpots(makeItem("m.add.10", 1, 1, "en"));
     expect(keys).toContain("practice.pad.keys");
     expect(keys).toContain("practice.pad.key.7");
     expect(answerSpots(makeItem("m.frac.unit", 1, 1, "en"))).toContain("practice.pad.keys");
@@ -90,7 +90,7 @@ describe("answerSpots", () => {
 
   it("on screen: a keypad item's digits can't be pointed at by any id, the slot the answer goes in can", () => {
     fakeLayout();
-    const item = makeItem("m.next.number", 1, 1, "en");
+    const item = makeItem("m.add.10", 1, 1, "en");
     expect(item.input).toBe("keypad");
     const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"].map((k) => `<button type="button" aria-label="${k}">${k}</button>`).join("");
     document.body.innerHTML = `
