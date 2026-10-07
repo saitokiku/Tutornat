@@ -16,6 +16,9 @@ import * as schema from "./schema";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
+/** Rows of a raw `db.execute(sql…)`: both drivers answer `{ rows }`. */
+export const rowsOf = <T>(result: unknown) => (result as { rows: T[] }).rows;
+
 type State = { db?: Promise<Db>; test?: Db | null };
 const KEY = Symbol.for("kaizenedu.db");
 const state = ((globalThis as Record<symbol, unknown>)[KEY] ??= {}) as State;

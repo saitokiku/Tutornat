@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Db } from "./client";
+import { rowsOf, type Db } from "./client";
 import { accounts, attempts, consentReceipts, courses, profiles, RECORD_TABLES, sessions } from "./schema";
 import { testDb } from "./testing";
 import { SYNC_LISTS } from "./wire";
@@ -16,8 +16,8 @@ const rec = (accountId: string, id: string, profileId: string | null = null) => 
 
 describe("schema", () => {
   it("has one table per synced store list", async () => {
-    const { rows } = await db.execute<{ table_name: string }>(sql`select table_name from information_schema.tables where table_schema = 'public'`);
-    const tables = rows.map((r) => r.table_name);
+    const result = await db.execute(sql`select table_name from information_schema.tables where table_schema = 'public'`);
+    const tables = rowsOf<{ table_name: string }>(result).map((r) => r.table_name);
     for (const t of ["accounts", "sessions", "password_resets", "auth_throttle", "attempts", "consent_receipts", "plan_done"]) expect(tables).toContain(t);
     // Every list the browser syncs has a home: attempts on its own, the rest as record tables.
     expect(SYNC_LISTS.filter((l) => l !== "attempts").sort()).toEqual(Object.keys(RECORD_TABLES).sort());

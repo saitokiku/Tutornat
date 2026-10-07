@@ -1814,6 +1814,12 @@ const es: Record<Key, string> = {
   "ai.budget.extract.month": "Tu familia ya usó el tiempo de IA de este mes. La lectura con IA de papeles de la escuela vuelve el {date}; puedes agregar las fechas a mano ahora.",
   "ai.budget.coach.day": "Hoy ya no se pueden escribir más notas de la semana. Todo lo de esta página sigue aquí; inténtalo mañana.",
   "ai.budget.coach.month": "Tu familia ya usó el tiempo de IA de este mes. La nota de la semana vuelve el {date}.",
+  // -- backend
+  "acct.err.passwordLong": "Usa 200 caracteres o menos",
+  "acct.mail.resetSubject": "Restablece tu contraseña de KaizenEDU",
+  "acct.mail.resetBody": "Alguien pidió restablecer la contraseña de esta cuenta de KaizenEDU. Abre el enlace de abajo en la próxima hora para elegir una nueva.",
+  "acct.mail.resetButton": "Elegir una contraseña nueva",
+  "acct.mail.resetIgnore": "Si no fuiste tú, ignora este correo. Tu contraseña no cambia.",
 };
 
 export default es;

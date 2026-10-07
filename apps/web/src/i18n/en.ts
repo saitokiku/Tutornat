@@ -1812,6 +1812,12 @@ const en = {
   "ai.budget.extract.month": "Your family has used this month's AI time. Reading school papers with AI is back on {date}; you can add the dates by hand now.",
   "ai.budget.coach.day": "No more weekly notes today. Everything on this page is still here; try again tomorrow.",
   "ai.budget.coach.month": "Your family has used this month's AI time. The weekly note is back on {date}.",
+  // -- backend
+  "acct.err.passwordLong": "Use 200 characters or fewer",
+  "acct.mail.resetSubject": "Reset your KaizenEDU password",
+  "acct.mail.resetBody": "Someone asked to reset the password for this KaizenEDU account. Open the link below within an hour to choose a new one.",
+  "acct.mail.resetButton": "Choose a new password",
+  "acct.mail.resetIgnore": "If it wasn't you, ignore this email. Your password stays the same.",
 } as const;
 
 export default en;
