@@ -200,3 +200,27 @@ export function isFactored(n: Node): boolean {
 export function isExpanded(src: string): boolean {
   return !/[()]/.test(src.replace(/\^\(-?\d+\)/g, ""));
 }
+
+/** The top-level terms of a sum: a + b − c → [a, b, c]. */
+export function termsOf(n: Node): Node[] {
+  if (n.t === "bin" && (n.op === "+" || n.op === "-")) return [...termsOf(n.a), ...termsOf(n.b)];
+  if (n.t === "neg") return termsOf(n.a);
+  return [n];
+}
+
+function varCounts(n: Node, out = new Map<string, number>()): Map<string, number> {
+  if (n.t === "var") out.set(n.n, (out.get(n.n) ?? 0) + 1);
+  else if (n.t === "neg" || n.t === "fn") varCounts(n.a, out);
+  else if (n.t === "bin") {
+    varCounts(n.a, out);
+    if (n.op !== "^") varCounts(n.b, out);
+  }
+  return out;
+}
+
+/** As simple as the expected answer: no more terms, and no variable written twice in one term (x·x, x^4·x^3). */
+export function isSimplified(got: Node, want: Node): boolean {
+  const terms = termsOf(got);
+  if (terms.length > termsOf(want).length) return false;
+  return terms.every((t) => [...varCounts(t).values()].every((c) => c <= 1));
+}

@@ -26,5 +26,6 @@ export function sayFrac(n: number, d: number, locale: Locale) {
   const a = Math.abs(n);
   const names = (locale === "es" ? ES_DEN : EN_DEN)[d];
   if (!names) return `${sign}${a} ${tr(locale, "over", "sobre")} ${d}`;
-  return `${sign}${a} ${a === 1 ? names[0] : names[1]}`;
+  // "one third" / "un tercio", not "1 third" / "uno tercio".
+  return a === 1 ? `${sign}${tr(locale, "one", "un")} ${names[0]}` : `${sign}${a} ${names[1]}`;
 }

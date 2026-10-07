@@ -28,6 +28,7 @@ const FORM_KEY: Record<NonNullable<Verdict["form"]>, Key> = {
   simplest: "practice.form.simplest",
   factored: "practice.form.factored",
   expanded: "practice.form.expanded",
+  simplified: "practice.form.simplified",
   remainder: "practice.form.remainder",
 };
 

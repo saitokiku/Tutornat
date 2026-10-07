@@ -11,7 +11,9 @@ import { getSkill } from "@/practice/skills";
 type Projected = { key: string; date: string; label: string; kind: "prep" | "check" };
 
 /** What the planner will put on each day: prep before tests, checks opening. Shown lighter than school items. */
-export function projections(events: SchoolEvent[], statuses: Statuses, from: string, to: string, locale: Locale, t: (k: never, v?: Record<string, string | number>) => string): Projected[] {
+export function projections(events: SchoolEvent[], statuses: Statuses, from: string, to: string, locale: Locale, t: (k: never, v?: Record<string, string | number>) => string, today = from): Projected[] {
+  // Nothing is projected into the past: those days already happened.
+  if (from < today) from = today;
   const out: Projected[] = [];
   for (const e of events) {
     if (e.done || !(e.kind === "test" || e.kind === "quiz") || !e.skillIds.some(getSkill)) continue;
@@ -53,7 +55,7 @@ export function WeekView({
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   const end = days[6];
   const fmt = (d: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale === "es" ? "es-US" : "en-US", o).format(fromLocalDate(d));
-  const proj = projections(events, statuses, start, end, locale, t as never);
+  const proj = projections(events, statuses, start, end, locale, t as never, today);
   const color = (e: SchoolEvent) => classes.find((c) => c.id === e.classId)?.color ?? "var(--color-muted)";
 
   return (

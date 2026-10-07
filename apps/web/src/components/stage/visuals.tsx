@@ -110,6 +110,11 @@ export function NumberLineVisual({
   return (
     <svg viewBox={`0 0 ${w} 64`} role="img" aria-label={alt} className="w-full max-w-md">
       <line x1={pad - 8} x2={w - pad + 8} y1={y} y2={y} stroke={INK} strokeWidth={2} strokeLinecap="round" />
+      {/* With a denominator, every 1/d gets a small unlabeled tick so a point can be read, not guessed. */}
+      {denominator &&
+        Array.from({ length: Math.round((max - min) * denominator) + 1 }, (_, k) => min + k / denominator)
+          .filter((v) => !marks.some((m) => Math.abs(m - v) < 1e-9))
+          .map((v) => <line key={`t${v}`} x1={x(v)} x2={x(v)} y1={y - 4} y2={y + 4} stroke={INK} strokeWidth={1} opacity={0.6} />)}
       {marks.map((m) => (
         <g key={m}>
           <line x1={x(m)} x2={x(m)} y1={y - 7} y2={y + 7} stroke={INK} strokeWidth={1.5} />

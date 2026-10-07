@@ -74,10 +74,10 @@ export function unlockParent() {
   update((s) => void (s.session.unlocked = true));
 }
 
-export function addNote(profileId: string, text: string) {
+export function addNote(profileId: string, text: string, from?: "tutor" | "safety") {
   const clean = text.trim().slice(0, 1000);
   if (!clean) return;
-  update((s) => void s.notes.push({ id: newId(), profileId, at: Date.now(), text: clean }));
+  update((s) => void s.notes.push({ id: newId(), profileId, at: Date.now(), text: clean, from }));
 }
 
 export function removeNote(id: string) {

@@ -23,3 +23,6 @@ next-env.d.ts
 .claude/settings.local.json
 playwright-report/
 test-results/
+
+# Agent worktrees (local only)
+.claude/worktrees/

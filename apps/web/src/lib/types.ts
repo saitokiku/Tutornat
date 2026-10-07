@@ -138,7 +138,8 @@ export type ActivityEvent = {
   seconds?: number;
 };
 
-export type ParentNote = { id: string; profileId: string; at: number; text: string };
+/** A note for the learner's grown-ups: written by a grown-up, or left by the tutor (`from: "tutor"`). */
+export type ParentNote = { id: string; profileId: string; at: number; text: string; from?: "tutor" | "safety" };
 
 export type GenerationRequest = {
   goal: string;

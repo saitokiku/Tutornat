@@ -135,7 +135,7 @@ function expRulesVar(r: Rng, locale: Locale): ItemBody {
       prompt: [instr, ...(coef ? [String(c1)] : []), pw(v, a), " · ", ...(coef ? [String(c2)] : []), pw(v, b)],
       say: tr(locale, `Simplify ${mono(c1, a)} times ${mono(c2, b)}. Use one exponent.`, `Simplifica ${mono(c1, a)} por ${mono(c2, b)}. Usa un solo exponente.`),
       input: "expr",
-      answer: { kind: "expr", expr: `${k === 1 ? "" : k}${v}^${e}` },
+      answer: { kind: "expr", expr: `${k === 1 ? "" : k}${v}^${e}`, form: "simplified" },
       hints: [
         tr(locale, `Both powers have the base ${v}, so they can be combined.`, `Las dos potencias tienen base ${v}, así que se pueden combinar.`),
         coef
@@ -155,7 +155,7 @@ function expRulesVar(r: Rng, locale: Locale): ItemBody {
       prompt: [instr, pw(v, a), " ÷ ", pw(v, b)],
       say: tr(locale, `Simplify ${sayPow(v, a, "en")} divided by ${sayPow(v, b, "en")}. Use one exponent.`, `Simplifica ${sayPow(v, a, "es")} entre ${sayPow(v, b, "es")}. Usa un solo exponente.`),
       input: "expr",
-      answer: { kind: "expr", expr: `${v}^${e}` },
+      answer: { kind: "expr", expr: `${v}^${e}`, form: "simplified" },
       hints: [
         tr(locale, `Write both as products of ${v}'s. How many factors cancel?`, `Escribe las dos como productos de ${v}. ¿Cuántos factores se cancelan?`),
         tr(locale, "To divide powers with the same base, keep the base and subtract the exponents: first minus second.", "Para dividir potencias de la misma base, conserva la base y resta los exponentes: el primero menos el segundo."),
@@ -175,7 +175,7 @@ function expRulesVar(r: Rng, locale: Locale): ItemBody {
     prompt: [instr, "(", ...(coef ? [String(c)] : []), pw(v, a), { sup: [")", String(b)] }],
     say: tr(locale, `Simplify ${c === 1 ? "" : `${c} `}${sayPow(v, a, "en")}, ${all}. Use one exponent.`, `Simplifica ${c === 1 ? "" : `${c} `}${sayPow(v, a, "es")}, ${all}. Usa un solo exponente.`),
     input: "expr",
-    answer: { kind: "expr", expr: `${k === 1 ? "" : k}${v}^${e}` },
+    answer: { kind: "expr", expr: `${k === 1 ? "" : k}${v}^${e}`, form: "simplified" },
     hints: [
       tr(locale, `(${inner})${sup(b)} means ${inner} used as a factor ${b} times.`, `(${inner})${sup(b)} significa ${inner} usado como factor ${b} veces.`),
       coef

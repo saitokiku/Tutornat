@@ -62,6 +62,11 @@ describe("check", () => {
     expect(check({ kind: "expr", expr: "x^2+5x+6", form: "factored" }, "(x+2)(x+3)").correct).toBe(true);
     expect(check({ kind: "expr", expr: "x^2+5x+6", form: "factored" }, "x^2+5x+6")).toEqual({ correct: false, form: "factored" });
     expect(check({ kind: "expr", expr: "3x-4" }, "y = 3x − 4").correct).toBe(true);
+    // Typing the question back is not simplifying it.
+    expect(check({ kind: "expr", expr: "x^7", form: "simplified" }, "x^4*x^3")).toEqual({ correct: false, form: "simplified" });
+    expect(check({ kind: "expr", expr: "x^7", form: "simplified" }, "x^7").correct).toBe(true);
+    expect(check({ kind: "expr", expr: "5x+2", form: "expanded" }, "3x + 2x + 2")).toEqual({ correct: false, form: "expanded" });
+    expect(check({ kind: "expr", expr: "5x+2", form: "expanded" }, "2 + 5x").correct).toBe(true);
   });
 
   it("text answers ignore case, accents and punctuation", () => {

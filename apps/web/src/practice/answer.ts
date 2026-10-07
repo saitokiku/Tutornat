@@ -1,4 +1,4 @@
-import { equivalent, isExpanded, isFactored, parse } from "./expr";
+import { equivalent, isExpanded, isFactored, isSimplified, parse } from "./expr";
 import { gcd } from "./rng";
 import type { Answer } from "./types";
 
@@ -6,7 +6,7 @@ import type { Answer } from "./types";
 // `form` failures ("right amount, not in simplest form") are reported separately so feedback can say
 // exactly what to fix; they still count as not correct.
 
-export type Verdict = { correct: boolean; form?: "simplest" | "factored" | "expanded" | "remainder" };
+export type Verdict = { correct: boolean; form?: "simplest" | "factored" | "expanded" | "simplified" | "remainder" };
 
 export type ParsedNumber = { value: number; n?: number; d?: number };
 
@@ -104,7 +104,8 @@ export function check(answer: Answer, response: string | number): Verdict {
       const got = parse(rhs), want = parse(answer.expr);
       if (!got || !want || !equivalent(got, want)) return { correct: false };
       if (answer.form === "factored" && !isFactored(got)) return { correct: false, form: "factored" };
-      if (answer.form === "expanded" && !isExpanded(rhs)) return { correct: false, form: "expanded" };
+      if (answer.form === "expanded" && (!isExpanded(rhs) || !isSimplified(got, want))) return { correct: false, form: "expanded" };
+      if (answer.form === "simplified" && !isSimplified(got, want)) return { correct: false, form: "simplified" };
       return { correct: true };
     }
     case "text":

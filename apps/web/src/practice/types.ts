@@ -13,7 +13,7 @@ export type Answer =
   | { kind: "fraction"; n: number; d: number; simplest?: boolean }
   | { kind: "choice"; index: number }
   | { kind: "text"; accept: string[] }
-  | { kind: "expr"; expr: string; form?: "factored" | "expanded" }
+  | { kind: "expr"; expr: string; form?: "factored" | "expanded" | "simplified" }
   | { kind: "set"; values: number[] }
   | { kind: "pair"; x: number; y: number }
   | { kind: "remainder"; q: number; r: number };
