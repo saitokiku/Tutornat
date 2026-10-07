@@ -4,8 +4,9 @@ import { collectErrors, family, noOverflow } from "./helpers";
 
 // The tutor that knows things, in demo mode (no AI): a topic question gets a cited extract and the
 // practice that fits on the board; a photo stays on the device; a school date goes on the calendar in one
-// tap; a kindergartner taps instead of typing. Knowledge routes are stubbed so the journey never depends
-// on Wikipedia being reachable. Every journey runs at desktop and phone sizes.
+// tap; a kindergartner taps instead of typing. With the AI tutor (its route stubbed with a streamed
+// reply), a photo is shrunk in the browser and sent with the words. Knowledge routes are stubbed so the
+// journeys never depend on Wikipedia being reachable. Every journey runs at desktop and phone sizes.
 
 const FALLACY = {
   title: "Fallacy",
