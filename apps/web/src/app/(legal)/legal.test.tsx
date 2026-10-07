@@ -36,12 +36,25 @@ describe("policy pages", () => {
   it("says plainly what goes where, and claims no certification", () => {
     page(<PrivacyPage />);
     const text = document.body.textContent!;
-    expect(text).toContain("We never send learners' names to an AI model or to any other company.");
+    expect(text).toContain("We never attach a learner's name, your name or your email to what we send an AI model or another company.");
     expect(text).toContain("a name typed into a message or a school item goes with it");
     expect(text).toContain("only the words being looked up");
     expect(text).toContain("verifiable parental consent under COPPA");
     expect(text).toMatch(/Apple or Google/);
+    // Request data our host keeps, typed titles in the weekly email, and online read-aloud voices.
+    expect(text).toContain("IP address");
+    expect(text).toContain("the titles of upcoming tests and quizzes as you typed them");
+    expect(text).toContain("online Google voice");
     expect(text).not.toMatch(/certified|compliant|guarantee|100%|military-grade|bank-level/i);
+  });
+
+  it("never claims, anywhere, that a typed name can't leave the device", () => {
+    // Text goes as typed (privacy ai.2), so no sentence may promise that names never go anywhere.
+    for (const [k, v] of Object.entries(en).filter(([k]) => k.startsWith("trust."))) {
+      expect(v, k).not.toMatch(/never (send|sent|carried|carries) (a |learners' )?names?\b/i);
+      expect(v, k).not.toMatch(/without names/i);
+      expect(v, k).not.toMatch(/never your children's names/i);
+    }
   });
 
   it("terms and retention render with their own sections", () => {
@@ -56,14 +69,23 @@ describe("policy pages", () => {
     const tables = screen.getAllByRole("table");
     expect(tables).toHaveLength(2);
     expect(within(tables[0]).getByRole("rowheader", { name: "Password reset links" }).nextElementSibling).toHaveTextContent("30 minutes.");
+    expect(within(tables[0]).getByRole("rowheader", { name: /^Requests to our server/ }).nextElementSibling).toHaveTextContent(/request logs/);
     expect(within(tables[1]).getAllByRole("row")).toHaveLength(5);
+    // The later rows are a proposal: no period the owner hasn't set.
+    expect(screen.getByRole("heading", { level: 2, name: "Once accounts are on our server (proposed)" })).toBeInTheDocument();
+    expect(tables[1].textContent).not.toMatch(/\d+ (days|months)/);
   });
 
-  it("switches to Spanish with the language toggle, keyboard only", async () => {
+  it("switches to Spanish with full-name language buttons, keyboard only", async () => {
     page(<PrivacyPage />);
     const user = userEvent.setup();
-    screen.getByRole("button", { name: "es" }).focus();
+    const group = screen.getByRole("group", { name: "Language" });
+    expect(within(group).getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+    const es = within(group).getByRole("button", { name: "Español" });
+    expect(es).toHaveClass("min-h-11");
+    es.focus();
     await user.keyboard("{Enter}");
+    expect(es).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("heading", { level: 1, name: "Privacidad" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Borrador, pendiente de revisión legal");
     expect(screen.getByRole("note")).toHaveTextContent("7 de octubre de 2026");

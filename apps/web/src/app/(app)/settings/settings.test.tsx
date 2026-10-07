@@ -94,31 +94,52 @@ describe("Settings for a grown-up", () => {
     expect(read().profiles.map((p) => p.id)).toEqual([bo.id]);
     expect(read().attempts.some((a) => a.profileId === ada.id)).toBe(false);
     expect(read().threads).toEqual([]);
-    expect(screen.getByText("Deleted Ada and their records.")).toBeInTheDocument();
+    // Focus lands on the notice, so it is read out and the next Tab goes on from here.
+    const notice = screen.getByText("Deleted Ada and their records.");
+    expect(notice.closest("[tabindex='-1']")).toHaveFocus();
   });
 
-  it("cancelling a learner delete keeps everything", async () => {
+  it("cancelling a learner delete keeps everything and returns focus to that learner's Delete button", async () => {
     await grownUp();
     const user = userEvent.setup();
     render(<SettingsPage />);
-    await user.click(screen.getByRole("button", { name: "Delete Bo and their records" }));
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    screen.getByRole("button", { name: "Delete Bo and their records" }).focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await user.keyboard("{Enter}");
     expect(read().profiles).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Delete Bo and their records" })).toHaveFocus();
   });
 
-  it("deletes everything only after the confirm word, then reloads", async () => {
+  it("deletes everything only with the confirm word and the account password, then reloads", async () => {
     await grownUp();
     const user = userEvent.setup();
     render(<SettingsPage />);
     const del = screen.getByRole("button", { name: "Delete our account and data" });
     expect(del).toBeDisabled();
     expect(screen.getAllByLabelText("What would be deleted")[0]).toHaveTextContent(/Learners\s*2|2\s*Learners/);
-    await user.type(screen.getByLabelText("Type DELETE to confirm"), "delet");
-    expect(del).toBeDisabled();
-    await user.type(screen.getByLabelText("Type DELETE to confirm"), "e{Enter}");
+    await user.type(screen.getByLabelText("Type DELETE to confirm"), "delete");
+    expect(del).toBeDisabled(); // still needs the password
+    const password = screen.getByLabelText("Your password");
+    await user.type(password, "not-my-password");
+    expect(del).toBeEnabled();
+    await user.click(del);
+    expect(await screen.findByText("That password isn't right.")).toBeInTheDocument();
+    expect(password).toHaveFocus();
+    expect(read().accounts).toHaveLength(1);
+    expect(reloadHome).not.toHaveBeenCalled();
+    await user.clear(password);
+    await user.type(password, "longenough{Enter}");
     await waitFor(() => expect(reloadHome).toHaveBeenCalledOnce());
     expect(read().accounts).toEqual([]);
     expect(read().profiles).toEqual([]);
+  });
+
+  it("says when saved files aren't inside the download", async () => {
+    const { ada } = await grownUp();
+    update((s) => void s.events.push({ id: "e1", profileId: ada.id, title: "Quiz", kind: "quiz", date: "2026-10-09", skillIds: [], source: "typed", createdAt: Date.now(), attachment: { blobId: "b1", name: "quiz.jpg" } }));
+    render(<SettingsPage />);
+    expect(screen.getByText(/1 saved photo or file attached to a school item isn't inside it/)).toBeInTheDocument();
   });
 
   it("links to question review, the policies and the contact address", async () => {

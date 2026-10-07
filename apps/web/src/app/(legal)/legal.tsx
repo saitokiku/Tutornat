@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { KaizenLogo } from "@/components/brand";
 import { useTitle } from "@/components/LangSync";
-import { LangToggle } from "@/components/LangToggle";
 import { useLocale, useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
+import { update } from "@/lib/store";
 
 // The public policy pages. They render on the server in English and switch to the family's
 // language in the browser (no store needed to read them).
@@ -39,14 +39,29 @@ export function PolicyLinks({ className = "" }: { className?: string }) {
   );
 }
 
+/** English / Español as full words at 44px, so a Spanish-speaking parent on a phone finds it at once. */
+function LanguagePicker() {
+  const t = useT();
+  const locale = useLocale();
+  return (
+    <div role="group" aria-label={t("trust.legal.language")} className="flex flex-wrap gap-2">
+      {(["en", "es"] as const).map((l) => (
+        <button key={l} type="button" lang={l} aria-pressed={locale === l} onClick={() => update((s) => void (s.prefs.locale = l))} className="k-chip min-h-11 px-4 text-sm">
+          {t(`lang.${l}`)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function LegalFrame({ children }: { children: ReactNode }) {
   const t = useT();
   const path = usePathname();
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
-      <header className="mx-auto flex w-full max-w-wide items-center justify-between gap-4 px-4 py-5 sm:px-8">
+      <header className="mx-auto flex w-full max-w-wide flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-8">
         <KaizenLogo size={32} href="/" />
-        <LangToggle />
+        <LanguagePicker />
       </header>
       <nav aria-label={t("trust.legal.nav")} className="mx-auto w-full max-w-prose px-4 sm:px-0">
         <ul className="flex flex-wrap gap-2">
@@ -100,7 +115,7 @@ export function LegalPage({ title, intro, sections }: { title: Key; intro: Key; 
           <ol className="mt-2 grid gap-x-6 sm:grid-cols-2">
             {sections.map((s) => (
               <li key={s.id}>
-                <a href={`#${s.id}`} className="inline-flex min-h-11 items-center text-sm text-ink underline decoration-border underline-offset-4 hover:decoration-accent sm:min-h-9">
+                <a href={`#${s.id}`} className="inline-flex min-h-11 items-center text-sm text-ink underline decoration-border underline-offset-4 hover:decoration-accent">
                   {t(s.title)}
                 </a>
               </li>

@@ -10,7 +10,7 @@ const contact: PolicySection = { id: "contact", title: "trust.privacy.contact.h"
 const PRIVACY: PolicySection[] = [
   { id: "short", title: "trust.privacy.short.h", blocks: [{ list: ["trust.privacy.short.1", "trust.privacy.short.2", "trust.privacy.short.3", "trust.privacy.short.4", "trust.privacy.short.5"] }] },
   { id: "keep", title: "trust.privacy.keep.h", blocks: [{ list: ["trust.privacy.keep.1", "trust.privacy.keep.2", "trust.privacy.keep.3"] }] },
-  { id: "where", title: "trust.privacy.where.h", blocks: [{ p: "trust.privacy.where.1" }, { p: "trust.privacy.where.2" }, { p: "trust.privacy.where.3" }] },
+  { id: "where", title: "trust.privacy.where.h", blocks: [{ p: "trust.privacy.where.1" }, { p: "trust.privacy.where.2" }, { p: "trust.privacy.where.4" }, { p: "trust.privacy.where.3" }] },
   { id: "ai", title: "trust.privacy.ai.h", blocks: [{ p: "trust.privacy.ai.1" }, { p: "trust.privacy.ai.2" }, { p: "trust.privacy.ai.3" }, { p: "trust.privacy.ai.4" }] },
   { id: "lookups", title: "trust.privacy.know.h", blocks: [{ p: "trust.privacy.know.1" }] },
   { id: "voice", title: "trust.privacy.voice.h", blocks: [{ p: "trust.privacy.voice.1" }, { p: "trust.privacy.voice.2" }, { p: "trust.privacy.voice.3" }] },
@@ -50,6 +50,7 @@ const RETENTION: PolicySection[] = [
           ["trust.retention.now.reset", "trust.retention.now.resetHow"],
           ["trust.retention.now.ai", "trust.retention.now.aiHow"],
           ["trust.retention.now.know", "trust.retention.now.knowHow"],
+          ["trust.retention.now.requests", "trust.retention.now.requestsHow"],
           ["trust.retention.now.email", "trust.retention.now.emailHow"],
           ["trust.retention.now.logs", "trust.retention.now.logsHow"],
         ],
