@@ -163,10 +163,12 @@ function DemoChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
       if (intent === "hint") setState((x) => ({ ...x, hintsGiven: x.hintsGiven + 1 }));
       return { text: r.text, cards: r.similar ? [{ type: "worked", item: r.similar }] : [] };
     }
-    // No problem on screen: find practice and real sources that fit what they asked about.
-    const q = text.toLowerCase();
-    const ids = [...new Set([...matchSkills(text), ...SKILLS.filter((k) => k.title.en.toLowerCase().includes(q) || k.title.es.toLowerCase().includes(q)).map((k) => k.id)])].slice(0, 3);
-    const sources = resourcesFor({ topic: text, grade: learner.grade, locale }).slice(0, 3);
+    // No problem on screen: find practice and real sources that fit what they asked about (and the homework).
+    const about = setup.homework ? `${setup.homework.title} ${setup.homework.notes ?? ""} ${text}` : text;
+    const q = text.toLowerCase().trim();
+    const byTitle = q.length > 3 ? SKILLS.filter((k) => k.title.en.toLowerCase().includes(q) || k.title.es.toLowerCase().includes(q)).map((k) => k.id) : [];
+    const ids = [...new Set([...matchSkills(about), ...byTitle])].slice(0, 3);
+    const sources = resourcesFor({ topic: about, grade: learner.grade, locale }).slice(0, 3);
     const cards: Card[] = ids.map((id) => ({ type: "practice", skillId: id }));
     if (sources.length) cards.push({ type: "resources", list: sources.map((r) => ({ title: r.title, source: r.source, url: r.url })) });
     return { text: cards.length ? t("tutor.demo.found") : t("tutor.demo.talkOther"), cards };

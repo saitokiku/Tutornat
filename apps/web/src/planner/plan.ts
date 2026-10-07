@@ -70,12 +70,16 @@ export function planFor(input: PlanInput): Plan {
   for (const id of [...new Set([...checkedToday, ...open])].slice(0, PLAN_RULES.maxChecks))
     add({ key: `check:${id}`, kind: "check", minutes: 3, subject: getSkill(id)?.subject, skillIds: [id] });
 
-  // 2. Test and quiz prep in the days before, 3. school work due soon.
-  for (const e of [...input.events].sort((a, b) => a.date.localeCompare(b.date))) {
-    if (e.done) continue;
+  // 2. Test and quiz prep in the days before.
+  const upcoming = [...input.events].filter((e) => !e.done).sort((a, b) => a.date.localeCompare(b.date));
+  for (const e of upcoming) {
     const inDays = daysBetween(date, e.date);
     if ((e.kind === "test" || e.kind === "quiz") && inDays >= 1 && inDays <= PLAN_RULES.prepDays && e.skillIds.some(getSkill))
       add({ key: `prep:${e.id}`, kind: "prep", minutes: setMinutes, subject: getSkill(e.skillIds.find(getSkill)!)?.subject, skillIds: e.skillIds.filter(getSkill), event: e, inDays });
+  }
+  // 3. School work due soon (and a test or quiz that is today).
+  for (const e of upcoming) {
+    const inDays = daysBetween(date, e.date);
     if ((e.kind === "homework" || e.kind === "project" || ((e.kind === "test" || e.kind === "quiz") && inDays === 0)) && inDays >= 0 && inDays <= PLAN_RULES.dueDays)
       add({ key: `due:${e.id}`, kind: "due", minutes: e.kind === "project" ? 25 : 15, skillIds: e.skillIds, event: e, inDays });
   }
