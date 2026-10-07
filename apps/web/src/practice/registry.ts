@@ -13,6 +13,7 @@ import { MATH_K_2_MORE } from "./math/k2-more";
 import { MATH_3_5_MORE } from "./math/g3to5-more";
 import { MATH_6_7_MORE } from "./math/g6to7-more";
 import { MATH_8_9_MORE } from "./math/g8to9-more";
+import { ENGLISH_GRAMMAR_3_5 } from "./english/grammar-35";
 
 export const STRANDS: Skill[][] = [
   ENGLISH_K_4,
@@ -27,4 +28,5 @@ export const STRANDS: Skill[][] = [
   MATH_3_5_MORE,
   MATH_6_7_MORE,
   MATH_8_9_MORE,
+  ENGLISH_GRAMMAR_3_5,
 ];
