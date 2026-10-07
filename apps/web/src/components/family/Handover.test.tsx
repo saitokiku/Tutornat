@@ -123,6 +123,6 @@ describe("where the hand-over links land, in the child's session", () => {
     render(<PracticePage />);
     const checks = screen.getByRole("region", { name: "Checks ready" });
     expect(checks).toHaveTextContent("Add within 5");
-    expect(screen.getAllByRole("button", { name: "Start check" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^Start check: / })).toHaveLength(1);
   });
 });
