@@ -4,7 +4,14 @@ What the owner actually said, in order, with the date. Newest wins when they con
 verbatim (typos kept). Sources: Hermes session history (`~/.hermes/state.db`, clarify answers and
 messages, 2026-09-30 → 10-04) and the Claude Code session of 2026-10-07.
 
-## 2026-10-07 — consolidation into Tutornat (current)
+## 2026-10-07 (night) — the learning fabric (current)
+
+- "okay let focus on getting the tutor part and dashboard and academic integration and calendar organizations, basically at home kumon with on demand practice gernetor and kumon at home generate lessons catered to you. and also talks and teaches naturally. and ai works to interface, help grow, track shadow work etc and keep your growth aligned and happening. ready all the ai strategy docs, now feel free to diverge and have full creative freedom, use old stuff as refernce. not bad on the demo but farrrrrr from a complete product."
+- "This product should also be marketed and catered for home schooling and parents who need homework/ test / tutoring help immediately and also students who are already good this should ease their life a lot either staying managed etc"
+- "Make it a super detailed codebase and have all features you can step by step for the users here it should be the ultimate learning fabric in the world but start with k-9 math and English and science and as always use real sources for books courses and etc to give info to student or anyone … work all night please make something good Nd detailed don't ask for permission you are allowed"
+- Decided by Claude under that autonomy, recorded in [specs/2026-10-07-learning-fabric-design.md](specs/2026-10-07-learning-fabric-design.md): a deterministic practice engine (Kumon-style sets) as the backbone; the mastery law from Kaizen-AI/trellis; one unnamed tutor that teaches with tools; AI as a layer that the product works without; preview deploys only — kaizenedu.net stays the owner's call.
+
+## 2026-10-07 — consolidation into Tutornat
 
 - "Load up kaizen ai, kaizen edu (not to confuse with the domain), tutornat, and trellis. The kaizen Ai repo is probably the most complete so take useable modules out of it and all other repos and cleanly put it in tutor ant our new product modules … rewrite tutornat with final clean modules and a basic dashboard site with magic box and course generation and login and etc first no AI just frontend and throw all modules in some foolder there for later use. everything actually usable should be cleanly in tutornat repo so i can work from there alone next time."
 - kaizenedu.net: "the actual website kaizenedu.net is not the real product but a shitty attempt and we will use that domain though for our final product".

@@ -7,6 +7,11 @@ look), [docs/STATUS.md](docs/STATUS.md) (what's done), [docs/ROADMAP.md](docs/RO
 ## Layout
 
 - `apps/web` — the product (Next.js 16.4, React 19, TypeScript, Tailwind v4).
+  - `src/practice` — skills, generators, answer checker (pure; runs on server and client).
+  - `src/learning` — the mastery law and set building (pure).
+  - `src/planner` — Today's plan, dates, `.ics`, school text intake, skill matching (pure).
+  - `src/lib` — store-backed actions screens call; `src/lib/ai` — server AI (tutor, builders, safety).
+  - `src/resources` — real sources; add one only after its link loads.
 - `modules/` — parked source from earlier attempts. **Never import it from `apps/web`.** Port pieces in
   deliberately; each module has a README saying what's worth taking.
 - `docs/history/` — records from earlier attempts. Historical; may be stale.
@@ -37,6 +42,13 @@ npm run e2e        # Playwright journey (parent + K + ES learner) at 1440 and 39
 6. **Minimum correct code** (Ponytail): reuse what's here, native/browser features first, no
    abstractions without a second user, one runnable check for non-trivial logic.
 7. Secrets never go in the repo. `.env*` is ignored except `.env.example`.
+8. **Answers are checked by code, never by a model.** A new skill ships with a test that verifies its
+   keys by an independent route (see any `src/practice/*/*.test.ts`). Hand-written banks are
+   `content: "draft"` until a teacher reviews them.
+9. **The mastery law** (`src/learning/engine.ts` RULES) is product policy: practice never proves a
+   skill. Change its numbers only with the owner.
+10. **AI is a layer.** Every screen works in demo mode; AI output is labelled; the tutor prompt never
+    contains an answer key; the safety screen runs before any model call.
 
 ## Next.js 16.4 gotchas in this app
 

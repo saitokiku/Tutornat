@@ -27,6 +27,12 @@ attempt, not a reference.
   Adult profiles must keep working, but no adult-specific work happens now.
 - Human tutors are a later add-on; the product must stand alone without them.
 
+## Jobs (2026-10-07)
+
+Help right now (homework, a test tomorrow) · daily practice (at-home tutoring center) · homeschool
+(skill maps, lessons, reading log, dated records) · staying on top (school calendar import, test prep
+that schedules itself). One product; the family's setup answer changes emphasis only.
+
 ## Product Purpose
 
 Turn anything a learner wants to learn into a short, ordered course, then teach it on a visual stage
@@ -54,8 +60,9 @@ invented mastery scores.
 
 ## Capabilities and Constraints
 
-- Today (frontend phase): no AI calls, no backend. Everything saves in the browser; demo content and
-  template outlines are labelled as such.
+- Today: no backend; everything saves in the browser. AI runs only when the deployment has a provider
+  (Anthropic key, or AI Gateway); otherwise the demo tutor and template outlines, labelled as such.
+- Practice answers are checked by code. The tutor teaches with tools and has no answer keys.
 - Model policy when AI connects: native Anthropic, server-side only, no client-supplied keys, no silent
   fallback provider *(from Hermes-era policy; re-confirm before wiring)*.
 - EN and ES across the interface; Spanish needs native-speaker review before launch.
