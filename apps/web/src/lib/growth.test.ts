@@ -7,6 +7,7 @@ import { startOfWeek } from "./activity";
 import { weekFacts } from "./family";
 import {
   gradedChecks,
+  lessonAnswers,
   lessonTallies,
   practicedSkills,
   recordStart,
@@ -303,6 +304,23 @@ describe("lessonTallies", () => {
     expect(t.get("done")).toEqual({ own: 0, helped: 1, missed: 0 });
   });
 
+  it("keeps the answers of a lesson not finished yet, with no finish", () => {
+    const list = lessonAnswers([
+      ev("quiz_answered", day1, { sceneId: "q1", correct: false }),
+      ev("quiz_answered", day1 + 1, { sceneId: "q1", correct: true, assisted: true }),
+      ev("lesson_completed", day1 + 2, { id: "done" }),
+      ev("quiz_answered", day2, { lessonId: "l2", sceneId: "q1", correct: false }),
+    ]);
+    expect(list.map((x) => [x.answer.lessonId, x.answer.correct, x.finish?.id])).toEqual([
+      ["l1", true, "done"],
+      ["l2", false, undefined],
+    ]);
+  });
+
+  it("gives a lesson finished with no questions an empty tally", () => {
+    expect(lessonTallies([ev("lesson_completed", day1, { id: "slides" })]).get("slides")).toEqual({ own: 0, helped: 0, missed: 0 });
+  });
+
   it("keeps lessons apart", () => {
     const t = lessonTallies([
       ev("quiz_answered", day1, { lessonId: "l2", sceneId: "q1", correct: false }),
@@ -436,6 +454,22 @@ describe("weekFacts (the family card's week)", () => {
     const f = weekFacts(s, "ada", NOW);
     expect(f.lessonChecks).toEqual({ own: 1, helped: 1, missed: 2 });
     expect([f.own, f.helped, f.missed]).toEqual([1, 0, 1]);
+  });
+
+  it("counts each lesson question once, as it last stood, the way Growth and a practice item do", () => {
+    const s = state({
+      activity: [
+        // Monday: Q1 missed, then right with help in the same visit; Q2 missed and the lesson left.
+        ev("quiz_answered", mon, { sceneId: "q1", correct: false }),
+        ev("quiz_answered", mon + 1, { sceneId: "q1", correct: true, assisted: true }),
+        ev("quiz_answered", mon + 2, { sceneId: "q2", correct: false }),
+        // Tuesday: a fresh visit, Q2 right on her own, and the lesson finished.
+        ev("quiz_answered", mon + D, { sceneId: "q2", correct: true, assisted: false }),
+        ev("lesson_completed", mon + D + 1, { id: "fin" }),
+      ],
+    });
+    expect(weekFacts(s, "ada", NOW).lessonChecks).toEqual({ own: 1, helped: 1, missed: 0 });
+    expect(lessonTallies(s.activity).get("fin")).toEqual(weekFacts(s, "ada", NOW).lessonChecks);
   });
 
   it("counts reading by its date, and not a day logged ahead", () => {

@@ -116,7 +116,8 @@ const indexIn = (bounds: number[], t: number) => {
   return i;
 };
 
-const tally = (list: { correct?: boolean; assisted?: boolean }[]): Tally => ({
+/** Right on their own, right with help, not yet. */
+export const tally = (list: { correct?: boolean; assisted?: boolean }[]): Tally => ({
   own: list.filter((a) => a.correct && !a.assisted).length,
   helped: list.filter((a) => a.correct && a.assisted).length,
   missed: list.filter((a) => !a.correct).length,
@@ -146,13 +147,14 @@ export function gradedChecks(attempts: Attempt[]): GradedCheck[] {
 }
 
 /**
- * Each finished lesson's question tally, keyed by the lesson_completed event id: every question
- * answered since the lesson was last finished, counted once as it last stood. A visit left halfway
- * and then done again from the start counts each question once; a redo after a finish counts afresh.
+ * Lesson questions as they last stood, like a practice item: between two finishes of a lesson only
+ * the latest answer to each question counts, so a visit left halfway and then done again counts each
+ * question once, and a miss put right with help counts once, as right with help. A redo after a
+ * finish counts afresh. Each answer comes with the lesson_completed event that closed it, if any.
  */
-export function lessonTallies(events: ActivityEvent[]): Map<string, Tally> {
+export function lessonAnswers(events: ActivityEvent[]): { answer: ActivityEvent; finish?: ActivityEvent }[] {
   const open = new Map<string, Map<string, ActivityEvent>>();
-  const out = new Map<string, Tally>();
+  const out: { answer: ActivityEvent; finish?: ActivityEvent }[] = [];
   for (const e of [...events].sort((a, b) => a.at - b.at)) {
     const key = `${e.courseId}|${e.lessonId}`;
     if (e.type === "quiz_answered") {
@@ -161,11 +163,19 @@ export function lessonTallies(events: ActivityEvent[]): Map<string, Tally> {
       open.set(key, answers);
     }
     if (e.type === "lesson_completed") {
-      out.set(e.id, tally([...(open.get(key)?.values() ?? [])]));
+      for (const answer of open.get(key)?.values() ?? []) out.push({ answer, finish: e });
       open.delete(key);
     }
   }
+  for (const answers of open.values()) for (const answer of answers.values()) out.push({ answer });
   return out;
+}
+
+/** Each finished lesson's question tally (see lessonAnswers), keyed by the lesson_completed event id. */
+export function lessonTallies(events: ActivityEvent[]): Map<string, Tally> {
+  const by = new Map<string, ActivityEvent[]>(events.filter((e) => e.type === "lesson_completed").map((e) => [e.id, []]));
+  for (const { answer, finish } of lessonAnswers(events)) if (finish) by.get(finish.id)?.push(answer);
+  return new Map([...by].map(([id, list]) => [id, tally(list)]));
 }
 
 function subjectsOf(s: StoreState, profileId: string) {

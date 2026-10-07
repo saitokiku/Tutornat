@@ -3,6 +3,7 @@ import { getSkill } from "@/practice/skills";
 import { fromLocalDate, localDate } from "@/planner/dates";
 import type { ReadingEntry } from "@/planner/types";
 import { startOfWeek } from "./activity";
+import { lessonAnswers, tally, type Tally } from "./growth";
 import { statusesOf } from "./practice";
 import { newId, update, type StoreState } from "./store";
 import type { Goal, Subject } from "./types";
@@ -18,8 +19,11 @@ export type WeekFacts = {
   own: number;
   helped: number;
   missed: number;
-  /** Lesson questions answered this week (every answer, as with practice), kept apart from practice answers. */
-  lessonChecks: { own: number; helped: number; missed: number };
+  /**
+   * Lesson questions answered this week, kept apart from practice answers: each question once, as it
+   * last stood (lib/growth lessonAnswers), as a practice item is one answer however many tries it took.
+   */
+  lessonChecks: Tally;
   proved: string[];
   helpOn: string[];
   checksWaiting: string[];
@@ -35,7 +39,9 @@ export function weekFacts(s: StoreState, profileId: string, now: number): WeekFa
   const attempts = s.attempts.filter((a) => a.profileId === profileId && a.mode !== "tutor" && inWeek(a.at));
   const statuses: Statuses = statusesOf(s, profileId, now);
   const lessons = s.activity.filter((e) => e.profileId === profileId && e.type === "lesson_completed" && inWeek(e.at));
-  const quiz = s.activity.filter((e) => e.profileId === profileId && e.type === "quiz_answered" && inWeek(e.at));
+  const quiz = lessonAnswers(s.activity.filter((e) => e.profileId === profileId))
+    .map((x) => x.answer)
+    .filter((e) => inWeek(e.at));
   // Reading counts by its calendar day; a day logged ahead waits for its date.
   const today = localDate(now);
   const reading = s.reading.filter((r) => r.profileId === profileId && r.date <= today && inWeek(fromLocalDate(r.date).getTime()));
@@ -49,11 +55,7 @@ export function weekFacts(s: StoreState, profileId: string, now: number): WeekFa
     own: attempts.filter((a) => a.correct && !a.assisted).length,
     helped: attempts.filter((a) => a.correct && a.assisted).length,
     missed: attempts.filter((a) => !a.correct).length,
-    lessonChecks: {
-      own: quiz.filter((e) => e.correct && !e.assisted).length,
-      helped: quiz.filter((e) => e.correct && e.assisted).length,
-      missed: quiz.filter((e) => !e.correct).length,
-    },
+    lessonChecks: tally(quiz),
     proved: Object.values(statuses).filter((x) => x.state === "proved" && x.provedAt && inWeek(x.provedAt)).map((x) => x.skillId),
     helpOn: [...helpCount.entries()].filter(([id]) => getSkill(id)).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id),
     checksWaiting: checksOpen(statuses, now).map((x) => x.skillId),
