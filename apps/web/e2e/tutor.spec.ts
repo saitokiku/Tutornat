@@ -108,6 +108,58 @@ test("a kindergartner hears the tutor first and taps instead of typing", async (
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
+/** A streamed AI tutor reply, in the UI message stream format /api/tutor answers with. */
+function aiReply(chunks: object[]) {
+  return {
+    status: 200,
+    headers: { "content-type": "text/event-stream", "x-vercel-ai-ui-message-stream": "v1" },
+    body: [...chunks.map((c) => `data: ${JSON.stringify(c)}\n\n`), "data: [DONE]\n\n"].join(""),
+  };
+}
+
+test("with the AI tutor, a photo is shrunk in the browser and sent with the words; its look_up lands on the board", async ({ page }) => {
+  const errors = collectErrors(page);
+  const bodies: { messages: { role: string; parts: { type: string; url?: string; mediaType?: string; text?: string }[] }[]; context: Record<string, unknown> }[] = [];
+  await family(page, "tutor-ai-photo", [["Ada", "6"]]);
+  await page.getByRole("button", { name: /Ada/ }).click();
+  await page.route("**/api/ai/status", (r) => r.fulfill({ json: { mode: "anthropic" } }));
+  await page.route("**/api/tutor", (r) => {
+    bodies.push(r.request().postDataJSON());
+    return r.fulfill(
+      aiReply([
+        { type: "start" },
+        { type: "tool-input-available", toolCallId: "c1", toolName: "look_up", input: { topic: "ratio" } },
+        { type: "tool-output-available", toolCallId: "c1", output: { found: true, title: "Ratio", extract: "A ratio shows how many times one number contains another.", url: "https://en.wikipedia.org/wiki/Ratio", lang: "en", license: "CC BY-SA 4.0", source: "Wikipedia" } },
+        { type: "text-start", id: "t" },
+        { type: "text-delta", id: "t", delta: "What have you tried on the first one?" },
+        { type: "text-end", id: "t" },
+        { type: "finish" },
+      ]),
+    );
+  });
+  await page.goto("/talk");
+  await expect(page.getByText("Replies written by AI", { exact: false })).toBeVisible();
+
+  await page.getByTestId("tutor-photo").setInputFiles({ name: "worksheet.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") });
+  await expect(page.getByText("Photo ready to send")).toBeVisible();
+  await expect(page.getByText("The AI tutor reads the photo to help. It isn't saved.")).toBeVisible();
+  await page.getByRole("textbox").fill("can you check my ratio work");
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText("What have you tried on the first one?")).toBeVisible();
+  const last = bodies[0].messages.at(-1)!;
+  const file = last.parts.find((p) => p.type === "file")!;
+  expect(file.mediaType).toBe("image/jpeg"); // re-drawn small in the browser, whatever was picked
+  expect(file.url).toMatch(/^data:image\/jpeg;base64,/);
+  expect(last.parts.find((p) => p.type === "text")?.text).toBe("can you check my ratio work");
+  expect(JSON.stringify(bodies[0])).not.toContain("Ada"); // no name goes to the tutor
+  const fact = page.getByRole("region", { name: "Board" }).getByRole("article", { name: "Ratio" });
+  await expect(fact).toBeVisible();
+  await expect(fact.getByRole("link", { name: /Read the article/ })).toHaveAttribute("href", "https://en.wikipedia.org/wiki/Ratio");
+  await noOverflow(page);
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
 test("the tutor beside a problem offers a photo, hints and a similar one", async ({ page }) => {
   const errors = collectErrors(page);
   await demoWithKnowledge(page);
