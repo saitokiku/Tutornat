@@ -1,9 +1,11 @@
-import { newId } from "./store";
+import { newId, read, subscribe, type StoreState } from "./store";
 
 // Photos and PDFs that come with a school item, kept in this browser (IndexedDB) next to the store.
 // Backend-shaped: when accounts move to a server these become uploads, and screens stay as they are.
 // Where IndexedDB can't be opened (some private windows, tests) files live in memory for this page
-// only, and blobPersistence() says so, so the screen can tell the family honestly.
+// only, and the store says so (blobPersistence, StoredFile.where), so screens can tell the family.
+// Files follow the store: when nothing points to a file any more (an item or a learner deleted,
+// "delete everything on this device"), it is deleted too.
 
 /** The most a kept file may weigh. Photos are shrunk before this is checked. */
 export const BLOB_MAX_BYTES = 10 * 1024 * 1024;
@@ -13,11 +15,13 @@ export const IMAGE_INPUT_MAX_BYTES = 40 * 1024 * 1024;
 export const IMAGE_MAX_SIDE = 1600;
 export const INTAKE_ACCEPT = "image/*,application/pdf";
 
-export type StoredFile = { id: string; name: string; type: string; size: number; at: number; blob: Blob };
+export type StoredFile = { id: string; name: string; type: string; size: number; at: number; blob: Blob; where: "device" | "memory" };
 type Row = { id: string; name: string; type: string; size: number; at: number; data: ArrayBuffer };
 
-const DB_NAME = "kaizenedu.files";
+export const DB_NAME = "kaizenedu.files";
+const DB_VERSION = 2; // 2: an index on `at`, so pruning reads ids and ages, never the files themselves
 const STORE = "files";
+const BY_AGE = "at";
 const memory = new Map<string, StoredFile>();
 let opening: Promise<IDBDatabase | null> | null = null;
 
@@ -25,11 +29,28 @@ function open(): Promise<IDBDatabase | null> {
   opening ??= new Promise((resolve) => {
     try {
       if (typeof indexedDB === "undefined") return resolve(null);
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: "id" });
-      req.onsuccess = () => resolve(req.result);
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        const store = db.objectStoreNames.contains(STORE) ? req.transaction!.objectStore(STORE) : db.createObjectStore(STORE, { keyPath: "id" });
+        if (!store.indexNames.contains(BY_AGE)) store.createIndex(BY_AGE, "at");
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        // iOS Safari drops the connection when the app is backgrounded, and a newer page may upgrade the
+        // database: forget this connection so the next call opens a fresh one.
+        db.onclose = () => (opening = null);
+        db.onversionchange = () => {
+          db.close();
+          opening = null;
+        };
+        resolve(db);
+      };
       req.onerror = () => resolve(null);
-      req.onblocked = () => resolve(null);
+      req.onblocked = () => {
+        opening = null;
+        resolve(null);
+      };
     } catch {
       resolve(null);
     }
@@ -37,19 +58,33 @@ function open(): Promise<IDBDatabase | null> {
   return opening;
 }
 
-/** Runs one request in its own transaction; null when the database refuses. */
-async function run<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>): Promise<{ ok: true; value: T } | null> {
-  const db = await open();
-  if (!db) return null;
-  return new Promise((resolve) => {
+/**
+ * Runs `fn` in one transaction and gives back what its getter returns once the transaction has
+ * committed — a write that "succeeded" but was then aborted (storage full) counts as failed. null when
+ * the database refuses. A connection closed under us is reopened once.
+ */
+async function run<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => () => T): Promise<{ value: T } | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const db = await open();
+    if (!db) return null;
+    let tx: IDBTransaction;
     try {
-      const req = fn(db.transaction(STORE, mode).objectStore(STORE));
-      req.onsuccess = () => resolve({ ok: true, value: req.result });
-      req.onerror = () => resolve(null);
+      tx = db.transaction(STORE, mode);
     } catch {
-      resolve(null);
+      opening = null;
+      continue;
     }
-  });
+    return new Promise((resolve) => {
+      try {
+        const result = fn(tx.objectStore(STORE));
+        tx.oncomplete = () => resolve({ value: result() });
+        tx.onabort = tx.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+  return null;
 }
 
 /** "device" when files survive closing the page; "memory" when they last only while it is open. */
@@ -60,45 +95,101 @@ export async function blobPersistence(): Promise<"device" | "memory"> {
 /** Keeps a file and returns its id, or null when it is empty or over the cap. */
 export async function putBlob(blob: Blob, name: string): Promise<string | null> {
   if (blob.size > BLOB_MAX_BYTES || blob.size === 0) return null;
-  const file: StoredFile = { id: newId(), name: name.slice(0, 120), type: blob.type || "application/octet-stream", size: blob.size, at: Date.now(), blob };
+  const file: StoredFile = { id: newId(), name: name.slice(0, 120), type: blob.type || "application/octet-stream", size: blob.size, at: Date.now(), blob, where: "memory" };
   // Stored as an ArrayBuffer: that works everywhere IndexedDB does (older Safari can't store Blobs).
-  const db = await open();
-  const data = db ? await blob.arrayBuffer().catch(() => null) : null;
-  const saved = data && (await run("readwrite", (s) => s.put({ id: file.id, name: file.name, type: file.type, size: file.size, at: file.at, data } satisfies Row)));
+  const data = (await open()) ? await blob.arrayBuffer().catch(() => null) : null;
+  const row: Row | null = data && { id: file.id, name: file.name, type: file.type, size: file.size, at: file.at, data };
+  const saved =
+    row &&
+    (await run("readwrite", (s) => {
+      s.put(row);
+      return () => true;
+    }));
+  // Not saved on the device: kept for this page, and getBlob says so ("memory").
   if (!saved) memory.set(file.id, file);
   return file.id;
 }
 
 export async function getBlob(id: string): Promise<StoredFile | null> {
   if (memory.has(id)) return memory.get(id)!;
-  const got = await run<Row | undefined>("readonly", (s) => s.get(id));
+  const got = await run("readonly", (s) => {
+    const req = s.get(id) as IDBRequest<Row | undefined>;
+    return () => req.result;
+  });
   const r = got?.value;
-  return r ? { id: r.id, name: r.name, type: r.type, size: r.size, at: r.at, blob: new Blob([r.data], { type: r.type }) } : null;
+  return r ? { id: r.id, name: r.name, type: r.type, size: r.size, at: r.at, blob: new Blob([r.data], { type: r.type }), where: "device" } : null;
 }
 
 export async function deleteBlob(id: string) {
   memory.delete(id);
-  await run("readwrite", (s) => s.delete(id));
+  await run("readwrite", (s) => {
+    s.delete(id);
+    return () => true;
+  });
 }
 
-/** Deletes every kept file (used with "delete everything on this device"). */
+/** Deletes every kept file (with "delete everything on this device"). */
 export async function clearBlobs() {
   memory.clear();
-  await run("readwrite", (s) => s.clear());
+  await run("readwrite", (s) => {
+    s.clear();
+    return () => true;
+  });
 }
 
 /**
- * Deletes files no school item points to any more (an item deleted elsewhere, a learner removed, the
- * store cleared). Files younger than `graceMs` are left alone so a save in another tab isn't undone.
+ * Deletes files no school item points to any more (an item deleted in a tab that never loaded this
+ * module, a save that never finished). Files younger than `graceMs` are left alone so a save in
+ * another tab isn't undone. Reads only ids and ages, never the files.
  */
 export async function pruneBlobs(keep: Iterable<string>, now = Date.now(), graceMs = 3600_000): Promise<number> {
   const live = new Set(keep);
   const old = (at: number) => now - at > graceMs;
   const gone = [...memory.values()].filter((f) => !live.has(f.id) && old(f.at)).map((f) => f.id);
-  const all = await run<Row[]>("readonly", (s) => s.getAll());
-  for (const r of all?.value ?? []) if (!live.has(r.id) && old(r.at)) gone.push(r.id);
-  for (const id of gone) await deleteBlob(id);
-  return gone.length;
+  gone.forEach((id) => memory.delete(id));
+  const deleted = await run("readwrite", (s) => {
+    const ids: string[] = [];
+    const req = s.index(BY_AGE).openKeyCursor();
+    req.onsuccess = () => {
+      const c = req.result;
+      if (!c) return;
+      const id = String(c.primaryKey);
+      if (!live.has(id) && old(Number(c.key))) {
+        s.delete(id);
+        ids.push(id);
+      }
+      c.continue();
+    };
+    return () => ids;
+  });
+  return gone.length + (deleted?.value.length ?? 0);
+}
+
+/** Every file a school item in the store points to. */
+export const fileIds = (s: StoreState) => new Set(s.events.flatMap((e) => (e.attachment?.blobId ? [e.attachment.blobId] : [])));
+
+let following = false;
+/**
+ * Files follow the store: a file the store stops pointing to is deleted, and when every account is
+ * gone ("delete everything on this device") so is every file. Runs once per page, on import.
+ */
+export function followStore() {
+  if (following || typeof window === "undefined") return;
+  following = true;
+  let before = fileIds(read());
+  subscribe(() => {
+    const s = read();
+    const now = fileIds(s);
+    if (!s.accounts.length && before.size) void clearBlobs();
+    else for (const id of before) if (!now.has(id)) void deleteBlob(id);
+    before = now;
+  });
+}
+
+if (typeof window !== "undefined") {
+  followStore();
+  // Once per page load, off the critical path: files left behind by deletes made where this module wasn't loaded.
+  setTimeout(() => void pruneBlobs(fileIds(read())), 5000);
 }
 
 /** Width and height that fit inside `max` on the longest side, keeping the shape. Never enlarges. */

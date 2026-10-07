@@ -8,11 +8,13 @@ import { getSkill, SKILLS } from "@/practice/skills";
 // the guess and can change it before anything is saved. Learner names are taken out on the device
 // before the text is sent (lib/intake.ts redactNames).
 
+/** A photo (redrawn as a JPEG on the device) or a PDF, as a base64 data: URL; nothing else reaches the model. */
+const FILE = /^data:(image\/(?:jpeg|png|webp|gif)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/;
+
 export const IntakeRequest = z.object({
   kind: z.literal("intake"),
-  text: z.string().max(4000).optional(),
-  /** data: URL of a photo (already shrunk on the device) or a PDF. */
-  file: z.string().max(4_400_000).optional(),
+  text: z.string().trim().max(4000).optional(),
+  file: z.string().max(4_400_000).regex(FILE).optional(),
   today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   locale: z.enum(["en", "es"]),
   grade: z.string().max(5),
@@ -56,10 +58,8 @@ export async function readIntake(req: IntakeRequest, model: LanguageModel) {
   ].join("\n");
   const content: ({ type: "text"; text: string } | { type: "file"; data: string; mediaType: string })[] = [{ type: "text", text: instruction }];
   if (req.text) content.push({ type: "text", text: `Typed:\n${req.text}` });
-  if (req.file) {
-    const m = /^data:([\w.+-]+\/[\w.+-]+);base64,(.*)$/.exec(req.file);
-    if (m) content.push({ type: "file", data: m[2], mediaType: m[1] });
-  }
+  const file = req.file ? FILE.exec(req.file) : null;
+  if (file) content.push({ type: "file", data: file[2], mediaType: file[1] });
   const { output } = await generateText({ model, output: Output.object({ schema: IntakeSchema }), messages: [{ role: "user", content }] });
   return {
     ...output,

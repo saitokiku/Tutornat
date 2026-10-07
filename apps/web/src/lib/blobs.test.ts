@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { BLOB_MAX_BYTES, IMAGE_INPUT_MAX_BYTES, blobPersistence, checkFile, clearBlobs, dataUrl, deleteBlob, fitWithin, getBlob, prepareFile, pruneBlobs, putBlob } from "./blobs";
 
 // jsdom has no IndexedDB, so this is the fallback path: files kept in memory for the page, and the
@@ -16,7 +16,7 @@ describe("file store (in-memory fallback)", () => {
     const id = await putBlob(pdf(), "sheet.pdf");
     expect(id).toBeTruthy();
     const got = await getBlob(id!);
-    expect(got).toMatchObject({ id, name: "sheet.pdf", type: "application/pdf", size: 18 });
+    expect(got).toMatchObject({ id, name: "sheet.pdf", type: "application/pdf", size: 18, where: "memory" });
     expect(await got!.blob.text()).toBe("%PDF-1.4 worksheet");
   });
 
@@ -70,6 +70,32 @@ describe("files before they're kept", () => {
     expect(await prepareFile(file)).toEqual({ blob: file, name: "notes.pdf" });
     expect(await prepareFile(new File(["<p>"], "page.html", { type: "text/html" }))).toEqual({ error: "type" });
     expect(await prepareFile(new File([new Uint8Array(BLOB_MAX_BYTES + 1)], "big.pdf", { type: "application/pdf" }))).toEqual({ error: "size" });
+  });
+
+  it("redraws a photo as a JPEG at most 1600 px on its long side, upright and on white", async () => {
+    const bitmap = { width: 4032, height: 3024, close: vi.fn() };
+    const decode = vi.fn(async () => bitmap);
+    vi.stubGlobal("createImageBitmap", decode);
+    const drawn: unknown[][] = [];
+    const ctx = { fillStyle: "", fillRect: vi.fn(), drawImage: (...args: unknown[]) => drawn.push(args) };
+    const canvas = { width: 0, height: 0, getContext: () => ctx, toBlob: vi.fn((done: (b: Blob) => void, type: string) => done(new Blob(["jpeg bytes"], { type }))) };
+    const make = document.createElement.bind(document);
+    const spy = vi.spyOn(document, "createElement").mockImplementation((tag: string) => (tag === "canvas" ? (canvas as unknown as HTMLCanvasElement) : make(tag)));
+    try {
+      const photo = new File([new Uint8Array(5_000_000)], "IMG_2041.HEIC", { type: "image/heic" });
+      const out = await prepareFile(photo);
+      expect(out).toMatchObject({ name: "IMG_2041.jpg" });
+      expect((out as { blob: Blob }).blob.type).toBe("image/jpeg");
+      expect(decode).toHaveBeenCalledWith(photo, { imageOrientation: "from-image" });
+      expect([canvas.width, canvas.height]).toEqual([1600, 1200]);
+      expect(ctx.fillStyle).toBe("#ffffff");
+      expect(drawn[0]).toEqual([bitmap, 0, 0, 1600, 1200]);
+      expect(canvas.toBlob).toHaveBeenCalledWith(expect.any(Function), "image/jpeg", 0.85);
+      expect(bitmap.close).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 
   it("explains a photo this browser can't open instead of keeping it", async () => {

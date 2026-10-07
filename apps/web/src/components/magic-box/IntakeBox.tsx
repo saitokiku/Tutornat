@@ -8,9 +8,9 @@ import { statusLine } from "@/components/practice/status";
 import { Button, Field, Notice, Spinner } from "@/components/ui";
 import { useT } from "@/i18n";
 import { useAiMode } from "@/lib/ai/client";
-import { screen } from "@/lib/ai/safety";
-import { blobPersistence, INTAKE_ACCEPT, prepareFile, pruneBlobs, type FileProblem } from "@/lib/blobs";
-import { sizeLabel } from "@/lib/files";
+import { screen, type Screen } from "@/lib/ai/safety";
+import { blobPersistence, INTAKE_ACCEPT, prepareFile, type FileProblem } from "@/lib/blobs";
+import { KIND_TAG, sizeLabel } from "@/lib/files";
 import {
   AI_FILE_MAX_BYTES,
   TEXT_MAX,
@@ -19,6 +19,7 @@ import {
   isSchoolKind,
   mergeGuess,
   practiceSearchHref,
+  readByAi,
   readWithAi,
   redactNames,
   saveSchoolItem,
@@ -27,7 +28,7 @@ import {
   type IntakeKind,
 } from "@/lib/intake";
 import { aiQuestions, startAiSet, startSet, statusesOf } from "@/lib/practice";
-import { addNote, learnersOf } from "@/lib/profiles";
+import { addNote, currentAccount, learnersOf } from "@/lib/profiles";
 import { classesOf } from "@/lib/school";
 import { newId, read, useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -38,11 +39,20 @@ import { KindRow } from "./KindRow";
 
 type Attached = { key: string; blob: Blob; name: string; image: boolean; url?: string };
 
+/** Names that never go to a model: every learner's, and the grown-up's own. */
+const privateNames = () => {
+  const s = read();
+  return [...learnersOf(s).map((p) => p.nickname), currentAccount(s)?.displayName ?? ""];
+};
+
+const OK: Screen = { kind: "ok" };
+
 /**
  * The universal box: homework, a test, practice or something to learn, typed or as a photo/PDF. The
  * guess shows as a choice row before anything is made; the family can change it, then confirms.
  * School work becomes an item on the calendar (and opens its page), practice opens a set, learning
- * opens the course builder.
+ * opens the course builder. The safety screen reads every word as it is typed: a crisis or abuse
+ * message gets the fixed reply and a note for the grown-ups instead of a guess.
  */
 export function IntakeBox({ learner, initialText = "", variant = "compact" }: { learner: Profile; initialText?: string; variant?: "compact" | "page" }) {
   const t = useT();
@@ -63,6 +73,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
   const dateInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
+  const noted = useRef(false);
 
   const [text, setText] = useState(initialText.slice(0, TEXT_MAX));
   const [file, setFile] = useState<Attached | null>(null);
@@ -79,38 +90,47 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
   const [classId, setClassId] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ title?: boolean; date?: boolean }>({});
   const [need, setNeed] = useState<"practice" | "learn" | null>(null);
-  const [safety, setSafety] = useState<string | null>(null);
-  const [noted, setNoted] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [questionsFailed, setQuestionsFailed] = useState(false);
 
   const words = text.trim();
+  const said = words ? screen(words, locale) : OK;
+  // A crisis or abuse message: the fixed reply replaces the guess, and nothing can be made from it.
+  const urgent = said.kind === "crisis" || said.kind === "abuse";
   const fileKey = file ? `file:${file.key}` : null;
   const textKey = `text:${words}`;
   const key = fileKey ?? textKey;
-  // A longer typed request is read once typing pauses (short ones are left to the rules). While the
-  // next read is pending, the last one stays on screen so the guess doesn't flicker back and forth.
-  const readText = aiOn && !file && words.length >= 24 && screen(words, locale).kind === "ok" && aiRead?.key !== textKey;
-  const aiNow = aiRead?.key === key || (readText && aiRead?.key.startsWith("text:")) ? (aiRead?.result ?? null) : null;
+  // Typed words are read once typing pauses. While the next reading is pending, the last one stays on
+  // screen only when these words carry on from those (typing on); unrelated words show the rules' guess.
+  const readText = aiOn && !file && words.length >= 3 && said.kind === "ok" && aiRead?.key !== textKey;
+  const lastWords = aiRead?.key.startsWith("text:") ? aiRead.key.slice(5) : null;
+  const carries = readText && lastWords !== null && (words.startsWith(lastWords) || lastWords.startsWith(words));
+  const aiNow = aiRead?.key === key || carries ? (aiRead?.result ?? null) : null;
   const fileTooBig = !!file && file.blob.size > AI_FILE_MAX_BYTES;
   const readingFile = aiOn && !!file && !fileTooBig && aiRead?.key !== fileKey;
   const reading = readingFile || inFlight === textKey;
   const readFailed = aiOn && !!file && aiRead?.key === fileKey && aiRead.result === null;
   const fileOnly = !!file && !words;
 
-  // Files whose school item is gone (deleted elsewhere, a learner removed, the store cleared) leave the device.
+  // One note for the grown-ups each time a crisis or abuse message appears, however long it stays.
+  const noteKind = urgent ? said.kind : null;
   useEffect(() => {
-    void pruneBlobs(read().events.flatMap((e) => (e.attachment?.blobId ? [e.attachment.blobId] : [])));
-  }, []);
+    if (!noteKind) {
+      noted.current = false;
+      return;
+    }
+    if (noted.current) return;
+    noted.current = true;
+    addNote(learner.id, t(noteKind === "abuse" ? "intake.safetyNoteAbuse" : "intake.safetyNoteCrisis"), "safety");
+  }, [noteKind, learner.id, t]);
 
   // The photo or PDF is read as soon as it is added, with what was typed as context (if it passes the safety screen).
   useEffect(() => {
     if (!aiOn || !file || file.blob.size > AI_FILE_MAX_BYTES) return;
     let live = true;
-    const names = learnersOf(read()).map((p) => p.nickname);
     const typed = area.current?.value ?? "";
     const context = screen(typed, locale).kind === "ok" ? typed : "";
-    readWithAi({ text: context, file: file.blob, today, locale, grade: learner.grade, names }).then((result) => live && setAiRead({ key: `file:${file.key}`, result }));
+    readWithAi({ text: context, file: file.blob, today, locale, grade: learner.grade, names: privateNames() }).then((result) => live && setAiRead({ key: `file:${file.key}`, result }));
     return () => {
       live = false;
     };
@@ -121,8 +141,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     let live = true;
     const timer = setTimeout(() => {
       setInFlight(textKey);
-      const names = learnersOf(read()).map((p) => p.nickname);
-      readWithAi({ text: textKey.slice(5), today, locale, grade: learner.grade, names }).then((result) => {
+      readWithAi({ text: textKey.slice(5), today, locale, grade: learner.grade, names: privateNames() }).then((result) => {
         if (live) setAiRead({ key: textKey, result });
         setInFlight((k) => (k === textKey ? null : k));
       });
@@ -141,12 +160,16 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     };
   }, [file]);
 
-  const rules = classifyIntake(text, { today, classes });
+  const ctx = { today, classes, locale };
+  const rules = classifyIntake(text, ctx);
   // A photo or PDF with nothing telling it apart is most likely school work.
   const fileBias = !!file && !aiNow && (fileOnly || rules.reason.rule === "default");
-  const guess: IntakeGuess = aiNow ? mergeGuess(rules, aiNow, { today, classes }) : fileBias ? { ...rules, kind: "homework" } : rules;
+  const guess: IntakeGuess = aiNow ? mergeGuess(rules, aiNow, ctx) : fileBias ? { ...rules, kind: "homework" } : rules;
   const kind = picked ?? guess.kind;
   const school = isSchoolKind(kind);
+  // Off-limits words can still name school work ("health quiz on drugs and alcohol"), which no model
+  // reads without the AI tutor; they never go to the AI question writer or the course builder.
+  const blocked = said.kind === "offLimits" && !school;
   const titleValue = title ?? guess.title;
   const dateValue = date ?? guess.date ?? "";
   const classValue = classId ?? guess.classId ?? "";
@@ -162,13 +185,11 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     setClassId(null);
     setErrors({});
     setNeed(null);
-    setSafety(null);
     setQuestionsFailed(false);
   };
 
   const changeText = (v: string) => {
     setText(v);
-    setSafety(null);
     setNeed(null);
     if (!v.trim() && !file) resetChoices();
   };
@@ -192,17 +213,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
   };
 
   const confirm = async () => {
-    if (!ready || busy) return;
-    const said = words ? screen(words, locale) : null;
-    if (said && said.kind !== "ok") {
-      setSafety(said.reply);
-      // One note for the grown-ups per thing said, however many times it is sent.
-      if (said.kind !== "offLimits" && noted !== words) {
-        addNote(learner.id, t(said.kind === "abuse" ? "intake.safetyNoteAbuse" : "intake.safetyNoteCrisis"), "safety");
-        setNoted(words);
-      }
-      return;
-    }
+    if (!ready || busy || urgent || blocked) return;
     if (school) {
       const bad = { title: !titleValue.trim(), date: !isDay(dateValue) };
       setErrors(bad);
@@ -216,8 +227,10 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
         classId: classValue || undefined,
         skillIds: guess.skillIds,
         text: words,
+        wordsTitle: rules.title,
         file: file ? { blob: file.blob, name: file.name } : undefined,
-        source: aiNow ? "ai" : "typed",
+        // "Read by the AI tutor" only when the name, day and kind saved are all the reader's.
+        source: readByAi(aiNow, { kind, title: titleValue, date: dateValue }) ? "ai" : "typed",
       });
       if (typeof made !== "string") return router.push(`/calendar/${made.id}`);
       setBusy(false);
@@ -234,15 +247,8 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
       if (!aiOn) return router.push(practiceSearchHref(topic, guess.subject));
       setBusy(true);
       setQuestionsFailed(false);
-      // The topic goes to the model without any learner's name in it; the set keeps the words as typed.
-      const questions = await aiQuestions(
-        redactNames(
-          topic,
-          learnersOf(read()).map((p) => p.nickname),
-        ).text,
-        learner.grade,
-        locale,
-      );
+      // The topic goes to the model without anyone's name in it; the set keeps the words as typed.
+      const questions = await aiQuestions(redactNames(topic, privateNames()).text, learner.grade, locale);
       const set = questions && startAiSet(learner, topic, questions, now);
       if (set) return router.push(`/practice/${set}`);
       setBusy(false);
@@ -275,6 +281,8 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     .filter(Boolean)
     .join(", ");
   const fileNote = !file ? null : !aiOn ? (mode === null ? null : t("intake.photoNeedsAi")) : fileTooBig ? t("intake.fileTooBigForAi") : readFailed ? t("intake.aiReadFailed") : null;
+  // A file with practice or learning: used only to read the topic, and kept only with school work.
+  const fileUnused = !school && file && !aiNow && !reading && mode !== null ? t(aiOn ? "intake.fileNotRead" : "intake.fileUnused") : null;
 
   return (
     <form
@@ -355,7 +363,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
               // eslint-disable-next-line @next/next/no-img-element -- a local object URL; next/image can't optimize it
               <img src={file.url} alt="" className="size-11 shrink-0 rounded-[6px] border border-border object-cover" />
             ) : (
-              <span className="w-11 shrink-0 text-center font-opmono text-[11px] font-semibold text-muted">PDF</span>
+              <span className="w-11 shrink-0 text-center font-opmono text-[11px] font-semibold text-muted">{KIND_TAG.pdf}</span>
             )}
             <span className="min-w-0 flex-1 truncate text-ink">{file.name}</span>
             <span className="shrink-0 font-opmono text-xs tabular-nums text-muted">{sizeLabel(file.blob.size)}</span>
@@ -377,10 +385,22 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
         </div>
       )}
 
-      {ready && (
+      {/* Always in the page, so screen readers announce the AI tutor reading and its guess when it changes. */}
+      <p role="status" className="sr-only">
+        {!urgent && ready ? (reading ? t("intake.reading") : aiNow ? reason : "") : ""}
+      </p>
+
+      {urgent && (
+        <div className="border-t border-border px-5 py-4 sm:px-6">
+          <Notice tone="bad">{said.reply}</Notice>
+        </div>
+      )}
+
+      {ready && !urgent && (
         <div className="space-y-4 border-t border-border px-5 py-4 sm:px-6 animate-fade-up">
           <KindRow
             value={kind}
+            extra={guess.kind}
             onChange={(k) => {
               setPicked(k);
               setNeed(null);
@@ -394,16 +414,11 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
             <p id={`${id}-reason`} className="text-xs text-muted">
               {reason}
             </p>
-            {/* Announced: the AI tutor reading, and its guess when it arrives. */}
-            <p role="status" className="flex items-center gap-2 text-xs text-muted empty:hidden">
-              {reading ? (
-                <>
-                  <Spinner /> {t("intake.reading")}
-                </>
-              ) : aiNow ? (
-                <span className="sr-only">{reason}</span>
-              ) : null}
-            </p>
+            {reading && (
+              <p aria-hidden="true" className="flex items-center gap-2 text-xs text-muted">
+                <Spinner /> {t("intake.reading")}
+              </p>
+            )}
           </div>
           {aiNow && aiNow.notes.length > 0 && (
             <details className="text-xs text-muted">
@@ -460,11 +475,12 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
                   </Field>
                 )}
               </div>
-              <p className="text-xs text-muted">{skillNames ? t("intake.skills", { skills: skillNames }) : t("intake.noSkills")}</p>
+              {kind !== "no-school" && <p className="text-xs text-muted">{skillNames ? t("intake.skills", { skills: skillNames }) : t("intake.noSkills")}</p>}
             </div>
           )}
 
-          {kind === "practice" && (
+          {blocked && <Notice tone="warn">{said.reply}</Notice>}
+          {!blocked && kind === "practice" && (
             <div className="space-y-2">
               <p className="text-sm text-ink">
                 {skillId
@@ -477,7 +493,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
                 <Notice
                   tone="warn"
                   action={
-                    <Button size="sm" variant="secondary" onClick={() => router.push(practiceSearchHref(topic, guess.subject))}>
+                    <Button variant="secondary" className="px-4 text-xs" onClick={() => router.push(practiceSearchHref(topic, guess.subject))}>
                       {t("intake.practice.searchInstead")}
                     </Button>
                   }
@@ -487,19 +503,15 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
               )}
             </div>
           )}
-          {kind === "learn" && <p className="text-sm text-ink">{goal ? t("intake.learn.goal", { goal: goal.length > 80 ? `${goal.slice(0, 80)}…` : goal }) : t("intake.learn.needGoal")}</p>}
-          {!school && file && !aiNow && <p className="text-xs text-muted">{t("intake.fileUnused")}</p>}
+          {!blocked && kind === "learn" && (
+            <p className="text-sm text-ink">{goal ? t("intake.learn.goal", { goal: goal.length > 80 ? `${goal.slice(0, 80)}…` : goal }) : t("intake.learn.needGoal")}</p>
+          )}
+          {fileUnused && <p className="text-xs text-muted">{fileUnused}</p>}
           {need && (
             <p role="alert" className="text-xs font-medium text-bad">
               {t(need === "practice" ? "intake.practice.needTopic" : "intake.learn.needGoal")}
             </p>
           )}
-        </div>
-      )}
-
-      {safety && (
-        <div className="mx-5 mb-4 sm:mx-6">
-          <Notice tone="bad">{safety}</Notice>
         </div>
       )}
 
@@ -529,9 +541,11 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
         <Button variant="ghost" className="pointer-fine:hidden" onClick={() => cameraInput.current?.click()}>
           <CameraIcon /> {t("intake.camera")}
         </Button>
-        <Button type="submit" className="ml-auto" disabled={!ready} loading={busy}>
-          {label} <IconArrowRight size={16} />
-        </Button>
+        {!urgent && (
+          <Button type="submit" className="ml-auto" disabled={!ready || blocked} loading={busy}>
+            {label} <IconArrowRight size={16} />
+          </Button>
+        )}
       </div>
 
       {dragging && (

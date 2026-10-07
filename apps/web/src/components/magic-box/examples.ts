@@ -26,13 +26,13 @@ export const INTAKE_EXAMPLES: Record<Locale, Record<Band, string[]>> = {
     "35": ["Fractions worksheet due Friday", "Multiplication quiz next Tuesday", "Practice times tables", "How does the water cycle work?"],
     "68": ["Ratios homework due tomorrow", "Science test on Friday", "Practice negative numbers", "How do cells divide?"],
     "9": ["Linear functions worksheet due Thursday", "Chemistry quiz on Friday", "Practice slope", "What is a chemical reaction?"],
-    adult: ["Reading assignment due Monday", "Exam next Friday", "Practice percentages", "How do vaccines work?"],
+    adult: ["Reading assignment due Monday", "Final exam on Friday", "Practice percentages", "How do vaccines work?"],
   },
   es: {
     k2: ["Hoja de sumas para mañana", "Prueba de ortografía el viernes", "Practicar sumas hasta 10", "¿Por qué cambian de color las hojas?"],
     "35": ["Tarea de fracciones para el viernes", "Examen de multiplicación el próximo martes", "Practicar las tablas de multiplicar", "¿Cómo funciona el ciclo del agua?"],
     "68": ["Tarea de razones para mañana", "Examen de ciencias el viernes", "Practicar números negativos", "¿Cómo se dividen las células?"],
     "9": ["Hoja de funciones lineales para el jueves", "Prueba de química el viernes", "Practicar pendiente", "¿Qué es una reacción química?"],
-    adult: ["Lectura para el lunes", "Examen el próximo viernes", "Practicar porcentajes", "¿Cómo funcionan las vacunas?"],
+    adult: ["Lectura para el lunes", "Examen final el viernes", "Practicar porcentajes", "¿Cómo funcionan las vacunas?"],
   },
 };
