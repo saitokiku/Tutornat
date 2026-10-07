@@ -35,6 +35,7 @@ import shortWords from "./english-short-words";
 import partsOfSpeech from "./english-parts-of-speech";
 import partsOfSpeechEs from "./english-parts-of-speech-es";
 import figurative from "./english-figurative";
+import figurativeEs from "./english-figurative-es";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -73,4 +74,5 @@ export const REGISTRY: CatalogueEntry[] = [
   partsOfSpeech,
   partsOfSpeechEs,
   figurative,
+  figurativeEs,
 ];
