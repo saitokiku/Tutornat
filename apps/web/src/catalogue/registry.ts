@@ -29,6 +29,7 @@ import equationsEs from "./math-equations-es";
 import linearFunctions from "./math-linear-functions";
 import pythagorean from "./math-pythagorean";
 import pythagoreanEs from "./math-pythagorean-es";
+import rhymesSyllables from "./english-rhymes-syllables";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -61,4 +62,5 @@ export const REGISTRY: CatalogueEntry[] = [
   linearFunctions,
   pythagorean,
   pythagoreanEs,
+  rhymesSyllables,
 ];
