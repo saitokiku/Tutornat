@@ -1,6 +1,6 @@
 import { checksOpen, type Statuses } from "@/learning/engine";
 import { getSkill } from "@/practice/skills";
-import { localDate } from "@/planner/dates";
+import { fromLocalDate, localDate } from "@/planner/dates";
 import type { ReadingEntry } from "@/planner/types";
 import { startOfWeek } from "./activity";
 import { statusesOf } from "./practice";
@@ -16,9 +16,12 @@ export type WeekFacts = {
   minutes: number;
   sets: number;
   lessons: number;
+  /** Practice answers (not lesson checks). */
   own: number;
   helped: number;
   missed: number;
+  /** Checks answered inside lessons this week, kept apart from practice answers. */
+  lessonChecks: { own: number; helped: number; missed: number };
   proved: string[];
   helpOn: string[];
   checksWaiting: string[];
@@ -33,6 +36,7 @@ export function weekFacts(s: StoreState, profileId: string, now: number): WeekFa
   const attempts = s.attempts.filter((a) => a.profileId === profileId && a.mode !== "tutor" && inWeek(a.at));
   const statuses: Statuses = statusesOf(s, profileId, now);
   const lessons = s.activity.filter((e) => e.profileId === profileId && e.type === "lesson_completed" && inWeek(e.at));
+  const quiz = s.activity.filter((e) => e.profileId === profileId && e.type === "quiz_answered" && inWeek(e.at));
   const reading = s.reading.filter((r) => r.profileId === profileId && inWeek(new Date(`${r.date}T12:00`).getTime()));
   const helpCount = new Map<string, number>();
   for (const a of attempts) if (a.assisted || !a.correct) helpCount.set(a.skillId, (helpCount.get(a.skillId) ?? 0) + 1);
@@ -44,6 +48,11 @@ export function weekFacts(s: StoreState, profileId: string, now: number): WeekFa
     own: attempts.filter((a) => a.correct && !a.assisted).length,
     helped: attempts.filter((a) => a.correct && a.assisted).length,
     missed: attempts.filter((a) => !a.correct).length,
+    lessonChecks: {
+      own: quiz.filter((e) => e.correct && !e.assisted).length,
+      helped: quiz.filter((e) => e.correct && e.assisted).length,
+      missed: quiz.filter((e) => !e.correct).length,
+    },
     proved: Object.values(statuses).filter((x) => x.state === "proved" && x.provedAt && inWeek(x.provedAt)).map((x) => x.skillId),
     helpOn: [...helpCount.entries()].filter(([id]) => getSkill(id)).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id),
     checksWaiting: checksOpen(statuses, now).map((x) => x.skillId),
@@ -51,6 +60,23 @@ export function weekFacts(s: StoreState, profileId: string, now: number): WeekFa
     stuck: Object.values(statuses).filter((x) => x.stuck).map((x) => x.skillId),
     readingMinutes: reading.reduce((n, r) => n + r.minutes, 0),
   };
+}
+
+/**
+ * The last time the learner did anything here: an answer, time with the tutor, a lesson, a plan line
+ * marked done, or reading a grown-up logged. Adding a course is not doing something.
+ */
+export function lastActive(s: StoreState, profileId: string): number | undefined {
+  let last: number | undefined;
+  const see = (t: number | undefined) => {
+    if (t !== undefined && (last === undefined || t > last)) last = t;
+  };
+  for (const a of s.attempts) if (a.profileId === profileId) see(a.at);
+  for (const e of s.activity) if (e.profileId === profileId && e.type !== "course_added") see(e.at);
+  for (const d of s.planDone) if (d.profileId === profileId) see(d.at);
+  for (const th of s.threads) if (th.profileId === profileId) see(th.lines.at(-1)?.at ?? th.startedAt);
+  for (const r of s.reading) if (r.profileId === profileId) see(fromLocalDate(r.date).getTime());
+  return last;
 }
 
 /** Proved / in progress / not started per subject, for the skill overview. */

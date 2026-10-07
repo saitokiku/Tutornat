@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
-import { EventMark, eventText } from "@/components/growth/events";
-import { IconChevronLeft, IconChevronRight } from "@/components/icons";
+import { DayLog } from "@/components/growth/DayLog";
+import { SubjectGrowth } from "@/components/growth/SubjectGrowth";
 import { EmptyState, btn } from "@/components/ui";
-import { useLocale, useT } from "@/i18n";
-import { startOfWeek, summarizeWeek } from "@/lib/activity";
-import { dayLabel, shortDate, timeLabel } from "@/lib/format";
+import { useT } from "@/i18n";
+import { schoolResults, weeklyGrowth } from "@/lib/growth";
+import { settingsOf, statusesOf } from "@/lib/practice";
 import { currentLearner, learnersOf } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
+import type { Profile } from "@/lib/types";
+import { localDate } from "@/planner/dates";
 
 export default function GrowthPage() {
   return (
@@ -22,22 +24,15 @@ export default function GrowthPage() {
   );
 }
 
-// Step weeks by landing mid-week and snapping to Monday, so clock changes never shift the week.
-const DAY = 864e5;
-
 function Growth() {
   const t = useT();
   useTitle(t("growth.title"));
-  const locale = useLocale();
   const router = useRouter();
   const params = useSearchParams();
   const me = useStore(currentLearner);
   const kids = useStore(learnersOf);
   const learner = me ?? kids.find((k) => k.id === params.get("learner")) ?? kids[0];
-  const events = useStore((s) => s.activity.filter((e) => e.profileId === learner?.id));
-  const courses = useStore((s) => s.courses.filter((c) => c.profileId === learner?.id));
-  const [thisWeek] = useState(() => startOfWeek(Date.now()));
-  const [week, setWeek] = useState(thisWeek);
+  const [now] = useState(() => Date.now());
 
   if (!learner)
     return (
@@ -51,17 +46,6 @@ function Growth() {
       />
     );
 
-  const w = summarizeWeek(events, week);
-  const figures: [string, number][] = [
-    [t("growth.started"), w.started],
-    [t("growth.finished"), w.finished],
-    [t("growth.own"), w.own],
-    [t("growth.help"), w.help],
-    [t("growth.missed"), w.missed],
-    [t("growth.minutes"), w.minutes],
-  ];
-  const days = w.days.filter((d) => d.events.length).reverse();
-
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -69,69 +53,60 @@ function Growth() {
         {!me && kids.length > 1 && (
           <div role="group" aria-label={t("growth.viewing")} className="flex flex-wrap gap-2">
             {kids.map((k) => (
-              <button key={k.id} type="button" aria-pressed={k.id === learner.id} onClick={() => router.replace(`/growth?learner=${k.id}`)} className="k-chip">
+              <button key={k.id} type="button" aria-pressed={k.id === learner.id} onClick={() => router.replace(`/growth?learner=${k.id}`)} className="k-chip min-h-11 px-4">
                 {k.nickname}
               </button>
             ))}
           </div>
         )}
       </div>
+      {/* Keyed by learner so the day-by-day week resets when a grown-up switches child. */}
+      <Record key={learner.id} learner={learner} self={!!me} now={now} />
+    </div>
+  );
+}
 
-      <div className="flex items-center gap-2">
-        <button type="button" onClick={() => setWeek(startOfWeek(week - 3 * DAY))} aria-label={t("growth.prev")} className="grid size-10 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30">
-          <IconChevronLeft size={18} />
-        </button>
-        <p className="min-w-44 text-center text-sm font-medium text-ink">{t("growth.weekOf", { date: shortDate(week, locale) })}</p>
-        <button
-          type="button"
-          onClick={() => setWeek(startOfWeek(week + 10 * DAY))}
-          disabled={week >= thisWeek}
-          aria-label={t("growth.next")}
-          className="grid size-10 place-items-center rounded-full border border-border bg-panel text-ink hover:border-ink/30 disabled:opacity-30"
-        >
-          <IconChevronRight size={18} />
-        </button>
+/** The learner sees their own path; a grown-up sees the same, plus the skills behind it and results from school. */
+function Record({ learner, self, now }: { learner: Profile; self: boolean; now: number }) {
+  const t = useT();
+  const s = useStore((x) => x);
+  const growth = useMemo(() => weeklyGrowth(s, learner.id, now), [s, learner.id, now]);
+  const statuses = statusesOf(s, learner.id, now);
+  const results = useMemo(() => schoolResults(s, learner.id, localDate(growth[0].weeks[0].start)), [s, learner.id, growth]);
+  // Subjects with something in them; daily subjects with nothing yet get one line, not a card of zeros.
+  const shown = growth.filter((g) => g.any || (!self && results.some((r) => r.subject === g.subject)));
+  const waiting = settingsOf(learner).subjects.filter((x) => !shown.some((g) => g.subject === x));
+  const anything = shown.length > 0;
+
+  return (
+    <>
+      <div className="max-w-prose space-y-2">
+        <p className="text-sm text-ink">{self ? t("fam.growthSelf") : t("fam.growthFor", { name: learner.nickname })}</p>
+        <p className="text-xs text-muted">{t("child.honest")}</p>
       </div>
 
-      <dl className="grid grid-cols-2 divide-border overflow-hidden rounded-md border border-border bg-panel sm:grid-cols-3 lg:grid-cols-6 lg:divide-x">
-        {figures.map(([label, n]) => (
-          <div key={label} className="border-b border-border px-4 py-4 lg:border-b-0">
-            <dt className="text-xs text-muted">{label}</dt>
-            <dd className="mt-1 font-opmono text-t1 font-semibold tabular-nums text-ink">{n}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className="text-xs text-muted">{t("growth.note")}</p>
-
-      {days.length === 0 ? (
+      {anything ? (
+        <div className="space-y-6">
+          {shown.map((g) => (
+            <SubjectGrowth key={g.subject} growth={g} statuses={statuses} results={self ? [] : results.filter((r) => r.subject === g.subject)} detail={!self} now={now} />
+          ))}
+          {waiting.length > 0 && <p className="text-sm text-muted">{t("fam.nothingYet", { subjects: waiting.map((x) => t(`subject.${x}`)).join(", ") })}</p>}
+        </div>
+      ) : (
         <EmptyState
-          title={t("growth.empty")}
+          title={t("fam.growthEmpty")}
+          body={self ? t("fam.growthEmptySelf") : t("fam.growthEmptyFor", { name: learner.nickname })}
           action={
-            me ? (
+            self ? (
               <Link href="/home" className={btn("secondary")}>
                 {t("growth.emptyCta")}
               </Link>
             ) : undefined
           }
         />
-      ) : (
-        <ol className="space-y-6">
-          {days.map((d) => (
-            <li key={d.day}>
-              <h2 className="mb-2 text-sm font-semibold capitalize text-ink">{dayLabel(d.day, locale)}</h2>
-              <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-panel">
-                {d.events.map((e) => (
-                  <li key={e.id} className="flex items-center gap-3 px-4 py-3 text-sm">
-                    <EventMark e={e} />
-                    <span className="min-w-0 flex-1 text-ink">{eventText(e, courses, t)}</span>
-                    <span className="shrink-0 font-opmono text-xs tabular-nums text-muted">{timeLabel(e.at, locale)}</span>
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ol>
       )}
-    </div>
+
+      <DayLog profileId={learner.id} now={now} />
+    </>
   );
 }
