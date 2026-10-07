@@ -381,7 +381,7 @@ function ChatView({
                     {e.text}
                     {e.streaming && <span aria-hidden="true" className="ml-1 inline-block size-2 animate-pulse rounded-full bg-muted align-middle" />}
                   </p>
-                  {!e.streaming && <SayButton text={e.text} locale={locale} />}
+                  {!e.streaming && <SayButton text={e.text} locale={locale} big={young} />}
                 </div>
               )}
               {board ? (

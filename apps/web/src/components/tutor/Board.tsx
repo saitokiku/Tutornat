@@ -59,8 +59,8 @@ export function cardLabel(card: BoardCard, t: ReturnType<typeof useT>, locale: L
 
 const speechOk = () => typeof window !== "undefined" && "speechSynthesis" in window;
 
-/** Reads one text aloud (44px target). */
-export function SayButton({ text, locale, label }: { text: string; locale: Locale; label?: string }) {
+/** Reads one text aloud: 44px, or 56px for a young learner, for whom hearing it is the main way in. */
+export function SayButton({ text, locale, label, big = false }: { text: string; locale: Locale; label?: string; big?: boolean }) {
   const t = useT();
   const [on, setOn] = useState(false);
   if (!speechOk() || !text) return null;
@@ -75,7 +75,7 @@ export function SayButton({ text, locale, label }: { text: string; locale: Local
           setOn(false);
         } else if (speakText(text, locale, () => setOn(false))) setOn(true);
       }}
-      className={`inline-grid size-11 shrink-0 place-items-center rounded-full border transition-colors ${on ? "border-accent bg-accent/10 text-accent" : "border-border bg-panel text-muted hover:border-ink/30 hover:text-ink"}`}
+      className={`inline-grid ${big ? "size-14" : "size-11"} shrink-0 place-items-center rounded-full border transition-colors ${on ? "border-accent bg-accent/10 text-accent" : "border-border bg-panel text-muted hover:border-ink/30 hover:text-ink"}`}
     >
       {on ? <IconStop size={18} /> : <IconSpeaker size={18} />}
     </button>
@@ -208,7 +208,7 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
       return <p className="text-xs text-muted">{t("tutor.noteLeft")}</p>;
     case "fact":
       return (
-        <Shell id={id} label={label} aside={<SayButton text={card.extract} locale={card.lang} />}>
+        <Shell id={id} label={label} aside={<SayButton text={card.extract} locale={card.lang} big={young} />}>
           <h3 className="font-brand text-t3 font-semibold text-ink">{card.title}</h3>
           <blockquote cite={card.url} lang={card.lang} className="mt-1.5 border-l-2 border-border pl-3 text-sm text-ink">
             {card.extract}
@@ -222,7 +222,7 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
       );
     case "definition":
       return (
-        <Shell id={id} label={label} aside={<SayButton text={`${card.word}. ${card.senses.map((s) => s.text).join(" ")}`} locale="en" />}>
+        <Shell id={id} label={label} aside={<SayButton text={`${card.word}. ${card.senses.map((s) => s.text).join(" ")}`} locale="en" big={young} />}>
           <h3 className="font-brand text-t3 font-semibold text-ink" lang="en">
             {card.word}
           </h3>
@@ -241,7 +241,7 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
       );
     case "lesson":
       return (
-        <Shell id={id} label={label} aside={<SayButton text={[card.lead, ...card.points].filter(Boolean).join(" ")} locale={locale} />}>
+        <Shell id={id} label={label} aside={<SayButton text={[card.lead, ...card.points].filter(Boolean).join(" ")} locale={locale} big={young} />}>
           <h3 className="font-brand text-t3 font-semibold text-ink">{card.lessonTitle}</h3>
           {card.lead && <p className="mt-1 text-sm text-ink">{card.lead}</p>}
           <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-ink">
@@ -284,7 +284,7 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
       );
     case "poem":
       return (
-        <Shell id={id} label={label} aside={<SayButton text={`${card.title}. ${card.lines.join(" ")}`} locale="en" />}>
+        <Shell id={id} label={label} aside={<SayButton text={`${card.title}. ${card.lines.join(" ")}`} locale="en" big={young} />}>
           <h3 className="font-brand text-t3 font-semibold text-ink" lang="en">
             {card.title}
           </h3>

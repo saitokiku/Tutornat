@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { read } from "@/lib/store";
@@ -130,6 +130,37 @@ describe("Talk with the demo tutor", () => {
 });
 
 describe("a young learner", () => {
+  it("hears the tutor first, then each reply, one sentence at a time", async () => {
+    const said: string[] = [];
+    vi.stubGlobal(
+      "SpeechSynthesisUtterance",
+      class {
+        lang = "";
+        voice = null;
+        rate = 1;
+        constructor(public text: string) {}
+      },
+    );
+    vi.stubGlobal("speechSynthesis", { speak: (u: { text: string }) => said.push(u.text), cancel: vi.fn(), getVoices: () => [] });
+    const user = userEvent.setup();
+    const { unmount } = render(<TutorChat board setup={{ learner: learner({ grade: "1" }), surface: "talk", title: "Talk" }} />);
+    await waitFor(() => expect(said).toEqual(["I'm the demo tutor.", "What do you want to learn about?", "Tap one."]));
+    expect(screen.getByRole("button", { name: "Reading aloud" })).toHaveAttribute("aria-pressed", "true");
+    // The speaker beside each reply is a big target too.
+    expect(screen.getAllByRole("button", { name: /^Read aloud: / })[0].className).toContain("size-14");
+    await user.click(screen.getByRole("button", { name: "Read me a poem" }));
+    await waitFor(() => expect(said.length).toBeGreaterThan(3));
+    unmount();
+
+    // Older learners turn reading aloud on themselves.
+    said.length = 0;
+    render(<TutorChat board setup={{ learner: learner({ grade: "6" }), surface: "talk", title: "Talk" }} />);
+    expect(await screen.findByRole("button", { name: "Read aloud" })).toHaveAttribute("aria-pressed", "false");
+    expect(said).toEqual([]);
+    cleanup(); // unmount while the fake speech is still there, then put the globals back
+    vi.unstubAllGlobals();
+  });
+
   it("is greeted first with big tap chips and needs no typing", async () => {
     const user = userEvent.setup();
     render(<TutorChat board setup={{ learner: learner({ grade: "K" }), surface: "talk", title: "Talk" }} />);
