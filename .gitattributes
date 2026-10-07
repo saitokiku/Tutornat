@@ -4,3 +4,4 @@ apps/web/src/i18n/es.ts merge=union
 apps/web/src/catalogue/registry.ts merge=union
 apps/web/src/practice/registry.ts merge=union
 apps/web/src/resources/list.ts merge=union
+apps/web/src/practice/reviewed.ts merge=union
