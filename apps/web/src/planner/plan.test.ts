@@ -37,8 +37,9 @@ describe("planFor", () => {
   it("gives one daily set per enabled subject from the map", () => {
     const plan = planFor(base());
     const daily = [...plan.lead, ...plan.more].filter((i) => i.kind === "daily");
-    expect(daily.map((i) => i.subject)).toEqual(["math"]); // English strand may be empty; math always has skills
+    expect(daily.map((i) => i.subject)).toEqual(["math", "english"]);
     expect(daily[0].skillIds[0]).toBe("m.count.10");
+    expect(daily[1].skillIds[0]).toBe("e.letter.sounds");
   });
 
   it("puts open checks first", () => {
