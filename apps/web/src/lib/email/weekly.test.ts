@@ -7,8 +7,8 @@ import { createLearner } from "../profiles";
 import { read, resetMemory, update } from "../store";
 import type { SchoolEvent } from "@/planner/types";
 import type { Profile } from "../types";
-import { renderWeekly, WeeklyInput, withoutNames } from "./render";
-import { askConfirmation, codeFrom, confirmWeekly, emailMode, LOOK_RULES, nameWords, previewWeekly, resetEmailMode, resetSendStatus, sendDueWeekly, setWeeklyOn, useLastSend, useSentFromParentView, useWeeklyEmail, weekEnd, weeklyInput, weeklyOf } from "./weekly";
+import { nameWords, renderWeekly, WeeklyInput, withoutNames } from "./render";
+import { askConfirmation, codeFrom, confirmWeekly, emailMode, LOOK_RULES, previewWeekly, resetEmailMode, resetSendStatus, sendDueWeekly, setWeeklyOn, useLastSend, useSentFromParentView, useWeeklyEmail, weekEnd, weeklyInput, weeklyOf } from "./weekly";
 import { getSkill, SKILLS } from "@/practice/skills";
 
 const H = 3600_000;

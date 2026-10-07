@@ -8,7 +8,7 @@ import { weekFacts } from "../family";
 import { statusesOf } from "../practice";
 import { read, update, useStore, type StoreState } from "../store";
 import type { Account, Profile } from "../types";
-import { isQuiet, renderWeekly, tr, WeeklyInput, withoutNames, type Email, type LearnerWeek } from "./render";
+import { isQuiet, nameWords, renderWeekly, tr, WeeklyInput, withoutNames, type Email, type LearnerWeek } from "./render";
 
 // The weekly family email (opt-in): composed from the same numbers as the Family page, nothing for a
 // week with no activity, only ever to the account's own address (never to a child, who has none).
@@ -122,28 +122,6 @@ function learnerWeek(s: StoreState, p: Profile, weekStart: number, now: number, 
     tests,
     ...(idle >= LOOK_RULES.idleDays ? { idleDays: Math.min(idle, 400) } : {}),
   };
-}
-
-/**
- * Words never treated as a name, though a grown-up may type them into one ("The Lopez Family",
- * "Mom"): hiding them would garble titles ("Test on the water cycle").
- */
-const NOT_NAMES = new Set(
-  "the and of for our my family familia los las del la el de y mom mum mommy mummy dad daddy mama mamá papa papá mami papi parent parents padre madre padres grandma grandpa nana abuela abuelo abuelos home casa house kids niños".split(
-    " ",
-  ),
-);
-
-/** Each name, and each word of a longer one ("Maria Lopez", "Mary-Jane"), leaving out common words. */
-export function nameWords(names: string[]): string[] {
-  const out = new Set<string>();
-  const keep = (w: string) => !NOT_NAMES.has(w.toLocaleLowerCase());
-  for (const name of names) {
-    const whole = name.trim();
-    if (whole && keep(whole)) out.add(whole);
-    for (const w of whole.split(/[\s\-‐-―]+/)) if (w.length >= 3 && keep(w)) out.add(w);
-  }
-  return [...out];
 }
 
 /**
