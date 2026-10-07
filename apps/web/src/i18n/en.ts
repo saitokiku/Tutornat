@@ -1801,6 +1801,17 @@ const en = {
   "voice.micOff.hidden": "The microphone turned off when this page was hidden. Tap it to talk again.",
   "voice.setAside.heard": "Did you say “{text}”?",
   "voice.setAside.send": "Yes, send it",
+  // -- aiinfra
+  "ai.budget.tutor.day": "That's all the tutor time for today. The tutor is back tomorrow, and practice still works.",
+  "ai.budget.tutor.month": "Your family has used this month's tutor time. The tutor is back on {date}, and practice still works.",
+  "ai.budget.course.day": "The lesson writer is done for today. Start from a template or a ready-made course now, or try again tomorrow.",
+  "ai.budget.course.month": "Your family has used this month's lesson writing. It's back on {date}. Templates and ready-made courses still work.",
+  "ai.budget.practice.day": "AI-written questions are done for today. Practice from the skill map still works.",
+  "ai.budget.practice.month": "Your family has used this month's AI-written questions. They're back on {date}. Practice from the skill map still works.",
+  "ai.budget.extract.day": "Reading school papers with AI is done for today. You can add the dates by hand now, or try again tomorrow.",
+  "ai.budget.extract.month": "Your family has used this month's AI time. Reading school papers with AI is back on {date}; you can add the dates by hand now.",
+  "ai.budget.coach.day": "The weekly note is done for today. Everything on this page is still here, and you can try again tomorrow.",
+  "ai.budget.coach.month": "Your family has used this month's AI time. The weekly note is back on {date}.",
 } as const;
 
 export default en;

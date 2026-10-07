@@ -1803,6 +1803,17 @@ const es: Record<Key, string> = {
   "voice.micOff.hidden": "El micrófono se apagó cuando esta página quedó oculta. Tócalo para volver a hablar.",
   "voice.setAside.heard": "¿Dijiste “{text}”?",
   "voice.setAside.send": "Sí, envíalo",
+  // -- aiinfra
+  "ai.budget.tutor.day": "Por hoy se terminó el tiempo con el tutor. Mañana vuelve, y la práctica sigue funcionando.",
+  "ai.budget.tutor.month": "Tu familia ya usó el tiempo con el tutor de este mes. El tutor vuelve el {date}, y la práctica sigue funcionando.",
+  "ai.budget.course.day": "El escritor de lecciones terminó por hoy. Puedes empezar ahora con una plantilla o un curso listo, o intentarlo mañana.",
+  "ai.budget.course.month": "Tu familia ya usó las lecciones escritas de este mes. Vuelven el {date}. Las plantillas y los cursos listos siguen funcionando.",
+  "ai.budget.practice.day": "Las preguntas escritas por IA terminaron por hoy. La práctica del mapa de habilidades sigue funcionando.",
+  "ai.budget.practice.month": "Tu familia ya usó las preguntas escritas por IA de este mes. Vuelven el {date}. La práctica del mapa de habilidades sigue funcionando.",
+  "ai.budget.extract.day": "Leer papeles de la escuela con IA terminó por hoy. Puedes agregar las fechas a mano ahora, o intentarlo mañana.",
+  "ai.budget.extract.month": "Tu familia ya usó el tiempo de IA de este mes. Leer papeles de la escuela con IA vuelve el {date}; puedes agregar las fechas a mano ahora.",
+  "ai.budget.coach.day": "La nota de la semana terminó por hoy. Todo lo de esta página sigue aquí, y puedes intentarlo mañana.",
+  "ai.budget.coach.month": "Tu familia ya usó el tiempo de IA de este mes. La nota de la semana vuelve el {date}.",
 };
 
 export default es;
