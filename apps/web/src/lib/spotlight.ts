@@ -1,0 +1,520 @@
+// Spotlight: the tutor points at something on screen, the way a person points with a finger. The
+// element glows, a short caption says why, and if it is off screen the learner is shown which way.
+//
+// Targets are ids only. Screens mark the places a tutor points at most with data-spot="<id>"
+// (spotAttr). Anything else on screen — any visible control or heading — gets a stable auto id from
+// its role and accessible name, so the AI can still say "tap this". Nothing from outside ever passes a
+// CSS selector; every id is validated against SPOT_ID first.
+//
+// The engine is a tiny client store (like lib/store.ts; components read it with useSpotlight from
+// components/spotlight/hooks.ts). SpotlightLayer draws whatever is lit. No React and no "use client"
+// here: lib/ai/spot-tool.ts imports this into the server route for the id rule, and nothing touches the
+// DOM until a function is called in the browser.
+
+/* ------------------------------------------------------------------ ids */
+
+export const SPOT_ID = /^[a-z0-9][a-z0-9.-]{0,63}$/;
+export const isSpotId = (id: unknown): id is string => typeof id === "string" && SPOT_ID.test(id);
+
+/** Marks an element as a spot target: `<button {...spotAttr("practice.hint")}>`. `label` names it when it has no text (an SVG part). */
+export function spotAttr(id: string, label?: string): { "data-spot"?: string; "data-spot-label"?: string } {
+  if (!isSpotId(id) || id.startsWith("auto.")) {
+    if (process.env.NODE_ENV !== "production") console.error(`spotAttr: "${id}" is not a spot id (lowercase dotted, not auto.*)`);
+    return {};
+  }
+  return label ? { "data-spot": id, "data-spot-label": label } : { "data-spot": id };
+}
+
+/* ------------------------------------------------------------------ names */
+
+const NAME_MAX = 60;
+export type Scrub = (text: string) => string;
+
+let defaultScrub: Scrub | null = null;
+
+/** Sets the scrub every spot list and lookup uses (auto ids are built from scrubbed names, so both must agree). */
+export function setSpotScrub(fn: Scrub | null) {
+  defaultScrub = fn;
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** A scrub that replaces these names (the learner's, a grown-up's) wherever they appear as whole words. */
+export function scrubNames(names: (string | null | undefined)[], replacement = "[name]"): Scrub {
+  const list = [...new Set(names.map((n) => n?.trim() ?? "").filter((n) => n.length >= 2))].sort((a, b) => b.length - a.length);
+  if (!list.length) return (s) => s;
+  const re = new RegExp(`(?<![\\p{L}\\p{N}])(?:${list.map(escapeRe).join("|")})(?![\\p{L}\\p{N}])`, "giu");
+  return (s) => s.replace(re, replacement);
+}
+
+const BREAK = /^(address|article|aside|blockquote|br|dd|div|dl|dt|figcaption|figure|footer|form|h[1-6]|header|hr|label|li|main|nav|ol|p|section|table|td|text|th|title|tr|tspan|ul)$/;
+
+/** Visible text of a subtree as assistive tech reads it: skips aria-hidden parts, uses a part's aria-label in place of its text. */
+function textOf(el: Element): string {
+  let out = "";
+  const walk = (node: Node) => {
+    for (const c of Array.from(node.childNodes)) {
+      if (c.nodeType === 3) out += c.nodeValue ?? "";
+      else if (c.nodeType === 1) {
+        const e = c as Element;
+        if (e.getAttribute("aria-hidden") === "true" || e.hasAttribute("hidden") || /^(script|style|template)$/.test(e.localName)) continue;
+        const label = e.getAttribute("aria-label");
+        if (label) out += ` ${label} `;
+        else walk(e);
+        if (BREAK.test(e.localName)) out += " ";
+      }
+    }
+  };
+  walk(el);
+  return out;
+}
+
+const FIELD = "input, select, textarea";
+const ENTRY_ROLE = /^(textbox|searchbox|combobox|spinbutton)$/;
+
+/** Accessible name, simplified: labelledby, aria-label, a field's labels, text, title. Never a field's value. */
+function accessibleName(el: Element): string {
+  const by = el.getAttribute("aria-labelledby");
+  if (by) {
+    const s = by
+      .split(/\s+/)
+      .map((id) => el.ownerDocument.getElementById(id))
+      .map((r) => (r ? textOf(r) : ""))
+      .join(" ")
+      .trim();
+    if (s) return s;
+  }
+  const label = el.getAttribute("aria-label")?.trim();
+  if (label) return label;
+  const field = el.matches(FIELD);
+  if (field) {
+    const labels = (el as HTMLInputElement).labels;
+    const s = labels ? Array.from(labels).map(textOf).join(" ").trim() : "";
+    if (s) return s;
+    if (el instanceof HTMLInputElement && /^(button|submit|reset)$/.test(el.type) && el.value) return el.value;
+    const placeholder = el.getAttribute("placeholder")?.trim();
+    if (placeholder) return placeholder;
+  }
+  // What someone typed is theirs: entry fields are named by their labels only.
+  const entry = field || (el as HTMLElement).isContentEditable || ENTRY_ROLE.test(el.getAttribute("role") ?? "");
+  if (!entry) {
+    const text = textOf(el).trim();
+    if (text) return text;
+  }
+  const title = el.getAttribute("title") ?? Array.from(el.children).find((c) => c.localName === "title")?.textContent;
+  return title?.trim() ?? "";
+}
+
+function clip(s: string): string {
+  if (s.length <= NAME_MAX) return s;
+  return `${s.slice(0, NAME_MAX - 1).replace(/[\uD800-\uDBFF]$/, "")}…`;
+}
+
+/** What a spot is called in the list the tutor sees: data-spot-label, else its accessible name; scrubbed, at most 60 characters. */
+export function spotName(el: Element, scrub: Scrub | null = defaultScrub): string {
+  let s = (el.getAttribute("data-spot-label") || accessibleName(el)).replace(/\s+/g, " ").trim();
+  if (scrub) s = scrub(s);
+  return clip(s);
+}
+
+/* ------------------------------------------------------------------ targets */
+
+const SKIP = '[hidden], [inert], [aria-hidden="true"], [data-spot-layer]';
+const CONTROL = 'button, a[href], input:not([type="hidden"]), select, textarea, [role="button"], [role="tab"], [role="link"], [role="checkbox"], [role="radio"], [role="slider"]';
+const HEADING = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
+
+type VisibilityOptions = { opacityProperty?: boolean; visibilityProperty?: boolean; checkOpacity?: boolean; checkVisibilityCSS?: boolean };
+
+/** On the page and perceivable: connected, not hidden/inert/aria-hidden, not zero-size, not invisible. */
+export function isShown(el: Element): boolean {
+  if (!el.isConnected || el.closest(SKIP)) return false;
+  const r = el.getBoundingClientRect();
+  if (r.width <= 0 && r.height <= 0) return false;
+  const check = (el as Element & { checkVisibility?: (o: VisibilityOptions) => boolean }).checkVisibility;
+  if (typeof check === "function" && !check.call(el, { opacityProperty: true, visibilityProperty: true, checkOpacity: true, checkVisibilityCSS: true })) return false;
+  return getComputedStyle(el).visibility !== "hidden";
+}
+
+function roleOf(el: Element): string {
+  const explicit = el.getAttribute("role")?.trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-z]/g, "");
+  if (explicit) return explicit.slice(0, 12);
+  const tag = el.localName;
+  if (/^h[1-6]$/.test(tag)) return "heading";
+  if (tag === "a") return "link";
+  if (tag === "button") return "button";
+  if (tag === "select") return "combobox";
+  if (tag === "textarea") return "textbox";
+  if (tag === "input") {
+    const type = (el as HTMLInputElement).type;
+    if (type === "checkbox" || type === "radio") return type;
+    if (type === "range") return "slider";
+    if (/^(button|submit|reset|image)$/.test(type)) return "button";
+    return "textbox";
+  }
+  return "control";
+}
+
+function slug(s: string, max: number): string {
+  return s
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, max)
+    .replace(/-+$/, "");
+}
+
+type Found = { id: string; el: Element; name: string };
+
+function explicitTargets(scrub: Scrub | null): Found[] {
+  const seen = new Set<string>();
+  const out: Found[] = [];
+  for (const el of Array.from(document.querySelectorAll("[data-spot]"))) {
+    const id = el.getAttribute("data-spot") ?? "";
+    if (!isSpotId(id) || id.startsWith("auto.") || seen.has(id) || !isShown(el)) continue;
+    seen.add(id);
+    out.push({ id, el, name: spotName(el, scrub) });
+  }
+  return out;
+}
+
+/** Every visible, named control and heading in page order, each with its auto id. Numbering runs over the whole page so ids stay stable. */
+function autoTargets(scrub: Scrub | null): Found[] {
+  const used = new Set<string>();
+  const out: Found[] = [];
+  for (const el of Array.from(document.querySelectorAll(`${CONTROL}, ${HEADING}, [tabindex]`))) {
+    if (el.hasAttribute("data-spot") || el.closest("[data-spot-ignore]")) continue;
+    if (!el.matches(CONTROL) && !el.matches(HEADING) && !(Number(el.getAttribute("tabindex")) >= 0)) continue;
+    // A heading inside a link, a span inside a button: the outer control is the thing to point at.
+    if (el.parentElement?.closest(CONTROL)) continue;
+    if (!isShown(el)) continue;
+    const name = spotName(el, scrub);
+    if (!name) continue;
+    const prefix = `auto.${roleOf(el)}.`;
+    const base = prefix + (slug(name, 64 - prefix.length - 4) || "item");
+    let id = base;
+    for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
+    used.add(id);
+    out.push({ id, el, name });
+  }
+  return out;
+}
+
+export type SpotInfo = { id: string; name: string };
+
+/**
+ * What the tutor can point at right now: marked targets first, then every visible control and heading,
+ * each half on screen first, capped. Names are scrubbed (setSpotScrub or opts.scrub) before they or
+ * the auto ids built from them leave this function.
+ */
+export function visibleSpots(opts: { cap?: number; scrub?: Scrub | null } = {}): SpotInfo[] {
+  if (typeof document === "undefined") return [];
+  const scrub = opts.scrub === undefined ? defaultScrub : opts.scrub;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const onScreen = (f: Found) => {
+    const r = f.el.getBoundingClientRect();
+    return r.bottom > 0 && r.right > 0 && r.top < vh && r.left < vw;
+  };
+  const firstOnScreen = (list: Found[]) => [...list.filter(onScreen), ...list.filter((f) => !onScreen(f))];
+  return [...firstOnScreen(explicitTargets(scrub)), ...firstOnScreen(autoTargets(scrub))]
+    .slice(0, opts.cap ?? 60)
+    .map(({ id, name }) => ({ id, name }));
+}
+
+/** The element an id names, by the same rules as visibleSpots, or null (unknown, invalid or hidden). */
+export function resolveSpot(id: string, opts: { scrub?: Scrub | null } = {}): Element | null {
+  if (typeof document === "undefined" || !isSpotId(id)) return null;
+  if (id.startsWith("auto.")) return autoTargets(opts.scrub === undefined ? defaultScrub : opts.scrub).find((f) => f.id === id)?.el ?? null;
+  // Safe as a selector: SPOT_ID allows only [a-z0-9.-].
+  return Array.from(document.querySelectorAll(`[data-spot="${id}"]`)).find(isShown) ?? null;
+}
+
+/* ------------------------------------------------------------------ honesty guard */
+
+const guards = new Set<readonly string[]>();
+
+function guardedBy(el: Element): boolean {
+  for (const list of guards)
+    for (const id of list) {
+      const hits = id.startsWith("auto.") ? [resolveSpot(id)] : Array.from(document.querySelectorAll(`[data-spot="${id}"]`));
+      if (hits.some((g) => g && (g === el || g.contains(el)))) return true;
+    }
+  return false;
+}
+
+/**
+ * Makes these targets (and anything inside them) unpointable until released: the correct choice, the
+ * answer tick on a pad. Spot requests for them quietly fail. Never remove them from the visible list —
+ * a missing choice would tell the model which one is right.
+ */
+export function guardSpots(ids: readonly string[]): () => void {
+  const list = ids.filter(isSpotId);
+  guards.add(list);
+  if (live && guardedBy(live.target)) clearSpot();
+  return () => {
+    guards.delete(list);
+  };
+}
+
+/* ------------------------------------------------------------------ engine */
+
+export type SpotCue = "glow" | "point";
+export type SpotStep = { id: string; say: string };
+export type SpotOptions = {
+  /** The caption: why this matters, in the tutor's words. */
+  say?: string;
+  /** glow = a ring around it (default); point = an arrow at it, for small things a ring would crowd. */
+  cue?: SpotCue;
+  /** Move keyboard focus to the target. Off by default: pointing never steals focus. */
+  focus?: boolean;
+  /** Clears itself after this long (default SPOT_MS). 0 or Infinity keeps it until dismissed. Steps never time out. */
+  ms?: number;
+  /** More places to visit after this one, as a walkthrough with Back / Next. */
+  steps?: SpotStep[];
+  /** Dim the rest of the page. Default: on for walkthroughs, off for a single spot. */
+  dim?: boolean;
+};
+
+export type Spotlight = {
+  /** One per spot()/spotSteps() call. */
+  session: number;
+  /** Bumps when the same spot re-pulses or its element is replaced. */
+  nonce: number;
+  id: string;
+  target: Element;
+  say?: string;
+  cue: SpotCue;
+  dim: boolean;
+  /** The whole walkthrough, or null for a single spot. */
+  steps: SpotStep[] | null;
+  index: number;
+};
+
+export const SPOT_MS = 8000;
+const SAY_MAX = 160;
+
+let live: Spotlight | null = null;
+let sessions = 0;
+const listeners = new Set<() => void>();
+const emit = () => listeners.forEach((fn) => fn());
+
+let timer: ReturnType<typeof setTimeout> | undefined;
+let duration: number | null = null;
+let remaining = 0;
+let startedAt = 0;
+let held = false;
+let focusing = false;
+let observer: MutationObserver | null = null;
+
+export const currentSpot = () => live;
+export function subscribeSpot(fn: () => void) {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+const cleanSay = (s: string | undefined) => {
+  const t = s?.replace(/\s+/g, " ").trim();
+  return t ? (t.length > SAY_MAX ? `${t.slice(0, SAY_MAX - 1)}…` : t) : undefined;
+};
+
+/** Resolved, shown and not guarded, or null. */
+function pick(id: string): Element | null {
+  const el = resolveSpot(id);
+  return el && !guardedBy(el) ? el : null;
+}
+
+/** Lights one element. False when the id is unknown, hidden or guarded (and nothing changes). */
+export function spot(id: string, opts: SpotOptions = {}): boolean {
+  if (opts.steps?.length) return spotSteps([{ id, say: opts.say ?? "" }, ...opts.steps], opts);
+  const target = pick(id);
+  if (!target) return false;
+  begin({ id, target, say: cleanSay(opts.say), cue: opts.cue ?? "glow", dim: opts.dim ?? false, steps: null, index: 0 }, opts.ms ?? SPOT_MS, opts.focus);
+  return true;
+}
+
+/** A walkthrough: one place at a time, Back / Next / Done. Starts at the first step that can be found. */
+export function spotSteps(steps: SpotStep[], opts: Omit<SpotOptions, "say" | "steps" | "ms"> = {}): boolean {
+  const list = steps.filter((s) => isSpotId(s.id)).map((s) => ({ id: s.id, say: cleanSay(s.say) ?? "" }));
+  for (let i = 0; i < list.length; i++) {
+    const target = pick(list[i].id);
+    if (!target) continue;
+    begin({ id: list[i].id, target, say: list[i].say || undefined, cue: opts.cue ?? "glow", dim: opts.dim ?? true, steps: list, index: i }, null, opts.focus);
+    return true;
+  }
+  return false;
+}
+
+/** Next (1) or Back (-1) in a walkthrough, skipping steps that are gone. Next past the end, or on a single spot, finishes. */
+export function stepSpot(delta: 1 | -1 = 1): boolean {
+  if (!live) return false;
+  const steps = live.steps;
+  if (steps)
+    for (let i = live.index + delta; i >= 0 && i < steps.length; i += delta) {
+      const target = pick(steps[i].id);
+      if (!target) continue;
+      live = { ...live, id: steps[i].id, target, say: steps[i].say || undefined, index: i, nonce: 0 };
+      reveal(target, false);
+      emit();
+      return true;
+    }
+  if (delta > 0) clearSpot();
+  return false;
+}
+
+export function clearSpot() {
+  if (!live) return;
+  live = null;
+  clearTimeout(timer);
+  detach();
+  emit();
+}
+
+/** Pauses the timer while the learner reads or uses the caption (hover, focus). */
+export function holdSpot(on: boolean) {
+  if (on === held) return;
+  held = on;
+  if (!live || duration === null) return;
+  if (on) {
+    clearTimeout(timer);
+    remaining -= Date.now() - startedAt;
+  } else run(Math.max(remaining, 2500));
+}
+
+/** Scrolls the lit element back into view and pulses it again (the edge indicator's job). */
+export function revealSpot() {
+  if (!live) return;
+  reveal(live.target, true);
+  live = { ...live, nonce: live.nonce + 1 };
+  emit();
+}
+
+/** Re-checks the lit element after the page changed: same id re-found (a re-render), else cleared. */
+export function checkSpot() {
+  if (!live || (live.target.isConnected && isShown(live.target))) return;
+  const again = pick(live.id);
+  if (!again) return clearSpot();
+  live = { ...live, target: again, nonce: live.nonce + 1 };
+  emit();
+}
+
+/** Test hook: clears the spot, guards and scrub. */
+export function resetSpotlight() {
+  clearSpot();
+  guards.clear();
+  defaultScrub = null;
+  held = false;
+}
+
+function begin(s: Omit<Spotlight, "session" | "nonce">, ms: number | null, focus?: boolean) {
+  const fresh = !live;
+  live = { ...s, session: ++sessions, nonce: 0 };
+  clearTimeout(timer);
+  duration = ms && ms > 0 && Number.isFinite(ms) ? ms : null;
+  if (duration !== null) {
+    remaining = duration;
+    if (!held) run(duration);
+  }
+  if (fresh) attach();
+  reveal(s.target, false);
+  if (focus) focusTarget(s.target);
+  emit();
+}
+
+function run(ms: number) {
+  clearTimeout(timer);
+  remaining = ms;
+  startedAt = Date.now();
+  timer = setTimeout(clearSpot, ms);
+}
+
+const TYPING = 'textarea, select, input:not([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="image"])';
+const isEntry = (el: Element) => el.matches(TYPING) || (el as HTMLElement).isContentEditable || ENTRY_ROLE.test(el.getAttribute("role") ?? "");
+
+function typing(): boolean {
+  const a = document.activeElement;
+  return !!a && a !== document.body && isEntry(a);
+}
+
+/** The part of the viewport where el can be seen: cut down by every clipping or scrolling ancestor. */
+export function clipBox(el: Element): { left: number; top: number; right: number; bottom: number } {
+  const box = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+  for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    if (cs.overflowX !== "visible" || cs.overflowY !== "visible") {
+      const r = p.getBoundingClientRect();
+      box.left = Math.max(box.left, r.left);
+      box.top = Math.max(box.top, r.top);
+      box.right = Math.min(box.right, r.right);
+      box.bottom = Math.min(box.bottom, r.bottom);
+    }
+    if (cs.position === "fixed") break;
+  }
+  return box;
+}
+
+function inView(el: Element): boolean {
+  const b = el.getBoundingClientRect();
+  // A line in a drawing can be 0 wide: give it a pixel each way so it can count as seen.
+  const r = { left: Math.min(b.left, b.right - 1), right: Math.max(b.right, b.left + 1), top: Math.min(b.top, b.bottom - 1), bottom: Math.max(b.bottom, b.top + 1) };
+  const c = clipBox(el);
+  const w = Math.min(r.right, c.right) - Math.max(r.left, c.left);
+  const h = Math.min(r.bottom, c.bottom) - Math.max(r.top, c.top);
+  if (w <= 0 || h <= 0) return false;
+  return (w * h) / ((r.right - r.left) * (r.bottom - r.top)) >= 0.9 || h >= (c.bottom - c.top) * 0.6;
+}
+
+function reveal(el: Element, force: boolean) {
+  if (typeof el.scrollIntoView !== "function") return;
+  if (!force && (typing() || inView(el))) return;
+  const still = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const tall = el.getBoundingClientRect().height > window.innerHeight * 0.6;
+  el.scrollIntoView({ behavior: still ? "instant" : "smooth", block: tall ? "start" : "center", inline: "nearest" });
+}
+
+function focusTarget(el: Element) {
+  const h = el as HTMLElement;
+  if (typeof h.focus !== "function" || !(h.tabIndex >= 0 || el.matches("a[href], button, input, select, textarea"))) return;
+  focusing = true;
+  h.focus({ preventScroll: true });
+  focusing = false;
+}
+
+/* The learner acted on what was pointed at: the spot did its job. */
+function activated() {
+  if (!live) return;
+  if (!live.steps) return clearSpot();
+  const { session, index } = live;
+  // Let the click land (a menu opens, a panel appears) before looking for the next step.
+  setTimeout(() => live?.session === session && live.index === index && stepSpot(1), 120);
+}
+
+function onKey(e: KeyboardEvent) {
+  if (e.key === "Escape" && !e.defaultPrevented) clearSpot();
+}
+function onClick(e: Event) {
+  if (live && e.target instanceof Node && live.target.contains(e.target)) activated();
+}
+function onFocusIn(e: Event) {
+  if (!focusing && live && isEntry(live.target) && e.target instanceof Node && live.target.contains(e.target)) activated();
+}
+
+function attach() {
+  document.addEventListener("keydown", onKey);
+  document.addEventListener("click", onClick, true);
+  document.addEventListener("focusin", onFocusIn, true);
+  if (typeof MutationObserver === "function") {
+    observer = new MutationObserver(() => checkSpot());
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "inert", "aria-hidden"] });
+  }
+}
+
+function detach() {
+  document.removeEventListener("keydown", onKey);
+  document.removeEventListener("click", onClick, true);
+  document.removeEventListener("focusin", onFocusIn, true);
+  observer?.disconnect();
+  observer = null;
+}

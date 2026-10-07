@@ -1554,6 +1554,22 @@ const es: Record<Key, string> = {
   "pr.std.missing": "No encontramos el texto de {code} en los estándares Common Core.",
   "pr.howNote": "Ahora respóndela para seguir. Cuenta como hecha con ayuda.",
   "pr.blank": "espacio en blanco",
+  // -- spotlight
+  "spot.region": "De tu tutor",
+  "spot.gotIt": "Entendido",
+  "spot.done": "Listo",
+  "spot.step": "{n} de {total}",
+  "spot.announceStep": "Paso {n} de {total}: {say}",
+  "spot.lookAt": "Mira: {name}",
+  "spot.lookHere": "Mira donde señala tu tutor.",
+  "spot.show": "Muéstramelo",
+  "spot.dir.up": "arriba",
+  "spot.dir.down": "abajo",
+  "spot.dir.left": "a la izquierda",
+  "spot.dir.right": "a la derecha",
+  "spot.hintHere": "La pista habla de esta parte.",
+  "spot.again": "Muéstramelo otra vez",
+  "spot.gone": "Eso ya no está en la pantalla.",
 };
 
 export default es;

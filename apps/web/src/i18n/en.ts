@@ -1552,6 +1552,22 @@ const en = {
   "pr.std.missing": "We couldn't find the wording of {code} in the Common Core text.",
   "pr.howNote": "Now answer it to move on. It counts as done with help.",
   "pr.blank": "blank",
+  // -- spotlight
+  "spot.region": "From your tutor",
+  "spot.gotIt": "Got it",
+  "spot.done": "Done",
+  "spot.step": "{n} of {total}",
+  "spot.announceStep": "Step {n} of {total}: {say}",
+  "spot.lookAt": "Look at: {name}",
+  "spot.lookHere": "Look where your tutor is pointing.",
+  "spot.show": "Show me",
+  "spot.dir.up": "above",
+  "spot.dir.down": "below",
+  "spot.dir.left": "to the left",
+  "spot.dir.right": "to the right",
+  "spot.hintHere": "The hint is about this part.",
+  "spot.again": "Show me again",
+  "spot.gone": "That isn't on the screen any more.",
 } as const;
 
 export default en;
