@@ -38,19 +38,18 @@ export type Block =
 /** Static teaching pictures drawn in SVG (not text rendered into an image). */
 export type Visual =
   | { kind: "fraction"; parts: number; shaded: number }
-  | { kind: "number-line"; min: number; max: number; marks: number[] }
+  | { kind: "number-line"; min: number; max: number; marks: number[]; denominator?: number }
   | { kind: "particles"; state: "solid" | "liquid" | "gas" }
-  | { kind: "moon"; phase: number }; // 0 = new, 0.5 = full, 0..1
+  | { kind: "moon"; phase: number } // 0 = new, 0.5 = full, 0..1
+  | { kind: "line-graph"; points: [number, number][]; xLabel: string; yLabel: string };
 
 export type Widget =
   | { kind: "fraction-bar"; parts: number; shaded: number; target?: { parts: number; shaded: number } }
-  | { kind: "number-line"; min: number; max: number; step: number; start: number; target?: number }
+  /** denominator: label positions as fractions (e.g. 4 → 0, 1/4, 2/4…) instead of decimals. */
+  | { kind: "number-line"; min: number; max: number; step: number; start: number; target?: number; denominator?: number }
   | { kind: "states-of-matter"; startC: number; target?: "solid" | "liquid" | "gas" }
-  | { kind: "moon-phases"; target?: number }
-  | {
-      kind: "claim-sorter";
-      items: { id: string; text: string; role: "claim" | "evidence" | "reasoning" }[];
-    };
+  | { kind: "moon-phases"; target?: number } // target = day 0..29
+  | { kind: "sorter"; categories: string[]; items: { id: string; text: string; answer: number }[] };
 
 export type QuizQuestion = {
   id: string;
