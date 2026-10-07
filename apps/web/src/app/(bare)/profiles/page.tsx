@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KaizenLogo } from "@/components/brand";
 import { IconFamily, IconLogout, IconPen, IconPlus, IconTrash } from "@/components/icons";
 import { Avatar } from "@/components/profiles/Avatar";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
 import { signOut } from "@/lib/auth";
 import { createLearner, learnersOf, removeLearner, selectLearner, updateLearner } from "@/lib/profiles";
-import { useStore } from "@/lib/store";
+import { read, useStore } from "@/lib/store";
 
 export default function ProfilesPage() {
   const t = useT();
@@ -27,6 +27,11 @@ export default function ProfilesPage() {
   const showForm = form ?? (learners.length === 0 && unlocked ? "add" : null);
   const editing = learners.find((l) => l.id === showForm);
   const pendingGate = gate ?? (learners.length === 0 && !unlocked ? "add" : null);
+
+  // The picker belongs to the family, not to whoever used the app last.
+  useEffect(() => {
+    if (read().session.profileId) selectLearner(null);
+  }, []);
 
   const open = (id: string | "parent") => {
     selectLearner(id);

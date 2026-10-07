@@ -59,32 +59,36 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
   const onSpeakText = useCallback((text: string) => setQuizText(text), []);
 
   const header = (
-    <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-panel px-4 py-3 sm:px-6">
-      <Link href={`/courses/${course.id}`} className="-ml-2 inline-flex min-h-10 min-w-0 items-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink">
+    <header className="flex items-center gap-2 border-b border-border bg-panel px-2 py-2 sm:gap-4 sm:px-6 sm:py-3">
+      <Link
+        href={`/courses/${course.id}`}
+        aria-label={t("stage.backToCourse")}
+        className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-sm px-2 text-sm font-medium text-muted hover:bg-panel2 hover:text-ink sm:max-w-64 sm:justify-start"
+      >
         <IconArrowLeft size={16} className="shrink-0" />
-        <span className="truncate" lang={course.locale}>
+        <span className="hidden truncate sm:inline" lang={course.locale}>
           {course.title}
         </span>
       </Link>
-      <div className="order-last flex w-full min-w-0 items-center gap-2 sm:order-none sm:w-auto sm:flex-1 sm:justify-center">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:justify-center">
         <SubjectDot subject={course.subject} />
         <h1 className="truncate font-brand text-t3 font-semibold text-ink" lang={course.locale}>
           {lesson.title}
         </h1>
       </div>
       {lesson.scenes.length > 0 && !finished && (
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           {speech.supported &&
             (speech.speaking ? (
-              <Button size="sm" variant="secondary" onClick={speech.stop}>
-                <IconStop size={14} /> {t("stage.stopReading")}
+              <Button size="sm" variant="secondary" onClick={speech.stop} aria-label={t("stage.stopReading")}>
+                <IconStop size={14} /> <span className="hidden sm:inline">{t("stage.stopReading")}</span>
               </Button>
             ) : (
-              <Button size="sm" variant="secondary" onClick={() => speech.speak(scene.kind === "quiz" ? quizText : sceneSpeech(scene))}>
-                <IconSpeaker size={16} /> {t("stage.readAloud")}
+              <Button size="sm" variant="secondary" onClick={() => speech.speak(scene.kind === "quiz" ? quizText : sceneSpeech(scene))} aria-label={t("stage.readAloud")}>
+                <IconSpeaker size={16} /> <span className="hidden sm:inline">{t("stage.readAloud")}</span>
               </Button>
             ))}
-          <Button size="sm" variant="ghost" aria-pressed={false} onClick={() => setBoardNote(!boardNote)} aria-label={t("stage.whiteboard")}>
+          <Button size="sm" variant="ghost" onClick={() => setBoardNote(!boardNote)} aria-label={t("stage.whiteboard")}>
             <IconBoard size={16} />
           </Button>
           <Button size="sm" variant={showTutor ? "secondary" : "ghost"} aria-expanded={showTutor} onClick={() => setShowTutor(!showTutor)} aria-label={showTutor ? t("tutor.hide") : t("tutor.show")}>
@@ -203,7 +207,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
               <>
                 <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3 sm:px-8">
                   <span className="font-opmono text-[11px] uppercase tracking-wider text-muted">{t(`stage.kind.${scene.kind}` as const)}</span>
-                  <span className="font-opmono text-xs tabular-nums text-muted">{t("stage.sceneOf", { n: index + 1, total: lesson.scenes.length })}</span>
+                  <span className="hidden font-opmono text-xs tabular-nums text-muted lg:inline">{t("stage.sceneOf", { n: index + 1, total: lesson.scenes.length })}</span>
                 </div>
                 <div key={scene.id} className="min-h-[22rem] animate-fade-up space-y-6 px-5 py-7 sm:px-8 sm:py-9" lang={course.locale}>
                   <h2 id="scene-title" className="font-brand text-t1 font-semibold text-balance text-ink">

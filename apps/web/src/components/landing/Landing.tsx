@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { CATALOGUE } from "@/catalogue";
 import { KaizenLogo } from "@/components/brand";
+import { CourseArt } from "@/components/courses/CourseArt";
 import { IconArrowRight, IconPaperclip } from "@/components/icons";
 import { FractionBar } from "@/components/stage/widgets/FractionBar";
 import { MoonVisual } from "@/components/stage/visuals";
 import { SubjectDot, btn } from "@/components/ui";
-import { useLocale, useT } from "@/i18n";
+import { gradeLabel, useLocale, useT } from "@/i18n";
 import { update, useStore } from "@/lib/store";
 import type { Locale } from "@/lib/types";
 
@@ -53,7 +55,7 @@ export function Landing() {
                 </Link>
               )}
             </div>
-            <p className="mt-6 text-sm text-muted">{t("landing.subjects.title")}</p>
+            <p className="mt-6 text-sm text-muted">{t("landing.facts")}</p>
           </div>
 
           <HeroStage />
@@ -71,6 +73,8 @@ export function Landing() {
             </div>
           </div>
         </section>
+
+        <Inside signedIn={signedIn} />
 
         <section aria-labelledby="parents" className="mx-auto grid max-w-wide items-center gap-12 px-5 py-20 sm:px-8 lg:grid-cols-2">
           <div>
@@ -256,5 +260,37 @@ function FamilyArt() {
         <p className="mt-1 text-sm italic text-ink">{es ? "Practicar con tiras de papel el sábado." : "Try paper strips together on Saturday."}</p>
       </div>
     </div>
+  );
+}
+
+const SHOWCASE = ["english-story-order", "science-matter", "math-fractions", "science-moon", "english-argument", "math-slope"];
+
+/** The real catalogue, not mock-ups: one course per grade band and subject. */
+function Inside({ signedIn }: { signedIn: boolean }) {
+  const t = useT();
+  const locale = useLocale();
+  const shown = SHOWCASE.map((id) => CATALOGUE.find((c) => c.id === (locale === "es" && id === "math-fractions" ? "math-fractions-es" : id))!).filter(Boolean);
+  return (
+    <section aria-labelledby="inside" className="mx-auto max-w-wide px-5 py-20 sm:px-8">
+      <h2 id="inside" className="font-brand text-t1 font-semibold text-ink sm:text-d3">
+        {t("landing.inside.title")}
+      </h2>
+      <p className="mt-3 max-w-[34rem] text-body text-muted">{t("landing.inside.body")}</p>
+      <ul className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3">
+        {shown.map((c) => (
+          <li key={c.id}>
+            <Link href={signedIn ? "/profiles" : "/sign-up"} className="group block rounded-md border border-border bg-panel p-3 transition-shadow hover:shadow-soft">
+              <CourseArt lessons={c.lessons} subject={c.subject} />
+              <p className="mt-3 px-1 text-sm font-semibold text-ink" lang={c.locale}>
+                {c.title}
+              </p>
+              <p className="px-1 pb-1 font-opmono text-xs text-muted">
+                {gradeLabel(locale, c.grade)} · {t(`subject.${c.subject}` as const)}
+              </p>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

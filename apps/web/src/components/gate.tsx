@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { use, useEffect, type ReactNode } from "react";
 import { browser } from "react-dom";
+import { KaizenMark } from "@/components/brand";
 import { Notice } from "@/components/ui";
 import { useT } from "@/i18n";
 import { currentLearner } from "@/lib/profiles";
@@ -48,5 +49,9 @@ export function StoreHealthNotice() {
 }
 
 export function PageFallback() {
-  return <div aria-busy="true" className="min-h-dvh bg-paper" />;
+  return (
+    <div aria-busy="true" className="grid min-h-dvh place-items-center bg-paper">
+      <KaizenMark size={40} className="animate-pulse opacity-60" />
+    </div>
+  );
 }
