@@ -149,7 +149,8 @@ async function applyRecords(tx: Tx, accountId: string, list: SyncList, pushed: P
         deleted: sql`excluded.deleted`,
         seq: sql`nextval('sync_seq')`,
       },
-      setWhere: sql`excluded.updated_at > ${table.updatedAt}`,
+      // A removed learner stays removed: an older device's edit can't bring a child's record back.
+      setWhere: list === "profiles" ? sql`excluded.updated_at > ${table.updatedAt} and not ${table.deleted}` : sql`excluded.updated_at > ${table.updatedAt}`,
     })
     .returning({ id: table.id, deleted: table.deleted });
   const done = new Set(applied.map((a) => a.id));

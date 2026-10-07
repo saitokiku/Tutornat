@@ -558,13 +558,21 @@ export function ensureStarted() {
   setInterval(() => {
     if (document.visibilityState === "visible") void syncNow();
   }, 60_000);
-  void boot();
+  void resume();
 }
 
-async function boot() {
+/** Once per page load: picks up the server session this browser holds, if any. Exported for tests. */
+export async function resume() {
   const hint = hintAccount();
-  if (!hint) return;
   const s = read();
+  if (!hint) {
+    // The server session lapsed (30 days unused) while the copy here still says signed in. Without a
+    // session nothing would be saved to the account, so the grown-up signs in again; anything this
+    // device hadn't sent stays in its outbox and goes up then.
+    const a = s.accounts.find((x) => x.id === s.session.accountId);
+    if (a && !a.passwordHash) applyRemote((d) => void (d.session = { accountId: null, profileId: null }));
+    return;
+  }
   if (s.session.accountId === hint && s.accounts.some((a) => a.id === hint)) {
     active = hint;
     void serverStatus();

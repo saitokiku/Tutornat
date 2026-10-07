@@ -234,7 +234,8 @@ export async function loadConsent(): Promise<ConsentOptions | null> {
   }
 }
 
-export type GrantInput = { profileId: string; scope: ConsentScope[]; method: string; under13: boolean };
+/** `proof`: what a verified method's own flow handed back, for the server to confirm with the vendor. */
+export type GrantInput = { profileId: string; scope: ConsentScope[]; method: string; under13: boolean; proof?: string };
 
 export async function grantConsent(input: GrantInput): Promise<{ ok: true; receipt: ConsentReceipt } | { ok: false; error: Key }> {
   // A learner added a moment ago must reach the server before consent can name them.

@@ -1,9 +1,11 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { signUp, type AuthOk } from "./auth";
 import type { Db } from "./client";
-import { consentGate, grantConsent, methodsFor, revokeConsent } from "./consent";
+import { CONSENT_METHODS, consentGate, grantConsent, methodsFor, revokeConsent, type ConsentMethod } from "./consent";
 import { consentAllows, CONSENT_NOTICE_VERSION, gradeAge, receiptCounts, type ConsentReceipt } from "./policy";
+import { consentReceipts } from "./schema";
 import { syncAccount } from "./sync";
 import { testDb } from "./testing";
 
@@ -24,8 +26,8 @@ async function familyWith(grades: string[]) {
   await syncAccount(db, r.account.id, { v: 1, since: 0, now: Date.now(), push: { profiles: push } });
   return { accountId: r.account.id, token: r.token, ids: push.map((p) => p.id) };
 }
-const grant = (accountId: string, profileId: string, method: string, env = DEV, extra: Partial<{ under13: boolean; noticeVersion: string; scope: ("ai" | "voice")[] }> = {}) =>
-  grantConsent(db, accountId, { profileId, scope: ["ai", "voice"], method, under13: true, noticeVersion: CONSENT_NOTICE_VERSION, ...extra }, { req: req(), env });
+const grant = (accountId: string, profileId: string, method: string, env = DEV, extra: Partial<{ under13: boolean; noticeVersion: string; scope: ("ai" | "voice")[]; proof: string }> = {}) =>
+  grantConsent(db, accountId, { profileId, scope: ["ai", "voice"], method, under13: true, noticeVersion: CONSENT_NOTICE_VERSION, ...extra }, { env });
 
 describe("consent policy", () => {
   const receipt = (over: Partial<ConsentReceipt>): ConsentReceipt => ({
@@ -81,6 +83,36 @@ describe("recording consent", () => {
     expect(await grant(accountId, other.ids[0], "dev-not-verified", DEV)).toEqual({ ok: false, error: "learner" });
     // An eighth grader the grown-up says is 13 can be confirmed by them, in production too.
     expect(await grant(accountId, ids[1], "parent-confirmed", PROD, { under13: false })).toMatchObject({ ok: true, receipt: { under13: false } });
+  });
+});
+
+describe("a verified method plugs in", () => {
+  // The shape a vendor method takes (a card charge, a signed form…): its own flow runs in the
+  // browser, and the server confirms what the browser brought back before anything is recorded.
+  const vendor: ConsentMethod = {
+    id: "test-vendor",
+    verified: true,
+    forUnder13: true,
+    available: (env) => env.TEST_VENDOR_KEY === "configured",
+    verify: async ({ proof }) => (proof === "vendor-ref-ok" ? { ok: true, evidence: "vendor-ref-ok" } : { ok: false }),
+  };
+  const env = { ...PROD, TEST_VENDOR_KEY: "configured" };
+
+  it("records the vendor's reference and switches an under-13 learner on in production", async () => {
+    CONSENT_METHODS.push(vendor);
+    try {
+      expect(methodsFor(PROD).map((m) => m.id)).not.toContain("test-vendor");
+      const { accountId, ids } = await familyWith(["2"]);
+      expect(await grant(accountId, ids[0], "test-vendor", env, { proof: "forged" })).toEqual({ ok: false, error: "declined" });
+      const r = await grant(accountId, ids[0], "test-vendor", env, { proof: "vendor-ref-ok" });
+      expect(r).toMatchObject({ ok: true, receipt: { method: "test-vendor", verified: true, under13: true } });
+      const receipt = (r as { receipt: ConsentReceipt }).receipt;
+      expect(consentAllows({ grade: "2", receipts: [receipt], scope: "voice", production: true })).toBe(true);
+      const [row] = await db.select().from(consentReceipts).where(eq(consentReceipts.id, receipt.id));
+      expect(row.evidence).toBe("vendor-ref-ok");
+    } finally {
+      CONSENT_METHODS.splice(CONSENT_METHODS.indexOf(vendor), 1);
+    }
   });
 });
 

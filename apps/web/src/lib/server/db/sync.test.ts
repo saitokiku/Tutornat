@@ -166,6 +166,20 @@ describe("sync", () => {
     expect((await device(acct).sync()).changes.courses?.map((c) => c.id)).toEqual(["c2"]);
   });
 
+  it("keeps a removed learner removed when an offline device edits them afterwards", async () => {
+    const acct = await family();
+    const a = device(acct);
+    const offline = device(acct);
+    await a.sync({ profiles: [put(profile("p1"), Date.now() - 120_000)] });
+    await offline.sync();
+    await a.sync({ profiles: [{ id: "p1", at: Date.now() - 60_000, deleted: true }] });
+    // The other device was offline when it renamed the child, with a later change time.
+    const res = await offline.sync({ profiles: [put(profile("p1", { nickname: "Renamed" }), Date.now())], notes: [put({ id: "n1", profileId: "p1", text: "x" } as never)] });
+    expect(res.conflicts.profiles).toEqual([{ id: "p1", deleted: true }]);
+    expect(res.rejected).toBe(1);
+    expect((await device(acct).sync()).changes.profiles).toEqual([{ id: "p1", deleted: true }]);
+  });
+
   it("ignores a device trimming append-only and capped lists", async () => {
     const acct = await family();
     const a = device(acct);

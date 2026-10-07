@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { GET as meRoute } from "@/app/api/auth/me/route";
 import { POST as signInRoute } from "@/app/api/auth/sign-in/route";
 import { POST as signOutRoute } from "@/app/api/auth/sign-out/route";
 import { POST as signUpRoute } from "@/app/api/auth/sign-up/route";
@@ -12,7 +13,7 @@ import { recordAnswer, startSet } from "./practice";
 import { addNote, createLearner, removeLearner, updateLearner } from "./profiles";
 import { testDb } from "./server/db/testing";
 import { emptyState, read, resetMemory, STORE_KEY, type StoreState } from "./store";
-import { diff, resetSyncForTests, setServerStatusForTests, syncNow, useSyncState } from "./sync";
+import { diff, resetSyncForTests, resume, setServerStatusForTests, syncNow, useSyncState } from "./sync";
 import type { Profile } from "./types";
 import { renderHook } from "@testing-library/react";
 
@@ -34,6 +35,7 @@ const ROUTES: Record<string, (req: Request) => Promise<Response>> = {
   "/api/auth/sign-in": signInRoute,
   "/api/auth/sign-out": signOutRoute,
   "/api/sync": syncRoute,
+  "GET /api/auth/me": meRoute,
   "GET /api/consent": consentGet,
   "/api/consent": consentPost,
 };
@@ -265,6 +267,57 @@ describe("sync between devices", () => {
     on("phone");
     await signIn(email, PASS);
     expect(read().notes.map((x) => x.text)).toEqual(["unsent"]);
+  });
+});
+
+describe("a fresh page load", () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-07T18:00:00Z") }));
+
+  it("picks the family back up when this browser's saved data was cleared", async () => {
+    await newFamily("laptop");
+    const leo = learner();
+    addNote(leo.id, "kept on the server");
+    await syncNow();
+    // Safari dropped the site's storage; the cookies are still there.
+    localStorage.clear();
+    resetMemory();
+    resetSyncForTests();
+    expect(read().profiles).toEqual([]);
+    await resume();
+    expect(read().profiles.map((p) => p.nickname)).toEqual(["Leo"]);
+    expect(read().notes.map((x) => x.text)).toEqual(["kept on the server"]);
+    // Not unlocked: whoever picks the device up next may be a child.
+    expect(read().session.unlocked).toBe(false);
+  });
+
+  it("signs the grown-up out when the server session has lapsed, and keeps unsent work for later", async () => {
+    const email = await newFamily("laptop");
+    const leo = learner();
+    await syncNow();
+    current!.online = false;
+    tick();
+    addNote(leo.id, "written offline");
+    await syncNow();
+    // Thirty days pass unused: both cookies expire with the session.
+    current!.online = true;
+    current!.cookies.clear();
+    on("laptop");
+    await resume();
+    expect(read().session.accountId).toBeNull();
+    await signIn(email, PASS);
+    await syncNow();
+    on("phone");
+    await signIn(email, PASS);
+    expect(read().notes.map((x) => x.text)).toEqual(["written offline"]);
+  });
+
+  it("leaves a browser-only family signed in", async () => {
+    setServerStatusForTests({ mode: "local", resetEmail: false, production: false });
+    on("laptop");
+    await signUp({ email: `local-resume-${++n}@example.test`, password: PASS, displayName: "Maria" });
+    await resume();
+    expect(read().session.accountId).not.toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

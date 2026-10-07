@@ -26,8 +26,12 @@ export interface ConsentMethod {
   /** May be used for a learner under 13. */
   forUnder13: boolean;
   available(env: Env): boolean;
-  /** Runs the method's check. `evidence` is the vendor's reference (never a card number or a document). */
-  verify(ctx: { accountId: string; profileId: string; req: Request }): Promise<{ ok: true; evidence?: string } | { ok: false }>;
+  /**
+   * Runs the method's check. `proof` is what the browser brought back from the vendor's own flow
+   * (a payment intent or session id, say), for the method to confirm with the vendor server to server.
+   * `evidence` is the vendor's reference to keep on the receipt (never a card number or a document).
+   */
+  verify(ctx: { accountId: string; profileId: string; proof: string | null; env: Env }): Promise<{ ok: true; evidence?: string } | { ok: false }>;
 }
 
 /** For building and testing the flow. Never offered in production. Recorded as "not verified". */
@@ -53,7 +57,7 @@ export const CONSENT_METHODS: ConsentMethod[] = [devNotVerified, parentConfirmed
 
 export const methodsFor = (env: Env = process.env) => CONSENT_METHODS.filter((m) => m.available(env));
 
-export type GrantInput = { profileId: string; scope: ConsentScope[]; method: string; under13: boolean; noticeVersion: string };
+export type GrantInput = { profileId: string; scope: ConsentScope[]; method: string; under13: boolean; noticeVersion: string; proof?: string | null };
 export type GrantError = "learner" | "method" | "notice" | "declined";
 
 const lock = (db: Db, accountId: string) => db.execute(sql`select pg_advisory_xact_lock(hashtextextended(${accountId}, 0))`);
@@ -68,7 +72,7 @@ export async function grantConsent(
   db: Db,
   accountId: string,
   input: GrantInput,
-  ctx: { req: Request; env?: Env },
+  ctx: { env?: Env } = {},
 ): Promise<{ ok: true; receipt: ConsentReceipt } | { ok: false; error: GrantError }> {
   const env = ctx.env ?? process.env;
   const p = await learner(db, accountId, input.profileId);
@@ -79,7 +83,7 @@ export async function grantConsent(
   const method = methodsFor(env).find((m) => m.id === input.method);
   if (!method || (under13 && !method.forUnder13)) return { ok: false, error: "method" };
   if (input.noticeVersion !== CONSENT_NOTICE_VERSION) return { ok: false, error: "notice" };
-  const result = await method.verify({ accountId, profileId: input.profileId, req: ctx.req });
+  const result = await method.verify({ accountId, profileId: input.profileId, proof: input.proof ?? null, env });
   if (!result.ok) return { ok: false, error: "declined" };
   return db.transaction(async (tx) => {
     await lock(tx, accountId);

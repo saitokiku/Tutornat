@@ -1,23 +1,23 @@
 "use client";
 
-import { useTitle } from "@/components/LangSync";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SyncStatus } from "@/components/auth/SyncStatus";
-import { needsConsent } from "@/lib/server/db/policy";
 import { useEffect, useState } from "react";
+import { SyncStatus } from "@/components/auth/SyncStatus";
 import { KaizenLogo } from "@/components/brand";
 import { IconFamily, IconLogout, IconPen, IconPlus, IconTrash } from "@/components/icons";
+import { useTitle } from "@/components/LangSync";
 import { Avatar } from "@/components/profiles/Avatar";
+import { GoalsPicker } from "@/components/profiles/GoalsPicker";
 import { LearnerForm } from "@/components/profiles/LearnerForm";
 import { ParentGate } from "@/components/profiles/ParentGate";
 import { Button, btn } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
 import { accountsOnServer, signOut } from "@/lib/auth";
-import { createLearner, learnersOf, removeLearner, selectLearner, updateLearner } from "@/lib/profiles";
-import { read, useStore } from "@/lib/store";
 import { goalsOf } from "@/lib/family";
-import { GoalsPicker } from "@/components/profiles/GoalsPicker";
+import { createLearner, learnersOf, removeLearner, selectLearner, updateLearner } from "@/lib/profiles";
+import { needsConsent } from "@/lib/server/db/policy";
+import { read, useStore } from "@/lib/store";
 
 export default function ProfilesPage() {
   const t = useT();

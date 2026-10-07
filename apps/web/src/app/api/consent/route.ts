@@ -22,6 +22,8 @@ const Body = z.object({
   method: z.string().min(1).max(60),
   under13: z.boolean(),
   noticeVersion: z.string().min(1).max(60),
+  /** What a vendor's own flow handed back, for a verified method to confirm (consent.ts). */
+  proof: z.string().max(500).optional(),
 });
 
 /** A grown-up gives consent for one learner. Answers the receipt and every receipt on the account. */
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
   return withAccount(req, async ({ db, accountId }) => {
     const body = await readJson(req, Body);
     if (body instanceof Response) return body;
-    const r = await grantConsent(db, accountId, body, { req });
+    const r = await grantConsent(db, accountId, body);
     if (!r.ok) return json({ error: r.error }, { status: r.error === "learner" ? 404 : 400 });
     return json({ receipt: r.receipt, receipts: await listReceipts(db, accountId) });
   });
