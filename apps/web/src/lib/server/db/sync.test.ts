@@ -9,7 +9,7 @@ import type { Db } from "./client";
 import { attempts, classes, consentReceipts } from "./schema";
 import { syncAccount, type SyncBody } from "./sync";
 import { testDb } from "./testing";
-import { SYNC_LIMITS, type PushRecord, type SyncList, type SyncResponse } from "./wire";
+import { SYNC_LIMITS, utf8Bytes, type PushRecord, type SyncList, type SyncResponse } from "./wire";
 
 let db: Db;
 let close: () => Promise<void>;
@@ -276,6 +276,10 @@ describe("sync", () => {
     } while (fresh.last!.more && pages < 10);
     expect(pages).toBe(2);
     expect(seen.size).toBe(2500);
+  });
+
+  it("counts UTF-8 bytes the way they go over the network, half emoji included", () => {
+    for (const s of ["abc", "é", "数", "🌋", "a\uD83Db", "\uDC00", ""]) expect(utf8Bytes(s), JSON.stringify(s)).toBe(Buffer.byteLength(s));
   });
 
   it("keeps every answer under the byte budget, counting UTF-8, and still loses no row", async () => {
