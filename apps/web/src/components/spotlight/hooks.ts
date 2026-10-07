@@ -27,3 +27,30 @@ export const usePhone = () => useMedia("(max-width: 639.98px)");
 const noop = () => () => {};
 /** True in the browser after hydration, false on the server and while hydrating. */
 export const useClient = () => useSyncExternalStore(noop, () => true, () => false);
+
+// Was the learner's last input a key or a pointer? Noted from the start (two passive listeners), so a
+// caption that appears after some typing already knows.
+let byKey = false;
+const modality = new Set<() => void>();
+const onInput = (e: Event) => {
+  const key = e.type === "keydown";
+  if (key === byKey) return;
+  byKey = key;
+  modality.forEach((fn) => fn());
+};
+if (typeof document !== "undefined") {
+  document.addEventListener("keydown", onInput, { capture: true, passive: true });
+  document.addEventListener("pointerdown", onInput, { capture: true, passive: true });
+}
+
+function subscribeModality(fn: () => void) {
+  modality.add(fn);
+  return () => {
+    modality.delete(fn);
+  };
+}
+
+/** The last input was a key: show keyboard hints. */
+export const useKeyboardUser = () => useSyncExternalStore(subscribeModality, () => byKey, () => false);
+/** The same, read in an event handler (focus arrived by keyboard, not by a tap). */
+export const lastInputWasKey = () => byKey;

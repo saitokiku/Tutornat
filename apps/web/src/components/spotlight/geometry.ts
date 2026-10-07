@@ -126,6 +126,32 @@ export function angleTo(from: { x: number; y: number }, to: { x: number; y: numb
 /** Does a docked bar from y to y+h (with a little air) overlap the target? */
 export const overlapsBand = (t: Box, y: number, h: number, air = 8) => t.y < y + h + air && t.y + t.h > y - air;
 
+/**
+ * Where the phone caption bar docks inside the free band [top, bottom] (below the header, above the tab
+ * bar, a sheet or the keyboard): at the bottom, unless it would sit on the target or on a field (the chat
+ * box, the answer) and the top is clearer; at the top when the band is too short to hold it.
+ */
+export function dockSide(target: Box | null, h: number, top: number, bottom: number, keep: Box[], gap: number): "top" | "bottom" {
+  const low = bottom - gap - h, high = top + gap;
+  if (low < high) return "top";
+  const cost = (y: number) => (target && overlapsBand(target, y, h) ? 1000 : 0) + keep.filter((k) => overlapsBand(k, y, h, 0)).length;
+  return cost(low) <= cost(high) ? "bottom" : "top";
+}
+
+/**
+ * The ring's clip-path. On a side where the target itself is cut (scrolled under the sticky header, the
+ * tab bar, or out of its panel) the ring is cut at that same edge, so it disappears with its target. On
+ * other sides the glow may spill `glow` px, but never over a bar (`bars`: the screen less its bars).
+ */
+export function ringClip(ring: Box, t: Box, seen: View, bars: View, glow: number): string {
+  const top = t.y < seen.top ? seen.top : bars.top;
+  const bottom = t.y + t.h > seen.bottom ? seen.bottom : bars.bottom;
+  const left = t.x < seen.left ? seen.left : bars.left;
+  const right = t.x + t.w > seen.right ? seen.right : bars.right;
+  const px = (n: number) => `${Math.round(Math.max(-glow, n))}px`;
+  return `inset(${px(top - ring.y)} ${px(ring.x + ring.w - right)} ${px(ring.y + ring.h - bottom)} ${px(left - ring.x)})`;
+}
+
 /** A full-screen path with a rounded hole over b (even-odd fill), for the walkthrough dim. */
 export function holePath(vw: number, vh: number, b: Box, radius: number): string {
   const r = Math.max(0, Math.min(radius, b.w / 2, b.h / 2));

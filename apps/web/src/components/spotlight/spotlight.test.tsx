@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runSpotFromToolPart } from "@/lib/ai/spot-tool";
-import { currentSpot, guardSpots, resetSpotlight, spot, spotSteps } from "@/lib/spotlight";
+import { currentSpot, guardSpots, resetSpotlight, setSpotBand, spot, spotSteps } from "@/lib/spotlight";
 import { SpotAgain } from "./SpotAgain";
 import { SpotlightLayer } from "./SpotlightLayer";
 import { fakeLayout, mockMedia } from "./test-layout";
@@ -46,6 +46,12 @@ function Practice({ withHint = true }: { withHint?: boolean }) {
 const lit = (fn: () => unknown) => act(() => void fn());
 const region = () => screen.queryByRole("region", { name: "From your tutor" });
 const status = () => document.querySelector('[data-spot-layer] [role="status"]')!;
+/** The caption is placed (measured) and takes clicks. */
+const ready = () => waitFor(() => expect(region()).not.toHaveAttribute("data-ready"));
+/** What covers the screen's edges, for the bar detection (jsdom has no hit testing). */
+const bars = (hit: (y: number) => Element | null) => {
+  document.elementsFromPoint = (_x: number, y: number) => [hit(y)].filter((e): e is Element => e !== null);
+};
 let undoMedia: (() => void) | null = null;
 
 beforeEach(() => {
@@ -57,6 +63,7 @@ afterEach(() => {
   act(() => resetSpotlight());
   undoMedia?.();
   undoMedia = null;
+  delete (document as { elementsFromPoint?: unknown }).elementsFromPoint;
   vi.restoreAllMocks();
 });
 
@@ -83,7 +90,7 @@ describe("SpotlightLayer", () => {
     expect(currentSpot()).toBeNull();
   });
 
-  it("is reachable from the keyboard with Alt+Shift+T, closes on Escape and gives focus back", async () => {
+  it("is reachable from the keyboard with F6, shows the key to keyboard users, closes on Escape and gives focus back", async () => {
     render(
       <>
         <Practice />
@@ -94,11 +101,80 @@ describe("SpotlightLayer", () => {
     await userEvent.click(answer);
     lit(() => spot("practice.check", { say: "Then check it here." }));
     expect(document.activeElement).toBe(answer);
-    await userEvent.keyboard("{Alt>}{Shift>}T{/Shift}{/Alt}");
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Got it" }));
+    expect(region()).not.toHaveTextContent("brings you here");
+    await userEvent.keyboard("4");
+    expect(region()).toHaveTextContent("F6 brings you here");
+    await userEvent.keyboard("{F6}");
+    const gotIt = screen.getByRole("button", { name: "Got it" });
+    expect(document.activeElement).toBe(gotIt);
+    // On the button, a screen reader hears the words too, and the key it can be reached by.
+    expect(gotIt).toHaveAccessibleDescription("Then check it here.");
+    expect(gotIt).toHaveAttribute("aria-keyshortcuts", "F6");
     await userEvent.keyboard("{Escape}");
     expect(region()).toBeNull();
     expect(document.activeElement).toBe(answer);
+  });
+
+  it("Escape closes the caption and nothing else: the tutor drawer behind it stays open", async () => {
+    render(
+      <>
+        <Practice />
+        <SpotlightLayer />
+      </>,
+    );
+    const drawer = vi.fn();
+    window.addEventListener("keydown", drawer);
+    lit(() => spot("practice.hint", { say: "Here." }));
+    await userEvent.keyboard("{F6}");
+    await userEvent.keyboard("{Escape}");
+    expect(region()).toBeNull();
+    lit(() => spot("practice.hint", { say: "Here." }));
+    (document.activeElement as HTMLElement).blur();
+    await userEvent.keyboard("{Escape}");
+    expect(region()).toBeNull();
+    // Two Escapes so far, each closing a caption; only the F6 reached the window.
+    expect(drawer.mock.calls.filter(([e]) => (e as KeyboardEvent).key === "Escape")).toHaveLength(0);
+    await userEvent.keyboard("{Escape}");
+    expect(drawer.mock.calls.filter(([e]) => (e as KeyboardEvent).key === "Escape")).toHaveLength(1);
+    window.removeEventListener("keydown", drawer);
+  });
+
+  it("a tap away from the caption lets go of it: its timer runs again, and focus is not pulled back", async () => {
+    render(
+      <>
+        <Practice />
+        <SpotlightLayer />
+      </>,
+    );
+    const answer = screen.getByRole("textbox", { name: "Your answer" });
+    await userEvent.click(answer);
+    lit(() => spot("practice.check", { say: "Then check it here.", ms: 300 }));
+    await userEvent.keyboard("{F6}");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Got it" }));
+    // Held while the keyboard is in it.
+    await act(() => new Promise((r) => setTimeout(r, 400)));
+    expect(region()).not.toBeNull();
+    // Tapping the problem's text: focus goes nowhere (relatedTarget null). The hold lets go (2.5s floor).
+    await userEvent.click(screen.getByText("3"));
+    expect(document.activeElement).toBe(document.body);
+    await waitFor(() => expect(region()).toBeNull(), { timeout: 4000 });
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("a tap on Got it does not pull focus back into the answer field (no phone keyboard popping up)", async () => {
+    render(
+      <>
+        <Practice />
+        <SpotlightLayer />
+      </>,
+    );
+    const answer = screen.getByRole("textbox", { name: "Your answer" });
+    await userEvent.click(answer);
+    lit(() => spot("practice.check", { say: "Then check it here." }));
+    await ready();
+    await userEvent.click(screen.getByRole("button", { name: "Got it" }));
+    expect(region()).toBeNull();
+    expect(document.activeElement).not.toBe(answer);
   });
 
   it("Escape anywhere closes it", async () => {
@@ -151,7 +227,7 @@ describe("SpotlightLayer", () => {
     );
     lit(() => spot("visual.numberline.tick.3", { cue: "point" }));
     await waitFor(() => expect(document.querySelector(".kz-spot-arrow")).not.toBeNull());
-    await waitFor(() => expect(status()).toHaveTextContent("Look at: 3/4"));
+    await waitFor(() => expect(status()).toHaveTextContent("Your tutor is pointing at 3/4."));
     expect(region()).toBeNull();
     expect(screen.queryByRole("button", { name: /Show me/ })).toBeNull();
     expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
@@ -228,6 +304,38 @@ describe("SpotlightLayer", () => {
     expect(screen.getByRole("button", { name: /^Show me \((above|below|to the left|to the right)\)$/ })).toBeInTheDocument();
   });
 
+  it("on phones docks at the top rather than over the box the learner is typing in (the talk board)", async () => {
+    undoMedia = mockMedia("max-width");
+    render(
+      <>
+        <button type="button" data-spot="talk.board" data-rect="10 300 300 200">
+          Board
+        </button>
+        <textarea aria-label="Say something" data-rect="10 724 300 44" />
+        <SpotlightLayer />
+      </>,
+    );
+    lit(() => spot("talk.board", { say: "The picture is up here." }));
+    await waitFor(() => expect(region()).toHaveAttribute("data-dock", "top"));
+  });
+
+  it("on phones docks above a sheet that covers the bottom of the screen (the tutor drawer)", async () => {
+    undoMedia = mockMedia("max-width");
+    render(
+      <>
+        <Practice />
+        <aside data-rect="0 300 1024 468" style={{ position: "fixed" }}>
+          Tutor
+        </aside>
+        <SpotlightLayer />
+      </>,
+    );
+    bars((y) => (y > 300 ? document.querySelector("aside") : null));
+    lit(() => spot("practice.check", { say: "Then check it." }));
+    // 768 (the window) − 300 (the sheet's top) + 12.
+    await waitFor(() => expect(region()?.style.bottom).toBe("480px"));
+  });
+
   it("gives K–2 learners the bigger buttons", async () => {
     render(
       <>
@@ -242,6 +350,89 @@ describe("SpotlightLayer", () => {
     lit(() => spot("today.next", { say: "Tap here to start." }));
     await waitFor(() => expect(region()).toHaveAttribute("data-band", "k2"));
     expect(screen.getByRole("button", { name: "Got it" })).toHaveClass("kz-spot-btn");
+  });
+
+  it("takes the band from the learner, not the target, and reads the words aloud for K–2", async () => {
+    const speak = vi.fn();
+    Object.assign(window, { speechSynthesis: { speak, cancel: vi.fn(), getVoices: () => [] }, SpeechSynthesisUtterance: class { constructor(public text: string) {} } });
+    render(
+      <>
+        <nav>
+          <a href="/calendar" data-spot="nav.calendar">
+            Calendar
+          </a>
+        </nav>
+        <SpotlightLayer />
+      </>,
+    );
+    setSpotBand("k2");
+    lit(() => spot("nav.calendar", { say: "Your test is on the calendar." }));
+    await waitFor(() => expect(region()).toHaveAttribute("data-band", "k2"));
+    await ready();
+    await userEvent.click(screen.getByRole("button", { name: /^Read aloud: Your test is on the calendar/ }));
+    expect(speak).toHaveBeenCalledWith(expect.objectContaining({ text: "Your test is on the calendar." }));
+    // Grown-ups (and older learners) get no speaker.
+    setSpotBand(null);
+    lit(() => spot("nav.calendar", { say: "Your test is on the calendar." }));
+    expect(screen.queryByRole("button", { name: /^Read aloud/ })).toBeNull();
+    delete (window as { speechSynthesis?: unknown }).speechSynthesis;
+  });
+
+  it("follows a target that moves without changing size (the drawer closing, a hint appearing above it)", async () => {
+    render(
+      <>
+        <Practice />
+        <SpotlightLayer />
+      </>,
+    );
+    lit(() => spot("practice.hint", { say: "Tap Hint." }));
+    const ring = () => document.querySelector<HTMLElement>(".kz-spot-ring");
+    await waitFor(() => expect(ring()?.style.translate).toBe("4px 4px"));
+    const hint = screen.getByRole("button", { name: "Hint" });
+    act(() => {
+      hint.setAttribute("data-rect", "210 310 100 40");
+      document.querySelector("main")!.prepend(document.createElement("p"));
+    });
+    await waitFor(() => expect(ring()?.style.translate).toBe("204px 304px"));
+  });
+
+  it("cuts the ring where its target is cut: half under the sticky header, it disappears with it", async () => {
+    render(
+      <>
+        <header data-rect="0 0 1024 64" style={{ position: "sticky" }}>
+          Header
+        </header>
+        <button type="button" data-spot="practice.hint" data-rect="10 40 100 40">
+          Hint
+        </button>
+        <SpotlightLayer />
+      </>,
+    );
+    bars((y) => (y < 100 ? document.querySelector("header") : null));
+    lit(() => spot("practice.hint"));
+    // The ring box starts at 40 − 6 = 34 and the header ends at 64: its top 30px is cut. Elsewhere the
+    // glow may spill 32px, except past the screen's left edge, 4px away.
+    await waitFor(() => expect(document.querySelector<HTMLElement>(".kz-spot-ring")?.style.clipPath).toBe("inset(30px -32px -32px -4px)"));
+  });
+
+  it("hands the keyboard to the caption when the edge button goes away", async () => {
+    render(
+      <>
+        <Practice />
+        <SpotlightLayer />
+      </>,
+    );
+    lit(() => spot("far", { say: "Your next step is down here." }));
+    const edge = await screen.findByRole("button", { name: "Show me (below)" });
+    act(() => edge.focus());
+    await userEvent.keyboard("{Enter}");
+    // The page scrolls it into view (faked here): the edge button goes, the caption shows.
+    act(() => {
+      screen.getByRole("button", { name: "Far away" }).setAttribute("data-rect", "10 400 100 40");
+      window.dispatchEvent(new Event("scroll"));
+    });
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Show me (below)" })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Got it" })));
   });
 
   it("never lights a guarded answer", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { angleTo, arrowAt, cornerRadius, edgeAnchor, holePath, intersect, offscreen, placeCallout, ringBox, roomiest } from "./geometry";
+import { angleTo, arrowAt, cornerRadius, dockSide, edgeAnchor, holePath, intersect, offscreen, placeCallout, ringBox, ringClip, roomiest } from "./geometry";
 
 const view = { left: 0, top: 0, right: 1440, bottom: 900 };
 const size = { w: 320, h: 120 };
@@ -89,5 +89,46 @@ describe("geometry", () => {
     const d = holePath(100, 100, { x: 10, y: 10, w: 40, h: 20 }, 8);
     expect(d.startsWith("M0 0H100V100H0Z")).toBe(true);
     expect(d).toContain("A8 8 0 0 1");
+  });
+});
+
+describe("dockSide", () => {
+  const box = (y: number, h = 44) => ({ x: 10, y, w: 300, h });
+  it("docks above the tab bar by default", () => {
+    expect(dockSide(box(300), 64, 0, 780, [], 12)).toBe("bottom");
+  });
+  it("goes to the top when the bottom would sit on the target, or on the box being typed in", () => {
+    expect(dockSide(box(700), 64, 0, 780, [], 12)).toBe("top");
+    expect(dockSide(box(300), 64, 0, 780, [box(720)], 12)).toBe("top");
+  });
+  it("stays at the bottom when the top is no clearer", () => {
+    expect(dockSide(box(300), 64, 0, 780, [box(720), box(20)], 12)).toBe("bottom");
+  });
+  it("goes to the top when the space above a sheet or the keyboard is too short to hold it", () => {
+    expect(dockSide(null, 64, 0, 70, [], 12)).toBe("top");
+  });
+});
+
+describe("ringClip", () => {
+  const screen = { left: 0, top: 0, right: 1440, bottom: 900 };
+  it("lets the glow spill where nothing is in the way", () => {
+    const t = { x: 100, y: 100, w: 80, h: 40 };
+    expect(ringClip(ringBox(t, 6, 28), t, screen, screen, 32)).toBe("inset(-32px -32px -32px -32px)");
+  });
+  it("cuts the ring with its target at the edge that cuts the target (a sticky header, a panel)", () => {
+    const t = { x: 100, y: 40, w: 80, h: 40 };
+    const seen = { ...screen, top: 64 };
+    expect(ringClip(ringBox(t, 6, 28), t, seen, seen, 32)).toBe("inset(30px -32px -32px -32px)");
+  });
+  it("never paints the glow over a bar, even when the target clears it", () => {
+    const t = { x: 100, y: 70, w: 80, h: 40 };
+    const bars = { ...screen, top: 64 };
+    // The ring starts at 64; the glow above it stops at the bar.
+    expect(ringClip(ringBox(t, 6, 28), t, bars, bars, 32)).toBe("inset(0px -32px -32px -32px)");
+  });
+  it("spills past a panel's edge when the target itself is whole inside it", () => {
+    const t = { x: 100, y: 200, w: 80, h: 40 };
+    const panel = { left: 96, top: 196, right: 400, bottom: 600 };
+    expect(ringClip(ringBox(t, 6, 28), t, panel, screen, 32)).toBe("inset(-32px -32px -32px -32px)");
   });
 });

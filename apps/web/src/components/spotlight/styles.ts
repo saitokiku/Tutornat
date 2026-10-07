@@ -1,7 +1,8 @@
 // The spotlight's own CSS, rendered once by the layer (it owns no global stylesheet). The ring is the
 // one sanctioned halo in the KaizenEDU world: a 2px rose rule with a soft rose glow that follows the
-// element's corners, two calm pulses on arrival, then steady. Reduced motion: steady from the start.
-// Forced colors: the system Highlight outline, no glow, no dim.
+// element's corners, two calm pulses on arrival, then steady. It sits 6px off the target (RING_PAD), clear
+// of the app's own 2px focus outline, so the two never fuse into one thick bar. Reduced motion: steady
+// from the start. Forced colors: a dashed system Highlight outline (focus is solid), no glow, no dim.
 
 const ACCENT = "var(--color-accent)";
 const glow = (pct: number) => `color-mix(in srgb, ${ACCENT} ${pct}%, transparent)`;
@@ -38,6 +39,7 @@ export const SPOT_CSS = `
 .kz-spot-callout[data-side="right"] .kz-spot-tail { left: 0; border-bottom-color: var(--color-border); border-left-color: var(--color-border); }
 .kz-spot-callout[data-side="left"] .kz-spot-tail { left: 100%; border-top-color: var(--color-border); border-right-color: var(--color-border); }
 .kz-spot-dir > span { display: grid; transition: rotate 200ms ${EASE}; }
+.kz-spot-callout:focus-within .kz-spot-kbd { display: none; }
 .kz-spot-edge { position: fixed; z-index: 60; animation: kz-spot-fade 200ms ease-out both; }
 
 [data-band="k2"] .kz-spot-btn, .kz-spot-btn[data-band="k2"] { min-height: 56px; min-width: 56px; font-size: 1rem; }
@@ -58,7 +60,8 @@ export const SPOT_CSS = `
   .kz-spot-ring::after, .kz-spot-arrow svg { animation: none; }
 }
 @media (forced-colors: active) {
-  .kz-spot-ring { box-shadow: none; outline: 3px solid Highlight; outline-offset: 0; }
+  /* Dashed, so the tutor's pointing never reads as keyboard focus (a solid Highlight outline). */
+  .kz-spot-ring { box-shadow: none; outline: 3px dashed Highlight; outline-offset: 0; }
   .kz-spot-ring::after, .kz-spot-scrim { display: none; }
   .kz-spot-arrow .kz-spot-shaft { stroke: Highlight; }
   .kz-spot-arrow .kz-spot-halo { stroke: Canvas; }
