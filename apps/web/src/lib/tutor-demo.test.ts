@@ -259,6 +259,22 @@ describe("the demo tutor on a topic", () => {
     expect(f.wiki).not.toHaveBeenCalled();
   });
 
+  it("never sends a search that is about the learner or names someone in the family", async () => {
+    const f = fakes();
+    const named = ctx({ names: ["Ada", "Maria Lopez"] });
+    await demoAnswer("who is Ada", named, fresh(), f);
+    await demoAnswer("find me a book about ada", named, fresh(), f);
+    await demoAnswer("what does Lopez mean", named, fresh(), f);
+    await demoAnswer("find me a book about my dog", named, fresh(), f);
+    await demoAnswer("read me a poem by maria", named, fresh(), f);
+    expect(f.wiki).not.toHaveBeenCalled();
+    expect(f.books).not.toHaveBeenCalled();
+    expect(f.define).not.toHaveBeenCalled();
+    expect(f.poems).not.toHaveBeenCalled();
+    await demoAnswer("what is the US Constitution", named, fresh(), f);
+    expect(f.wiki).toHaveBeenCalledWith("us constitution", "en");
+  });
+
   it("shows Wikipedia's answer only when it is about the topic and fit for a child", async () => {
     const offTopic = await demoAnswer("what is a sloth", ctx(), fresh(), fakes({ wiki: async () => ({ ...FALLACY, title: "Georgia Ku", extract: "Georgia Ku is a singer." }) }));
     expect(offTopic.cards.some((c) => c.type === "fact")).toBe(false);
@@ -485,6 +501,7 @@ describe("opening an open conversation", () => {
     expect(openTalk("en", "K", ["Count to 10", "Letter sounds"])).toBe("What do you want to learn about? Count to 10, Letter sounds, or a poem? Tap one.");
     expect(openTalk("es", "1", ["Contar hasta 10", "Sonidos de las letras"])).toBe("¿Sobre qué quieres aprender? ¿Contar hasta 10, Sonidos de las letras o un poema? Toca uno.");
     expect(openTalk("en", "K")).toBe("What do you want to learn about? Tap one.");
+    expect(openTalk("es", "K", ["¿Cuál es más?"])).toBe("¿Sobre qué quieres aprender? ¿Cuál es más o un poema? Toca uno.");
     expect(openTalk("en", "6", ["Ratios"])).toBe("What would you like to learn or work on?");
     expect(demoOpening(ctx({ grade: "K", choices: ["Count to 10"] })).text).toBe("I'm the demo tutor.\nWhat do you want to learn about? Count to 10 or a poem? Tap one.");
   });

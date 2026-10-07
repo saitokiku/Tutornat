@@ -171,6 +171,7 @@ function DemoChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; 
     homework: setup.homework,
     lesson: setup.lesson ? { title: setup.lesson.title } : undefined,
     choices: titles(topics, setup),
+    names: familyNames(read(), learner.id),
     seed: randomSeed,
   }));
   const [first] = useState(() => demoOpening(ctx));

@@ -132,7 +132,7 @@ test("a kindergartner hears the tutor first, with the choices named, and taps in
   // Spoken before anything is tapped, one sentence at a time, naming what the chips say.
   await expect.poll(said).toEqual(expect.arrayContaining(["I'm the demo tutor.", "What do you want to learn about?", "Tap one."]));
   const chips = page.getByRole("group", { name: "Quick asks" }).getByRole("button");
-  const first = (await chips.first().innerText()).trim();
+  const first = (await chips.first().innerText()).trim().replace(/[?!.]+$/, "");
   expect((await said()).some((line) => line.includes(first))).toBe(true);
   const poem = page.getByRole("button", { name: "Read me a poem" });
   await expect(poem).toBeVisible();

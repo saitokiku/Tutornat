@@ -151,7 +151,8 @@ describe("a young learner", () => {
     const chips = within(await screen.findByRole("group", { name: "Quick asks" })).getAllByRole("button");
     const labels = chips.map((c) => c.textContent);
     await waitFor(() => expect(said.slice(0, 2)).toEqual(["I'm the demo tutor.", "What do you want to learn about?"]));
-    expect(said[2]).toBe(`${new Intl.ListFormat("en-US", { type: "disjunction" }).format([...labels.slice(0, -1), "a poem"] as string[])}?`);
+    const named = labels.slice(0, -1).map((l) => l!.replace(/[?!.]+$/, ""));
+    expect(said[2]).toBe(`${new Intl.ListFormat("en-US", { type: "disjunction" }).format([...named, "a poem"])}?`);
     expect(said[3]).toBe("Tap one.");
     expect(screen.getByRole("button", { name: "Reading aloud" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Reading aloud" }).className).toContain("min-h-14");

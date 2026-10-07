@@ -42,6 +42,8 @@ export type DemoContext = {
   lesson?: { title: string };
   /** The topics a young learner can tap at the start, so the spoken opening names them. */
   choices?: string[];
+  /** The family's names (familyNames): a search that mentions one never leaves the device. */
+  names?: string[];
   /** Fresh seeds for worked examples (random in the browser, fixed in tests). */
   seed: () => number;
 };
@@ -112,7 +114,7 @@ export function topicOf(text: string): string {
 }
 
 /** Words about the learner or the people around them: a topic with these is personal, not a lookup. */
-const PERSONAL = /\b(?:i|im|ive|me|my|mine|myself|you|your|yours|we|our|us|mi|mis|tu|tus|yo|nosotros|nuestr[ao]s?)\b/;
+const PERSONAL = /\b(?:i|im|ive|me|my|mine|myself|you|your|yours|we|our|mi|mis|tu|tus|yo|nosotros|nuestr[ao]s?)\b/;
 
 /**
  * What to look up for a sentence, or null when it isn't a topic: only a question about something ("what
@@ -415,15 +417,34 @@ export function demoOpening(ctx: DemoContext): DemoTurn {
 export function openTalk(locale: Locale, grade: Grade, choices: string[] = []): string {
   if (!young(grade)) return t(locale, "tutor.open.talk");
   if (!choices.length) return t(locale, "tut.open.young");
-  const list = new Intl.ListFormat(locale === "es" ? "es-US" : "en-US", { type: "disjunction" }).format([...choices, t(locale, "tut.open.poemChoice")]);
+  // A chip that is itself a question ("Which is more?") is named without its marks inside the sentence.
+  const named = choices.map((c) => c.replace(/^[¿¡]+|[?!.¿¡]+$/g, "").trim());
+  const list = new Intl.ListFormat(locale === "es" ? "es-US" : "en-US", { type: "disjunction" }).format([...named, t(locale, "tut.open.poemChoice")]);
   return t(locale, "tut.open.youngChoices", { choices: list });
 }
 
 /** A photo in demo mode: nothing is read or sent anywhere; the learner is asked to type the problem (a young one, to ask a grown-up to). */
 export const demoPhoto = (ctx: DemoContext, state: DemoState): DemoTurn => ({ text: t(ctx.locale, young(ctx.grade) ? "tut.photo.demoYoung" : "tut.photo.demo"), cards: [], state });
 
-/** One demo reply. Knowledge comes through `fetchers` (the /api/know routes in the browser, fakes in tests). */
-export async function demoAnswer(text: string, ctx: DemoContext, state: DemoState, fetchers: DemoFetchers): Promise<DemoTurn> {
+/**
+ * The sources, guarded: a query about the learner ("my dog") or naming someone in the family is never
+ * sent (plan 3.1: no learner identifiers forwarded); it is answered as found nothing.
+ */
+function guarded(fetchers: DemoFetchers, names: string[] = []): DemoFetchers {
+  const family = new Set(names.flatMap(tokens));
+  const ok = (q: string) => !PERSONAL.test(plain(q).replace(/'/g, "")) && !tokens(q).some((w) => family.has(w));
+  return {
+    wiki: (q, lang) => (ok(q) ? fetchers.wiki(q, lang) : Promise.resolve(null)),
+    define: (q) => (ok(q) ? fetchers.define(q) : Promise.resolve([])),
+    books: (q) => (ok(q) ? fetchers.books(q) : Promise.resolve([])),
+    poems: (q) => (ok(q) ? fetchers.poems(q) : Promise.resolve([])),
+    shortPoems: fetchers.shortPoems,
+  };
+}
+
+/** One demo reply. Knowledge comes through `sources` (the /api/know routes in the browser, fakes in tests). */
+export async function demoAnswer(text: string, ctx: DemoContext, state: DemoState, sources: DemoFetchers): Promise<DemoTurn> {
+  const fetchers = guarded(sources, ctx.names);
   const l = ctx.locale;
   const say = (key: Parameters<typeof t>[1], vars?: Record<string, string | number>) => t(l, key, vars);
   const item = ctx.item;
@@ -441,7 +462,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
     case "define": {
       const defs = l === "en" ? await sensesOf(fetchers, ask.word) : [];
       if (defs.length) return { text: say("tut.demo.define", { word: ask.word }), cards: [definitionCard(ask.word, defs)], state: next({}, ["definition"]) };
-      const wiki = PERSONAL.test(plain(ask.word)) ? null : await wikiOn(fetchers, ask.word, l);
+      const wiki = await wikiOn(fetchers, ask.word, l);
       if (wiki) return { text: say("tut.demo.defineWiki", { word: ask.word }), cards: [factCard(wiki)], state };
       return { text: say("tut.demo.noDefinition", { word: ask.word }), cards: [], state };
     }
