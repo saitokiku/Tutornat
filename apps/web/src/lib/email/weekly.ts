@@ -160,6 +160,11 @@ export async function askConfirmation(now = Date.now()): Promise<AskResult> {
   return "sent";
 }
 
+/** The token of a confirmation link this page was opened from (`/settings#weekly=<token>`), if any. */
+export function confirmTokenInUrl(): string | null {
+  return /^#weekly=(.+)$/.exec(typeof window === "undefined" ? "" : window.location.hash)?.[1] ?? null;
+}
+
 /** The link from the confirmation email landed here: check it with the server and keep it. */
 export async function confirmWeekly(token: string, now = Date.now()): Promise<boolean> {
   const me = signedIn();

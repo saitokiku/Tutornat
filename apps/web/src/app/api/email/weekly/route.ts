@@ -48,7 +48,8 @@ export async function POST(req: Request) {
     if (now - (lastConfirm.get(tag) ?? 0) < CONFIRM_GAP_MS) return Response.json({ error: "rate" }, { status: 429 });
     lastConfirm.set(tag, now);
     if (lastConfirm.size > 5000) lastConfirm.clear();
-    const link = `${origin(req)}/settings?weekly=${await tokenFor(body.to)}`;
+    // In the fragment, so the token never reaches a server log or a Referer header.
+    const link = `${origin(req)}/settings#weekly=${await tokenFor(body.to)}`;
     const sent = await sendEmail(body.to, renderConfirm(body.locale, link), `confirm:${tag}:${Math.floor(now / CONFIRM_GAP_MS)}`);
     log(sent.ok ? "info" : "warn", sent.ok ? "email_confirm_sent" : "email_confirm_failed", sent.ok ? {} : { status: sent.status });
     return sent.ok ? Response.json({ ok: true }) : Response.json({ error: "send_failed" }, { status: 502 });

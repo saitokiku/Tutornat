@@ -6,13 +6,15 @@ import type { Email } from "./render";
 // Resend key, so the server keeps no list: only someone who received the link can hold it.
 //
 //   RESEND_API_KEY  required to send anything; without it the app shows previews only
+//   KAIZEN_EMAIL    on Vercel, must also be "resend", so a key left in the project by an earlier
+//                   attempt stays inert until someone means to send (same rule as KAIZEN_AI)
 //   EMAIL_FROM      sender, e.g. "KaizenEDU <weekly@kaizenedu.net>" (a domain verified in Resend)
 //   APP_URL         origin for links in emails; defaults to the request's own origin
 
 const RESEND = "https://api.resend.com/emails";
 const DEFAULT_FROM = "KaizenEDU <weekly@kaizenedu.net>";
 
-export const emailConfigured = () => Boolean(process.env.RESEND_API_KEY);
+export const emailConfigured = () => Boolean(process.env.RESEND_API_KEY) && (!process.env.VERCEL || process.env.KAIZEN_EMAIL === "resend");
 
 export const normEmail = (email: string) => email.trim().toLowerCase();
 

@@ -27,6 +27,7 @@ beforeEach(() => {
   posts = [];
   resetEmailMode();
   nav.params = new URLSearchParams();
+  history.replaceState(null, "", "/settings");
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -175,7 +176,7 @@ describe("Weekly email in Settings", () => {
   it("confirms the address from the emailed link and tidies the URL", async () => {
     mode = "send";
     const { accountId } = await grownUp();
-    nav.params = new URLSearchParams({ weekly: "a".repeat(43) });
+    history.replaceState(null, "", `/settings#weekly=${"a".repeat(43)}`);
     render(<SettingsPage />);
     await screen.findByText("Confirmed. The weekly email is on.");
     expect(weeklyOf(read(), accountId)).toMatchObject({ on: true, confirmed: { token: "a".repeat(43) } });
@@ -186,7 +187,7 @@ describe("Weekly email in Settings", () => {
   it("says when a confirmation link doesn't check out", async () => {
     mode = "send";
     await grownUp();
-    nav.params = new URLSearchParams({ weekly: "b".repeat(43) });
+    history.replaceState(null, "", `/settings#weekly=${"b".repeat(43)}`);
     render(<SettingsPage />);
     await screen.findByText("That confirmation link didn't work. Send a new one below.");
   });
@@ -196,7 +197,7 @@ describe("Settings for a learner", () => {
   it("shows only their language, switching, and the policies", async () => {
     const { ada } = await grownUp();
     act(() => update((s) => void (s.session.profileId = ada.id)));
-    nav.params = new URLSearchParams({ weekly: "a".repeat(43) });
+    history.replaceState(null, "", `/settings#weekly=${"a".repeat(43)}`);
     render(<SettingsPage />);
     expect(screen.getByRole("heading", { name: "Language for Ada" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download our data" })).toBeNull();

@@ -2151,7 +2151,7 @@ const en = {
   "trust.learner.deleted": "Deleted {name} and their records.",
 
   "trust.weekly.title": "Weekly email",
-  "trust.weekly.body": "A short email each Monday about the week before, with the same numbers as the Family page. It goes only to {email}, never to a child, and not at all after a week with no activity. Learners are listed by grade, not by name.",
+  "trust.weekly.body": "A short email after each week, about that week, with the same numbers as the Family page. It goes only to {email}, never to a child, and not at all after a week with no activity. Learners are listed by grade, not by name.",
   "trust.weekly.toggle": "Send me the weekly email",
   "trust.weekly.toggleBody": "Off until you turn it on. Turn it off here any time.",
   "trust.weekly.notConnected": "Email isn't connected on this site yet, so nothing is sent. The preview below is exactly what the email would say.",

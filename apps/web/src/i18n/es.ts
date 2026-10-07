@@ -2153,7 +2153,7 @@ const es: Record<Key, string> = {
   "trust.learner.deleted": "Se borró a {name} y sus registros.",
 
   "trust.weekly.title": "Correo semanal",
-  "trust.weekly.body": "Un correo corto cada lunes sobre la semana anterior, con los mismos números de la página Familia. Va solo a {email}, nunca a un niño, y no se envía después de una semana sin actividad. Los estudiantes aparecen por grado, no por nombre.",
+  "trust.weekly.body": "Un correo corto al terminar cada semana, sobre esa semana, con los mismos números de la página Familia. Va solo a {email}, nunca a un niño, y no se envía después de una semana sin actividad. Los estudiantes aparecen por grado, no por nombre.",
   "trust.weekly.toggle": "Enviarme el correo semanal",
   "trust.weekly.toggleBody": "Apagado hasta que lo actives. Puedes apagarlo aquí cuando quieras.",
   "trust.weekly.notConnected": "El correo todavía no está conectado en este sitio, así que no se envía nada. La vista previa de abajo es exactamente lo que diría el correo.",

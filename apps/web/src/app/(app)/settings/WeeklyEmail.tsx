@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Notice } from "@/components/ui";
 import { useLocale, useT } from "@/i18n";
-import { askConfirmation, confirmWeekly, emailMode, previewWeekly, setWeeklyOn, useWeeklyEmail, weeklyOf, type AskResult, type EmailMode } from "@/lib/email/weekly";
+import { askConfirmation, confirmTokenInUrl, confirmWeekly, emailMode, previewWeekly, setWeeklyOn, useWeeklyEmail, weeklyOf, type AskResult, type EmailMode } from "@/lib/email/weekly";
 import { shortDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { Account } from "@/lib/types";
@@ -17,7 +17,8 @@ export function WeeklyEmail({ account }: { account: Account }) {
   const t = useT();
   const locale = useLocale();
   const router = useRouter();
-  const token = useSearchParams().get("weekly");
+  // The emailed link carries its token in the fragment (#weekly=…), which never reaches a server.
+  const [token] = useState(confirmTokenInUrl);
   const w = useStore((s) => weeklyOf(s, account.id));
   const [now] = useState(() => Date.now());
   const [origin] = useState(() => window.location.origin);

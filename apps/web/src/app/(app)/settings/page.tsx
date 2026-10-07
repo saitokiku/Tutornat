@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PolicyLinks, CONTACT_EMAIL } from "@/app/(legal)/legal";
 import { Guard } from "@/components/gate";
@@ -11,6 +10,7 @@ import { GoalsPicker } from "@/components/profiles/GoalsPicker";
 import { Button, Field, Notice, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import { useAiMode } from "@/lib/ai/client";
+import { confirmTokenInUrl } from "@/lib/email/weekly";
 import { signOut } from "@/lib/auth";
 import { goalsOf } from "@/lib/family";
 import { currentAccount, currentLearner, renameAccount, updateLearner } from "@/lib/profiles";
@@ -82,7 +82,7 @@ function Settings() {
   const t = useT();
   useTitle(t("settings.title"));
   const learner = useStore(currentLearner);
-  const confirming = useSearchParams().has("weekly");
+  const [confirming] = useState(() => confirmTokenInUrl() !== null);
 
   // A learner is using the app: only their language here; the rest is the grown-up's.
   if (learner)

@@ -52,9 +52,21 @@ describe("without RESEND_API_KEY", () => {
 });
 
 describe("with RESEND_API_KEY", () => {
-  beforeEach(() => vi.stubEnv("RESEND_API_KEY", "re_test_0123456789abcdef"));
+  beforeEach(() => {
+    vi.stubEnv("RESEND_API_KEY", "re_test_0123456789abcdef");
+    vi.stubEnv("VERCEL", "");
+  });
 
   it("reports send mode", async () => {
+    expect(await (await GET()).json()).toEqual({ mode: "send" });
+  });
+
+  it("on Vercel, stays in preview until KAIZEN_EMAIL=resend says the key is meant to send", async () => {
+    vi.stubEnv("VERCEL", "1");
+    expect(await (await GET()).json()).toEqual({ mode: "preview" });
+    expect((await POST(req({ action: "confirm", to: "old-key@example.com", locale: "en" }))).status).toBe(503);
+    expect(resend).toEqual([]);
+    vi.stubEnv("KAIZEN_EMAIL", "resend");
     expect(await (await GET()).json()).toEqual({ mode: "send" });
   });
 
@@ -67,7 +79,7 @@ describe("with RESEND_API_KEY", () => {
     expect(sent.headers.get("authorization")).toBe("Bearer re_test_0123456789abcdef");
     expect(sent.body.to).toEqual(["maria@example.com"]);
     expect(sent.body.subject).toBe("Confirma el correo semanal de KaizenEDU");
-    const token = String(sent.body.text).match(/\/settings\?weekly=([A-Za-z0-9_-]+)/)![1];
+    const token = String(sent.body.text).match(/\/settings#weekly=([A-Za-z0-9_-]+)$/m)![1];
     expect(await verifyToken("maria@example.com", token)).toBe(true);
     expect(await verifyToken("other@example.com", token)).toBe(false);
     expect(await (await POST(req({ action: "verify", to: "MARIA@example.com", token }))).json()).toEqual({ ok: true });
