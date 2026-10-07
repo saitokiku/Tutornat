@@ -51,6 +51,9 @@ validated before it touches the DOM; nothing from outside (the model, a URL) eve
 | `holdSpot(on)` | Pauses the timer (the layer does this while the caption is hovered or focused). |
 | `revealSpot()` | Scrolls the lit target back into view and pulses it again (the edge button). |
 | `guardSpots(ids) → release` | Makes targets unpointable while an item is up (see Honesty). |
+| `spotStatus(id)` | `"ok"`, `"missing"` or `"guarded"`: whether it could be lit now, and why not. Lights nothing. |
+| `setSpotBand(band)` | The learner's age band (`bandOf(grade)`), or `null` for a grown-up; carried on each spot. |
+| `edgeBars()`, `seenView(el)` | What covers the screen's top and bottom (sticky header, tab bar, a bottom sheet), and where `el` can be seen once its panels and those bars are taken off. Scrolling and drawing both go by this. |
 | `currentSpot()`, `subscribeSpot()`; `useSpotlight()` in `components/spotlight/hooks.ts` | Read what is lit. (The hook lives with the components so `lib/spotlight.ts` has no React and is safe to import into the tutor route.) |
 
 `cue: "glow"` (default) rings the element. `cue: "point"` puts a rose arrow beside it instead — for
@@ -69,39 +72,67 @@ caption and the edge button take pointer events.
 
 - **Ring:** a 2px rose (`--color-accent`) rule with a soft rose glow, following the element's corners
   (pill buttons get a pill, an SVG circle a circle), at least 28px so a tick still gets a visible ring,
-  kept inside the screen. Two calm pulses on arrival (exponential ease-out), then steady. It sits just
-  above the target's own stacking level, so a drawer or sheet that covers the target also covers the
-  ring. This is the one sanctioned halo in the KaizenEDU world — nothing else glows.
+  kept inside the screen. It sits **6px off the target**, clear of the app's 2px focus outline (offset
+  2px), so a focused target shows two separate rings, never one thick bar. Two calm pulses on arrival
+  (exponential ease-out), then steady. It sits just above the target's own stacking level, and is
+  **clipped like its target**: where the target is cut (scrolled under the sticky header or the tab
+  bar, or out of the chat log) the ring is cut at the same edge, and its glow never paints over a bar.
+  This is the one sanctioned halo in the KaizenEDU world — nothing else glows.
+- **Tracking:** animation frames run only while something moves. Scrolling (any scroller), resizing
+  (window, visual viewport, target, caption), focus moving, the page changing (a MutationObserver: a
+  hint appearing above the target), CSS transitions (the tutor drawer's padding sliding away) start
+  them, and a 300ms look at the target's box catches anything else (an image loading above it).
 - **Caption:** panel, ink text, hairline, soft shadow, 14px radius, a pointer toward the target. It goes
   on a side where it fits and covers least of what matters — the question and headings, answer fields,
   whatever has focus; on a tie below, then above, then beside. For a part of a drawing it sits outside
   the whole drawing, pointing in. It never covers the target unless no side can hold it. Short captions
-  sit on one line with "Got it"; walkthroughs show `2 of 4`, Back and Next / Done.
-- **Phones (< 640px):** the caption docks as a bar above the bottom tab bar (or at the top when the
-  target is down there), with an arrow button that turns to show which way the target is and brings it
-  back when pressed.
+  sit on one line with "Got it"; walkthroughs show `2 of 4`, Back and Next / Done. For keyboard users
+  (last input was a key) a small "`F6` brings you here" line shows until focus is inside.
+- **Phones (< 640px):** the caption docks as a bar in the free band of the screen: below a top bar,
+  above the tab bar, **above a bottom sheet of any height** (the tutor drawer) and **above the on-screen
+  keyboard** (measured from `visualViewport`). It docks at the top instead when the bottom would sit on
+  the target or on a field (the talk board's composer, the answer box, whatever has focus), or when the
+  band is too short. An arrow button turns to show which way the target is and brings it back.
 - **Off screen:** the target is scrolled into view (smooth; instant under reduced motion) — unless the
-  learner is typing. If they scroll it away while it is lit, an edge button ("Show me", with the
-  direction for screen readers) appears on that edge of the screen or of the panel it scrolled out of.
+  learner is typing (a key pressed in a text field in the last 1.5s; the cursor merely sitting in the
+  chat box after sending does not count). "In view" means inside its panel and not under a sticky
+  header, the tab bar or a sheet. If they scroll it away while it is lit, an edge button ("Show me",
+  with the direction for screen readers) appears on that edge of the screen or of the panel it
+  scrolled out of.
 - **Dim** (walkthroughs): the rest of the page under a light ink scrim with a rounded cutout.
 - **Reduced motion:** steady ring, no pulse, no nudge (`kz-spot--still` on the layer, plus the media
-  query). **Forced colors:** the system `Highlight` outline, no glow, no dim.
-- **K–2:** buttons are 56px when the target is inside `[data-band="k2"]`, 44px otherwise.
+  query). **Forced colors:** a **dashed** system `Highlight` outline (keyboard focus is solid), no glow,
+  no dim.
+- **K–2:** the band comes from the learner (`setSpotBand`), falling back to a `[data-band]` ancestor of
+  the target. K–2 gets 56px buttons, larger caption text, and a speaker button (the app's `Hear`) that
+  reads the caption aloud, as every hint and choice can be.
 
 ### Behaviour rules
 
-1. Pointing **never takes focus** unless `focus: true`. Keyboard users reach the caption with
-   **Alt+Shift+T** (`aria-keyshortcuts` on its main button) or by tabbing to the end of the page;
-   closing it with focus inside hands focus back to where they were.
+1. Pointing **never takes focus** unless `focus: true`. Keyboard users reach the caption with **F6**
+   (the browsers' "next pane" key, bound to nothing on a page and typing no character;
+   `aria-keyshortcuts` on the main button, the visible hint above, and the first walkthrough step's
+   announcement says it). Inside the caption F6 does what the browser does. The main button is
+   `aria-describedby` the caption. Closing it hands focus back to where the learner was **only** if
+   focus came in by keyboard and was lost with the caption — a tap on Got it never pulls focus back
+   into the answer field (and pops the phone keyboard up). A tap away from the caption releases it.
+   When the edge button goes away with focus on it, focus moves to the caption's main button (or the
+   target).
 2. It clears itself on **Escape**, on a **new page**, on a **new spot**, when the target **leaves the
    page** (a re-rendered element with the same id is followed instead), when the learner **uses the
-   target** (a click, or focusing a field — it did its job; in a walkthrough this moves to the next
-   step), or after **`ms`**. The timer waits while the caption is hovered or focused. Walkthroughs never
-   time out.
-3. The caption is announced once in a **polite live region** ("Step 2 of 4: …" in walkthroughs; "Look
-   at: Hint" when there is no caption). While lit, the target is `aria-describedby` the caption, and
-   its own `aria-describedby` is restored afterwards. The ring, arrow and dim are `aria-hidden`.
-4. It works at 320px, for SVG parts inside the teaching visuals (including 0-wide tick lines), and
+   target** (a click, or focusing a field — it did its job), or after **`ms`**. An Escape that closes a
+   spot is consumed (`preventDefault` + `stopPropagation`), so the tutor drawer behind it stays open
+   for the next one. Captions stay until dismissed; a bare glow times out after 8s; the timer waits
+   while the caption is hovered or focused.
+3. **Walkthroughs** never time out. Using a step's target moves to the next step; so does the step's
+   target going away (often the step working: "Tap Add" turns the button into a form). Next past the
+   end, or no step left to find, finishes.
+4. The caption is announced once in a **polite live region** ("Step 2 of 4: …" in walkthroughs; "Your
+   tutor is pointing at Hint." when there is no caption; "… at part of {the drawing}." for an unnamed
+   part — and marking an unnamed target logs a dev error asking for `data-spot-label`). While lit, the
+   target (or, for a field lit through its label, the field) is `aria-describedby` the caption, and its
+   own `aria-describedby` is restored afterwards. The ring, arrow, dim and key hint are `aria-hidden`.
+5. It works at 320px, for SVG parts inside the teaching visuals (including 0-wide tick lines), and
    inside scrolling panels.
 
 ## Honesty rule: never point at an answer
@@ -284,9 +315,11 @@ Never mark destructive controls (`course.delete`): the tutor has no reason to po
 5. **TutorChat** (`components/tutor/TutorChat.tsx`):
    - names stay on the device: in `AiChat`,
      `useEffect(() => { setSpotScrub(scrubNames([learner.nickname, read().accounts.find((a) => a.id === read().session.accountId)?.displayName])); return () => setSpotScrub(null); }, [learner.nickname]);`
+     (pass whole names: `scrubNames` also scrubs each word, so "Maria Lopez" covers "Maria").
    - send what is on screen with each message:
      `onSend={(text) => sendMessage({ text }, { body: { context: { ...context, spots: visibleSpots() } } })}`
    - point: `useEffect(() => { for (const m of messages) for (const p of m.parts) runSpotFromToolPart(p as { type: string }); }, [messages]);`
+     (this first run is what lets `SpotAgain` appear: it only shows for a pointing that lit).
    - transcript: add `| { type: "spot"; part: { type: string; state?: string; toolCallId?: string; input?: unknown } }`
      to `Card`, `case "tool-point_at": out.push({ type: "spot", part: p }); break;` in `cardsOf`, and
      `case "spot": return <SpotAgain part={card.part} />;` in `CardView`.
@@ -299,8 +332,25 @@ Never mark destructive controls (`course.delete`): the tutor has no reason to po
    - `"answer"` after a try, and `noMoreHints`: `{ id: "practice.show-how", say: t(locale, "tutor.demo.showHow") }`.
    DemoChat's `send` (an event handler) then calls `if (r.spot) spot(r.spot.id, { say: r.spot.say })`.
 7. **Practice Runner** (`components/practice/Runner.tsx`):
-   - `useEffect(() => (item ? guardSpots(answerSpots(item)) : undefined), [item]);`
-   - the ids in the practice table above, via `{...spotAttr("practice.hint")}` etc.
+   - guard the answer while the item is up, and **clear any pointing when the problem changes** (Next
+     reuses the same route and DOM nodes, so a caption about the last problem's "bottom number" would
+     otherwise sit on this one's):
+     ```tsx
+     useEffect(() => {
+       if (!item) return;
+       const release = guardSpots(answerSpots(item));
+       return () => {
+         release();
+         clearSpot();
+       };
+     }, [item]);
+     ```
+   - the ids in the practice table above, via `{...spotAttr("practice.hint")}` etc. In `AnswerPad.tsx`:
+     `practice.pad.keys` on `Keys`' `role="group"` div, `practice.pad.key.<k>` on each key,
+     `practice.pad.output` on the keypad's `<output>`, `spotAttr("practice.pad.fraction.top", t("practice.numerator"))`
+     / `.bottom` on the fraction boxes and `practice.pad.remainder.q` / `.r` likewise (their aria-label
+     carries the value; the label keeps the name and id still), `practice.choices` on `ChoiceTiles`'
+     `<ul>` and `practice.choice.<i>` on each **`<li>`**, `practice.pad.symbols` on the algebra keys group.
    - `MathText` gets an optional `spot?: string` prop: each part `{...spotAttr(`${spot}.part.${i}`)}`,
      a fraction's two number spans `.top` / `.bottom`, a power's `<sup>` `.exp`, the blank
      `practice.prompt.blank`. The Runner passes `spot="practice.prompt"`; `Worked` passes nothing.
@@ -314,13 +364,19 @@ Never mark destructive controls (`course.delete`): the tutor has no reason to po
    unchecked, guard the part the learner sets to answer, marked `widget.answer` on each widget (the
    sorter's bins, the number line's points, the fraction bar's parts, the moon phases, the clock face,
    the grid cells): `useEffect(() => (checked ? undefined : guardSpots(["widget.answer"])), [checked]);`.
+   Clear the spot when the scene changes, as in step 7.
 9. **Shell, Today, calendar, courses, family, talk** — the ids above with `spotAttr`; on both the rail
    link and the bottom-bar link for each tab.
-10. **Tutor drawer on phones** (`components/tutor/TutorDrawer.tsx`): the sheet covers the page, and the
-    ring correctly sits under it. When `useSpotlight()` lights a target outside the panel, lower the
-    sheet to a peek (or close it) until the spot clears, so the learner can see where the tutor points.
-11. **Age band** — put `data-band={bandOf(grade)}` (`@/catalogue`) on a wrapper (the design-system pass); the layer reads
-    it from the target's ancestors for the 56px K–2 buttons.
+10. **Tutor drawer** (`components/tutor/TutorDrawer.tsx`):
+    - Escape: the caption consumes the Escape that closes it; make the drawer's window listener respect
+      that, so one Escape never closes both: `const esc = (e: KeyboardEvent) => e.key === "Escape" && !e.defaultPrevented && onClose();`
+    - on phones the sheet covers the page and the ring correctly sits under it (the caption docks above
+      the sheet). When `useSpotlight()` lights a target outside the panel, lower the sheet to a peek (or
+      close it) until the spot clears, so the learner can see where the tutor points.
+11. **Age band** — in `AppShell` (and the focus layout that hosts practice and talk), next to where the
+    learner is read: `useEffect(() => setSpotBand(learner ? bandOf(learner.grade) : null), [learner?.grade]);`
+    (`bandOf` from `@/catalogue`). K–2 then gets 56px buttons and a speaker in the caption wherever the
+    target is (the nav, the tutor sheet). A `[data-band]` ancestor of the target still works as a fallback.
 
 ## Limits
 
@@ -328,3 +384,7 @@ Never mark destructive controls (`course.delete`): the tutor has no reason to po
   can drift to a neighbour or vanish (then nothing lights). Marked ids don't drift — mark what matters.
 - A target covered by an opaque layer the tutor did not open (a dialog) is lit under it, not on top.
 - `hintSpot` only answers when the words leave no doubt; most hints get no spot, by design.
+- The name backstop leaves out a control whose name contains a learner's name of 4+ letters even
+  inside another word ("Theory" for Theo). Safe, at the cost of that control not being pointable.
+- The caption is not spoken on its own; K–2 gets the speaker button. Speaking it automatically would
+  cut across the Runner's own read-aloud of the problem.
