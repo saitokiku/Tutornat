@@ -41,12 +41,14 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("caps", () => {
   it("have sane defaults and read the environment, ignoring nonsense", () => {
-    expect(caps()).toEqual({ dayTurns: 50, dayUsd: 1, monthTurns: 3000, monthUsd: 30 });
+    expect(caps()).toEqual({ dayTurns: 50, dayUsd: 1, monthTurns: 3000, monthUsd: 30, addressTurns: 300, addressUsd: 6 });
     vi.stubEnv("KAIZEN_AI_DAILY_TURNS", "12");
     vi.stubEnv("KAIZEN_AI_MONTHLY_USD", "7.5");
     vi.stubEnv("KAIZEN_AI_DAILY_USD", "lots");
     vi.stubEnv("KAIZEN_AI_MONTHLY_TURNS", "-3");
-    expect(caps()).toEqual({ dayTurns: 12, dayUsd: 1, monthTurns: 3000, monthUsd: 7.5 });
+    vi.stubEnv("KAIZEN_AI_ADDRESS_DAILY_TURNS", " 40 ");
+    vi.stubEnv("KAIZEN_AI_ADDRESS_DAILY_USD", "");
+    expect(caps()).toEqual({ dayTurns: 12, dayUsd: 1, monthTurns: 3000, monthUsd: 7.5, addressTurns: 40, addressUsd: 6 });
   });
 });
 
@@ -64,9 +66,12 @@ describe("who is spending", () => {
   it("uses the opaque ids the browser sends, and a hash of the address otherwise", () => {
     const learner = id();
     const account = id();
-    expect(spender(request({ learner, account }))).toEqual({ learner, account });
+    const known = spender(request({ learner, account }));
+    expect(known).toMatchObject({ learner, account });
+    expect(known.address).toMatch(/^ip-[a-f0-9]{32}$/);
     const anon = spender(request({ learner: "Ada", account: "not-a-hash" }));
     expect(anon.learner).toBe(anon.account);
+    expect(anon.account).toBe(anon.address);
     expect(anon.account).toMatch(/^ip-[a-f0-9]{32}$/);
     expect(JSON.stringify(anon)).not.toContain("203.0.113.9");
     // A grown-up's request without a learner counts against the account's own day.
@@ -120,6 +125,50 @@ describe("forced caps", () => {
     // A date far from the server's is ignored, so it can't be used to reset the day.
     spend({ ...who, day: "2031-01-01" }, 1);
     expect(overCap(request({ ...who, day: "2031-02-02" }), NOW)).toBe("day");
+  });
+
+  it("holds one address to its ceiling however many made-up ids it sends, on the server's own day", async () => {
+    vi.stubEnv("KAIZEN_AI_ADDRESS_DAILY_TURNS", "5");
+    const ip = "198.51.100.77";
+    // Five requests, each with fresh ids and a different claimed date, all from one address.
+    for (const day of ["2026-10-06", "2026-10-07", "2026-10-08", "2026-10-07", "2026-10-06"]) spend({ learner: id(), account: id(), day, ip }, 1);
+    const fresh = { learner: id(), account: id(), ip };
+    expect(spentBy(request(fresh), NOW)).toMatchObject({ day: { turns: 0 }, month: { turns: 0 }, address: { turns: 5 } });
+    expect(overCap(request(fresh), NOW)).toBe("day");
+    const res = await spendGate(request(fresh, tutorBody("what is a fraction?")), "talk", undefined, NOW);
+    expect(await res!.text()).toContain(capMessage("talk", "day", "en"));
+    // Another address is not held back, and the next day the ceiling lifts.
+    expect(overCap(request({ ...fresh, ip: "198.51.100.78" }), NOW)).toBeNull();
+    expect(overCap(request(fresh), NOW + 86_400_000)).toBeNull();
+  });
+
+  it("stops one address at its daily cost ceiling too", () => {
+    vi.stubEnv("KAIZEN_AI_ADDRESS_DAILY_USD", "0.10");
+    const ip = "198.51.100.90";
+    spend({ learner: id(), account: id(), ip }, 3, usage(10_000, 2_000)); // 3 × $0.04
+    expect(overCap(request({ learner: id(), account: id(), ip }), NOW)).toBe("day");
+  });
+
+  it("turns an AI job off with a cap of zero", () => {
+    vi.stubEnv("KAIZEN_AI_DAILY_TURNS", "0");
+    expect(overCap(request({ learner: id(), account: id(), ip: "198.51.100.91" }), NOW)).toBe("day");
+  });
+
+  it("forgets past periods once the store grows, and never today's or a later one", () => {
+    const OLD = NOW - 40 * 86_400_000; // late August
+    const today = { learner: id(), account: id(), ip: "198.51.100.120" };
+    spend(today, 1);
+    const old = { learner: id(), account: id(), ip: "198.51.100.121" };
+    for (let i = 0; i < 12_000; i++) meter(request({ ...old, learner: id(), account: id() }), OLD).start();
+    meter(request(old), OLD).start();
+    // A prune that ran while August requests were still writing kept October.
+    expect(spentBy(request(today), NOW).day.turns).toBe(1);
+    expect(spentBy(request(old), OLD).day.turns).toBe(1);
+    // Enough new writes today to prune again: August goes, October stays.
+    for (let i = 0; i < 12_000; i++) meter(request({ ...today, learner: id(), account: id() }), NOW).start();
+    expect(spentBy(request(old), OLD)).toMatchObject({ day: { turns: 0 }, month: { turns: 0 }, address: { turns: 0 } });
+    expect(spentBy(request(today), NOW).day.turns).toBe(1);
+    expect(spentBy(request(today), NOW).address.turns).toBe(12_001);
   });
 
   it("counts one turn per request however many model calls it makes", () => {
