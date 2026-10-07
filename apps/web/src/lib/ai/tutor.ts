@@ -11,7 +11,7 @@ import {
 import { TutorContext } from "./context";
 import { systemPrompt } from "./prompts";
 import { screen } from "./safety";
-import { tutorTools } from "./tools";
+import { hintsGiven, tutorTools } from "./tools";
 
 // One tutor turn. The safety screen runs first and can answer without any model. Kept free of
 // provider setup so tests can pass a mock model.
@@ -97,7 +97,7 @@ export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promi
     model,
     system,
     messages: await convertToModelMessages(photos.messages),
-    tools: tutorTools(ctx),
+    tools: tutorTools(ctx, { hintsGiven: hintsGiven(messages) }),
     stopWhen: isStepCount(5),
     maxOutputTokens: 700,
   });

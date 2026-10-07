@@ -1,4 +1,4 @@
-import { tool } from "ai";
+import { tool, type UIMessage } from "ai";
 import { z } from "zod";
 import { standardUrl, wiktionaryUrl } from "@/components/tutor/sources";
 import { audiobooks, cleanQuery, define, poemsBy, poemTitled, searchBooks, shortPoems, standardText, wikiSummary } from "@/knowledge";
@@ -33,9 +33,23 @@ export const VisualInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("moon"), phase: n(0, 1) }),
 ]);
 
-export function tutorTools(ctx: TutorContext) {
+/**
+ * How many vetted hints the tutor has already given in this conversation. Tools are built per request,
+ * so the ladder's place comes from the conversation itself, or the second ask would get the first hint again.
+ */
+export function hintsGiven(messages: UIMessage[]): number {
+  let n = 0;
+  for (const m of messages)
+    for (const p of m.parts ?? []) {
+      const part = p as { type: string; state?: string; output?: { hint?: unknown } };
+      if (part.type === "tool-next_hint" && part.state === "output-available" && typeof part.output?.hint === "string") n++;
+    }
+  return n;
+}
+
+export function tutorTools(ctx: TutorContext, history: { hintsGiven?: number } = {}) {
   const current = () => (ctx.item && getSkill(ctx.item.skillId) ? makeItem(ctx.item.skillId, ctx.item.level, ctx.item.seed, ctx.locale) : null);
-  let hintsGiven = 0;
+  let hintsGiven = history.hintsGiven ?? 0;
   return {
     next_hint: tool({
       description: "The next vetted hint for the learner's current problem, smallest first. Using it counts as help.",

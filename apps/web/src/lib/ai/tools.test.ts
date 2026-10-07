@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cardsOf, skillsIn } from "@/components/tutor/cards";
 import { clearKnowCache } from "@/knowledge/fetch";
 import type { TutorContext } from "./context";
-import { knowledgeTools } from "./tools";
+import { makeItem } from "@/practice/skills";
+import { hintsGiven, knowledgeTools } from "./tools";
 import { tutorTurn } from "./tutor";
 
 // Each knowledge tool, called by a mock model, runs against stubbed sources and ends up as a board card
@@ -136,6 +137,24 @@ describe("knowledge tools, through the tutor turn, onto the board", () => {
     const offered = await run("start_practice", { skillId: "e.fallacies", reason: "Spot the flaw in an argument" });
     expect(offered.cards).toEqual([{ type: "practice", skillId: "e.fallacies", reason: "Spot the flaw in an argument" }]);
     expect(skillsIn(offered.m)).toEqual(["e.fallacies"]);
+  });
+});
+
+describe("the hint ladder across turns", () => {
+  it("each turn's next_hint continues where the conversation left off", async () => {
+    const practice: TutorContext = { locale: "en", grade: "4", surface: "practice", item: { skillId: "m.frac.addlike", level: 1, seed: 7 }, tries: 1 };
+    const item = makeItem("m.frac.addlike", 1, 7, "en");
+    const first = await run("next_hint", {}, practice);
+    const firstHint = first.m.parts.find((p) => p.type === "tool-next_hint") as { output?: { hint?: string } };
+    expect(firstHint.output?.hint).toBe(item.hints[0]);
+
+    // The browser sends the whole conversation back, tool results included.
+    const { model, prompts } = toolModel("next_hint", {});
+    const again = await reply(await tutorTurn({ messages: [user("hint please"), first.m, { id: "u2", role: "user", parts: [{ type: "text", text: "another hint" }] }], context: practice }, model));
+    const second = again.parts.find((p) => p.type === "tool-next_hint") as { output?: { hint?: string } };
+    expect(second.output?.hint).toBe(item.hints[1]);
+    expect(hintsGiven([first.m, again])).toBe(2);
+    expect(JSON.stringify(prompts[0])).not.toContain(JSON.stringify(item.answer)); // no key in what the model sees
   });
 });
 

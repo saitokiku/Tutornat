@@ -35,8 +35,13 @@ function Panel({ ctx, learner, surface, onClose }: { ctx: DockContext; learner: 
   const t = useT();
   const panel = useRef<HTMLElement>(null);
   const young = ["K", "1", "2"].includes(learner.grade);
+  // Focus goes into the panel on open and back to what opened it (the "Ask the tutor" button) on close.
+  const [opener] = useState(() => (typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null));
   useEffect(() => {
     panel.current?.focus();
+    return () => opener?.focus?.();
+  }, [opener]);
+  useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
@@ -57,7 +62,7 @@ function Panel({ ctx, learner, surface, onClose }: { ctx: DockContext; learner: 
           <h2 id="tutor-panel-title" className="font-brand text-t3 font-semibold text-ink">
             {t("tutor.title")}
           </h2>
-          <button type="button" onClick={onClose} aria-label={t("common.close")} className="ml-auto grid size-10 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
+          <button type="button" onClick={onClose} aria-label={t("common.close")} className="ml-auto grid size-11 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
             <IconX size={18} />
           </button>
         </header>

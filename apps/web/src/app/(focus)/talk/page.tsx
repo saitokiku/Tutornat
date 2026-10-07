@@ -56,7 +56,13 @@ export default function TalkPage() {
       <div className="flex h-dvh flex-col bg-paper">
         <header className="border-b border-border bg-panel">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:px-6">
-            <button type="button" onClick={() => router.back()} aria-label={t("talk.back")} className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
+            <button
+              type="button"
+              // Back where they came from; opened straight from a link, back to the dashboard.
+              onClick={() => (window.history.length > 1 ? router.back() : router.push("/home"))}
+              aria-label={t("talk.back")}
+              className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink"
+            >
               <IconArrowLeft size={20} />
             </button>
             <KaizenMark size={24} />

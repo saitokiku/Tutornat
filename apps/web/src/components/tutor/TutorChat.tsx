@@ -184,7 +184,7 @@ function DemoChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
 
 /* ------------------------------------------------------------------ view */
 
-type Quick = { label: string; say?: string; fill?: [string, string] };
+type Quick = { label: string; fill?: [string, string] };
 
 function ChatView({
   setup,
@@ -414,7 +414,7 @@ function ChatView({
               key={q.label}
               type="button"
               disabled={busy}
-              onClick={() => (q.fill ? fill(q.fill) : submit(q.say ?? q.label))}
+              onClick={() => (q.fill ? fill(q.fill) : submit(q.label))}
               className={young ? "k-btn-secondary min-h-14 px-5 text-base" : "k-btn-secondary min-h-11 px-3.5 text-xs"}
             >
               {q.label}
