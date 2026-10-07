@@ -43,6 +43,7 @@ import contextClues from "./english-context-clues";
 import fallacies from "./english-fallacies";
 import fallaciesEs from "./english-fallacies-es";
 import themePov from "./english-theme-pov";
+import thesis from "./english-thesis";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -89,4 +90,5 @@ export const REGISTRY: CatalogueEntry[] = [
   fallacies,
   fallaciesEs,
   themePov,
+  thesis,
 ];
