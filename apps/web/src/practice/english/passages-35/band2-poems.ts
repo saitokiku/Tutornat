@@ -1,0 +1,111 @@
+import { Q, type Passage } from "./types";
+
+// Band 2 poems, grade 4–5 text band (draft: written for KaizenEDU, not yet reviewed by a teacher).
+export const BAND2_POEMS: Passage[] = [
+  {
+    id: "river",
+    kind: "poem",
+    band: 2,
+    title: ["The River Speaks", "Habla el río"],
+    en: [
+      "I was born as snow on a mountain,\nwhere the air is thin and white.\nIn spring the sun unlocked me,\nand I ran downhill day and night.",
+      "I gathered every trickle,\nevery creek and stream I found,\nand grew from a whisper\ninto a wide and rushing sound.",
+      "I carved the canyon slowly,\none grain of stone a year.\nThe walls you climb and photograph\nare the patient work I left here.",
+      "I carry boats past cities,\nI water fields of corn.\nI give the herons fish to catch\nand the frogs a place to be born.",
+      "So when you drop a wrapper\nor pour paint down a storm drain,\nremember that it reaches me,\nand I must carry the stain.",
+      "I may look wide and mighty,\nbut I go where I am led.\nTake care of every drop of me,\nand I will help to keep you fed.",
+    ],
+    es: [
+      "Nací como nieve en una montaña,\ndonde el aire es fino y blanco.\nEn primavera el sol me abrió la puerta\ny bajé corriendo de día y de noche.",
+      "Junté cada hilito de agua,\ncada arroyo que encontré,\ny de ser apenas un susurro\npasé a ser un rugido ancho.",
+      "Tallé el cañón despacito,\nun granito de piedra cada año.\nLas paredes que escalas y fotografías\nson el trabajo paciente que dejé.",
+      "Llevo barcos junto a las ciudades,\nriego los campos de maíz.\nLes doy a las garzas peces para pescar\ny a las ranas un lugar donde nacer.",
+      "Así que cuando tiras una envoltura\no echas pintura por la alcantarilla,\nrecuerda que llega hasta mí\ny tengo que cargar con esa mancha.",
+      "Tal vez me veo ancho y poderoso,\npero voy por donde me llevan.\nCuida cada gota de mí\ny yo te ayudaré a tener qué comer.",
+    ],
+    qs: [
+      Q("pov", ["Who is the speaker in this poem?", "¿Quién habla en este poema?"], ["The river itself", "El propio río"], [["A person who lives on a mountain", "Una persona que vive en una montaña", "wrong-character"], ["A heron catching fish", "Una garza que pesca", "wrong-character"], ["A farmer watering corn", "Un agricultor que riega el maíz", "not-in-text"]], ["Read the first line. What was born as snow?", "Lee el primer verso. ¿Qué nació como nieve?"], ["I was born as snow on a mountain", "Nací como nieve en una montaña"]),
+      Q("words", ["What does the speaker mean by “I carved the canyon slowly”?", "¿Qué quiere decir quien habla con “Tallé el cañón despacito”?"], ["Over a very long time, the flowing water wore away the rock.", "Durante muchísimo tiempo, el agua que corre fue desgastando la roca."], [["The river used a knife to cut the stone.", "El río usó un cuchillo para cortar la piedra.", "took-literally"], ["The river made the canyon in one day.", "El río hizo el cañón en un solo día.", "opposite-meaning"], ["People built the canyon.", "La gente construyó el cañón.", "not-in-text"]], ["Look at the next line. How fast is one grain of stone a year?", "Mira el verso siguiente. ¿Qué tan rápido es un granito de piedra cada año?"], ["one grain of stone a year", "un granito de piedra cada año"]),
+      Q("theme", ["What is the message of the poem?", "¿Cuál es el mensaje del poema?"], ["People should protect rivers because so much life depends on them.", "Debemos cuidar los ríos porque mucha vida depende de ellos."], [["A river begins as snow on a mountain.", "Un río empieza como nieve en una montaña.", "plot-summary"], ["Rivers are too strong to be harmed.", "Los ríos son demasiado fuertes para que les pase algo.", "unsupported-lesson"], ["Herons are good at catching fish.", "Las garzas pescan muy bien.", "too-narrow"]], ["Read the last two stanzas. What does the river ask you to do?", "Lee las dos últimas estrofas. ¿Qué te pide el río?"], ["Take care of every drop of me", "Cuida cada gota de mí"]),
+      Q("details", ["According to the poem, how does trash get into the river?", "Según el poema, ¿cómo llega la basura al río?"], ["Things dropped outside or poured down drains end up there.", "Lo que se tira afuera o se echa por las alcantarillas termina ahí."], [["It comes from melting snow.", "Viene de la nieve que se derrite.", "wrong-detail"], ["Boats throw it in.", "Los barcos la tiran.", "not-in-text"], ["The herons bring it.", "Las garzas la traen.", "not-in-text"]], ["Find the stanza that begins “So when you drop a wrapper.”", "Busca la estrofa que empieza con “Así que cuando tiras una envoltura”."], ["remember that it reaches me", "recuerda que llega hasta mí"]),
+    ],
+  },
+  {
+    id: "launch-day",
+    kind: "poem",
+    band: 2,
+    title: ["Launch Day", "Día del lanzamiento"],
+    en: [
+      "My aunt is in that rocket,\nbuckled in and dressed in white.\nThe countdown crackles from the speakers,\nand I hold my breath in fright.",
+      "Three, two, one. The ground starts shaking\nlike thunder climbing up my feet.\nA tower of fire lifts her skyward,\nand the morning fills with heat.",
+      "In minutes she is just a spark,\nthen nothing but a trail,\na chalk line drawn across the blue\nthat the wind begins to pale.",
+      "Tonight she'll float inside the station,\nsixteen sunsets every day,\nand sleep tied to a wall\nso she won't drift away.",
+      "When it is dark, I'll find the station,\na bright dot sliding through the night,\nand I will wave up at my aunt\nand know she sees our city's light.",
+    ],
+    es: [
+      "Mi tía va en ese cohete,\nbien sujeta y vestida de blanco.\nLa cuenta regresiva truena en las bocinas\ny yo contengo el aliento, temblando.",
+      "Tres, dos, uno. El suelo tiembla\ncomo un trueno que me sube por los pies.\nUna torre de fuego la lleva al cielo\ny la mañana se llena de calor.",
+      "En minutos es apenas una chispa,\nluego solo una estela,\nuna raya de tiza sobre el azul\nque el viento va borrando.",
+      "Esta noche flotará en la estación,\ncon dieciséis atardeceres cada día,\ny dormirá sujeta a una pared\npara no irse flotando.",
+      "Cuando oscurezca, buscaré la estación,\nun punto brillante que cruza la noche,\ny saludaré a mi tía con la mano,\nsabiendo que ella ve las luces de mi ciudad.",
+    ],
+    qs: [
+      Q("pov", ["Who is the speaker of this poem?", "¿Quién habla en este poema?"], ["A niece or nephew watching an aunt blast off", "Un sobrino o una sobrina que ve despegar a su tía"], [["The astronaut in the rocket", "La astronauta que va en el cohete", "wrong-character"], ["The space station", "La estación espacial", "wrong-character"], ["A worker in the control room", "Una persona del centro de control", "not-in-text"]], ["Who is in the rocket, and how is the speaker related to her?", "¿Quién va en el cohete y qué parentesco tiene con quien habla?"], ["My aunt is in that rocket", "Mi tía va en ese cohete"]),
+      Q("words", ["In the poem, what is “a chalk line drawn across the blue”?", "En el poema, ¿qué es “una raya de tiza sobre el azul”?"], ["The thin white trail the rocket leaves in the sky", "La estela blanca y delgada que deja el cohete en el cielo"], [["Someone drawing on a chalkboard", "Alguien que dibuja en un pizarrón", "took-literally"], ["The ocean below the rocket", "El mar debajo del cohete", "ignored-context"], ["A crack in the launch pad", "Una grieta en la plataforma de lanzamiento", "ignored-context"]], ["What is the blue above the speaker, and what does a rocket leave behind?", "¿Qué es el azul que está sobre quien habla, y qué deja atrás un cohete?"], ["then nothing but a trail", "luego solo una estela"]),
+      Q("theme", ["What is the poem mostly about?", "¿De qué trata principalmente el poema?"], ["Missing someone far away but still feeling close to her", "Extrañar a alguien que está lejos, pero sentirse cerca de ella"], [["An aunt rides a rocket to the space station.", "Una tía viaja en cohete a la estación espacial.", "plot-summary"], ["Space travel is too dangerous.", "Viajar al espacio es demasiado peligroso.", "unsupported-lesson"], ["Rockets make the ground shake.", "Los cohetes hacen temblar el suelo.", "too-narrow"]], ["Read the last stanza. What will the speaker do when it is dark?", "Lee la última estrofa. ¿Qué hará quien habla cuando oscurezca?"], ["and I will wave up at my aunt", "y saludaré a mi tía con la mano"]),
+      Q("character", ["How does the speaker feel during the countdown?", "¿Cómo se siente quien habla durante la cuenta regresiva?"], ["Nervous and scared for the aunt", "Con nervios y miedo por su tía"], [["Bored and sleepy", "Con aburrimiento y sueño", "opposite-of-text"], ["Calm, as if nothing special is happening", "Con calma, como si no pasara nada especial", "opposite-of-text"], ["Angry at the aunt for leaving", "Con enojo porque su tía se va", "not-in-text"]], ["Look at what the speaker does with their breath.", "Fíjate en lo que hace quien habla con el aliento."], ["and I hold my breath in fright", "y yo contengo el aliento, temblando"]),
+    ],
+  },
+  {
+    id: "saturday-bread",
+    kind: "poem",
+    band: 2,
+    title: ["Saturday Bread", "El pan de los sábados"],
+    en: [
+      "On Saturdays, my grandmother\nwakes the yeast in a bowl of warm water.\nWe watch the foam rise like a tiny cloud.\n“It is breathing,” she tells me.",
+      "She adds the flour, cup by cup,\nthen turns the dough onto the table.\nPush, fold, turn. Push, fold, turn.\nHer hands keep time like a song.",
+      "We cover the bowl with a clean towel\nand leave it by the sunny window.\nAn hour later, I lift one corner.\nThe dough has doubled, round as a pillow.",
+      "In the oven it grows golden.\nThe whole house fills with the smell,\nand the neighbors' dog sits at our door\nas if he heard a dinner bell.",
+      "When we break the first warm loaf,\nI see the tiny holes inside,\nthe little rooms where the yeast once breathed,\nand Grandma smiles with pride.",
+    ],
+    es: [
+      "Los sábados, mi abuela\ndespierta la levadura en un tazón de agua tibia.\nVemos subir la espuma como una nubecita.\n“Está respirando”, me dice.",
+      "Le pone la harina, taza por taza,\ny luego vuelca la masa sobre la mesa.\nEmpuja, dobla, gira. Empuja, dobla, gira.\nSus manos llevan el ritmo como una canción.",
+      "Tapamos el tazón con un trapo limpio\ny lo dejamos junto a la ventana soleada.\nUna hora después, levanto una esquina.\nLa masa creció al doble, redonda como una almohada.",
+      "En el horno se pone dorada.\nToda la casa se llena del olor,\ny el perro de los vecinos se sienta en la puerta\ncomo si hubiera oído la campana de la cena.",
+      "Cuando partimos el primer pan calientito,\nveo los agujeritos de adentro,\nlos cuartitos donde respiró la levadura,\ny la abuela sonríe orgullosa.",
+    ],
+    qs: [
+      Q("words", ["In the poem, what are “the little rooms where the yeast once breathed”?", "En el poema, ¿qué son “los cuartitos donde respiró la levadura”?"], ["The tiny holes left by gas bubbles in the bread", "Los agujeritos que dejaron las burbujas de gas en el pan"], [["Small rooms in Grandma's house", "Cuartos pequeños de la casa de la abuela", "took-literally"], ["Pieces of the towel", "Pedazos del trapo", "ignored-context"], ["The racks inside the oven", "Las parrillas del horno", "ignored-context"]], ["Look at the line before. What does the speaker see inside the loaf?", "Mira el verso anterior. ¿Qué ve quien habla dentro del pan?"], ["I see the tiny holes inside", "veo los agujeritos de adentro"]),
+      Q("pov", ["Who is the speaker in this poem?", "¿Quién habla en este poema?"], ["A grandchild who bakes with Grandma", "Un nieto o una nieta que hornea con su abuela"], [["The grandmother", "La abuela", "wrong-character"], ["The neighbors' dog", "El perro de los vecinos", "wrong-character"], ["A baker in a store", "Un panadero de una tienda", "not-in-text"]], ["Look for the words “my grandmother” and “she tells me.”", "Busca las palabras “mi abuela” y “me dice”."], ["On Saturdays, my grandmother", "Los sábados, mi abuela"]),
+      Q("theme", ["What is the theme of the poem?", "¿Cuál es el tema del poema?"], ["Making something slowly with someone you love is worth the wait.", "Hacer algo despacio con alguien que quieres vale la espera."], [["Grandma bakes bread on Saturdays.", "La abuela hornea pan los sábados.", "plot-summary"], ["Bread from a store is just as good.", "El pan de la tienda es igual de bueno.", "unsupported-lesson"], ["Dogs like the smell of bread.", "A los perros les gusta el olor del pan.", "too-narrow"]], ["Think about how many steps and how much waiting the bread takes, and how the poem ends.", "Piensa en cuántos pasos y cuánta espera lleva el pan, y en cómo termina el poema."], ["and Grandma smiles with pride", "y la abuela sonríe orgullosa"]),
+      Q("details", ["What happened to the dough while it sat by the window?", "¿Qué le pasó a la masa mientras estaba junto a la ventana?"], ["It grew to twice its size.", "Creció al doble de su tamaño."], [["It turned golden.", "Se puso dorada.", "wrong-order"], ["It shrank and dried out.", "Se encogió y se secó.", "opposite-of-text"], ["The dog ate it.", "El perro se la comió.", "not-in-text"]], ["Read the stanza about the towel and the window.", "Lee la estrofa del trapo y la ventana."], ["The dough has doubled, round as a pillow.", "La masa creció al doble, redonda como una almohada."]),
+    ],
+  },
+  {
+    id: "under-the-reef",
+    kind: "poem",
+    band: 2,
+    title: ["Under the Reef", "Bajo el arrecife"],
+    en: [
+      "I float above the reef in my mask,\nbreathing slow through my snorkel,\nand below me a city wakes up:\nstreets of coral, towers, tunnels.",
+      "A parrotfish crunches its breakfast.\nA crab ducks into a doorway.\nA school of silver fish turns all at once,\nlike a flag snapping in the wind.",
+      "The coral wears every color:\nmustard, violet, rose,\nbranches like antlers, round mounds like brains,\nfans that wave as the water flows.",
+      "But at the edge of the reef I find\na patch gone white as bone,\nquiet and empty, no fish at all,\nlike a city left alone.",
+      "I lift my head into the sunlight\nand promise the sea one thing:\nI'll tell everyone what I saw down there,\nthe colors, and the white, and the silence.",
+    ],
+    es: [
+      "Floto sobre el arrecife con mi visor,\nrespirando despacio por el tubo,\ny debajo de mí despierta una ciudad:\ncalles de coral, torres, túneles.",
+      "Un pez loro mastica su desayuno.\nUn cangrejo se mete por una puerta.\nUn banco de peces plateados gira de golpe\ncomo una bandera que chasquea en el viento.",
+      "El coral se viste de todos los colores:\nmostaza, violeta, rosa,\nramas como astas de venado, montículos como cerebros,\nabanicos que se mecen con el agua.",
+      "Pero en la orilla del arrecife encuentro\nun parche blanco como un hueso,\ncallado y vacío, sin un solo pez,\ncomo una ciudad abandonada.",
+      "Saco la cabeza a la luz del sol\ny le prometo una cosa al mar:\nles contaré a todos lo que vi allá abajo,\nlos colores, y lo blanco, y el silencio.",
+    ],
+    qs: [
+      Q("words", ["Why does the poet call the reef “a city”?", "¿Por qué el poeta llama al arrecife “una ciudad”?"], ["It is crowded with living things and hiding places, like a busy town.", "Está lleno de seres vivos y escondites, como un pueblo con mucho movimiento."], [["People live in buildings under the sea.", "Hay gente que vive en edificios bajo el mar.", "took-literally"], ["The reef is next to a real city.", "El arrecife está junto a una ciudad de verdad.", "took-literally"], ["The reef is empty and quiet.", "El arrecife está vacío y callado.", "wrong-detail"]], ["Read the next lines. What fills the streets of this city?", "Lee los versos siguientes. ¿Qué llena las calles de esta ciudad?"], ["streets of coral, towers, tunnels", "calles de coral, torres, túneles"]),
+      Q("details", ["What does the speaker find at the edge of the reef?", "¿Qué encuentra quien habla en la orilla del arrecife?"], ["A white patch with no fish", "Un parche blanco sin peces"], [["A school of silver fish", "Un banco de peces plateados", "wrong-detail"], ["A crab in a doorway", "Un cangrejo en una puerta", "wrong-detail"], ["A sunken ship", "Un barco hundido", "not-in-text"]], ["Read the stanza that begins with “But.”", "Lee la estrofa que empieza con “Pero”."], ["a patch gone white as bone", "un parche blanco como un hueso"]),
+      Q("theme", ["What is the message of the poem?", "¿Cuál es el mensaje del poema?"], ["A reef full of life is worth protecting, and people should know when it is in trouble.", "Vale la pena cuidar un arrecife lleno de vida, y la gente debe saber cuando está en peligro."], [["A snorkeler sees fish and coral.", "Alguien que bucea ve peces y coral.", "plot-summary"], ["White coral is the most beautiful kind.", "El coral blanco es el más bonito.", "unsupported-lesson"], ["Parrotfish eat breakfast.", "Los peces loro desayunan.", "too-narrow"]], ["Read the speaker's promise at the end.", "Lee la promesa que hace quien habla al final."], ["I'll tell everyone what I saw down there", "les contaré a todos lo que vi allá abajo"]),
+      Q("pov", ["Who is the speaker in this poem?", "¿Quién habla en este poema?"], ["A person snorkeling above the reef", "Una persona que bucea con tubo sobre el arrecife"], [["A parrotfish", "Un pez loro", "wrong-character"], ["The coral reef itself", "El propio arrecife", "wrong-character"], ["A scientist in a laboratory", "Una científica en un laboratorio", "not-in-text"]], ["Look at the first two lines. What is the speaker wearing, and what are they breathing through?", "Mira los dos primeros versos. ¿Qué lleva puesto quien habla y por dónde respira?"], ["I float above the reef in my mask", "Floto sobre el arrecife con mi visor"]),
+    ],
+  },
+];
