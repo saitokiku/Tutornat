@@ -37,15 +37,18 @@ function choose(r: Rng, key: Choice, wrong: readonly Choice[]): Pick<ItemBody, "
   return { choices, input: "choices", answer: { kind: "choice", index: choices.indexOf(key) } };
 }
 
-/** A number key with up to three tagged wrong numbers; near misses fill any gap. */
-function numberChoices(r: Rng, key: number, tags: readonly (Tag | null)[], max = 1000) {
+/**
+ * A number key with up to three tagged wrong numbers; near misses fill any gap. A near miss that is
+ * already on screen (`shown`) is left out: picking it is a different mistake than miscounting.
+ */
+function numberChoices(r: Rng, key: number, tags: readonly (Tag | null)[], max = 1000, shown: readonly number[] = []) {
   const wrong: Choice[] = [];
   const add = (v: number, why: string) => {
     if (wrong.length >= 3 || !Number.isInteger(v) || v < 0 || v > max || v === key || wrong.some((c) => c.label === String(v))) return;
     wrong.push({ label: String(v), say: String(v), why });
   };
   for (const tag of tags) if (tag) add(Number(tag[0]), tag[1]);
-  for (const d of [1, -1, 2, -2, 3]) add(key + d, Math.abs(d) === 1 ? "off-by-one" : "miscounted");
+  for (const d of [1, -1, 2, -2, 3]) if (!shown.includes(key + d)) add(key + d, Math.abs(d) === 1 ? "off-by-one" : "miscounted");
   return choose(r, { label: String(key), say: String(key) }, wrong);
 }
 
@@ -168,6 +171,9 @@ export const STORY_100: readonly Story[] = [
   { kind: "start-add", pic: "🐟", what: ["A fish", "Un pez"], en: ([b, c]) => `Some fish were in a pond. Then ${b} more were added. Now there are ${c}. How many were there at first?`, es: ([b, c]) => `Había algunos peces en un estanque. Luego agregaron ${b} más. Ahora hay ${c}. ¿Cuántos había al principio?` },
   { kind: "compare", pic: "📖", what: ["A book", "Un libro"], en: ([a, b], n, m) => `${n} read ${a} pages. ${m} read ${b} pages. How many more pages did ${n} read?`, es: ([a, b], n, m) => `${n} leyó ${a} páginas. ${m} leyó ${b} páginas. ¿Cuántas páginas más leyó ${n}?` },
   { kind: "compare", pic: "🏃", what: ["A runner", "Una persona corriendo"], en: ([a, b], n, m) => `${n} ran ${a} laps this month. ${m} ran ${b} laps. How many more laps did ${n} run?`, es: ([a, b], n, m) => `${n} corrió ${a} vueltas este mes. ${m} corrió ${b} vueltas. ¿Cuántas vueltas más corrió ${n}?` },
+  // Lengths given in the same unit (2.MD.B.5): unit words in full, so a read-aloud says "inches", not "in".
+  { kind: "compare", pic: "🎀", what: ["A ribbon", "Una cinta"], en: ([a, b]) => `A red ribbon is ${a} inches long. A blue ribbon is ${b} inches long. How many inches longer is the red ribbon?`, es: ([a, b]) => `Una cinta roja mide ${a} pulgadas. Una cinta azul mide ${b} pulgadas. ¿Cuántas pulgadas más larga es la cinta roja?` },
+  { kind: "compare", pic: "🔗", what: ["A chain", "Una cadena"], en: ([a, b], n, m) => `${n}'s paper chain is ${a} centimeters long. ${m}'s is ${b} centimeters long. How many centimeters longer is ${n}'s chain?`, es: ([a, b], n, m) => `La cadena de papel de ${n} mide ${a} centímetros. La de ${m} mide ${b} centímetros. ¿Cuántos centímetros más larga es la cadena de ${n}?` },
   { kind: "fewer", pic: "🌻", what: ["A sunflower", "Un girasol"], en: ([a, d], n, m) => `${n} planted ${a} seeds. ${m} planted ${d} fewer. How many seeds did ${m} plant?`, es: ([a, d], n, m) => `${n} sembró ${a} semillas. ${m} sembró ${d} menos. ¿Cuántas semillas sembró ${m}?` },
   { kind: "fewer", pic: "🚀", what: ["A rocket", "Un cohete"], en: ([a, d]) => `A big rocket kit has ${a} parts. A small kit has ${d} fewer parts. How many parts are in the small kit?`, es: ([a, d]) => `Un kit grande de cohete tiene ${a} piezas. Un kit pequeño tiene ${d} piezas menos. ¿Cuántas piezas tiene el kit pequeño?` },
   { kind: "more", pic: "🖍️", what: ["Crayons", "Crayones"], en: ([a, d], n, m) => `${n} has ${a} crayons. ${m} has ${d} more than ${n}. How many crayons does ${m} have?`, es: ([a, d], n, m) => `${n} tiene ${a} crayones. ${m} tiene ${d} más que ${n}. ¿Cuántos crayones tiene ${m}?` },
@@ -325,9 +331,17 @@ const THINGS: readonly Thing[] = [
 ];
 const el = (t: Thing) => (t.f ? "la" : "el");
 const un = (t: Thing) => (t.f ? "una" : "un");
-type Unit = { abbr: Pair; one: Pair; many: Pair; max: number; key: "inch" | "cm" };
-const INCH: Unit = { abbr: ["in", "pulg"], one: ["inch", "pulgada"], many: ["inches", "pulgadas"], max: 12, key: "inch" };
-const CM: Unit = { abbr: ["cm", "cm"], one: ["centimeter", "centímetro"], many: ["centimeters", "centímetros"], max: 15, key: "cm" };
+/** Things long enough to line cubes along (1-inch cubes, so a cube count is the inch length). */
+const CUBE_THINGS = THINGS.filter((t) => t.inch[1] >= 4);
+/** Two different things, the first always the longer one in real life (its shortest beats the other's longest). */
+function longerPair(r: Rng): [Thing, Thing] {
+  const pairs = THINGS.flatMap((a) => THINGS.filter((b) => a.inch[0] > b.inch[1]).map((b) => [a, b] as [Thing, Thing]));
+  return r.pick(pairs);
+}
+/** Sentences name units in full ("12 inches") so a read-aloud never says "12 in"; the short form sits only after the answer box. */
+type Unit = { abbr: Pair; one: Pair; many: Pair; max: number; key: "inch" | "cm"; f: boolean };
+const INCH: Unit = { abbr: ["in.", "pulg."], one: ["inch", "pulgada"], many: ["inches", "pulgadas"], max: 12, key: "inch", f: true };
+const CM: Unit = { abbr: ["cm", "cm"], one: ["centimeter", "centímetro"], many: ["centimeters", "centímetros"], max: 15, key: "cm", f: false };
 const unitWord = (u: Unit, n: number, locale: Locale) => t2(locale, n === 1 ? u.one : u.many);
 
 // ---- Time ----
@@ -375,6 +389,8 @@ function purseText(p: Purse, locale: Locale, spoken = false) {
 const coinsEs = (p: Purse, spoken = false) =>
   `estas monedas: ${join(p.map(([c, n]) => `${n} de ${spoken ? `${c.v} ${c.v === 1 ? "centavo" : "centavos"}` : `${c.v}¢`}`), "es")}`;
 const purseValue = (p: Purse) => p.reduce((s, [c, n]) => s + c.v * n, 0);
+/** What a purse is worth to a child who thinks a nickel is 10¢ and a dime 5¢. */
+const swappedValue = (p: Purse) => p.reduce((s, [c, n]) => s + (c === DIME ? NICKEL.v : c === NICKEL ? DIME.v : c.v) * n, 0);
 const purseCount = (p: Purse) => p.reduce((s, [, n]) => s + n, 0);
 /** Coin types in order of value, with any type that has no coins left out. */
 const tidy = (p: Purse): Purse => COINS.map((c) => [c, p.filter(([x]) => x === c).reduce((s, [, n]) => s + n, 0)] as [Coin, number]).filter(([, n]) => n > 0);
@@ -423,6 +439,46 @@ const SHARE: Record<2 | 3 | 4, Share> = {
   3: { sg: ["third", "tercio"], pl: ["thirds", "tercios"], one: ["one third", "un tercio"], f: false },
   4: { sg: ["fourth", "cuarto"], pl: ["fourths", "cuartos"], one: ["one fourth", "un cuarto"], f: false },
 };
+/** "one third", "2 thirds", "both halves", "all 4 quarters"; Spanish "un tercio", "2 tercios", "las 2 mitades". */
+function shareWords(k: number, d: 2 | 3 | 4, locale: Locale, quarter = false) {
+  const sh = SHARE[d];
+  if (locale === "es") return k === 1 ? sh.one[1] : k === d ? `${sh.f ? "las" : "los"} ${d} ${sh.pl[1]}` : `${k} ${sh.pl[1]}`;
+  const pl = quarter ? "quarters" : sh.pl[0];
+  if (k === 1) return quarter ? "one quarter" : sh.one[0];
+  return k === d ? (d === 2 ? "both halves" : `all ${d} ${pl}`) : `${k} ${pl}`;
+}
+/** The plural share name: "fourths" (or "quarters"), "cuartos". */
+const sharePl = (d: 2 | 3 | 4, locale: Locale, quarter = false) => tr(locale, quarter ? "quarters" : SHARE[d].pl[0], SHARE[d].pl[1]);
+
+/** Long, flat wholes the fraction bar stands for. `f`: feminine in Spanish. */
+type Whole = { en: string; es: string; pl: Pair; f: boolean; pic?: string };
+export const WHOLES: readonly Whole[] = [
+  { en: "bar", es: "barra", pl: ["bars", "barras"], f: true },
+  { en: "chocolate bar", es: "barra de chocolate", pl: ["chocolate bars", "barras de chocolate"], f: true, pic: "🍫" },
+  { en: "ribbon", es: "cinta", pl: ["ribbons", "cintas"], f: true, pic: "🎀" },
+  { en: "loaf of bread", es: "pan", pl: ["loaves of bread", "panes"], f: false, pic: "🥖" },
+  { en: "waffle", es: "wafle", pl: ["waffles", "wafles"], f: false, pic: "🧇" },
+  { en: "sandwich", es: "sándwich", pl: ["sandwiches", "sándwiches"], f: false, pic: "🥪" },
+  { en: "log", es: "tronco", pl: ["logs", "troncos"], f: false, pic: "🪵" },
+  { en: "sheet of paper", es: "hoja de papel", pl: ["sheets of paper", "hojas de papel"], f: true, pic: "📄" },
+];
+/** "the waffle" / "el wafle". */
+const theWhole = (w: Whole, locale: Locale) => tr(locale, `the ${w.en}`, `${w.f ? "la" : "el"} ${w.es}`);
+/** "the whole waffle" / "todo el wafle". */
+const allOf = (w: Whole, locale: Locale) => tr(locale, `the whole ${w.en}`, `${w.f ? "toda la" : "todo el"} ${w.es}`);
+/** Alt text for a shaded bar standing for a whole: what is drawn, never the share's name. */
+function barAlt(w: Whole, d: number | null, shaded: number, locale: Locale) {
+  const cut = d === null ? tr(locale, "cut into equal parts", "dividida en partes iguales") : tr(locale, `cut into ${d} equal parts`, `dividida en ${d} partes iguales`);
+  const bar = w.pic ? tr(locale, `A ${w.en}, and a bar ${cut}.`, `${w.f ? "Una" : "Un"} ${w.es} y una barra ${cut}.`) : tr(locale, `A bar ${cut}.`, `Una barra ${cut}.`);
+  const sh =
+    shaded === 0
+      ? ""
+      : shaded === 1
+        ? tr(locale, " 1 part is shaded.", " 1 parte está coloreada.")
+        : tr(locale, ` ${shaded} parts are shaded.`, ` ${shaded} partes están coloreadas.`);
+  return bar + sh;
+}
+
 type Ctx = { pic: string; what: Pair; f: boolean; split: Pair; use: Pair };
 const SHARE_CTX: readonly Ctx[] = [
   { pic: "🥪", what: ["sandwich", "sándwich"], f: false, split: ["cuts", "corta"], use: ["eats 1 part", "Se come 1 parte"] },
@@ -438,12 +494,17 @@ const repeat = (k: number, v: number) => Array<number>(k).fill(v).join(" + ");
 const plusWords = (s: string, locale: Locale) => s.replace(/ \+ /g, tr(locale, " plus ", " más "));
 const dots = (groups: number[], crossed = 0): Visual => (crossed ? { kind: "dots", groups, crossed } : { kind: "dots", groups });
 
-/** Tens-first first step and worked lines for p ± q (q at least 10 and not a whole ten), else one line. */
+/**
+ * Tens-first first step and worked lines for p ± q (q at least 10 and not a whole ten), else one line.
+ * When the answer is exactly q's tens (67 − 37 = 30), "67 − 30 = 37" would show the answer and the
+ * story's own numbers, so the hint counts up instead.
+ */
 function tensFirst(p: number, op: "+" | "−", q: number, locale: Locale) {
   const res = op === "+" ? p + q : p - q;
   const qt = q - (q % 10), qo = q % 10;
   const mid = op === "+" ? p + qt : p - qt;
-  if (qt > 0 && qo > 0) return { hint: `${p} ${op} ${qt} = ${mid}`, steps: [`${p} ${op} ${qt} = ${mid}`, `${mid} ${op} ${qo} = ${res}`] };
+  const up = tr(locale, `Count up from ${q} to ${p}.`, `Cuenta desde ${q} hasta ${p}.`);
+  if (qt > 0 && qo > 0) return { hint: op === "−" && res === qt ? up : `${p} ${op} ${qt} = ${mid}`, steps: [`${p} ${op} ${qt} = ${mid}`, `${mid} ${op} ${qo} = ${res}`] };
   if (qt > 0) return { hint: tr(locale, `${q} is ${many(qt / 10, "ten", "en")}.`, `${q} son ${many(qt / 10, "ten", "es")}.`), steps: [`${p} ${op} ${q} = ${res}`] };
   return {
     hint: op === "+" ? tr(locale, `Start at ${p} and count on ${q}.`, `Empieza en ${p} y cuenta ${q} hacia adelante.`) : tr(locale, `Start at ${p} and count back ${q}.`, `Empieza en ${p} y cuenta ${q} hacia atrás.`),
@@ -466,9 +527,10 @@ export const MATH_K_2_MORE: Skill[] = [
       const tens = level === 1 || (level === 3 && r.bool(0.3));
       let seq: number[], at: number;
       if (tens) {
-        const first = r.int(1, 7);
+        // From 0 to 100 by tens, with the blank anywhere after the first number.
+        const first = r.int(0, 7);
         seq = [0, 1, 2, 3].map((k) => (first + k) * 10);
-        at = level === 1 ? 3 : r.int(1, 3);
+        at = r.int(1, 3);
       } else if (level === 2) {
         const ten = r.int(2, 10) * 10;
         // K counts to 100, so the run stops at 100.
@@ -485,7 +547,7 @@ export const MATH_K_2_MORE: Skill[] = [
       const tags: (Tag | null)[] = tens
         ? [[prev + 1, "counted-by-ones"], [key + 10, "skipped-a-ten"], key >= 30 && key <= 90 ? [key / 10 + 10, "teen-for-tens"] : null, [prev, "repeated-last-number"]]
         : crossing
-          ? [[key - 10, "went-back-to-the-ten"], [key + 10, "skipped-a-ten"], [key + 1, "skipped-a-number"]]
+          ? [[key - 10, "went-back-to-the-ten"], [key + 10, "skipped-a-ten"], [key + 1, "skipped-a-number"], [prev, "repeated-last-number"]]
           : [[key + 1, "skipped-a-number"], key >= 10 && rev !== key ? [rev, "reversed-digits"] : [key + 10, "wrong-tens-digit"], [prev, "repeated-last-number"]];
       const instr = tens ? tr(locale, "Count by tens.", "Cuenta de diez en diez.") : tr(locale, "Count by ones.", "Cuenta de uno en uno.");
       const before = `${seq.slice(0, at).join(", ")}, `;
@@ -494,7 +556,7 @@ export const MATH_K_2_MORE: Skill[] = [
       return {
         prompt: [`${instr} ${before}`, blank, ...(after ? [after] : [])],
         say: `${instr} ${heard}. ${tr(locale, "What number goes in the blank?", "¿Qué número va en el espacio?")}`,
-        ...numberChoices(r, key, tags, 100),
+        ...numberChoices(r, key, tags, 100, seq),
         hints: tens
           ? [
               tr(locale, "Each number is 10 more than the one before.", "Cada número es 10 más que el anterior."),
@@ -504,7 +566,7 @@ export const MATH_K_2_MORE: Skill[] = [
           : [
               tr(locale, "Say the numbers out loud.", "Di los números en voz alta."),
               crossing
-                ? tr(locale, "After 9 ones, the tens go up by one.", "Después de 9 unidades, las decenas suben uno.")
+                ? tr(locale, "After 9 ones, the tens go up by one.", "Después de 9 unidades, las decenas aumentan en uno.")
                 : tr(locale, "Each number is 1 more than the one before.", "Cada número es 1 más que el anterior."),
               tr(locale, `${prev} and 1 more.`, `${prev} y 1 más.`),
             ],
@@ -566,41 +628,71 @@ export const MATH_K_2_MORE: Skill[] = [
       }
       const n = level === 1 ? (r.bool(0.1) ? 0 : r.int(1, 10)) : r.int(11, 20);
       const two = n > 10;
+      // Counters in ten-frames, or (for 1 and up) loose dots in rows of five.
+      const asDots = n > 0 && r.bool(0.4);
       const rev = (n % 10) * 10 + Math.floor(n / 10);
+      const write = tr(locale, `We write ${n}.`, `Escribimos ${n}.`);
       const count =
         n === 0
-          ? [tr(locale, "There are no counters.", "No hay fichas."), tr(locale, "We write 0.", "Escribimos 0.")]
+          ? [tr(locale, "There are no counters.", "No hay fichas."), write]
           : n === 1
-            ? [tr(locale, "There is 1 counter.", "Hay 1 ficha."), tr(locale, "We write 1.", "Escribimos 1.")]
-            : [tr(locale, `There are ${n} counters.`, `Hay ${n} fichas.`), tr(locale, `We write ${n}.`, `Escribimos ${n}.`)];
+            ? [asDots ? tr(locale, "There is 1 dot.", "Hay 1 punto.") : tr(locale, "There is 1 counter.", "Hay 1 ficha."), write]
+            : [asDots ? tr(locale, `There are ${n} dots.`, `Hay ${n} puntos.`) : tr(locale, `There are ${n} counters.`, `Hay ${n} fichas.`), write];
+      const rows = Math.floor(n / 5), rest = n % 5;
+      const ask = asDots ? tr(locale, "How many dots? Write the number.", "¿Cuántos puntos hay? Escribe el número.") : tr(locale, "How many counters? Write the number.", "¿Cuántas fichas hay? Escribe el número.");
+      const twoDigit: Tag[] = [n < 20 ? [Number(`10${n - 10}`), "wrote-ten-and-ones-apart"] : [2, "dropped-the-zero"], ...(rev !== n && n < 20 ? [[rev, "reversed-digits"] as Tag] : [])];
+      const near: Tag[] = [[n + 1, "counted-one-twice"], [n - 1, "skipped-one"]];
+      // Empty boxes exist only in a frame that is not full.
+      const empty: Tag[] = asDots ? [] : two ? (n < 20 ? [[30 - n, "counted-empty-boxes"]] : []) : n < 10 ? [[10 - n, "counted-empty-boxes"]] : [];
+      const look = asDots
+        ? {
+            visual: dots([n]),
+            alt: tr(locale, "Dots in rows of five", "Puntos en filas de cinco"),
+            hints: two
+              ? [
+                  tr(locale, "Each full row has 5 dots.", "Cada fila llena tiene 5 puntos."),
+                  tr(locale, "Count the full rows by fives. Then count on.", "Cuenta las filas llenas de cinco en cinco. Luego sigue contando."),
+                  tr(locale, "The first two rows make 10.", "Las dos primeras filas son 10."),
+                ]
+              : [
+                  tr(locale, "Touch each dot once as you count.", "Toca cada punto una vez mientras cuentas."),
+                  n > 5 ? tr(locale, "Count the top row, then the next row.", "Cuenta la fila de arriba y luego la siguiente.") : tr(locale, "There is only one row. Count it.", "Hay una sola fila. Cuéntala."),
+                  n > 5 ? tr(locale, "The top row is full: 5. Count on from 5.", "La fila de arriba está llena: 5. Sigue contando desde 5.") : tr(locale, "Start at the left: 1, 2…", "Empieza por la izquierda: 1, 2…"),
+                ],
+            steps: two
+              ? [
+                  tr(locale, `${rows} rows of 5 make ${rows * 5}.`, `${rows} filas de 5 son ${rows * 5}.`),
+                  ...(rest ? [tr(locale, `${rows * 5} and ${rest} more make ${n}.`, `${rows * 5} y ${rest} más son ${n}.`)] : []),
+                  write,
+                ]
+              : count,
+          }
+        : {
+            visual: two ? ({ kind: "ten-frame", filled: n, frames: 2 } as const) : ({ kind: "ten-frame", filled: n } as const),
+            alt: two ? tr(locale, "Two ten-frames with counters", "Dos marcos de diez con fichas") : tr(locale, "A ten-frame. Some boxes may have counters.", "Un marco de diez. Algunas casillas pueden tener fichas."),
+            hints: two
+              ? [
+                  tr(locale, "Look at the first frame. Is it full?", "Mira el primer marco. ¿Está lleno?"),
+                  tr(locale, "A full frame is 10. Count on from 10.", "Un marco lleno es 10. Sigue contando desde 10."),
+                  tr(locale, `The second frame has ${n - 10}.`, `El segundo marco tiene ${n - 10}.`),
+                ]
+              : [
+                  tr(locale, "Touch each counter once as you count.", "Toca cada ficha una vez mientras cuentas."),
+                  tr(locale, "Count the top row, then the bottom row.", "Cuenta la fila de arriba y luego la de abajo."),
+                  n > 5
+                    ? tr(locale, "The top row is full: 5. Count on from 5.", "La fila de arriba está llena: 5. Sigue contando desde 5.")
+                    : tr(locale, "The bottom row is empty. Count the top row.", "La fila de abajo está vacía. Cuenta la fila de arriba."),
+                ],
+            steps: two ? [tr(locale, `10 and ${n - 10} more make ${n}.`, `10 y ${n - 10} más son ${n}.`), write] : count,
+          };
       return {
-        prompt: [tr(locale, "How many counters? Write the number.", "¿Cuántas fichas hay? Escribe el número.")],
-        say: tr(locale, "How many counters? Write the number.", "¿Cuántas fichas hay? Escribe el número."),
-        visual: two ? { kind: "ten-frame", filled: n, frames: 2 } : { kind: "ten-frame", filled: n },
-        alt: two ? tr(locale, "Two ten-frames with counters", "Dos marcos de diez con fichas") : tr(locale, "A ten-frame. Some boxes may have counters.", "Un marco de diez. Algunas casillas pueden tener fichas."),
+        prompt: [ask],
+        say: ask,
+        ...look,
         markable: true,
         input: "keypad",
         answer: { kind: "number", value: n },
-        wrong: misses(
-          n,
-          two
-            ? [n < 20 ? [Number(`10${n - 10}`), "wrote-ten-and-ones-apart"] : [2, "dropped-the-zero"], rev !== n && n < 20 ? [rev, "reversed-digits"] : null, [n + 1, "counted-one-twice"], [n - 1, "skipped-one"], [30 - n, "counted-empty-boxes"]]
-            : [[n + 1, "counted-one-twice"], [n - 1, "skipped-one"], [10 - n, "counted-empty-boxes"]],
-        ),
-        hints: two
-          ? [
-              tr(locale, "Look at the first frame. Is it full?", "Mira el primer marco. ¿Está lleno?"),
-              tr(locale, "A full frame is 10. Count on from 10.", "Un marco lleno es 10. Sigue contando desde 10."),
-              tr(locale, `The second frame has ${n - 10}.`, `El segundo marco tiene ${n - 10}.`),
-            ]
-          : [
-              tr(locale, "Touch each counter once as you count.", "Toca cada ficha una vez mientras cuentas."),
-              tr(locale, "Count the top row, then the bottom row.", "Cuenta la fila de arriba y luego la de abajo."),
-              n > 5
-                ? tr(locale, "The top row is full: 5. Count on from 5.", "La fila de arriba está llena: 5. Sigue contando desde 5.")
-                : tr(locale, "The bottom row is empty. Count the top row.", "La fila de abajo está vacía. Cuenta la fila de arriba."),
-            ],
-        steps: two ? [tr(locale, `10 and ${n - 10} more make ${n}.`, `10 y ${n - 10} más son ${n}.`), tr(locale, `We write ${n}.`, `Escribimos ${n}.`)] : count,
+        wrong: misses(n, two ? [...twoDigit, ...near, ...empty] : [...near, ...empty]),
         seconds: two ? 10 : 8,
       };
     },
@@ -635,9 +727,10 @@ export const MATH_K_2_MORE: Skill[] = [
       return {
         prompt: [`${ask} ${tr(locale, "Or are they the same?", "¿O son iguales?")}`],
         say: `${ask} ${tr(locale, "Or are they the same?", "¿O son iguales?")}`,
+        // Not markable on purpose: tap-to-mark counters wrap groups onto new lines on a phone, and this
+        // question needs the two groups side by side. The plain picture always keeps them in one row.
         visual: dots([a, b]),
         alt: tr(locale, "Two groups of dots, one on the left and one on the right", "Dos grupos de puntos, uno a la izquierda y otro a la derecha"),
-        markable: true,
         choices,
         input: "choices",
         answer: { kind: "choice", index },
@@ -670,6 +763,8 @@ export const MATH_K_2_MORE: Skill[] = [
       const k = r.int(1, 9), n = 10 + k;
       const askOnes = level === 1 || (level === 3 && r.bool());
       const pictured = level < 3;
+      // The ten and the ones as two ten-frames, or as a group of 10 dots and a group of the ones.
+      const frames = pictured && r.bool();
       const onesWord = tr(locale, k === 1 ? "1 one" : `${k} ones`, k === 1 ? "1 unidad" : `${k} unidades`);
       const choices = askOnes
         ? numberChoices(r, k, [[n, "gave-the-whole-number"], [1, "named-the-tens-digit"], [10, "gave-the-ten"]], 20)
@@ -682,11 +777,19 @@ export const MATH_K_2_MORE: Skill[] = [
       return {
         prompt,
         say: askOnes ? (pictured ? tr(locale, `${n} is 10 and how many more?`, `¿${n} es 10 y cuántos más?`) : tr(locale, `${n} is 10 plus what?`, `¿${n} es 10 más cuánto?`)) : pictured ? tr(locale, `10 and ${k} more make what number?`, `¿Qué número forman 10 y ${k} más?`) : tr(locale, `10 plus ${k}`, `10 más ${k}`),
-        ...(pictured ? { visual: { kind: "ten-frame" as const, filled: n, frames: 2 as const }, alt: tr(locale, "Two ten-frames with counters", "Dos marcos de diez con fichas"), markable: true } : {}),
+        ...(pictured
+          ? frames
+            ? { visual: { kind: "ten-frame" as const, filled: n, frames: 2 as const }, alt: tr(locale, "Two ten-frames with counters", "Dos marcos de diez con fichas"), markable: true }
+            : { visual: dots([10, k]), alt: tr(locale, "A group of 10 dots and another group of dots", "Un grupo de 10 puntos y otro grupo de puntos"), markable: true }
+          : {}),
         ...choices,
         hints: askOnes
           ? [
-              pictured ? tr(locale, "A full ten-frame is 10.", "Un marco de diez lleno es 10.") : tr(locale, `${n} is between 10 and 20.`, `${n} está entre 10 y 20.`),
+              pictured
+                ? frames
+                  ? tr(locale, "A full ten-frame is 10.", "Un marco de diez lleno es 10.")
+                  : tr(locale, "The first group has 10 dots.", "El primer grupo tiene 10 puntos.")
+                : tr(locale, `${n} is between 10 and 20.`, `${n} está entre 10 y 20.`),
               tr(locale, "The ones are what comes after the 10.", "Las unidades son lo que viene después del 10."),
               tr(locale, `Count on from 10 to ${n}. How many counts?`, `Cuenta desde 10 hasta ${n}. ¿Cuántos contaste?`),
             ]
@@ -714,13 +817,15 @@ export const MATH_K_2_MORE: Skill[] = [
           prompt: [`${n} = ${a} + `, blank],
           say: tr(locale, `${n} is ${a} and how many more?`, `¿${n} es ${a} y cuántos más?`),
           visual: dots([a, b]),
-          alt: tr(locale, "Two groups of dots side by side", "Dos grupos de puntos, uno al lado del otro"),
+          alt: tr(locale, "Two groups of dots", "Dos grupos de puntos"),
           markable: true,
           ...numberChoices(r, b, [[n, "gave-the-total"], [a, "repeated-the-first-part"]], 10),
           hints: [
-            tr(locale, `${n} dots in all. ${a} are in the first group.`, `${n} puntos en total. ${a} están en el primer grupo.`),
-            tr(locale, "Count the dots in the second group.", "Cuenta los puntos del segundo grupo."),
+            a === 1
+              ? tr(locale, `${n} dots in all. 1 is in the first group.`, `${n} puntos en total. 1 está en el primer grupo.`)
+              : tr(locale, `${n} dots in all. ${a} are in the first group.`, `${n} puntos en total. ${a} están en el primer grupo.`),
             tr(locale, `Count on from ${a} until you reach ${n}.`, `Cuenta desde ${a} hasta llegar a ${n}.`),
+            tr(locale, `Say ${a}. Then count on: ${a + 1}, …`, `Di ${a}. Luego sigue contando: ${a + 1}, …`),
           ],
           steps: [`${a} + ${b} = ${n}`, tr(locale, `So ${n} = ${a} + ${b}.`, `Entonces, ${n} = ${a} + ${b}.`)],
           seconds: 8,
@@ -728,8 +833,17 @@ export const MATH_K_2_MORE: Skill[] = [
       }
       const n = r.int(4, 10), a = r.int(1, n - 1), b = n - a;
       const pair = (x: number, y: number, why?: string): Choice => ({ label: `${x} + ${y}`, say: tr(locale, `${x} and ${y}`, `${x} y ${y}`), ...(why ? { why } : {}) });
-      const cands: [number, number, string][] = [[a, b + 1, "sum-too-big"], b > 1 ? [a, b - 1, "sum-too-small"] : [a - 1, b, "sum-too-small"], [n, 1, "used-the-total-as-a-part"], [a + 1, b + 1, "sum-too-big"]];
-      const wrong = cands.filter(([x, y]) => x >= 1 && y >= 1).slice(0, 3);
+      const cands: [number, number, string][] = [[a, b + 1, "sum-too-big"], b > 1 ? [a, b - 1, "sum-too-small"] : [a - 1, b, "sum-too-small"], [n, 1, "used-the-total-as-a-part"], [a + 1, b + 1, "sum-too-big"], [a + 1, b, "sum-too-big"]];
+      // "1 + 10" and "10 + 1" are the same pair to a child who knows order does not matter: keep one.
+      const pairKey = (x: number, y: number) => [x, y].sort((p, q) => p - q).join("+");
+      const used = new Set([pairKey(a, b)]);
+      const wrong = cands
+        .filter(([x, y]) => {
+          if (x < 1 || y < 1 || used.has(pairKey(x, y))) return false;
+          used.add(pairKey(x, y));
+          return true;
+        })
+        .slice(0, 3);
       const [wx, wy] = wrong[0];
       return {
         prompt: [tr(locale, `Which two numbers make ${n}?`, `¿Qué dos números forman ${n}?`)],
@@ -780,7 +894,10 @@ export const MATH_K_2_MORE: Skill[] = [
         ...numberChoices(
           r,
           key,
-          add ? [[a - b, "subtracted-instead-of-added"], [Math.max(a, b), "counted-one-group"], [key + 1, "counted-one-twice"]] : [[a + b, "added-instead-of-subtracted"], [b, "counted-crossed-out"], [a, "did-not-take-away"]],
+          add
+            ? [[a - b, "subtracted-instead-of-added"], [Math.max(a, b), "counted-one-group"], [key + 1, "counted-one-twice"]]
+            : // Without the picture there is nothing crossed out to count: giving the part taken is its own slip.
+              [[a + b, "added-instead-of-subtracted"], [b, pictured ? "counted-crossed-out" : "gave-the-part-taken"], [a, "did-not-take-away"]],
           20,
         ),
         hints: [
