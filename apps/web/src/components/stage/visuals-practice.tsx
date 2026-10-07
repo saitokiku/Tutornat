@@ -11,11 +11,19 @@ const MONO = "var(--font-opmono)";
 
 type P = { alt: string; tint: string };
 
+/**
+ * Counters per row in a dots picture. One group counts in rows of five (ten-frame thinking); several
+ * groups (equal groups) sit in two even rows. Shared with the tap-to-mark counters in practice.
+ */
+export const dotsPerRow = (groupCount: number, n: number) => (groupCount === 1 || n <= 5 ? 5 : Math.ceil(n / 2));
+
+/** The two strokes of an X over a counter that was taken away. */
+export const crossPath = (cx: number, cy: number, half: number) => `M${cx - half} ${cy - half} L${cx + half} ${cy + half} M${cx + half} ${cy - half} L${cx - half} ${cy + half}`;
+
 /** Counters in rows of five; groups side by side. The last `crossed` counters of the last group are taken away. */
 export function DotsVisual({ groups, crossed = 0, alt, tint }: P & { groups: number[]; crossed?: number }) {
   const r = 11, gap = 6, cell = r * 2 + gap, groupGap = 28;
-  // One group counts in rows of five (ten-frame thinking); several groups (equal groups) sit in two even rows.
-  const perRow = (n: number) => (groups.length === 1 || n <= 5 ? 5 : Math.ceil(n / 2));
+  const perRow = (n: number) => dotsPerRow(groups.length, n);
   const widths = groups.map((n) => Math.max(1, Math.min(n, perRow(n))) * cell - gap);
   const rows = Math.max(1, ...groups.map((n) => Math.ceil(n / perRow(n))));
   const w = widths.reduce((a, b) => a + b, 0) + groupGap * (groups.length - 1) + 8;
@@ -32,7 +40,7 @@ export function DotsVisual({ groups, crossed = 0, alt, tint }: P & { groups: num
           return (
             <g key={`${g}-${i}`}>
               <circle cx={cx} cy={cy} r={r} fill={gone ? EMPTY : tint} stroke={gone ? LINE : "none"} />
-              {gone && <path d={`M${cx - 7} ${cy - 7} L${cx + 7} ${cy + 7} M${cx + 7} ${cy - 7} L${cx - 7} ${cy + 7}`} stroke={INK} strokeWidth={2.5} strokeLinecap="round" />}
+              {gone && <path d={crossPath(cx, cy, 7)} stroke={INK} strokeWidth={2.5} strokeLinecap="round" />}
             </g>
           );
         });

@@ -4,10 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { IconX } from "@/components/icons";
 import { Hear } from "@/components/stage/hear";
 import { useT } from "@/i18n";
-import type { Choice, Input } from "@/practice/types";
+import type { Choice, Input, Pad } from "@/practice/types";
+import { ClockPad } from "./ClockPad";
+import { FractionBarPad } from "./FractionBarPad";
+import { NumberLinePad } from "./NumberLinePad";
 
 // How a learner answers. Big targets, the physical keyboard works everywhere, nothing is drag-only.
 // Every pad reports a plain string (choices report the index), so the checker sees one shape.
+// Touch pads (number line, fraction bar, clock) answer by doing; see their files for the conventions.
 
 type PadProps = {
   value: string;
@@ -270,8 +274,15 @@ export function TextAnswer({ value, onChange, onSubmit, disabled, algebra, label
   );
 }
 
-export function AnswerInput(props: PadProps & { input: Input; keys?: ("-" | ".")[]; choices?: Choice[]; onPick: (i: number) => void; label: string }) {
+export function AnswerInput(props: PadProps & { input: Input; keys?: ("-" | ".")[]; choices?: Choice[]; onPick: (i: number) => void; label: string; pad?: Pad; tint?: string }) {
+  const { pad } = props;
   switch (props.input) {
+    case "number-line":
+      return <NumberLinePad {...props} pad={pad?.kind === "number-line" ? pad : undefined} />;
+    case "fraction-bar":
+      return <FractionBarPad {...props} pad={pad?.kind === "fraction-bar" ? pad : undefined} />;
+    case "clock":
+      return <ClockPad {...props} pad={pad?.kind === "clock" ? pad : undefined} />;
     case "keypad":
       return <Keypad {...props} />;
     case "fraction":

@@ -1,7 +1,7 @@
 import type { Locale } from "@/lib/types";
 import { gcd, lcm, type Rng } from "../rng";
 import { sayFrac, tr } from "../text";
-import type { Choice, MathPart, Skill } from "../types";
+import type { Choice, ItemBody, MathPart, Skill } from "../types";
 
 // Grades 3–5: multiplication and division facts, multi-digit work, fractions and decimals.
 // Pictures come first at level 1; hints name the strategy a teacher would use (arrays, related
@@ -412,6 +412,72 @@ function parenExpr(r: Rng): OpsExpr {
   }
 }
 
+/**
+ * m.frac.unit level 3, on the fraction-bar pad: split the bar into equal parts and shade a fraction of
+ * it. Any equal amount is right (6/8 shows 3/4). Tagged slips: shading the rest, part-to-part.
+ */
+function buildFraction(r: Rng, locale: Locale): ItemBody {
+  const d = r.pick([2, 3, 4, 6, 8]);
+  const n = r.int(1, d - 1);
+  const wrong: { value: string; why: string }[] = [];
+  if (d - n !== n) wrong.push({ value: ft(d - n, d), why: "shaded-the-rest" });
+  if (n + d <= 12) wrong.push({ value: ft(n, n + d), why: "part-to-part" });
+  return {
+    prompt: [tr(locale, "Split the bar into equal parts. Shade ", "Divide la barra en partes iguales. Sombrea "), fr(n, d), tr(locale, " of it.", " de la barra.")],
+    say: tr(locale, `Split the bar into equal parts. Shade ${sayFrac(n, d, locale)} of it.`, `Divide la barra en partes iguales. Sombrea ${sayFrac(n, d, locale)} de la barra.`),
+    input: "fraction-bar",
+    pad: { kind: "fraction-bar", maxParts: 12 },
+    answer: { kind: "fraction", n, d },
+    wrong,
+    hints: [
+      tr(locale, "What does the bottom number of the fraction tell you?", "¿Qué te dice el número de abajo de la fracción?"),
+      tr(locale, "The bottom number is how many equal parts the whole has. The top number is how many to shade.", "El número de abajo dice en cuántas partes iguales se divide el entero. El de arriba, cuántas sombrear."),
+      tr(locale, `First split the bar into ${d} equal parts.`, `Primero divide la barra en ${d} partes iguales.`),
+    ],
+    steps: [
+      tr(locale, `Split the bar into ${d} equal parts.`, `Divide la barra en ${d} partes iguales.`),
+      tr(locale, `Shade ${n} of the ${d} parts.`, `Sombrea ${n} de las ${d} partes.`),
+      tr(locale, `${ft(n, d)} of the bar is shaded.`, `${ft(n, d)} de la barra está sombreada.`),
+    ],
+    seconds: 20,
+  };
+}
+
+/**
+ * m.frac.numberline level 3, on the number-line pad: put a point at a fraction (3.NF.A.2 asks for both
+ * reading and placing). Tagged slips: counting tick marks instead of jumps, losing the first whole.
+ */
+function placeFraction(r: Rng, locale: Locale): ItemBody {
+  const max = r.bool() ? 1 : 2;
+  const d = max === 1 ? r.pick([2, 3, 4, 6, 8]) : r.pick([2, 3, 4, 6]);
+  const n = max === 1 || !r.bool(0.65) ? r.int(1, d - 1) : r.int(d + 1, 2 * d - 1);
+  const past = n > d;
+  const wrong: { value: string; why: string }[] = [];
+  if (n >= 2) wrong.push({ value: ft(n - 1, d), why: "counted-ticks-not-jumps" });
+  if (past) wrong.push({ value: ft(n - d, d), why: "forgot-the-whole" });
+  return {
+    prompt: [tr(locale, "Put a point at ", "Coloca un punto en "), fr(n, d), tr(locale, " on the number line.", " en la recta numérica.")],
+    say: tr(locale, `Put a point at ${sayFrac(n, d, locale)} on the number line.`, `Coloca un punto en ${sayFrac(n, d, locale)} en la recta numérica.`),
+    input: "number-line",
+    pad: { kind: "number-line", min: 0, max, step: 1, denominator: d },
+    answer: { kind: "fraction", n, d },
+    wrong,
+    hints: [
+      tr(locale, "How many equal parts is each whole split into?", "¿En cuántas partes iguales está dividido cada entero?"),
+      tr(locale, "Each jump from one tick mark to the next is one part. Count jumps from 0, not marks.", "Cada salto de una marca a la siguiente es una parte. Cuenta saltos desde 0, no marcas."),
+      past
+        ? tr(locale, `1 is the same as ${ft(d, d)}. Start at 1 and count on ${n - d} more ${pl(n - d, "jump", "jumps")}.`, `1 es lo mismo que ${ft(d, d)}. Empieza en 1 y avanza ${n - d} ${pl(n - d, "salto", "saltos")} más.`)
+        : tr(locale, `Each whole has ${d} equal parts, so each jump is ${ft(1, d)}.`, `Cada entero tiene ${d} partes iguales, así que cada salto es ${ft(1, d)}.`),
+    ],
+    steps: [
+      tr(locale, `Each jump is ${ft(1, d)}.`, `Cada salto es ${ft(1, d)}.`),
+      tr(locale, `Count ${n} ${pl(n, "jump", "jumps")} from 0.`, `Cuenta ${n} ${pl(n, "salto", "saltos")} desde 0.`),
+      past ? tr(locale, `The point goes at ${ft(n, d)}, which is ${simplest(n, d)}.`, `El punto va en ${ft(n, d)}, que es ${simplest(n, d)}.`) : tr(locale, `The point goes at ${ft(n, d)}.`, `El punto va en ${ft(n, d)}.`),
+    ],
+    seconds: 20,
+  };
+}
+
 export const MATH_3_5: Skill[] = [
   {
     id: "m.mult.groups",
@@ -595,8 +661,9 @@ export const MATH_3_5: Skill[] = [
     standard: "3.NF.A.1",
     prereqs: ["m.mult.groups"],
     content: "computed",
-    levels: 2,
+    levels: 3,
     generate(r, level, locale) {
+      if (level === 3) return buildFraction(r, locale);
       const d = level === 1 ? r.pick([2, 3, 4, 6, 8]) : r.pick([3, 4, 5, 6, 8]);
       const n = level === 1 ? 1 : r.int(2, d - 1);
       return {
@@ -628,8 +695,9 @@ export const MATH_3_5: Skill[] = [
     standard: "3.NF.A.2",
     prereqs: ["m.frac.unit"],
     content: "computed",
-    levels: 2,
+    levels: 3,
     generate(r, level, locale) {
+      if (level === 3) return placeFraction(r, locale);
       const max = level === 1 ? 1 : 2;
       const d = level === 1 ? r.pick([2, 3, 4, 6, 8]) : r.pick([2, 3, 4, 6]);
       const n = level === 1 || !r.bool(0.65) ? r.int(1, d - 1) : r.int(d + 1, 2 * d - 1);

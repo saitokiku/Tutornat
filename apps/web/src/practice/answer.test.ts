@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { check, parseNumber } from "./answer";
+import { answerText, check, misconceptionOf, normTime, parseNumber } from "./answer";
 import { equivalent, isFactored, parse } from "./expr";
+import type { Answer, ItemBody } from "./types";
 
 const eq = (a: string, b: string) => equivalent(parse(a)!, parse(b)!);
 
@@ -106,5 +107,101 @@ describe("expressions", () => {
     expect(isFactored(parse("(x+3)^2")!)).toBe(true);
     expect(isFactored(parse("x^2+5x+6")!)).toBe(false);
     expect(isFactored(parse("x(x+5)")!)).toBe(true);
+  });
+});
+
+describe("touch-pad responses", () => {
+  it("number line: a tapped point is a number or a fraction", () => {
+    expect(check({ kind: "number", value: -2 }, "-2").correct).toBe(true);
+    expect(check({ kind: "number", value: -2 }, "−2").correct).toBe(true);
+    expect(check({ kind: "number", value: -2 }, "2").correct).toBe(false);
+    expect(check({ kind: "number", value: 0.75 }, "3/4").correct).toBe(true);
+    expect(check({ kind: "fraction", n: 3, d: 4 }, "3/4").correct).toBe(true);
+    expect(check({ kind: "fraction", n: 5, d: 4 }, "5/4").correct).toBe(true);
+    expect(check({ kind: "fraction", n: 3, d: 4 }, "4/3").correct).toBe(false);
+    expect(check({ kind: "fraction", n: 1, d: 4 }, "-1/4").correct).toBe(false);
+  });
+
+  it("fraction bar: shaded over parts, any equal amount", () => {
+    expect(check({ kind: "fraction", n: 3, d: 4 }, "3/4").correct).toBe(true);
+    expect(check({ kind: "fraction", n: 3, d: 4 }, "6/8").correct).toBe(true);
+    expect(check({ kind: "fraction", n: 3, d: 4 }, "3/8").correct).toBe(false);
+    expect(check({ kind: "fraction", n: 3, d: 4 }, "0/4").correct).toBe(false);
+    expect(check({ kind: "fraction", n: 2, d: 3 }, "2/3").correct).toBe(true);
+  });
+
+  it("clock: h:mm, with a leading zero or another separator read as the same time", () => {
+    const at: Answer = { kind: "text", accept: ["3:05"] };
+    expect(check(at, "3:05").correct).toBe(true);
+    expect(check(at, "03:05").correct).toBe(true);
+    expect(check(at, "3.05").correct).toBe(true);
+    expect(check(at, " 3 : 05 ").correct).toBe(true);
+    expect(check(at, "3:50").correct).toBe(false);
+    expect(check(at, "5:03").correct).toBe(false);
+    expect(check(at, "305").correct).toBe(false);
+    expect(check({ kind: "text", accept: ["12:00"] }, "12:00").correct).toBe(true);
+    expect(check({ kind: "text", accept: ["12:00"] }, "2:00").correct).toBe(false);
+    expect(check({ kind: "text", accept: ["03:30"] }, "3:30").correct).toBe(true);
+  });
+
+  it("normTime only reads clock times", () => {
+    expect(normTime("03:05")).toBe("3:05");
+    expect(normTime("12:30")).toBe("12:30");
+    expect(normTime("7h15")).toBe("7:15");
+    expect(normTime("3:5")).toBeNull();
+    expect(normTime("3:75")).toBeNull();
+    expect(normTime("noon")).toBeNull();
+  });
+
+  it("answerText writes times the way the clock pad does", () => {
+    expect(answerText({ kind: "text", accept: ["03:05"] })).toBe("3:05");
+    expect(answerText({ kind: "text", accept: ["noun", "nouns"] })).toBe("noun");
+    expect(answerText({ kind: "number", value: -2 })).toBe("-2");
+    expect(answerText({ kind: "fraction", n: 6, d: 8 })).toBe("3/4");
+  });
+});
+
+describe("misconceptionOf", () => {
+  const base = { hints: [], steps: [], seconds: 10, prompt: [], say: "" };
+  const choiceItem: ItemBody = {
+    ...base,
+    input: "choices",
+    choices: [{ label: "5/12", why: "added-denominators" }, { label: "5/6" }, { label: "1/6", why: "subtracted" }],
+    answer: { kind: "choice", index: 1 },
+  };
+
+  it("names the misconception of a chosen distractor", () => {
+    expect(misconceptionOf(choiceItem, 0)).toBe("added-denominators");
+    expect(misconceptionOf(choiceItem, 2)).toBe("subtracted");
+    expect(misconceptionOf(choiceItem, 1)).toBeUndefined();
+    expect(misconceptionOf({ ...choiceItem, choices: choiceItem.choices!.map((c) => ({ label: c.label })) }, 0)).toBeUndefined();
+  });
+
+  it("matches a typed wrong value under the checker's own normalization", () => {
+    const frac: ItemBody = { ...base, input: "fraction", answer: { kind: "fraction", n: 5, d: 6 }, wrong: [{ value: "5/12", why: "added-denominators" }, { value: "2", why: "added-everything" }] };
+    expect(misconceptionOf(frac, "5/12")).toBe("added-denominators");
+    expect(misconceptionOf(frac, "10/24")).toBe("added-denominators");
+    expect(misconceptionOf(frac, "2/1")).toBe("added-everything");
+    expect(misconceptionOf(frac, "10/12")).toBeUndefined();
+    expect(misconceptionOf(frac, "1/12")).toBeUndefined();
+    expect(misconceptionOf(frac, "")).toBeUndefined();
+
+    const num: ItemBody = { ...base, input: "keypad", answer: { kind: "number", value: 12 }, wrong: [{ value: "-12", why: "kept-the-sign" }] };
+    expect(misconceptionOf(num, "−12")).toBe("kept-the-sign");
+    expect(misconceptionOf(num, "-12.0")).toBe("kept-the-sign");
+    expect(misconceptionOf(num, "12")).toBeUndefined();
+  });
+
+  it("works for clock times, words, remainders and expressions", () => {
+    const clock: ItemBody = { ...base, input: "clock", answer: { kind: "text", accept: ["3:30"] }, wrong: [{ value: "6:15", why: "swapped-hands" }] };
+    expect(misconceptionOf(clock, "06:15")).toBe("swapped-hands");
+    expect(misconceptionOf(clock, "3:30")).toBeUndefined();
+    const word: ItemBody = { ...base, input: "text", answer: { kind: "text", accept: ["their"] }, wrong: [{ value: "there", why: "homophone" }] };
+    expect(misconceptionOf(word, "There.")).toBe("homophone");
+    const rem: ItemBody = { ...base, input: "remainder", answer: { kind: "remainder", q: 7, r: 2 }, wrong: [{ value: "7 R 9", why: "remainder-too-big" }] };
+    expect(misconceptionOf(rem, "7r9")).toBe("remainder-too-big");
+    const ex: ItemBody = { ...base, input: "expr", answer: { kind: "expr", expr: "2x+6" }, wrong: [{ value: "2x+3", why: "distributed-to-first-term" }] };
+    expect(misconceptionOf(ex, "3 + 2x")).toBe("distributed-to-first-term");
+    expect(misconceptionOf(ex, "2(x+3)")).toBeUndefined();
   });
 });

@@ -25,6 +25,57 @@ const dotsAlt = (locale: Locale, groups: number[], crossed = 0) => {
   return tr(locale, `A group of ${groups[0]} dots and a group of ${groups[1]} dots`, `Un grupo de ${groups[0]} puntos y un grupo de ${groups[1]} puntos`);
 };
 
+const clockTime = (h: number, m: number) => `${h}:${String(m).padStart(2, "0")}`;
+
+/**
+ * Set the hands to a time on the clock pad: level 1 o'clock, level 2 half hours, level 3 five minutes.
+ * The answer is "h:mm"; the two classic slips (long hand on the minutes' number, hands swapped) are tagged.
+ */
+function setTheClock(h: number, m: number, level: number, locale: Locale): ItemBody {
+  const time = clockTime(h, m);
+  const step = level === 1 ? 60 : level === 2 ? 30 : 5;
+  const where = m === 0 ? 12 : m / 5; // the number the long hand points to
+  const next = h === 12 ? 1 : h + 1;
+  const wrong: { value: string; why: string }[] = [];
+  if (m > 0 && m <= 12 && (m * 5) % step === 0) wrong.push({ value: clockTime(h, (m * 5) % 60), why: "minutes-as-number" });
+  const swapped = clockTime(where, (h * 5) % 60);
+  if ((h * 5) % step === 0 && swapped !== time && !wrong.some((w) => w.value === swapped)) wrong.push({ value: swapped, why: "swapped-hands" });
+  const la = h === 1 ? "la" : "las";
+  const spoken = m === 0 ? tr(locale, `${h} o'clock`, `${la} ${h} en punto`) : tr(locale, time, `${la} ${time}`);
+  const side =
+    h === 12 ? ["at the top", "arriba"] : h === 6 ? ["at the bottom", "abajo"] : h < 6 ? ["on the right side", "del lado derecho"] : ["on the left side", "del lado izquierdo"];
+  return {
+    prompt: [tr(locale, `Set the clock to ${time}.`, `Pon el reloj a ${la} ${time}.`)],
+    say: tr(locale, `Set the clock to ${spoken}.`, `Pon el reloj a ${spoken}.`),
+    input: "clock",
+    pad: { kind: "clock", stepMinutes: step },
+    answer: { kind: "text", accept: [time] },
+    ...(wrong.length ? { wrong } : {}),
+    hints:
+      level === 1
+        ? [
+            tr(locale, "The short hand shows the hour.", "La manecilla corta marca la hora."),
+            tr(locale, "At o'clock, the long hand points up to 12.", "En punto, la manecilla larga apunta al 12."),
+            tr(locale, `Look for the ${h} ${side[0]} of the clock.`, `Busca el ${h} ${side[1]} del reloj.`),
+          ]
+        : [
+            tr(locale, "The short hand shows the hour. The long hand shows the minutes.", "La manecilla corta marca la hora. La larga marca los minutos."),
+            tr(locale, "For the long hand, each number is 5 minutes.", "Para la manecilla larga, cada número vale 5 minutos."),
+            m === 0
+              ? tr(locale, "At o'clock, the long hand points to 12.", "En punto, la manecilla larga apunta al 12.")
+              : tr(locale, `For ${m} minutes, the long hand points to the ${where}.`, `Para ${m} minutos, la manecilla larga apunta al ${where}.`),
+          ],
+    steps: [
+      m === 0 ? tr(locale, "Long hand on 12: o'clock.", "Manecilla larga en el 12: en punto.") : tr(locale, `Long hand on ${where}: ${m} minutes.`, `Manecilla larga en el ${where}: ${m} minutos.`),
+      m === 0
+        ? tr(locale, `Short hand on ${h}.`, `Manecilla corta en el ${h}.`)
+        : tr(locale, `Short hand on ${h}, moving toward ${next} as the minutes pass.`, `Manecilla corta en el ${h}, avanzando hacia el ${next} con los minutos.`),
+      tr(locale, `The clock shows ${time}.`, `El reloj marca ${la} ${time}.`),
+    ],
+    seconds: 15,
+  };
+}
+
 export const EARLY_MATH: Skill[] = [
   {
     id: "m.count.10",
@@ -45,6 +96,7 @@ export const EARLY_MATH: Skill[] = [
           prompt: [tr(locale, "How many dots?", "¿Cuántos puntos hay?")],
           say: tr(locale, "How many dots? Count them.", "¿Cuántos puntos hay? Cuéntalos."),
           visual: { kind: "dots", groups: [n] },
+          markable: true,
           alt: dotsAlt(locale, [n]),
           hints: [
             tr(locale, "Touch each dot once as you count.", "Toca cada punto una vez mientras cuentas."),
@@ -73,6 +125,7 @@ export const EARLY_MATH: Skill[] = [
         prompt: [tr(locale, "How many in all?", "¿Cuántos hay en total?")],
         say: tr(locale, "How many in all?", "¿Cuántos hay en total?"),
         visual: { kind: "ten-frame", filled: n, frames: 2 },
+        markable: true,
         alt: tr(locale, `One full ten-frame and ${n - 10} more`, `Un marco de diez lleno y ${n - 10} más`),
         hints: [
           tr(locale, "A full frame holds 10.", "Un marco lleno tiene 10."),
@@ -101,7 +154,7 @@ export const EARLY_MATH: Skill[] = [
       return {
         prompt: [tr(locale, "Which number is more?", "¿Qué número es mayor?")],
         say: tr(locale, `Which is more, ${a} or ${b}?`, `¿Qué es más, ${a} o ${b}?`),
-        ...(level === 1 ? { visual: { kind: "dots" as const, groups: [a, b] }, alt: dotsAlt(locale, [a, b]) } : {}),
+        ...(level === 1 ? { visual: { kind: "dots" as const, groups: [a, b] }, markable: true, alt: dotsAlt(locale, [a, b]) } : {}),
         choices,
         input: "choices",
         answer: { kind: "choice", index: choiceIndex(choices, Math.max(a, b)) },
@@ -162,6 +215,7 @@ export const EARLY_MATH: Skill[] = [
         prompt: [`${a} + ${b} = `, { blank: true }],
         say: tr(locale, `${a} plus ${b} is how many?`, `¿${a} más ${b} son cuántos?`),
         visual: { kind: "dots", groups: [a, b] },
+        markable: true,
         alt: dotsAlt(locale, [a, b]),
         hints: [
           tr(locale, "Put the two groups together.", "Junta los dos grupos."),
@@ -189,6 +243,7 @@ export const EARLY_MATH: Skill[] = [
         prompt: [`${a} − ${b} = `, { blank: true }],
         say: tr(locale, `${a} take away ${b} is how many?`, `¿${a} menos ${b} son cuántos?`),
         visual: { kind: "dots", groups: [a], crossed: b },
+        markable: true,
         alt: dotsAlt(locale, [a], b),
         hints: [
           tr(locale, "Count the dots that are not crossed out.", "Cuenta los puntos que no están tachados."),
@@ -215,6 +270,7 @@ export const EARLY_MATH: Skill[] = [
         prompt: [tr(locale, `${n} and how many more make 10?`, `¿${n} y cuántos más hacen 10?`)],
         say: tr(locale, `${n} and how many more make 10?`, `¿${n} y cuántos más hacen 10?`),
         visual: { kind: "ten-frame", filled: n },
+        markable: true,
         alt: tr(locale, `A ten-frame with ${n} filled and ${10 - n} empty`, `Un marco de diez con ${n} llenos y ${10 - n} vacíos`),
         hints: [
           tr(locale, "Look at the empty boxes.", "Mira las casillas vacías."),
@@ -242,7 +298,7 @@ export const EARLY_MATH: Skill[] = [
       return {
         prompt: [`${a} + ${b} = `, { blank: true }],
         say: tr(locale, `${a} plus ${b}`, `${a} más ${b}`),
-        ...(level === 1 ? { visual: { kind: "dots" as const, groups: [a, b] }, alt: dotsAlt(locale, [a, b]) } : {}),
+        ...(level === 1 ? { visual: { kind: "dots" as const, groups: [a, b] }, markable: true, alt: dotsAlt(locale, [a, b]) } : {}),
         input: "keypad",
         answer: { kind: "number", value: a + b },
         hints: [
@@ -270,7 +326,7 @@ export const EARLY_MATH: Skill[] = [
       return {
         prompt: [`${a} − ${b} = `, { blank: true }],
         say: tr(locale, `${a} minus ${b}`, `${a} menos ${b}`),
-        ...(level === 1 ? { visual: { kind: "dots" as const, groups: [a], crossed: b }, alt: dotsAlt(locale, [a], b) } : {}),
+        ...(level === 1 ? { visual: { kind: "dots" as const, groups: [a], crossed: b }, markable: true, alt: dotsAlt(locale, [a], b) } : {}),
         input: "keypad",
         answer: { kind: "number", value: a - b },
         hints: [
@@ -492,6 +548,8 @@ export const EARLY_MATH: Skill[] = [
         options.add(r.bool(0.4) ? fmt(m === 0 ? hh : h, mm) : fmt(hh, m));
       }
       const choices = r.shuffle([...options]).map((label) => ({ label }));
+      // Some problems turn it around: set the hands to a time. Drawn last, so reading problems stay as they were.
+      if (r.bool(0.4)) return setTheClock(h, m, level, locale);
       return {
         prompt: [tr(locale, "What time does the clock show?", "¿Qué hora marca el reloj?")],
         say: tr(locale, "What time does the clock show?", "¿Qué hora marca el reloj?"),

@@ -1,6 +1,6 @@
 import { equivalent, isExpanded, isFactored, isSimplified, parse } from "./expr";
 import { gcd } from "./rng";
-import type { Answer } from "./types";
+import type { Answer, ItemBody } from "./types";
 
 // Deterministic answer checking. A model never decides whether a practice answer is right.
 // `form` failures ("right amount, not in simplest form") are reported separately so feedback can say
@@ -50,6 +50,18 @@ const norm = (s: string) =>
     .replace(/[^\p{L}\p{N}'/ ]/gu, "")
     .replace(/\s+/g, " ")
     .trim();
+
+/**
+ * A clock time the way the clock pad writes it: hour without a leading zero, two-digit minutes.
+ * "03:05", "3.05" and "3h05" all read as "3:05"; anything else is null.
+ */
+export function normTime(raw: string): string | null {
+  const m = /^\s*0*(\d{1,2})\s*[:.h]\s*(\d{2})\s*$/i.exec(raw);
+  if (!m) return null;
+  const h = Number(m[1]), min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return `${h}:${m[2]}`;
+}
 
 export function check(answer: Answer, response: string | number): Verdict {
   if (answer.kind === "choice") return { correct: response === answer.index };
@@ -108,8 +120,17 @@ export function check(answer: Answer, response: string | number): Verdict {
       if (answer.form === "simplified" && !isSimplified(got, want)) return { correct: false, form: "simplified" };
       return { correct: true };
     }
-    case "text":
-      return { correct: answer.accept.some((a) => norm(a) === norm(text)) };
+    case "text": {
+      // Times compare as times ("03:05" is "3:05", "305" is not a time); words compare without case,
+      // accents or punctuation.
+      const time = normTime(text);
+      return {
+        correct: answer.accept.some((a) => {
+          const want = a.includes(":") ? normTime(a) : null;
+          return want ? want === time : norm(a) === norm(text);
+        }),
+      };
+    }
   }
 }
 
@@ -129,7 +150,7 @@ export function answerText(answer: Answer, choices?: { label: string }[]): strin
     case "choice":
       return choices?.[answer.index]?.label ?? String(answer.index);
     case "text":
-      return answer.accept[0];
+      return (answer.accept[0].includes(":") && normTime(answer.accept[0])) || answer.accept[0];
     case "expr":
       return answer.expr;
     case "set":
@@ -139,4 +160,53 @@ export function answerText(answer: Answer, choices?: { label: string }[]): strin
     case "remainder":
       return answer.r ? `${answer.q} R ${answer.r}` : String(answer.q);
   }
+}
+
+/** A tagged wrong value read as an answer of the same kind, so the checker's own rules decide a match. */
+function asAnswer(like: Answer, value: string): Answer | null {
+  const v = value.trim();
+  switch (like.kind) {
+    case "number": {
+      const p = parseNumber(v);
+      return p ? { kind: "number", value: p.value, tolerance: like.tolerance } : null;
+    }
+    case "fraction": {
+      const p = parseNumber(v);
+      return p ? { kind: "fraction", n: p.n ?? p.value, d: p.d ?? 1 } : null;
+    }
+    case "text":
+      return { kind: "text", accept: [v] };
+    case "expr":
+      return { kind: "expr", expr: v };
+    case "remainder": {
+      const m = /^(\d+)(?:\s*(?:r|R|rem|remainder|resto)\s*(\d+))?$/.exec(v);
+      return m ? { kind: "remainder", q: Number(m[1]), r: Number(m[2] ?? 0) } : null;
+    }
+    case "set": {
+      const parts = v.replace(/[−–]/g, "-").split(/\s*[,;]\s*/).map(parseNumber);
+      return parts.every(Boolean) ? { kind: "set", values: parts.map((p) => p!.value) } : null;
+    }
+    case "pair": {
+      const nums = v.replace(/[−–]/g, "-").match(/-?\d+(?:\.\d+)?(?:\/\d+)?/g);
+      return nums?.length === 2 ? { kind: "pair", x: parseNumber(nums[0])!.value, y: parseNumber(nums[1])!.value } : null;
+    }
+    case "choice":
+      return null;
+  }
+}
+
+/**
+ * The misconception a wrong response shows: the `why` of the chosen choice (response = its index), or
+ * of a tagged wrong value the response equals under the checker's own rules ("10/24" matches "5/12",
+ * "03:15" matches "3:15"). Undefined for a right answer or a miss nobody tagged.
+ */
+export function misconceptionOf(item: Pick<ItemBody, "answer" | "choices" | "wrong">, response: string | number): string | undefined {
+  if (check(item.answer, response).correct) return undefined;
+  if (item.answer.kind === "choice") return typeof response === "number" ? item.choices?.[response]?.why : undefined;
+  const text = String(response);
+  if (!text.trim()) return undefined;
+  return item.wrong?.find((w) => {
+    const as = asAnswer(item.answer, w.value);
+    return as !== null && check(as, text).correct;
+  })?.why;
 }

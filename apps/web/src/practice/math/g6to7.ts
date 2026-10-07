@@ -723,11 +723,16 @@ function intNumberLine(r: Rng, level: number, locale: Locale): ItemBody {
   if (kind < 6) {
     const n = nonzero(r, -25, 25);
     const symbolic = n < 0 && r.bool();
+    // In words, the opposite is found on a number line (6.NS.C.6a): a symmetric line, so its ends give nothing away.
+    const lim = Math.max(10, Math.ceil(Math.abs(n) / 5) * 5);
     return {
-      prompt: symbolic ? [`−(${show(n)}) = `, { blank: true }] : [tr(locale, `What is the opposite of ${show(n)}?`, `¿Cuál es el opuesto de ${show(n)}?`)],
-      say: tr(locale, `What is the opposite of ${sayInt(n, locale)}?`, `¿Cuál es el opuesto de ${sayInt(n, locale)}?`),
-      input: "keypad",
-      keys: ["-"],
+      prompt: symbolic ? [`−(${show(n)}) = `, { blank: true }] : [tr(locale, `Put a point at the opposite of ${show(n)}.`, `Coloca un punto en el opuesto de ${show(n)}.`)],
+      say: symbolic
+        ? tr(locale, `What is the opposite of ${sayInt(n, locale)}?`, `¿Cuál es el opuesto de ${sayInt(n, locale)}?`)
+        : tr(locale, `Put a point at the opposite of ${sayInt(n, locale)} on the number line.`, `Coloca un punto en el opuesto de ${sayInt(n, locale)} en la recta numérica.`),
+      ...(symbolic
+        ? { input: "keypad" as const, keys: ["-" as const] }
+        : { input: "number-line" as const, pad: { kind: "number-line" as const, min: -lim, max: lim, step: 1 }, wrong: [{ value: String(n), why: "kept-the-sign" }] }),
       answer: { kind: "number", value: -n },
       hints: [
         symbolic

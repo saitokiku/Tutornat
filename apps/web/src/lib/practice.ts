@@ -10,6 +10,7 @@ import {
   type Statuses,
 } from "@/learning/engine";
 import type { AiQuestion, Attempt, Mode, PracticeSet, SetKind, Slot } from "@/learning/types";
+import { logAct, type ActInput } from "./acts";
 import { guessSubject } from "./generate";
 import { randomSeed } from "@/practice/rng";
 import { getSkill } from "@/practice/skills";
@@ -137,8 +138,24 @@ export function startSet(state: StoreState, opts: StartOpts): string | null {
     eventId: opts.eventId,
   };
   update((s) => void s.sets.push(set));
+  // A new set is a teaching act with an intent the improvement loop can test later. Placement only
+  // measures, so it is not one.
+  const act: Pick<ActInput, "kind" | "intent"> | null =
+    kind === "check" ? { kind: "check", intent: "check-decides" } : kind === "prep" ? { kind: "prep", intent: "test-goes-well" } : kind === "placement" ? null : { kind: "set", intent: "skill-moves" };
+  if (act) logAct({ profileId: profile.id, ...act, skillId: first, setId: set.id, ref: kind === "prep" ? opts.eventId : opts.planKey }, { at: now });
   return set.id;
 }
+
+/** How a set's time compares with the standard time, in words: never a timer, never a score. */
+export type Pace = "quicker" | "usual" | "slower";
+export function paceOf(seconds: number, standard: number): Pace {
+  if (standard <= 0 || seconds <= 0) return "usual";
+  const ratio = seconds / standard;
+  return ratio < 0.75 ? "quicker" : ratio <= 1.35 ? "usual" : "slower";
+}
+
+/** Whole minutes for a pace sentence; anything under a minute reads as 1. */
+export const wholeMinutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
 
 export type AnswerRecord = { slot: number; level: number; correct: boolean; assisted: boolean; seconds: number; response?: string; why?: string };
 
