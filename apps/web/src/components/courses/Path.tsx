@@ -15,7 +15,8 @@ import { CourseArt } from "./CourseArt";
 import { LangTag } from "./LangTag";
 import { OriginBadge } from "./Origin";
 
-const isYoung = (p: Profile) => p.grade === "K" || p.grade === "1" || p.grade === "2";
+/** K–2: primary actions and controls a young child taps are 56px. */
+export const isYoung = (p: Pick<Profile, "grade">) => p.grade === "K" || p.grade === "1" || p.grade === "2";
 
 /** Puts focus back on a control after its row moved (a moved DOM node drops focus). */
 function refocus(ids: string[]) {

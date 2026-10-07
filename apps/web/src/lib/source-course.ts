@@ -22,8 +22,11 @@ import type { Course, CourseLength, Grade, Lesson, Locale, QuizQuestion, Scene, 
 
 /** Where the knowledge comes from. Injected so the builder runs in tests without a network. */
 export type Fetchers = {
-  /** The best Wikipedia article for a topic, or null when there is none. */
-  wiki: (topic: string, lang: Locale) => Promise<WikiSummary | null>;
+  /**
+   * The best Wikipedia article for a topic, or null when there is none. "simple" is Simple English
+   * Wikipedia, asked first for K–2; a source that doesn't have it answers from English Wikipedia.
+   */
+  wiki: (topic: string, lang: Wiki) => Promise<WikiSummary | null>;
   /** Words that mean something like the topic (Datamuse). */
   related: (word: string) => Promise<string[]>;
   /** Dictionary definitions (Wiktionary through Datamuse); empty when the word has none. */
@@ -31,6 +34,9 @@ export type Fetchers = {
   /** Books a family can borrow (Open Library); the query may use Open Library's field filters. */
   books: (q: string) => Promise<Book[]>;
 };
+
+/** Which Wikipedia to read: the course's language, or Simple English (short words, short sentences) for K–2. */
+export type Wiki = Locale | "simple";
 
 /** A source could not be asked: the device is offline, or the source did not answer. */
 export type Failure = "offline" | "unavailable";
@@ -564,20 +570,29 @@ export async function buildSourceCourse(goal: string, grade: Grade, locale: Loca
   if (!fine(goal)) return course([], []);
   const topic = topicOf(goal, opts.avoid);
 
-  // 1. The overview: Wikipedia's article, quoted and credited.
+  // 1. The overview: Wikipedia's article, quoted and credited. K–2 in English read Simple English
+  // Wikipedia when it has the topic (short words, short sentences), English Wikipedia otherwise.
   let article: WikiSummary | null = null;
   let articleFailed: Failure | undefined;
   const searchable = topic.length >= 2;
+  const usable = (a: WikiSummary | null) => (a?.extract?.trim() && a.title?.trim() ? a : null);
   try {
-    article = searchable ? await fetchers.wiki(topic, locale) : null;
+    if (searchable && young && locale === "en") {
+      article = usable(
+        await fetchers.wiki(topic, "simple").catch((e: unknown) => {
+          if (failure(e) === "offline") throw e;
+          return null;
+        }),
+      );
+    }
+    if (searchable && !article) article = usable(await fetchers.wiki(topic, locale));
   } catch (e) {
     articleFailed = failure(e);
   }
-  if (article && (!article.extract?.trim() || !article.title?.trim())) article = null;
   const withheld = !!article && !fine(`${article.title} ${article.extract}`);
   report({ part: "article", title: article?.title, failed: articleFailed, withheld: withheld || undefined });
   if (withheld) article = null;
-  if (article && !isWebLink(article.url)) article = { ...article, url: `https://${locale}.wikipedia.org/wiki/${encodeURIComponent(article.title.replace(/ /g, "_"))}` };
+  if (article && !isWebLink(article.url)) article = { ...article, url: `https://${article.lang || locale}.wikipedia.org/wiki/${encodeURIComponent(article.title.replace(/ /g, "_"))}` };
   const extract = article ? (young ? [firstSentence(article.extract)] : paragraphs(article.extract)) : [];
 
   // 2. Key words (the dictionary is English) and books, side by side. Offline, nothing more is asked.
@@ -788,7 +803,7 @@ export function sourcesUsed(lessons: Lesson[], citations: NonNullable<Course["ci
 
 // ── The browser's fetchers ─────────────────────────────────────────────────────────────────────
 
-async function know<T>(kind: string, q: string, lang?: Locale): Promise<T> {
+async function know<T>(kind: string, q: string, lang?: Wiki): Promise<T> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) throw new SourceError("offline");
   const params = new URLSearchParams({ q });
   if (lang) params.set("lang", lang);
@@ -802,7 +817,10 @@ async function know<T>(kind: string, q: string, lang?: Locale): Promise<T> {
   return (await res.json()) as T;
 }
 
-/** Everything goes through our own /api/know, so only the topic leaves the device. */
+/**
+ * Everything goes through our own /api/know, so only the topic leaves the device. `lang=simple` asks
+ * for Simple English Wikipedia; until the route knows it, the route answers from English Wikipedia.
+ */
 export const knowFetchers: Fetchers = {
   wiki: async (topic, lang) => (await know<{ summary: WikiSummary | null }>("wiki", topic, lang)).summary ?? null,
   related: async (word) => (await know<{ related?: string[] }>("related", word)).related ?? [],

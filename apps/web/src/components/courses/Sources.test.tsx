@@ -117,7 +117,7 @@ describe("sourceLine", () => {
   };
   it("says what was found, what wasn't, and why", () => {
     expect(say({ part: "article", title: "Volcano" })).toEqual(["Found Wikipedia's article “Volcano”", "found"]);
-    expect(say({ part: "article", title: "Volcano", withheld: true })).toEqual(["Left out Wikipedia's article “Volcano”: it covers things that aren't for children", "none"]);
+    expect(say({ part: "article", title: "Volcano", withheld: true })).toEqual(["Left out Wikipedia's article “Volcano”: the safety check found words in it that aren't for children", "none"]);
     expect(say({ part: "article" })).toEqual(["Wikipedia has no article that matches “volcanoes”", "none"]);
     expect(say({ part: "article", failed: "offline" })).toEqual(["Couldn't reach Wikipedia: this device seems to be offline", "failed"]);
     expect(say({ part: "terms", count: 1 })).toEqual(["Found 1 key word with a definition", "found"]);

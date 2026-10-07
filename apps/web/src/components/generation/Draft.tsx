@@ -7,6 +7,7 @@ import { matchEntry } from "@/catalogue";
 import { CourseArt } from "@/components/courses/CourseArt";
 import { NotFound } from "@/components/courses/NotFound";
 import { OriginBadge } from "@/components/courses/Origin";
+import { isYoung } from "@/components/courses/Path";
 import { useTitle } from "@/components/LangSync";
 import { IconArrowLeft, IconArrowRight, IconCheck, IconMinus, IconRefresh, IconX } from "@/components/icons";
 import { Button, Notice, Spinner, SubjectDot, btn } from "@/components/ui";
@@ -428,7 +429,7 @@ export function Draft({ fetchers = knowFetchers }: { fetchers?: Fetchers }) {
               <Button variant="ghost" onClick={backToBox}>
                 {t("gen.editRequest")}
               </Button>
-              <Button onClick={create}>
+              <Button onClick={create} className={isYoung(learner) ? "min-h-14 px-7 text-t3" : ""}>
                 {t("gen.create")} <IconArrowRight size={16} />
               </Button>
             </div>

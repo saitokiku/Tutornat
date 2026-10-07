@@ -54,7 +54,7 @@ const BOOKS: Book[] = [
 function fake(over: Partial<Fetchers> = {}) {
   const calls: string[] = [];
   const f: Fetchers = {
-    wiki: async (topic) => (calls.push(`wiki:${topic}`), /volcan/i.test(topic) ? VOLCANO : null),
+    wiki: async (topic, lang) => (calls.push(lang === "simple" ? `wiki:${topic}:simple` : `wiki:${topic}`), /volcan/i.test(topic) ? VOLCANO : null),
     related: async (w) => (calls.push(`related:${w}`), ["volcanic", "eruption", "lava", "magma", "crater", "vent"]),
     define: async (w) => (calls.push(`define:${w}`), DICTIONARY[w] ?? []),
     books: async (q) => (calls.push(`books:${q}`), BOOKS),
@@ -227,6 +227,35 @@ describe("buildSourceCourse: the learner's grade", () => {
     expect(step(steps, "practice")).toEqual({ part: "practice", skills: ["Rocks, fossils and erosion"], questions: 0, grade: "4" });
     // Melting and freezing (grade 2) is near enough to borrow.
     expect(titles(course)).toContain("Melting and freezing");
+  });
+
+  it("K–2 in English read Simple English Wikipedia first, and English Wikipedia when it has nothing", async () => {
+    const simple: WikiSummary = { ...VOLCANO, extract: "A volcano is a mountain where hot melted rock comes out. The melted rock is called lava.", url: "https://simple.wikipedia.org/wiki/Volcano" };
+    const asked: string[] = [];
+    const both = fake({ wiki: async (_t, lang) => (asked.push(lang), lang === "simple" ? simple : VOLCANO) });
+    const k = await build("volcanoes", both.f, {}, "1");
+    expect(asked).toEqual(["simple"]);
+    expect((k.course.lessons[0].scenes[0] as SlideScene).blocks[0]).toEqual({ type: "text", text: "A volcano is a mountain where hot melted rock comes out." });
+    expect(citationGroups(k.course.citations!).article?.url).toBe("https://simple.wikipedia.org/wiki/Volcano");
+
+    // No Simple English article (or that source didn't answer): English Wikipedia.
+    for (const missing of [async () => null, async () => Promise.reject(new SourceError("unavailable"))]) {
+      const tried: string[] = [];
+      const enOnly = fake({ wiki: async (t, lang) => (tried.push(lang), lang === "simple" ? missing() : VOLCANO) });
+      const { course } = await build("volcanoes", enOnly.f, {}, "K");
+      expect(tried).toEqual(["simple", "en"]);
+      expect(citationGroups(course.citations!).article?.url).toBe("https://en.wikipedia.org/wiki/Volcano");
+    }
+
+    // Offline stops at the first ask; older learners and Spanish never ask Simple English.
+    const { offline, f } = offlineFetchers();
+    await build("volcanoes", f, {}, "K");
+    expect(offline.mock.calls.filter((c) => (c as unknown[])[1] === "en")).toEqual([]);
+    for (const [grade, locale] of [["3", "en"], ["1", "es"]] as const) {
+      const langs: string[] = [];
+      await build("volcanoes", fake({ wiki: async (_t, lang) => (langs.push(lang), VOLCANO) }).f, {}, grade, locale);
+      expect(langs).toEqual([locale]);
+    }
   });
 
   it("practice: nearest grade first, a skill far from the learner kept but marked", () => {

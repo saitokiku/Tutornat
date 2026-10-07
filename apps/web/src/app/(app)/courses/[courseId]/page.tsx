@@ -6,6 +6,7 @@ import { useState } from "react";
 import { LangTag } from "@/components/courses/LangTag";
 import { NotFound } from "@/components/courses/NotFound";
 import { OriginBadge } from "@/components/courses/Origin";
+import { isYoung } from "@/components/courses/Path";
 import { Related } from "@/components/courses/Related";
 import { CoursePractice, CourseSources } from "@/components/courses/Sources";
 import { ParentGate } from "@/components/profiles/ParentGate";
@@ -47,7 +48,7 @@ function CourseView() {
       <Notice
         tone="warn"
         action={
-          <Link href={`/courses/new/${course.id}`} className={btn("primary", "sm")}>
+          <Link href={`/courses/new/${course.id}`} className={btn("primary")}>
             {t("gen.rebuild")}
           </Link>
         }
@@ -85,7 +86,7 @@ function CourseView() {
         )}
         <div className="flex flex-wrap items-center gap-4 pt-2">
           {!outlineOnly && (
-            <Link href={`/learn/${course.id}/${target.id}`} className={btn("primary")}>
+            <Link href={`/learn/${course.id}/${target.id}`} className={btn("primary", "md", isYoung(learner) ? "min-h-14 px-7 text-t3" : "")}>
               {cta} <IconArrowRight size={16} />
             </Link>
           )}
