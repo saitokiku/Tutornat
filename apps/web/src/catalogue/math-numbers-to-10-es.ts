@@ -22,7 +22,7 @@ const numbersTo10Es: CatalogueEntry = {
             { type: "visual", visual: { kind: "dots", groups: [5] }, alt: "5 puntos en una fila." },
             { type: "text", text: "Toca cada punto una vez. Di un número al tocarlo." },
             { type: "text", text: "1, 2, 3, 4, 5." },
-            { type: "text", text: "El último número que dices te dice cuántos hay. Hay 5 puntos." },
+            { type: "text", text: "El último número que dices es cuántos hay. Hay 5 puntos." },
           ],
         },
         {
@@ -43,6 +43,21 @@ const numbersTo10Es: CatalogueEntry = {
         {
           id: "s3",
           kind: "slide",
+          title: "Hasta el 10",
+          blocks: [
+            {
+              type: "visual",
+              visual: { kind: "ten-frame", filled: 10 },
+              alt: "Un marco de diez lleno. Las dos filas tienen 5 puntos. Hay 10 puntos.",
+            },
+            { type: "text", text: "Dos filas llenas de 5 son 10." },
+            { type: "text", text: "Sigue desde 5: 6, 7, 8, 9, 10." },
+            { type: "text", text: "Un marco vacío tiene 0 puntos. Cero quiere decir ninguno." },
+          ],
+        },
+        {
+          id: "s4",
+          kind: "slide",
           title: "Cuenta cada uno una vez",
           blocks: [
             { type: "visual", visual: { kind: "dots", groups: [6] }, alt: "6 puntos: una fila de 5 y 1 más abajo." },
@@ -51,14 +66,14 @@ const numbersTo10Es: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
+          id: "s5",
           kind: "interactive",
-          title: "Cuenta hasta 6",
-          prompt: "Empieza en 0. Avanza un salto a la vez. Di cada número. Detente en 6.",
-          widget: { kind: "number-line", min: 0, max: 10, step: 1, start: 0, target: 6 },
+          title: "Cuenta hasta 9",
+          prompt: "Empieza en 0. Avanza un salto a la vez. Di cada número. Detente en 9.",
+          widget: { kind: "number-line", min: 0, max: 10, step: 1, start: 0, target: 9 },
         },
         {
-          id: "s5",
+          id: "s6",
           kind: "quiz",
           title: "Comprueba lo que sabes",
           questions: [
@@ -89,7 +104,7 @@ const numbersTo10Es: CatalogueEntry = {
           ],
         },
         {
-          id: "s6",
+          id: "s7",
           kind: "project",
           title: "Cuenta en casa",
           brief: "Cuenta cosas de verdad en casa, hasta 10.",
@@ -184,7 +199,7 @@ const numbersTo10Es: CatalogueEntry = {
             {
               id: "q3",
               prompt: "Valeria tiene 5 uvas. Luis tiene 5 uvas. ¿Quién tiene más?",
-              choices: ["Valeria", "Luis", "Tienen lo mismo"],
+              choices: ["Valeria", "Luis", "Tienen la misma cantidad"],
               answer: 2,
               hint: "¿Los dos números son distintos?",
               explain: "Los dos tienen 5. 5 y 5 son iguales.",
@@ -197,7 +212,7 @@ const numbersTo10Es: CatalogueEntry = {
           title: "Dos montones",
           brief: "Haz dos montones y encuentra cuál tiene más.",
           steps: [
-            "Haz un montón de frijoles, botones o bloques.",
+            "Haz un montón de frijoles, botones o bloques. Usa 10 o menos.",
             "Haz otro montón con un número distinto.",
             "Cuenta cada montón.",
             "Pon cada montón en una fila. Pon las filas lado a lado.",

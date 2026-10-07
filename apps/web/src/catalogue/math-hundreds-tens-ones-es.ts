@@ -194,10 +194,10 @@ const hundredsTensOnesEs: CatalogueEntry = {
             {
               id: "q3",
               prompt: "¿Cuánto es 500 + 30 + 8?",
-              choices: ["538", "50038", "583"],
+              choices: ["538", "500308", "583"],
               answer: 0,
               hint: "500 son las centenas. 30, las decenas. 8, las unidades.",
-              explain: "5 centenas, 3 decenas y 8 unidades son 538.",
+              explain: "5 centenas, 3 decenas y 8 unidades son 538. Cada lugar lleva una sola cifra.",
             },
           ],
         },
@@ -205,10 +205,10 @@ const hundredsTensOnesEs: CatalogueEntry = {
           id: "s6",
           kind: "project",
           title: "Centavos y valor posicional",
-          brief: "Muestra números con monedas y billetes de un dólar.",
+          brief: "Las monedas también son unidades, decenas y centenas.",
           steps: [
-            "Una moneda de 1 centavo vale 1. Una de 10 centavos vale 10.",
-            "Un dólar vale 100 centavos.",
+            "1 centavo es como una unidad. 10 centavos, como una decena.",
+            "Un dólar son 100 centavos. Es como una centena.",
             "Usa dinero de verdad o de juguete.",
             "Muestra 1 dólar y 2 monedas de 10. Agrega 5 monedas de 1.",
             "¿Cuántos centavos son? Escribe el número.",
@@ -233,9 +233,9 @@ const hundredsTensOnesEs: CatalogueEntry = {
               visual: { kind: "base-ten", hundreds: 2, tens: 3, ones: 4 },
               alt: "2 placas de cien y 3 barras de diez. Hay 4 cubitos sueltos. Muestran 234.",
             },
-            { type: "text", text: "Suma 1 decena a 234. Te da 244." },
+            { type: "text", text: "Súmale 1 decena a 234. Te da 244." },
             { type: "text", text: "Solo cambia la cifra de las decenas. Sube 1." },
-            { type: "text", text: "Quita 1 decena a 234. Te da 224." },
+            { type: "text", text: "Quítale 1 decena a 234. Te da 224." },
           ],
         },
         {
@@ -243,7 +243,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
           kind: "slide",
           title: "100 más, 100 menos",
           blocks: [
-            { type: "text", text: "Suma 1 centena a 234. Te da 334." },
+            { type: "text", text: "Súmale 1 centena a 234. Te da 334." },
             { type: "text", text: "Ahora sube 1 la cifra de las centenas." },
             {
               type: "visual",
@@ -251,7 +251,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
               alt: "Una recta numérica del 0 al 1000. Tiene una marca en cada centena.",
             },
             { type: "text", text: "En esta recta, cada salto es de 100." },
-            { type: "text", text: "Quita 1 centena a 234. Te da 134." },
+            { type: "text", text: "Quítale 1 centena a 234. Te da 134." },
           ],
         },
         {

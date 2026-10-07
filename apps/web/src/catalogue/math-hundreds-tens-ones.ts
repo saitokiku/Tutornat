@@ -194,10 +194,10 @@ const hundredsTensOnes: CatalogueEntry = {
             {
               id: "q3",
               prompt: "What is 500 + 30 + 8?",
-              choices: ["538", "50038", "583"],
+              choices: ["538", "500308", "583"],
               answer: 0,
               hint: "500 is the hundreds. 30 is the tens. 8 is the ones.",
-              explain: "5 hundreds, 3 tens and 8 ones make 538.",
+              explain: "5 hundreds, 3 tens and 8 ones make 538. Each place gets one digit.",
             },
           ],
         },

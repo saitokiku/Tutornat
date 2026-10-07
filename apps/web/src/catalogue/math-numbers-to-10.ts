@@ -43,6 +43,21 @@ const numbersTo10: CatalogueEntry = {
         {
           id: "s3",
           kind: "slide",
+          title: "All the way to 10",
+          blocks: [
+            {
+              type: "visual",
+              visual: { kind: "ten-frame", filled: 10 },
+              alt: "A full ten-frame. Both rows have 5 dots. There are 10 dots.",
+            },
+            { type: "text", text: "Two full rows of 5 make 10." },
+            { type: "text", text: "Count on from 5: 6, 7, 8, 9, 10." },
+            { type: "text", text: "An empty ten-frame has 0 dots. 0 means none." },
+          ],
+        },
+        {
+          id: "s4",
+          kind: "slide",
           title: "Count each one once",
           blocks: [
             { type: "visual", visual: { kind: "dots", groups: [6] }, alt: "6 dots: a row of 5 and 1 more below." },
@@ -51,14 +66,14 @@ const numbersTo10: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
+          id: "s5",
           kind: "interactive",
-          title: "Count to 6",
-          prompt: "Start at 0. Move one jump at a time. Say each number. Stop at 6.",
-          widget: { kind: "number-line", min: 0, max: 10, step: 1, start: 0, target: 6 },
+          title: "Count to 9",
+          prompt: "Start at 0. Move one jump at a time. Say each number. Stop at 9.",
+          widget: { kind: "number-line", min: 0, max: 10, step: 1, start: 0, target: 9 },
         },
         {
-          id: "s5",
+          id: "s6",
           kind: "quiz",
           title: "Check what you know",
           questions: [
@@ -89,7 +104,7 @@ const numbersTo10: CatalogueEntry = {
           ],
         },
         {
-          id: "s6",
+          id: "s7",
           kind: "project",
           title: "Count at home",
           brief: "Count real things at home, up to 10.",
@@ -197,7 +212,7 @@ const numbersTo10: CatalogueEntry = {
           title: "Two piles",
           brief: "Make two piles and find which has more.",
           steps: [
-            "Make a pile of beans, buttons or blocks.",
+            "Make a pile of beans, buttons or blocks. Use 10 or fewer.",
             "Make a second pile with a different number.",
             "Count each pile.",
             "Put each pile in a row, side by side.",
