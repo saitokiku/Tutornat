@@ -13,6 +13,34 @@ async function audit(page: Page, label: string) {
   expect(bad.map((v) => `${label}: ${v.id} — ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")}`)).toEqual([]);
 }
 
+/**
+ * Words, badges and Start marks inside a picture tile that the tile's speaker button covers. Checked
+ * with the real fonts, since a word's width (Start, Continuar, Empezar prueba) decides whether it
+ * reaches the corner. Text is measured by its line boxes, not its padded element.
+ */
+async function coveredBySpeaker(page: Page) {
+  return page.evaluate(() => {
+    const bad: string[] = [];
+    const hits = (r: DOMRect, h: DOMRect) => r.width > 0 && r.left < h.right && r.right > h.left && r.top < h.bottom && r.bottom > h.top;
+    for (const li of document.querySelectorAll("main li.relative")) {
+      const hear = li.querySelector(':scope > span > button[aria-label^="Read aloud"]');
+      const tile = li.firstElementChild;
+      if (!hear || !tile) continue;
+      const h = hear.getBoundingClientRect();
+      const walk = document.createTreeWalker(tile, NodeFilter.SHOW_TEXT);
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+        if (!n.textContent?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        if ([...range.getClientRects()].some((r) => hits(r, h))) bad.push(n.textContent.trim());
+      }
+      for (const mark of tile.querySelectorAll('.k-badge, [class*="rounded-full"][class*="border"]'))
+        if (hits(mark.getBoundingClientRect(), h)) bad.push(`mark: ${mark.textContent?.trim()}`);
+    }
+    return bad;
+  });
+}
+
 type Saved = { sets: { planKey?: string; finishedAt?: number }[]; acts: { profileId: string; kind: string; ref?: string }[]; profiles: { id: string; nickname: string }[] };
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem("kaizenedu.v1") ?? "{}") as Saved);
 
@@ -37,15 +65,28 @@ test("a kindergartner's Today: the tutor first, read-aloud on every line, no clo
 
   // The budget is 10 minutes, said to the grown-ups; the child's own lines carry no minute numbers.
   const grownUps = main.locator('section[aria-labelledby="grown-ups"]');
-  await expect(grownUps.getByText("Leo's plan fits about 10 minutes a day.")).toBeVisible();
+  await expect(grownUps.getByText("Leo's daily practice: 10 minutes.")).toBeVisible();
   expect(await main.locator('section[aria-labelledby="today"]').innerText()).not.toMatch(/\bmin\b/);
   expect(await main.getByRole("list", { name: "Today's status" }).count()).toBe(0);
 
-  // Big targets for small hands.
+  // Big targets for small hands: the start button, a tile, and every speaker.
   const start = main.getByRole("button", { name: /^Start, Math: Count up to 10/ });
   expect((await start.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+  const tile = main.getByRole("button", { name: /^English: Letter sounds/ });
+  expect((await tile.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+  // (The grown-ups' corner at the bottom is for adults and is left out.)
+  const speakers = main.locator('xpath=.//button[starts-with(@aria-label, "Read aloud")][not(ancestor::section[@aria-labelledby="grown-ups"])]');
+  expect(await speakers.count()).toBeGreaterThanOrEqual(6);
+  for (const box of await Promise.all((await speakers.all()).map((b) => b.boundingBox()))) expect(Math.min(box!.width, box!.height)).toBeGreaterThanOrEqual(56);
+  expect(await coveredBySpeaker(page)).toEqual([]);
   await noOverflow(page);
   await audit(page, "today-k");
+
+  // The narrowest phone: still no sideways scroll, and no word under a speaker.
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expect(start).toBeVisible();
+  await noOverflow(page);
+  expect(await coveredBySpeaker(page)).toEqual([]);
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
@@ -125,6 +166,9 @@ test("a grown-up sees a child's Today, read-only, with their page one tap away, 
   const errors = collectErrors(page);
   await family(page, "today-parent", [["Ada", "4"], ["Leo", "K"]]);
   await asParent(page);
+  // Without a child named, Today is not the grown-up's: their home is Family.
+  await page.goto("/home");
+  await expect(page).toHaveURL(/\/family$/);
   const leo = (await saved(page)).profiles.find((p) => p.nickname === "Leo")!;
   await page.goto(`/home?learner=${leo.id}`);
   await expect(page.getByRole("heading", { level: 1, name: "Today for Leo" })).toBeVisible();

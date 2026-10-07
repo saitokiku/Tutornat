@@ -3,10 +3,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { IconBook, IconCheckCircle, IconChevronRight, IconClock } from "@/components/icons";
-import { Hear } from "@/components/stage/hear";
 import { useLocale, useT } from "@/i18n";
 import { stripLines, type StripLine, type TodayStatus } from "@/lib/plan";
 import { getSkill } from "@/practice/skills";
+import { BigHear } from "./BigHear";
 
 type Props = {
   status: TodayStatus;
@@ -14,7 +14,7 @@ type Props = {
   /** K–2: bigger targets, read-aloud, and no minute numbers for the child. */
   young: boolean;
   grownUp: boolean;
-  /** Starts the first check on the plan (the learner's own view). */
+  /** Starts the next check (the learner's own view): see lib/plan.ts checkToStart. */
   onStartCheck?: () => void;
 };
 
@@ -120,7 +120,7 @@ export function StatusStrip({ status, learnerId, young, grownUp, onStartCheck }:
                 </button>
               )}
               <span className="pr-3 empty:hidden">
-                <Hear text={say} />
+                <BigHear text={say} />
               </span>
             </li>
           );

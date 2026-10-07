@@ -2,12 +2,16 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bandOf, catalogueFor } from "@/catalogue";
 import { HearContext } from "@/components/stage/hear";
+import { continueTarget } from "@/lib/continue";
 import { todayPlan, todayStatus } from "@/lib/plan";
 import { read, resetMemory, update } from "@/lib/store";
-import type { Profile } from "@/lib/types";
+import type { Course, Lesson, Profile } from "@/lib/types";
 import { addDays, localDate } from "@/planner/dates";
 import { ComingUp } from "./ComingUp";
+import { CoursesInProgress } from "./CoursesInProgress";
+import { PickTiles } from "./Picks";
 import { StatusStrip } from "./StatusStrip";
 import { TodayPlan } from "./TodayPlan";
 
@@ -27,10 +31,38 @@ function seed(p: Profile) {
   });
 }
 const young = (children: ReactNode) => <HearContext.Provider value={{ hear: true, young: true, locale: "en" }}>{children}</HearContext.Provider>;
-const plan = (p: Profile) => todayPlan(read(), p, NOW);
+const plan = (p: Profile, now = NOW) => todayPlan(read(), p, now);
+const speakers = () => screen.getAllByRole("button", { name: /^Read aloud:/ });
+const starts = (text: string) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
 
-beforeEach(() => push.mockClear());
-afterEach(() => resetMemory());
+const lesson = (id: string): Lesson => ({ id, title: `Lesson ${id}`, summary: "", minutes: 8, scenes: [] });
+const course = (o: Partial<Course> & { id: string; profileId: string }): Course => ({
+  title: `Course ${o.id}`,
+  goal: "",
+  subject: "science",
+  grade: "4",
+  locale: "en",
+  origin: "generated",
+  status: "ready",
+  length: "short",
+  sources: [],
+  lessons: [lesson("a"), lesson("b"), lesson("c")],
+  template: false,
+  createdAt: 1000,
+  updatedAt: 1000,
+  ...o,
+});
+
+beforeEach(() => {
+  push.mockClear();
+  // Taps file their work under the day they happen; the tests pin that day.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
+});
+afterEach(() => {
+  vi.useRealTimers();
+  resetMemory();
+});
 
 describe("TodayPlan", () => {
   it("starts any line, in any order, from the keyboard", async () => {
@@ -59,6 +91,33 @@ describe("TodayPlan", () => {
     // Nothing else was started: two taps, two sets, and Math still waits.
     expect(read().sets).toHaveLength(2);
     expect(read().sets.some((x) => x.planKey === `${DATE}:daily:math`)).toBe(false);
+  });
+
+  it("K–2: starts a tile, then the Next card, in that order, from the keyboard", async () => {
+    seed(leo);
+    const user = userEvent.setup();
+    render(young(<TodayPlan plan={plan(leo)} learner={leo} now={NOW} young />));
+    const tile = screen.getByRole("button", { name: /^English: Letter sounds/ });
+    for (let i = 0; i < 20 && document.activeElement !== tile; i++) await user.tab();
+    expect(tile).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(read().sets.map((x) => x.planKey)).toEqual([`${DATE}:daily:english`]);
+    const next = screen.getByRole("button", { name: /^Start, Math: Count up to 10/ });
+    for (let i = 0; i < 20 && document.activeElement !== next; i++) await user.tab({ shift: true });
+    expect(next).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(read().sets.map((x) => x.planKey)).toEqual([`${DATE}:daily:english`, `${DATE}:daily:math`]);
+  });
+
+  it("files a set under the day of the tap when the screen was left open overnight", async () => {
+    seed(ada);
+    const yesterday = NOW - 864e5;
+    render(<TodayPlan plan={plan(ada, yesterday)} learner={ada} now={yesterday} young={false} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Start, Math:/ }));
+    expect(read().sets.map((x) => x.planKey)).toEqual([`${DATE}:daily:math`]);
+    // So when Today comes back, the line just done is today's, and shows as done.
+    update((s) => void (s.sets[0].finishedAt = NOW));
+    expect(plan(ada).lead.find((i) => i.key === "daily:math")).toMatchObject({ done: true });
   });
 
   it("shows a started line as Continue and a finished line as done, and never starts anything by itself", () => {
@@ -94,6 +153,8 @@ describe("TodayPlan", () => {
     expect(screen.getByText("That's today's plan done.")).toBeInTheDocument();
     expect(screen.getByText("You can stop here. If you want more, it's below.")).toBeInTheDocument();
     expect(document.getElementById("next")).toBeNull();
+    // The count is of today's plan, the same lines "done" was decided by; the extra line counts itself.
+    expect(screen.getByText("1 of 1 done · 5 min a day")).toBeInTheDocument();
     expect(screen.getByText("If you have more time (1)")).toBeInTheDocument();
   });
 
@@ -103,19 +164,36 @@ describe("TodayPlan", () => {
     const { rerender } = render(<TodayPlan plan={plan(ada)} learner={ada} now={NOW} young={false} />);
     await userEvent.click(screen.getByRole("button", { name: "Mark done, Reading log" }));
     expect(read().events[0].done).toBe(true);
+    expect(read().planDone).toEqual([expect.objectContaining({ date: DATE, key: "due:hw" })]);
     rerender(<TodayPlan plan={plan(ada)} learner={ada} now={NOW} young={false} />);
     await userEvent.click(screen.getByRole("button", { name: "Undo, Reading log" }));
     expect(read().events[0].done).toBe(false);
     expect(screen.getByRole("link", { name: "Reading log" })).toHaveAttribute("href", "/calendar/hw");
   });
 
-  it("K–2: picture tiles, read-aloud on every line, big targets, no minute numbers", () => {
+  it("K–2: picture tiles, read-aloud on every line, 56px targets, no minute numbers", () => {
     seed(leo);
     const { container } = render(young(<TodayPlan plan={plan(leo)} learner={leo} now={NOW} young />));
     expect(container.textContent).not.toMatch(/\bmin\b/);
-    expect(screen.getAllByRole("button", { name: /^Read aloud:/ }).length).toBeGreaterThanOrEqual(3);
+    expect(speakers().length).toBeGreaterThanOrEqual(3);
+    // Every speaker is a 56px target (the stage's own is 40px).
+    for (const b of speakers()) expect(b).toHaveClass("size-14!");
     expect(screen.getByRole("button", { name: /^Start, Math: Count up to 10/ })).toHaveClass("min-h-14");
     expect(screen.getByRole("button", { name: /^English: Letter sounds/ })).toHaveClass("min-h-14");
+  });
+
+  it("K–2: the extra lines' summary can be heard, and hearing it does not open it", async () => {
+    seed({ ...leo, settings: { subjects: ["math", "english", "science"] } });
+    const p = read().profiles[0];
+    const today = plan(p);
+    expect(today.more.map((i) => i.key)).toEqual(["daily:science"]);
+    render(young(<TodayPlan plan={today} learner={p} now={NOW} young />));
+    const details = document.querySelector("details")!;
+    const say = screen.getByRole("button", { name: "Read aloud: If you have more time (1)" });
+    expect(details.contains(say)).toBe(false);
+    await userEvent.click(say);
+    expect(details.open).toBe(false);
+    expect(read().sets).toHaveLength(0);
   });
 
   it("says it is fine to stop once today's minutes are used, without stopping anything", () => {
@@ -150,6 +228,38 @@ describe("TodayPlan", () => {
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.getByText(/10 min a day/)).toBeInTheDocument();
     expect(screen.getByText(/Only Leo can start these/)).toBeInTheDocument();
+  });
+});
+
+describe("TodayPlan lesson lines", () => {
+  const started = (p: Profile, c: Course) =>
+    update((s) => {
+      s.courses.push(c);
+      s.activity.push({ id: "e1", profileId: p.id, at: NOW - 3600_000, type: "lesson_started", courseId: c.id, lessonId: "a" });
+    });
+
+  it("a lesson under way reads Continue, as it does under the courses, and says it was written by AI", async () => {
+    seed({ ...ada, settings: { subjects: [], dailyMinutes: 30 } });
+    const p = read().profiles[0];
+    started(p, course({ id: "moon", profileId: "p1", ai: true }));
+    render(<TodayPlan plan={plan(p)} learner={p} now={NOW} young={false} />);
+    const next = within(document.getElementById("next")!);
+    expect(next.getByText("Pick up where you left off")).toBeInTheDocument();
+    expect(next.getByText("Written by AI")).toBeInTheDocument();
+    await userEvent.click(next.getByRole("button", { name: "Continue, Lesson a" }));
+    expect(push).toHaveBeenLastCalledWith("/learn/moon/a");
+    expect(read().sets).toHaveLength(0);
+  });
+
+  it("K–2: a lesson tile from a template outline says so, and its course's language", () => {
+    seed({ ...leo, settings: { subjects: ["math"], dailyMinutes: 30 } });
+    const p = read().profiles[0];
+    update((s) => void s.courses.push(course({ id: "luna", profileId: "p2", template: true, locale: "es", lessons: [{ ...lesson("a"), title: "Las fases" }] })));
+    render(young(<TodayPlan plan={plan(p)} learner={p} now={NOW} young />));
+    const tile = screen.getByRole("button", { name: /^Las fases/ });
+    expect(within(tile).getByText("Template outline")).toBeInTheDocument();
+    expect(within(tile).getByText("In Spanish")).toBeInTheDocument();
+    expect(within(tile).getByText("Start")).toBeInTheDocument();
   });
 });
 
@@ -215,10 +325,113 @@ describe("ComingUp", () => {
     expect(screen.getAllByText(/08:30/).length).toBeGreaterThan(0);
   });
 
-  it("K–2: every row can be heard, and no clock times are shown", () => {
+  it("K–2: every row can be heard, every link is a 56px target, and no clock times are shown", () => {
     seed(leo);
-    render(young(<ComingUp events={[ev(1, "08:30")]} classes={[]} locale="en" now={NOW} times={false} />));
-    expect(screen.getByRole("button", { name: /^Read aloud: Item 1/ })).toBeInTheDocument();
+    render(young(<ComingUp events={Array.from({ length: 7 }, (_, i) => ev(i, "08:30"))} classes={[]} locale="en" now={NOW} times={false} />));
+    expect(screen.getByRole("button", { name: /^Read aloud: Item 1/ })).toHaveClass("size-14!");
     expect(screen.queryByText(/08:30/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Calendar" })).toHaveClass("min-h-14");
+    expect(screen.getByRole("link", { name: "1 more in the calendar" })).toHaveClass("min-h-14");
+  });
+});
+
+describe("CoursesInProgress", () => {
+  const points = () => continueTarget(read(), "p1");
+  function courses() {
+    seed(ada);
+    update((s) => {
+      s.courses.push(
+        course({ id: "ai", profileId: "p1", ai: true, title: "The Moon" }),
+        course({ id: "tpl", profileId: "p1", template: true, title: "Volcanoes" }),
+        course({ id: "es", profileId: "p1", locale: "es", title: "Fracciones", origin: "catalogue" }),
+      );
+      s.activity.push(
+        { id: "x1", profileId: "p1", at: 5000, type: "lesson_started", courseId: "ai", lessonId: "a" },
+        { id: "x2", profileId: "p1", at: 4000, type: "lesson_completed", courseId: "tpl", lessonId: "a" },
+      );
+    });
+  }
+
+  it("rows: each course with what made it, where it picks up, and Continue or Start", () => {
+    courses();
+    render(<CoursesInProgress points={points()} locale="en" young={false} grownUp={false} />);
+    expect(screen.getByRole("heading", { name: "Your courses" })).toBeInTheDocument();
+    const rows = screen.getAllByRole("listitem");
+    expect(within(rows[0]).getByText("Written by AI")).toBeInTheDocument();
+    expect(within(rows[0]).getByRole("link", { name: "Continue, The Moon" })).toHaveAttribute("href", "/learn/ai/a");
+    expect(within(rows[1]).getByText("Template outline")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Next: Lesson b")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("1 of 3 lessons finished")).toBeInTheDocument();
+    expect(within(rows[2]).getByText("In Spanish")).toBeInTheDocument();
+    expect(within(rows[2]).getByRole("link", { name: "Start, Fracciones" })).toHaveAttribute("href", "/learn/es/a");
+    expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute("href", "/courses");
+  });
+
+  it("K–2 tiles carry the same labels, can be heard, and open the next lesson", () => {
+    courses();
+    render(young(<CoursesInProgress points={points()} locale="en" young grownUp={false} />));
+    const moon = screen.getByRole("link", { name: /^The Moon/ });
+    expect(moon).toHaveAttribute("href", "/learn/ai/a");
+    expect(within(moon).getByText("Written by AI")).toBeInTheDocument();
+    expect(within(screen.getByRole("link", { name: /^Volcanoes/ })).getByText("Template outline")).toBeInTheDocument();
+    expect(within(screen.getByRole("link", { name: /^Fracciones/ })).getByText("In Spanish")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Read aloud: The Moon. Next: Lesson a" })).toHaveClass("size-14!");
+    expect(screen.getByRole("link", { name: "See all" })).toHaveClass("min-h-14");
+  });
+
+  it("a grown-up sees the list with nothing to open", () => {
+    courses();
+    render(<CoursesInProgress points={points()} locale="en" young={false} grownUp />);
+    expect(screen.getByText("The Moon")).toBeInTheDocument();
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+
+  it("never pushes a grown-up's assignment off Today", () => {
+    seed(ada);
+    update((s) => {
+      for (const id of ["c1", "c2", "c3"]) {
+        s.courses.push(course({ id, profileId: "p1", title: id }));
+        s.activity.push({ id: `s-${id}`, profileId: "p1", at: 9000, type: "lesson_started", courseId: id, lessonId: "a" });
+      }
+      s.courses.push(course({ id: "asg", profileId: "p1", title: "Assigned", assigned: true, createdAt: 2000 }));
+    });
+    render(<CoursesInProgress points={points()} locale="en" young={false} grownUp={false} />);
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.getByText("From a grown-up")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Start, Assigned" })).toBeInTheDocument();
+  });
+
+  it("shows nothing without courses", () => {
+    seed(ada);
+    const { container } = render(<CoursesInProgress points={[]} locale="en" young={false} grownUp={false} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("PickTiles", () => {
+  it("K–2: a ready-made course as a picture tile, heard by name, added and opened in one tap", async () => {
+    seed(leo);
+    const entries = catalogueFor("K", "en").filter((c) => bandOf(c.grade) === "k2");
+    expect(entries.length).toBeGreaterThan(0);
+    render(young(<PickTiles entries={entries} learner={leo} />));
+    const first = entries[0];
+    expect(screen.getByRole("button", { name: `Read aloud: ${first.title}`.slice(0, 12 + 60) })).toHaveClass("size-14!");
+    await userEvent.click(screen.getByRole("button", { name: starts(first.title) }));
+    const added = read().courses.find((c) => c.catalogueId === first.id)!;
+    expect(added).toMatchObject({ profileId: "p2", status: "ready" });
+    expect(push).toHaveBeenLastCalledWith(`/learn/${added.id}/${first.lessons[0].id}`);
+    // Adding a course is a teaching act: meant to be finished. Its outcome is worked out later.
+    expect(read().acts).toEqual([expect.objectContaining({ profileId: "p2", kind: "course", intent: "course-finished", ref: added.id })]);
+    expect(read().acts[0].outcome).toBeUndefined();
+    // Tapping again opens the same course, never a second copy, and logs nothing new.
+    await userEvent.click(screen.getByRole("button", { name: starts(first.title) }));
+    expect(read().courses.filter((c) => c.catalogueId === first.id)).toHaveLength(1);
+    expect(read().acts).toHaveLength(1);
+  });
+
+  it("shows nothing when every course is already the learner's", () => {
+    seed(leo);
+    const { container } = render(young(<PickTiles entries={[]} learner={leo} />));
+    expect(container).toBeEmptyDOMElement();
   });
 });

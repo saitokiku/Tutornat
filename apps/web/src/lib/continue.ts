@@ -19,9 +19,10 @@ export type ContinuePoint = {
 };
 
 /**
- * Every ready course with a lesson still to do, each with its next lesson. Courses already begun come
- * first, most recently touched first; then ones not begun yet, a grown-up's assignments before the rest.
- * Finished courses and unfinished outlines are left out.
+ * Every ready course with a lesson still to do, each with its next lesson, in the order to offer them:
+ * courses already begun and a grown-up's assignments come first, most recent first (a fresh assignment
+ * leads until the learner goes back to an older course); then courses added but not begun, in the
+ * learner's path order (`order`, else by date added). Finished courses and unfinished outlines are left out.
  */
 export function continueTarget(s: StoreState, profileId: string): ContinuePoint[] {
   const events = s.activity.filter((e) => e.profileId === profileId);
@@ -33,6 +34,11 @@ export function continueTarget(s: StoreState, profileId: string): ContinuePoint[
     if (!p.next) continue;
     out.push({ course, lesson: p.next, done: p.done, total: p.total, started: p.started, lastAt: Math.max(course.createdAt, ...mine.map((e) => e.at)) });
   }
-  const rank = (x: ContinuePoint) => (x.started ? 0 : x.course.assigned ? 1 : 2);
-  return out.sort((a, b) => rank(a) - rank(b) || b.lastAt - a.lastAt);
+  const leads = (x: ContinuePoint) => x.started || !!x.course.assigned;
+  const path = (x: ContinuePoint) => x.course.order ?? Infinity;
+  return out.sort((a, b) => {
+    if (leads(a) !== leads(b)) return leads(a) ? -1 : 1;
+    if (leads(a)) return b.lastAt - a.lastAt;
+    return path(a) - path(b) || a.course.createdAt - b.course.createdAt;
+  });
 }

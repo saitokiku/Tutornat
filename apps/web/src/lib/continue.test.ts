@@ -66,7 +66,7 @@ describe("continueTarget", () => {
     expect(continueTarget(read(), "p1").map((p) => p.course.id)).toEqual(["mine"]);
   });
 
-  it("puts courses already begun first, most recent first, then a grown-up's assignments, then the rest by date added", () => {
+  it("puts courses begun and a grown-up's assignments first, most recent first, then the rest", () => {
     seed(
       [
         course({ id: "new", createdAt: 9000 }),
@@ -77,9 +77,35 @@ describe("continueTarget", () => {
       [ev("old-start", "lesson_started", "a", 1000), ev("recent-start", "lesson_started", "b", 8000)],
     );
     const points = continueTarget(read(), "p1");
-    expect(points.map((p) => p.course.id)).toEqual(["recent-start", "old-start", "assigned", "new"]);
-    expect(points.map((p) => p.started)).toEqual([true, true, false, false]);
+    // The assignment (5000) came after the learner last touched old-start (1000), so it sits above it.
+    expect(points.map((p) => p.course.id)).toEqual(["recent-start", "assigned", "old-start", "new"]);
+    expect(points.map((p) => p.started)).toEqual([true, false, true, false]);
     expect(points[0]).toMatchObject({ lesson: { id: "b" }, lastAt: 8000 });
+  });
+
+  it("leads with a fresh assignment over three courses begun weeks ago, until the learner goes back to one", () => {
+    const week = 7 * 864e5;
+    const started = ["c1", "c2", "c3"].map((id, i) => course({ id, createdAt: 1000 + i }));
+    seed(
+      [...started, course({ id: "today", assigned: true, createdAt: 3 * week })],
+      started.map((c, i) => ev(c.id, "lesson_started", "a", week + i)),
+    );
+    expect(continueTarget(read(), "p1").map((p) => p.course.id)).toEqual(["today", "c3", "c2", "c1"]);
+    update((s) => void s.activity.push(ev("c1", "lesson_completed", "a", 3 * week + 10)));
+    expect(continueTarget(read(), "p1").map((p) => p.course.id)).toEqual(["c1", "today", "c3", "c2"]);
+  });
+
+  it("offers courses not begun in the learner's path order, then by date added", () => {
+    seed(
+      [
+        course({ id: "b-later", createdAt: 3000 }),
+        course({ id: "a-earlier", createdAt: 2000 }),
+        course({ id: "moved-up", createdAt: 9000, order: 0 }),
+        course({ id: "second", createdAt: 1000, order: 1 }),
+      ],
+      [],
+    );
+    expect(continueTarget(read(), "p1").map((p) => p.course.id)).toEqual(["moved-up", "second", "a-earlier", "b-later"]);
   });
 
   it("is empty for a learner with no courses", () => {

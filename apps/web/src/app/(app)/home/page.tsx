@@ -2,25 +2,27 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { bandOf, catalogueFor } from "@/catalogue";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { IconArrowRight, IconChat, IconClock } from "@/components/icons";
 import { MagicBox } from "@/components/magic-box/MagicBox";
 import { Avatar } from "@/components/profiles/Avatar";
-import { Hear, HearContext } from "@/components/stage/hear";
+import { HearContext } from "@/components/stage/hear";
+import { BigHear } from "@/components/today/BigHear";
 import { ComingUp } from "@/components/today/ComingUp";
 import { CoursesInProgress } from "@/components/today/CoursesInProgress";
 import { PickTiles, SuggestCard } from "@/components/today/Picks";
 import { StatusStrip } from "@/components/today/StatusStrip";
 import { TodayPlan, usePlanStart } from "@/components/today/TodayPlan";
-import { EmptyState, btn, Button } from "@/components/ui";
+import { useNow } from "@/components/today/useNow";
+import { btn, Button } from "@/components/ui";
 import { useLocale, useT } from "@/i18n";
 import { continueTarget } from "@/lib/continue";
 import { goalsOf } from "@/lib/family";
 import { dayLabel } from "@/lib/format";
-import { logPlanLines, planRef, todayPlan, todayStatus, todayViewer } from "@/lib/plan";
+import { checkToStart, logPlanLines, planRef, todayPlan, todayStatus, todayViewer } from "@/lib/plan";
 import { learnersOf, selectLearner } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -35,22 +37,19 @@ export default function HomePage() {
   );
 }
 
-/** A learner sees their own Today; a grown-up (parent session) sees one child's, read-only. */
+/**
+ * A learner sees their own Today; a grown-up (parent session) sees the child asked for, read-only
+ * (`/home?learner=<id>`). A grown-up with no child named goes to Family, their home in the shell.
+ */
 function Home() {
-  const t = useT();
   const params = useSearchParams();
+  const router = useRouter();
   const viewer = useStore((s) => todayViewer(s, params.get("learner")));
-  if (!viewer)
-    return (
-      <EmptyState
-        title={t("family.empty")}
-        action={
-          <Link href="/profiles" className={btn("secondary")}>
-            {t("profiles.add")}
-          </Link>
-        }
-      />
-    );
+  const nobody = !viewer;
+  useEffect(() => {
+    if (nobody) router.replace("/family");
+  }, [nobody, router]);
+  if (!viewer) return null;
   return <Today key={viewer.learner.id} learner={viewer.learner} grownUp={viewer.grownUp} />;
 }
 
@@ -58,14 +57,15 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
   const t = useT();
   const locale = useLocale();
   const router = useRouter();
-  const [now] = useState(() => Date.now());
+  // Moves on at midnight and when the page is looked at again, so the plan is always today's.
+  const now = useNow();
   const plan = useStore((s) => todayPlan(s, learner, now));
   const status = useStore((s) => todayStatus(s, learner, now));
   const points = useStore((s) => continueTarget(s, learner.id));
   const school = useStore((s) => comingUp(s.events.filter((e) => e.profileId === learner.id), localDate(now)));
   const classes = useStore((s) => s.classes.filter((c) => c.profileId === learner.id));
   const goals = useStore(goalsOf);
-  const start = usePlanStart(learner, plan.date);
+  const start = usePlanStart(learner);
   const young = bandOf(learner.grade) === "k2";
   const tiles = young && !grownUp;
   const hello = grownUp ? t("today.forChild", { name: learner.nickname }) : t("home.hello", { name: learner.nickname });
@@ -79,14 +79,14 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
   }, [grownUp, learner.id, refs]);
 
   const timeUp = status.used >= status.budget;
-  const checkLine = [...plan.lead, ...plan.more].find((i) => i.kind === "check" && !i.done);
+  const check = checkToStart(plan, status.checks);
   const strip = (
     <StatusStrip
       status={status}
       learnerId={learner.id}
       young={young}
       grownUp={grownUp}
-      onStartCheck={grownUp ? undefined : () => (checkLine ? start(checkLine) : router.push("/practice"))}
+      onStartCheck={grownUp ? undefined : () => (check ? start(check) : router.push("/practice"))}
     />
   );
   const planView = <TodayPlan plan={plan} learner={learner} now={now} young={young} grownUp={grownUp} timeUp={timeUp} />;
@@ -109,14 +109,14 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
                 <p className="mt-1 text-sm text-muted">{date}</p>
               </div>
               {/* Read aloud without the name: speech voices can be a network service. */}
-              <Hear text={t("today.helloSay", { date })} />
+              <BigHear text={t("today.helloSay", { date })} />
             </div>
             {/* Little ones are offered the tutor first; it speaks first in Talk. */}
             <div className="flex items-center gap-3">
               <Link href="/talk" className={btn("secondary", "md", "min-h-14 px-6 text-base")}>
                 <IconChat size={20} /> {t("talk.title")}
               </Link>
-              <Hear text={t("talk.title")} />
+              <BigHear text={t("talk.title")} />
             </div>
             {strip}
           </header>
@@ -129,10 +129,14 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
               {t("home.askGrownUp")}
             </h2>
             <MagicBox learner={learner} />
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <p className="text-sm text-muted">{t("today.k2.budget", { name: learner.nickname, n: status.budget })}</p>
-              <Link href="/calendar?add=test" className={btn("ghost", "md", "-ml-3 sm:ml-0")}>
-                <IconClock size={16} /> {t("today.k2.addSchool")}
+            {/* Said to the grown-up: the child's own lines carry no minute numbers. */}
+            <p className="text-sm text-muted">{t("today.k2.dailyTime", { name: learner.nickname, n: status.budget })}</p>
+            <div className="-ml-3 flex flex-wrap gap-x-2 gap-y-1">
+              <Link href="/calendar?add=homework" className={btn("ghost")}>
+                <IconClock size={16} /> {t("today.k2.addHomework")}
+              </Link>
+              <Link href="/calendar?add=test" className={btn("ghost")}>
+                <IconClock size={16} /> {t("today.k2.addTest")}
               </Link>
             </div>
           </section>
@@ -152,7 +156,8 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
             <p className="mt-1 text-sm text-muted">{date}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/talk" className={btn("secondary")}>
+            {/* A family that came for help right now gets it as the raised action. */}
+            <Link href="/talk" className={btn(goals?.includes("help") ? "primary" : "secondary")}>
               <IconChat size={16} /> {t("today.helpNow")}
             </Link>
             <Link href="/calendar?add=test" className={btn("secondary")}>

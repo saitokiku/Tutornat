@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { RULES } from "@/learning/engine";
 import type { Attempt } from "@/learning/types";
-import { logPlanLines, markDone, minutesToday, planRef, stripLines, TEST_AHEAD_DAYS, todayPlan, todayStatus, todayViewer, type TodayStatus } from "@/lib/plan";
+import { checkToStart, logPlanLines, markDone, minutesToday, planRef, stripLines, TEST_AHEAD_DAYS, todayPlan, todayStatus, todayViewer, type TodayStatus } from "@/lib/plan";
 import { read, resetMemory, update } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { addDays, localDate } from "@/planner/dates";
+import { getSkill } from "@/practice/skills";
 import type { SchoolEvent } from "@/planner/types";
 
 // The arithmetic behind Today's status strip, the plan acts it logs, and who it is for.
@@ -151,6 +152,49 @@ describe("todayPlan", () => {
   });
 });
 
+describe("checkToStart", () => {
+  // Three checks open: the plan lists two (PLAN_RULES.maxChecks); the strip counts all three.
+  const ready = (skillId: string, start: number) =>
+    Array.from({ length: RULES.readyWindow }, (_, i) => attempt({ skillId, level: getSkill(skillId)!.levels, at: NOW - 3 * 864e5 + start + i * 1000, seconds: 4 }));
+  const three = () =>
+    update((s) => {
+      s.attempts = [...ready("m.add.5", 0), ...ready("m.count.10", 20_000), ...ready("m.count.20", 40_000)];
+    });
+  const finish = (skillId: string) =>
+    update((s) => void s.sets.push({ id: `c-${skillId}`, profileId: "p1", createdAt: NOW, kind: "check", subject: "math", skillId, slots: [], planKey: planRef(DATE, `check:${skillId}`), finishedAt: NOW }));
+
+  it("opens the plan's next check not done", () => {
+    family();
+    three();
+    const plan = todayPlan(read(), ada, NOW);
+    const checks = todayStatus(read(), ada, NOW).checks;
+    expect(checks).toHaveLength(3);
+    const lines = plan.lead.filter((i) => i.kind === "check");
+    expect(lines).toHaveLength(2);
+    expect(checkToStart(plan, checks)).toBe(lines[0]);
+  });
+
+  it("opens a check the plan had no room for once the plan's checks are done", () => {
+    family();
+    three();
+    const [first, second] = todayPlan(read(), ada, NOW).lead.filter((i) => i.kind === "check").map((i) => i.skillIds[0]);
+    finish(first);
+    finish(second);
+    const plan = todayPlan(read(), ada, NOW);
+    expect(plan.lead.filter((i) => i.kind === "check").every((i) => i.done)).toBe(true);
+    // The strip still counts every open check; the one the plan does not list is the one to start.
+    const checks = todayStatus(read(), ada, NOW).checks;
+    const third = checks.find((x) => x !== first && x !== second)!;
+    expect(third).toBeDefined();
+    expect(checkToStart(plan, checks)).toEqual({ key: `check:${third}`, kind: "check", minutes: 3, skillIds: [third], done: false });
+  });
+
+  it("is nothing when no check is open", () => {
+    family();
+    expect(checkToStart(todayPlan(read(), ada, NOW), [])).toBeNull();
+  });
+});
+
 describe("logPlanLines", () => {
   it("records one plan act per line per day, and nothing when shown again", () => {
     family();
@@ -178,11 +222,11 @@ describe("todayViewer", () => {
     expect(todayViewer(read(), "p1")).toEqual({ learner: leo, grownUp: false });
   });
 
-  it("is a grown-up looking at the child asked for, else the first; never another family's", () => {
+  it("is a grown-up looking at the child asked for; no one without one, and never another family's", () => {
     family("parent");
     expect(todayViewer(read(), "p2")).toEqual({ learner: leo, grownUp: true });
-    expect(todayViewer(read(), null)).toEqual({ learner: ada, grownUp: true });
-    expect(todayViewer(read(), "x1")).toEqual({ learner: ada, grownUp: true });
+    expect(todayViewer(read(), null)).toBeNull();
+    expect(todayViewer(read(), "x1")).toBeNull();
   });
 
   it("is no one when nobody is chosen", () => {

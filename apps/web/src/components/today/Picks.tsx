@@ -5,15 +5,20 @@ import type { CatalogueEntry } from "@/catalogue";
 import { CourseArt } from "@/components/courses/CourseArt";
 import { LangTag } from "@/components/courses/LangTag";
 import { IconArrowRight } from "@/components/icons";
-import { Hear, useHear } from "@/components/stage/hear";
+import { useHear } from "@/components/stage/hear";
 import { Button, SubjectDot } from "@/components/ui";
 import { useT } from "@/i18n";
+import { logAct } from "@/lib/acts";
 import { courseProgress } from "@/lib/activity";
 import { addFromCatalogue, coursesOf } from "@/lib/courses";
 import { useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
+import { BigHear } from "./BigHear";
 
-/** Adds the ready-made course if needed and opens the lesson to do next. */
+/**
+ * Adds the ready-made course if needed and opens the lesson to do next. A course added here is a
+ * teaching act (meant to be finished); `once` keeps it to one even if adding logs it too.
+ */
 function useStartCourse(learner: Profile) {
   const router = useRouter();
   const courses = useStore((s) => coursesOf(s, learner.id));
@@ -22,6 +27,7 @@ function useStartCourse(learner: Profile) {
     const mine = courses.find((c) => c.catalogueId === entry.id);
     const id = mine?.id ?? addFromCatalogue(entry.id, learner.id);
     if (!id) return;
+    if (!mine) logAct({ profileId: learner.id, kind: "course", intent: "course-finished", ref: id }, { once: true });
     const lesson = (mine && courseProgress(mine, events).next) ?? entry.lessons[0];
     router.push(`/learn/${id}/${lesson.id}`);
   };
@@ -39,7 +45,7 @@ export function PickTiles({ entries, learner }: { entries: CatalogueEntry[]; lea
         <h2 id="pick" className="font-brand text-t2 font-semibold text-ink">
           {t("home.pick")}
         </h2>
-        <Hear text={t("home.pick")} />
+        <BigHear text={t("home.pick")} />
       </div>
       <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {entries.map((entry) => (
@@ -50,7 +56,11 @@ export function PickTiles({ entries, learner }: { entries: CatalogueEntry[]; lea
               className="flex h-full min-h-14 w-full flex-col gap-3 rounded-lg border border-border bg-panel p-2.5 text-left shadow-soft transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-lift sm:p-3"
             >
               <CourseArt lessons={entry.lessons} subject={entry.subject} size="lg" />
-              <span className={`flex items-start gap-2 px-1 font-brand font-semibold text-ink ${hear ? "pb-12 text-t3 sm:pb-1 sm:pr-12 sm:text-t2" : "pb-1 text-t3"}`} lang={entry.locale}>
+              <span className="px-1 empty:hidden">
+                <LangTag course={entry.locale} learner={learner.locale} />
+              </span>
+              {/* Room for the 56px speaker: its own row on a phone, beside the name from `sm` up. */}
+              <span className={`flex min-w-0 items-start gap-2 break-words px-1 font-brand font-semibold text-ink ${hear ? "pb-16 text-t3 sm:min-h-14 sm:pb-1 sm:pr-16 sm:text-t2" : "pb-1 text-t3"}`} lang={entry.locale}>
                 <span className="mt-2">
                   <SubjectDot subject={entry.subject} />
                 </span>
@@ -58,7 +68,7 @@ export function PickTiles({ entries, learner }: { entries: CatalogueEntry[]; lea
               </span>
             </button>
             <span className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3">
-              <Hear text={entry.title} />
+              <BigHear text={entry.title} />
             </span>
           </li>
         ))}

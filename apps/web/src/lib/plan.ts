@@ -1,6 +1,6 @@
 import { checksOpen } from "@/learning/engine";
 import { daysBetween, localDate } from "@/planner/dates";
-import { planFor, type PlanItem } from "@/planner/plan";
+import { planFor, type Plan, type PlanItem } from "@/planner/plan";
 import type { SchoolEvent } from "@/planner/types";
 import { lessonState } from "./activity";
 import { logAct } from "./acts";
@@ -135,6 +135,18 @@ export function todayStatus(s: StoreState, p: Profile, now: number): TodayStatus
   };
 }
 
+/**
+ * The check the status strip's "checks ready" opens: the plan's next check not done, else the first open
+ * check the plan had no room for (it lists at most two), so the strip always goes where you act on it.
+ */
+export function checkToStart(plan: Plan, checks: string[]): PlanItem | null {
+  const lines = [...plan.lead, ...plan.more].filter((i) => i.kind === "check");
+  const next = lines.find((i) => !i.done);
+  if (next) return next;
+  const id = checks.find((x) => !lines.some((i) => i.skillIds[0] === x));
+  return id ? { key: `check:${id}`, kind: "check", minutes: 3, skillIds: [id], done: false } : null;
+}
+
 export type StripLine =
   | { kind: "due"; events: SchoolEvent[] }
   | { kind: "test"; event: SchoolEvent; inDays: number }
@@ -155,13 +167,13 @@ export function stripLines(status: TodayStatus, opts: { young: boolean; grownUp:
 
 /**
  * Who Today is for, decided the way the app shell decides: a selected learner sees their own Today; a
- * grown-up (the parent session) looks at one child — the one asked for, else the first.
+ * grown-up (the parent session) looks at the child asked for (`?learner=`), read-only. With no child
+ * asked for, Today is no one's: the grown-up's home is Family, as the shell's logo and tabs say.
  */
 export function todayViewer(s: StoreState, learnerId: string | null): { learner: Profile; grownUp: boolean } | null {
   const me = currentLearner(s);
   if (me) return { learner: me, grownUp: false };
   if (s.session.profileId !== "parent") return null;
-  const kids = learnersOf(s);
-  const child = kids.find((k) => k.id === learnerId) ?? kids[0];
+  const child = learnersOf(s).find((k) => k.id === learnerId);
   return child ? { learner: child, grownUp: true } : null;
 }

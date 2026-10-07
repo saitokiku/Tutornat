@@ -5,16 +5,18 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { IconArrowRight, IconBook, IconCheck, IconCheckCircle, IconChat, IconClock, IconLayers, IconRefresh } from "@/components/icons";
 import { whenLabel } from "@/components/practice/status";
-import { Hear } from "@/components/stage/hear";
 import { Badge, Button, SubjectDot, btn } from "@/components/ui";
 import { t as tr, useLocale, useT } from "@/i18n";
+import { lessonState } from "@/lib/activity";
 import { markDone, startPlanItem } from "@/lib/plan";
 import { isReviewed } from "@/lib/review";
 import { read, useStore } from "@/lib/store";
 import type { Locale, Profile } from "@/lib/types";
-import { fromLocalDate } from "@/planner/dates";
+import { fromLocalDate, localDate } from "@/planner/dates";
 import type { Plan, PlanItem } from "@/planner/plan";
 import { getSkill } from "@/practice/skills";
+import { BigHear } from "./BigHear";
+import { CourseTags } from "./CoursesInProgress";
 import { PlanPicture } from "./PlanPicture";
 
 const ICON = { check: IconCheckCircle, prep: IconClock, due: IconBook, feedback: IconChat, daily: IconLayers, review: IconRefresh, lesson: IconBook };
@@ -64,13 +66,15 @@ export function itemMeta(item: PlanItem, locale: Locale, now: number, minutes = 
 
 /**
  * Opens the work behind a plan line: the lesson, or the line's set (made now, or the one already
- * started today). Only ever called from a tap — nothing on Today starts by itself.
+ * started today). Only ever called from a tap — nothing on Today starts by itself. The set is filed
+ * under the day of the tap, so a screen left open past midnight still files today's work as today's.
  */
-export function usePlanStart(learner: Profile, date: string) {
+export function usePlanStart(learner: Profile) {
   const router = useRouter();
   return (item: PlanItem) => {
     if (item.kind === "lesson") return router.push(`/learn/${item.lesson!.courseId}/${item.lesson!.lessonId}`);
-    const id = startPlanItem(read(), learner, item, date, Date.now());
+    const now = Date.now();
+    const id = startPlanItem(read(), learner, item, localDate(now), now);
     if (id) router.push(`/practice/${id}?from=today`);
   };
 }
@@ -105,30 +109,32 @@ type Ctx = {
 export function TodayPlan({ plan, learner, now, young, grownUp = false, timeUp = false }: Props) {
   const t = useT();
   const locale = useLocale();
-  const start = usePlanStart(learner, plan.date);
+  const start = usePlanStart(learner);
   const tiles = young && !grownUp;
   const ctx: Ctx = { locale, now, learner, date: plan.date, tiles, grownUp, minutes: !young || grownUp, start };
-  const all = [...plan.lead, ...plan.more];
   const next = plan.lead.find((i) => !i.done);
   const rest = plan.lead.filter((i) => i !== next);
-  const progress = t("plan.progress", { done: plan.doneCount, total: all.length });
+  // The count is of today's plan (the lead), the same lines "done for today" is decided by; the extra
+  // lines below carry their own count.
+  const progress = t("plan.progress", { done: plan.lead.filter((i) => i.done).length, total: plan.lead.length });
+  const more = t("plan.more", { n: plan.more.length });
 
   const heading = (
     <span className="flex items-center gap-2">
       <h2 id="today" className="font-brand text-t2 font-semibold text-ink">
         {t("plan.title")}
       </h2>
-      <Hear text={t("plan.title")} />
+      <BigHear text={t("plan.title")} />
     </span>
   );
 
-  if (!all.length)
+  if (!plan.lead.length && !plan.more.length)
     return (
       <section aria-labelledby="today" className="space-y-2 rounded-lg border border-border bg-panel p-5">
         {heading}
         <p className="flex items-center gap-2 text-sm text-muted">
           <span className="flex-1">{t("plan.empty")}</span>
-          <Hear text={t("plan.empty")} />
+          <BigHear text={t("plan.empty")} />
         </p>
       </section>
     );
@@ -142,7 +148,7 @@ export function TodayPlan({ plan, learner, now, young, grownUp = false, timeUp =
             {progress}
             {ctx.minutes && ` · ${t("plan.budget", { n: plan.budget })}`}
           </span>
-          <Hear text={progress} />
+          <BigHear text={progress} />
         </p>
       </div>
 
@@ -150,24 +156,32 @@ export function TodayPlan({ plan, learner, now, young, grownUp = false, timeUp =
       {next && timeUp && !grownUp && (
         <p className="flex items-center gap-3 rounded-lg border border-border bg-panel2 px-5 py-3.5 text-sm text-ink">
           <span className="flex-1">{t("today.timeUp")}</span>
-          <Hear text={t("today.timeUp")} />
+          <BigHear text={t("today.timeUp")} />
         </p>
       )}
 
       {rest.length > 0 && <Lines items={rest} ctx={ctx} />}
 
       {plan.more.length > 0 && (
-        <details className="group rounded-lg border border-border bg-panel">
-          <summary className={`flex cursor-pointer list-none items-center gap-2 px-4 font-medium text-ink sm:px-5 ${tiles ? "min-h-14 text-base" : "min-h-12 text-sm"}`}>
-            {t("plan.more", { n: plan.more.length })}
-            <span aria-hidden="true" className="ml-auto text-muted transition-transform group-open:rotate-90">
-              ›
+        // The speaker sits beside the summary, not in it: a button inside <summary> is invalid and would toggle it.
+        <div className="relative rounded-lg border border-border bg-panel">
+          <details className="group">
+            <summary className={`flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 font-medium text-ink sm:px-5 ${tiles ? "min-h-16 pr-20 text-base sm:pr-20" : "min-h-12 text-sm"}`}>
+              {more}
+              <span aria-hidden="true" className="ml-auto text-muted transition-transform group-open:rotate-90">
+                ›
+              </span>
+            </summary>
+            <div className={tiles ? "border-t border-border p-3 sm:p-4" : "border-t border-border"}>
+              <Lines items={plan.more} ctx={ctx} flush />
+            </div>
+          </details>
+          {tiles && (
+            <span className="absolute right-1 top-1">
+              <BigHear text={more} />
             </span>
-          </summary>
-          <div className={tiles ? "border-t border-border p-3 sm:p-4" : "border-t border-border"}>
-            <Lines items={plan.more} ctx={ctx} flush />
-          </div>
-        </details>
+          )}
+        </div>
       )}
 
       {grownUp && <p className="text-sm text-muted">{t("today.readOnly", { name: learner.nickname })}</p>}
@@ -193,14 +207,30 @@ function Lines({ items, ctx, flush }: { items: PlanItem[]; ctx: Ctx; flush?: boo
   );
 }
 
-/** Hand-written questions not yet reviewed by a teacher are labelled wherever they show up. */
-function useDraft(item: PlanItem) {
-  return useStore((s) =>
+/**
+ * What a line needs said about it besides its title: hand-written questions not yet reviewed by a
+ * teacher, and for a lesson, what made its course (AI, a template) and its language. Plus whether a
+ * lesson is already under way, so it reads "Continue" here just as it does under the courses.
+ */
+function useLineFacts(item: PlanItem, ctx: Ctx) {
+  const t = useT();
+  const draft = useStore((s) =>
     item.skillIds.some((id) => {
       const skill = getSkill(id);
       return skill ? !isReviewed(s, skill) : false;
     }),
   );
+  const course = useStore((s) => (item.lesson ? s.courses.find((c) => c.id === item.lesson!.courseId) : undefined));
+  const lessonStarted = useStore(
+    (s) => !!item.lesson && !item.done && lessonState(s.activity.filter((e) => e.profileId === ctx.learner.id), item.lesson.courseId, item.lesson.lessonId) === "started",
+  );
+  const tags = (
+    <>
+      {draft && <Badge tone="warn">{t("practice.draft")}</Badge>}
+      {course && <CourseTags course={course} locale={ctx.locale} assigned={false} />}
+    </>
+  );
+  return { tags, hasTags: draft || !!course, resumes: !!item.setId || lessonStarted, lang: course?.locale };
 }
 
 /** School lines open their item page from the title. */
@@ -215,15 +245,15 @@ function TitleText({ item, title }: { item: PlanItem; title: string }) {
 
 function NextCard({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
   const t = useT();
-  const draft = useDraft(item);
+  const facts = useLineFacts(item, ctx);
   const Icon = ICON[item.kind];
   const title = itemTitle(item, ctx.locale);
   const text = (
     <div className="min-w-0 flex-1">
       <p className="flex items-center gap-2 text-sm font-medium text-muted">
-        <Icon size={16} /> {item.setId ? t("plan.pickUp") : t("plan.next")}
+        <Icon size={16} /> {facts.resumes ? t("plan.pickUp") : t("plan.next")}
       </p>
-      <p className="mt-1.5 font-brand text-t2 font-semibold text-ink sm:text-t1">
+      <p className="mt-1.5 font-brand text-t2 font-semibold text-ink sm:text-t1" lang={facts.lang}>
         {item.subject && (
           <span className="mr-2 inline-block align-middle">
             <SubjectDot subject={item.subject} />
@@ -233,7 +263,7 @@ function NextCard({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
       </p>
       <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
         {itemMeta(item, ctx.locale, ctx.now, ctx.minutes)}
-        {draft && <Badge tone="warn">{t("practice.draft")}</Badge>}
+        {facts.tags}
       </p>
     </div>
   );
@@ -251,9 +281,9 @@ function NextCard({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
       )}
       {!ctx.grownUp && (
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <Actions item={item} ctx={ctx} title={title} primary />
+          <Actions item={item} ctx={ctx} title={title} resumes={facts.resumes} primary />
           <span className="ml-auto">
-            <Hear text={title} />
+            <BigHear text={title} />
           </span>
         </div>
       )}
@@ -263,7 +293,7 @@ function NextCard({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
 
 function PlanRow({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
   const t = useT();
-  const draft = useDraft(item);
+  const facts = useLineFacts(item, ctx);
   const Icon = ICON[item.kind];
   const title = itemTitle(item, ctx.locale);
   return (
@@ -274,18 +304,18 @@ function PlanRow({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
       {/* On a narrow screen the actions drop below the title, never squeezing it. */}
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
         <span className="min-w-0 flex-1 basis-40">
-          <span className={`block text-sm font-medium ${item.done ? "text-muted line-through decoration-border" : "text-ink"}`}>
+          <span className={`block text-sm font-medium ${item.done ? "text-muted line-through decoration-border" : "text-ink"}`} lang={facts.lang}>
             <TitleText item={item} title={title} />
           </span>
-          <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
             {itemMeta(item, ctx.locale, ctx.now, ctx.minutes)}
-            {draft && <Badge tone="warn">{t("practice.draft")}</Badge>}
+            {facts.tags}
           </span>
         </span>
         {item.done && <span className="text-xs font-medium text-muted">{t("today.done")}</span>}
         {!ctx.grownUp && (
           <span className="flex flex-wrap items-center gap-2 empty:hidden">
-            <Actions item={item} ctx={ctx} title={title} />
+            <Actions item={item} ctx={ctx} title={title} resumes={facts.resumes} />
           </span>
         )}
       </div>
@@ -293,26 +323,28 @@ function PlanRow({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
   );
 }
 
-/** K–2: a picture tile. The whole tile starts the line; the speaker reads its name. */
+/**
+ * K–2: a picture tile. The whole tile starts the line; the speaker beside it reads its name. On a phone
+ * the speaker gets its own row under the Start mark; from `sm` up it sits beside it. Either way the two
+ * never overlap, whatever the length of the word.
+ */
 function PlanTile({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
   const t = useT();
-  const draft = useDraft(item);
+  const facts = useLineFacts(item, ctx);
   const title = itemTitle(item, ctx.locale);
   const name = (
-    <span className="flex items-start gap-2 px-1 font-brand text-t3 font-semibold text-ink">
+    <span className="flex items-start gap-2 px-1 font-brand text-t3 font-semibold text-ink" lang={facts.lang}>
       {item.subject && (
         <span className="mt-2">
           <SubjectDot subject={item.subject} />
         </span>
       )}
-      <span className={item.done ? "text-muted line-through decoration-border" : ""}>{title}</span>
+      <span className={`min-w-0 break-words ${item.done ? "text-muted line-through decoration-border" : ""}`}>{title}</span>
     </span>
   );
-  const extra = draft && (
-    <span className="px-1">
-      <Badge tone="warn">{t("practice.draft")}</Badge>
-    </span>
-  );
+  const tags = facts.hasTags && <span className="flex flex-wrap items-center gap-1.5 px-1">{facts.tags}</span>;
+  // Room for the 56px speaker in the tile's bottom-right corner.
+  const clear = "pb-16 sm:pb-0 sm:pr-16";
   const shell = "flex h-full min-h-14 w-full flex-col gap-3 rounded-lg border border-border p-2.5 text-left sm:p-3";
   let tile: ReactNode;
   if (item.done)
@@ -322,15 +354,15 @@ function PlanTile({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
           <PlanPicture item={item} locale={ctx.locale} />
         </span>
         {name}
-        <span className={`mt-auto flex min-h-10 items-center gap-2 px-1 text-sm font-medium text-muted ${item.kind === "due" ? "" : "pr-12"}`}>
+        <span className={`mt-auto flex min-h-10 items-center gap-2 px-1 text-sm font-medium text-muted sm:min-h-14 ${item.kind === "due" ? "" : clear}`}>
           <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-good text-paper">
             <IconCheck size={13} strokeWidth={2.5} />
           </span>
           {t("today.done")}
         </span>
         {item.kind === "due" && (
-          <span className="flex flex-col gap-2 pb-12">
-            <Actions item={item} ctx={ctx} title={title} />
+          <span className="flex flex-col gap-2 pb-16">
+            <Actions item={item} ctx={ctx} title={title} resumes={false} />
           </span>
         )}
       </div>
@@ -340,9 +372,9 @@ function PlanTile({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
       <div className={`${shell} bg-panel shadow-soft`}>
         <PlanPicture item={item} locale={ctx.locale} />
         {name}
-        {extra}
-        <span className="mt-auto flex flex-col gap-2 pb-12">
-          <Actions item={item} ctx={ctx} title={title} />
+        {tags}
+        <span className="mt-auto flex flex-col gap-2 pb-16">
+          <Actions item={item} ctx={ctx} title={title} resumes={false} />
         </span>
       </div>
     );
@@ -351,10 +383,10 @@ function PlanTile({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
       <button type="button" onClick={() => ctx.start(item)} className={`${shell} bg-panel shadow-soft transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-lift`}>
         <PlanPicture item={item} locale={ctx.locale} />
         {name}
-        {extra}
-        <span className="mt-auto flex min-h-10 items-center pr-12">
-          <span className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-4 text-sm font-semibold text-ink">
-            {startLabel(item, t)} <IconArrowRight size={15} />
+        {tags}
+        <span className={`mt-auto flex min-h-10 min-w-0 items-center sm:min-h-14 ${clear}`}>
+          <span className="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border border-border px-3 py-1 text-sm font-semibold text-ink sm:px-4">
+            {startLabel(item, facts.resumes, t)} <IconArrowRight size={15} className="shrink-0" />
           </span>
         </span>
       </button>
@@ -363,7 +395,7 @@ function PlanTile({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
     <li className="relative">
       {tile}
       <span className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3">
-        <Hear text={title} />
+        <BigHear text={title} />
       </span>
     </li>
   );
@@ -380,17 +412,19 @@ function DoneForToday({ tiles, more }: { tiles: boolean; more: boolean }) {
         <p className="font-brand text-t2 font-semibold text-ink">{title}</p>
         {body && <p className="mt-1 text-sm text-muted">{body}</p>}
       </div>
-      <Hear text={title} />
+      <BigHear text={title} />
     </div>
   );
 }
 
-const startLabel = (item: PlanItem, t: ReturnType<typeof useT>) =>
-  item.setId ? t("plan.continue") : item.kind === "check" ? t("practice.startCheck") : t("practice.start");
+/** "Continue" for a line under way (its set, or its lesson), else the start word for its kind. */
+const startLabel = (item: PlanItem, resumes: boolean, t: ReturnType<typeof useT>) =>
+  resumes ? t("plan.continue") : item.kind === "check" ? t("practice.startCheck") : t("practice.start");
 
-function Actions({ item, ctx, title, primary }: { item: PlanItem; ctx: Ctx; title: string; primary?: boolean }) {
+function Actions({ item, ctx, title, resumes, primary }: { item: PlanItem; ctx: Ctx; title: string; resumes: boolean; primary?: boolean }) {
   const t = useT();
-  const big = ctx.tiles ? "min-h-14 px-7 text-base" : "";
+  // K–2: 56px targets; tiles are narrow on a phone, so their buttons keep a smaller side padding.
+  const big = ctx.tiles ? `min-h-14 text-base ${primary ? "px-7" : "px-4"}` : "";
   // The visible word leads the accessible name and the line's title follows, so "Start" is never ambiguous.
   const named = (label: string) => ({ "aria-label": `${label}, ${title}` });
   if (item.kind === "due" && item.done)
@@ -404,14 +438,15 @@ function Actions({ item, ctx, title, primary }: { item: PlanItem; ctx: Ctx; titl
     return (
       <>
         <Link href={`/talk?event=${item.event!.id}`} className={btn(primary ? "primary" : "secondary", "md", big)} {...named(t("plan.getHelp"))}>
-          <IconChat size={16} /> {t("plan.getHelp")}
+          <IconChat size={16} className="shrink-0" /> {t("plan.getHelp")}
         </Link>
-        <Button variant={primary ? "secondary" : "ghost"} className={big} onClick={() => markDone(ctx.learner.id, ctx.date, item.key)} {...named(t("plan.markDone"))}>
-          <IconCheck size={16} /> {t("plan.markDone")}
+        {/* Ticked off on the day of the tap, like a set started from here. */}
+        <Button variant={primary ? "secondary" : "ghost"} className={big} onClick={() => markDone(ctx.learner.id, localDate(Date.now()), item.key)} {...named(t("plan.markDone"))}>
+          <IconCheck size={16} className="shrink-0" /> {t("plan.markDone")}
         </Button>
       </>
     );
-  const label = startLabel(item, t);
+  const label = startLabel(item, resumes, t);
   return (
     <Button variant={primary ? "primary" : "secondary"} className={big} onClick={() => ctx.start(item)} {...named(label)}>
       {label}
