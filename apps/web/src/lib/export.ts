@@ -28,7 +28,7 @@ export type FamilyExport = {
 const NEVER_EXPORTED = new Set(["accounts", "profiles", "resets"]);
 
 type Row = Record<string, unknown>;
-const lists = (s: StoreState) => Object.entries(s).filter((e): e is [string, unknown[]] => Array.isArray(e[1]));
+const lists = (s: StoreState) => (Object.entries(s) as [string, unknown][]).filter((e): e is [string, unknown[]] => Array.isArray(e[1]));
 
 function owner(accountId: string, profileIds: Set<string>) {
   return (row: unknown) => {
@@ -49,7 +49,9 @@ export function exportFamily(s: StoreState, accountId: string, opts: { at?: numb
   if (!account) return null;
   const ids = familyIds(s, accountId);
   const mine = owner(accountId, ids);
-  const { salt: _salt, passwordHash: _hash, ...safe } = account;
+  const safe: Partial<Account> = { ...account };
+  delete safe.salt;
+  delete safe.passwordHash;
   const data: Record<string, unknown[]> = {};
   for (const [key, rows] of lists(s)) if (!NEVER_EXPORTED.has(key)) data[key] = rows.filter(mine);
   return {
@@ -57,7 +59,7 @@ export function exportFamily(s: StoreState, accountId: string, opts: { at?: numb
     version: 1,
     exportedAt: new Date(opts.at ?? Date.now()).toISOString(),
     ...(opts.note ? { note: opts.note } : {}),
-    account: safe,
+    account: safe as FamilyExport["account"],
     learners: s.profiles.filter((p) => p.accountId === accountId),
     prefs: s.prefs,
     data,
