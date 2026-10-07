@@ -61,8 +61,10 @@ In progress: (none) — overnight queue finished · check-ins without a commit: 
 **Not done / needs you**
 - AI tutor and real course writing (OpenMAIC) — not connected; outlines from the box are templates.
 - Real accounts/database — demo saves in the browser only.
-- Deploy to kaizenedu.net — waiting for your go-ahead. Work is on branch `foundation`, not pushed.
+- Deploy to kaizenedu.net — waiting for your go-ahead. Preview of `foundation` is live (Vercel login
+  required): https://kaizenedu-5ki2fsmjn-saitokikus-projects.vercel.app
+- Push: `git push -u origin foundation` — the agent's push was blocked by its safety check; run it yourself.
 - Rotate the six provider keys committed in the old KaizenEdu repo.
 - Spanish copy needs a native-speaker read before launch.
 
-**Next:** say "push and deploy a preview" to get a Vercel preview link, or pick the backend (ROADMAP Phase 2).
+**Next:** pick the backend (ROADMAP Phase 2) — accounts, database and child-privacy consent come before any AI.
