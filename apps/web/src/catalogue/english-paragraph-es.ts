@@ -44,7 +44,7 @@ const parrafoEs: CatalogueEntry = {
             { type: "text", text: "Lee este párrafo y fíjate en lo que hace la primera oración." },
             {
               type: "text",
-              text: "“El mercado de los domingos es mucho más que un lugar para comprar fruta. Ahí mi abuela saluda a vecinos que no ve en toda la semana. Los puestos de comida reúnen a familias enteras alrededor de una misma mesa. Los niños aprenden a pedir, a contar el cambio y a regatear con respeto. Para muchas familias del barrio, el mercado es el punto de encuentro de la semana.”",
+              text: "“El mercado de los domingos es mucho más que un lugar para comprar fruta. Ahí mi abuela saluda a vecinos que no ve en toda la semana. Los puestos de comida reúnen a familias enteras alrededor de una misma mesa. Los niños aprenden a pedir, a contar el cambio y a regatear con respeto. Para muchas familias del barrio, el mercado es el punto de encuentro de la semana”.",
             },
             {
               type: "text",
@@ -64,9 +64,9 @@ const parrafoEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Demasiado amplia: “El deporte es popular en todo el mundo.” Eso da para un libro, no para un párrafo.",
-                "Demasiado estrecha: “El entrenamiento de fútbol empieza a las cuatro.” Una vez dicho, ya no queda nada que explicar.",
-                "Enfocada: “Jugar en un equipo de fútbol me enseñó a perder sin enojarme.” Un párrafo puede explicarlo bien.",
+                "Demasiado amplia: “El deporte es popular en todo el mundo”. Eso da para un libro, no para un párrafo.",
+                "Demasiado estrecha: “El entrenamiento de fútbol empieza a las cuatro”. Una vez dicho, ya no queda nada que explicar.",
+                "Enfocada: “Jugar en un equipo de fútbol me enseñó a perder sin enojarme”. Un párrafo puede explicarlo bien.",
               ],
             },
           ],
@@ -83,8 +83,8 @@ const parrafoEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Solo el tema: “Este párrafo trata de mi perro.”",
-                "Tema y afirmación: “Cuidar a mi perro me ha hecho más responsable.”",
+                "Solo el tema: “Este párrafo trata de mi perro”.",
+                "Tema y afirmación: “Cuidar a mi perro me ha hecho más responsable”.",
                 "Evita anuncios como “En este párrafo les voy a hablar de…”. Di directamente lo que piensas.",
               ],
             },
@@ -184,8 +184,8 @@ const parrafoEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Datos y cifras: “La biblioteca abre 60 horas a la semana.”",
-                "Ejemplos: “El domingo pasado, en el mercado, vi a un señor enseñarle a su nieta a escoger aguacates.”",
+                "Datos y cifras: “La biblioteca abre 60 horas a la semana”.",
+                "Ejemplos: “El domingo pasado, en el mercado, vi a un señor enseñarle a su nieta a escoger aguacates”.",
                 "Explicaciones: oraciones que dicen por qué un dato o un ejemplo importa.",
                 "Citas: las palabras exactas de alguien, entre comillas.",
               ],
@@ -203,7 +203,7 @@ const parrafoEs: CatalogueEntry = {
             },
             {
               type: "text",
-              text: "“Ir a la escuela en bicicleta es una buena forma de empezar el día. Son quince minutos de ejercicio antes de pasar horas sentado en clase. En el camino voy hablando con mis amigos. Mi prima Sofía acaba de adoptar un gato. Cuando llego al salón, ya estoy despierto y con ganas de trabajar.”",
+              text: "“Ir a la escuela en bicicleta es una buena forma de empezar el día. Son quince minutos de ejercicio antes de pasar horas sentado en clase. En el camino voy hablando con mis amigos. Mi prima Sofía acaba de adoptar un gato. Cuando llego al salón, ya estoy despierto y con ganas de trabajar”.",
             },
             {
               type: "text",
@@ -223,9 +223,9 @@ const parrafoEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Oración temática: “Nuestra escuela necesita un recreo más largo.”",
-                "Solo el dato: “La fila de la cafetería tarda 15 minutos.”",
-                "Dato y explicación: “La fila de la cafetería tarda 15 minutos, así que de un recreo de 25 solo quedan 10 para comer y jugar.”",
+                "Oración temática: “Nuestra escuela necesita un recreo más largo”.",
+                "Solo el dato: “La fila de la cafetería tarda 15 minutos”.",
+                "Dato y explicación: “La fila de la cafetería tarda 15 minutos, así que de un recreo de 25 solo quedan 10 para comer y jugar”.",
               ],
             },
             { type: "text", text: "La explicación convierte un dato suelto en apoyo para la idea." },
@@ -235,7 +235,7 @@ const parrafoEs: CatalogueEntry = {
           id: "s4",
           kind: "interactive",
           title: "¿Apoya o se desvía?",
-          prompt: "Oración temática: “Cuidar las plantas del salón nos enseña a ser responsables.” Clasifica cada oración.",
+          prompt: "Oración temática: “Cuidar las plantas del salón nos enseña a ser responsables”. Clasifica cada oración.",
           widget: {
             kind: "sorter",
             categories: ["Apoya el tema", "Se desvía del tema"],
@@ -256,7 +256,7 @@ const parrafoEs: CatalogueEntry = {
           questions: [
             {
               id: "q1",
-              prompt: "Oración temática: “Aprender a nadar me hizo más valiente.” ¿Qué detalle la apoya mejor?",
+              prompt: "Oración temática: “Aprender a nadar me hizo más valiente”. ¿Qué detalle la apoya mejor?",
               choices: [
                 "La piscina está junto al parque.",
                 "La primera vez que salté a la parte honda me temblaban las piernas, pero al día siguiente volví a saltar.",
@@ -278,7 +278,7 @@ const parrafoEs: CatalogueEntry = {
             },
             {
               id: "q3",
-              prompt: "Oración temática: “Nuestra escuela necesita más bebederos.” ¿Qué oración da un dato y lo explica?",
+              prompt: "Oración temática: “Nuestra escuela necesita más bebederos”. ¿Qué oración da un dato y lo explica?",
               choices: [
                 "Somos 900 alumnos y solo hay dos bebederos, así que en el recreo las filas son tan largas que no alcanzamos a tomar agua.",
                 "Somos 900 alumnos.",
@@ -342,11 +342,11 @@ const parrafoEs: CatalogueEntry = {
           blocks: [
             {
               type: "text",
-              text: "Sin conectores: “Quería entrar al club de robótica. Las reuniones eran los martes. Los martes tenía clase de guitarra. Hablé con mi maestra de guitarra. Cambió mi clase al jueves. Entré al club en octubre.”",
+              text: "Sin conectores: “Quería entrar al club de robótica. Las reuniones eran los martes. Los martes tenía clase de guitarra. Hablé con mi maestra de guitarra. Cambió mi clase al jueves. Entré al club en octubre”.",
             },
             {
               type: "text",
-              text: "Con conectores: “Quería entrar al club de robótica. Sin embargo, las reuniones eran los martes, cuando tenía clase de guitarra. Por eso hablé con mi maestra, y ella cambió mi clase al jueves. Gracias a eso, en octubre entré al club.”",
+              text: "Con conectores: “Quería entrar al club de robótica. Sin embargo, las reuniones eran los martes, cuando tenía clase de guitarra. Por eso hablé con mi maestra, y ella cambió mi clase al jueves. Gracias a eso, en octubre entré al club”.",
             },
             {
               type: "text",
@@ -363,8 +363,8 @@ const parrafoEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Mal: “Llovió toda la mañana. Por ejemplo, se canceló el partido.” Un partido cancelado no es un ejemplo de lluvia: es una consecuencia.",
-                "Bien: “Llovió toda la mañana. Por eso se canceló el partido.”",
+                "Mal: “Llovió toda la mañana. Por ejemplo, se canceló el partido”. Un partido cancelado no es un ejemplo de lluvia: es una consecuencia.",
+                "Bien: “Llovió toda la mañana. Por eso se canceló el partido”.",
                 "Al inicio de una oración, “sin embargo”, “por ejemplo” y “además” suelen llevar coma después.",
                 "No empieces todas las oraciones con un conector. Úsalo donde la relación entre las ideas no quedaría clara.",
               ],
@@ -416,7 +416,7 @@ const parrafoEs: CatalogueEntry = {
           questions: [
             {
               id: "q1",
-              prompt: "“La biblioteca estaba cerrada el lunes. ___ estudié en la mesa de la cocina.” ¿Qué conector encaja mejor?",
+              prompt: "“La biblioteca estaba cerrada el lunes. ___ estudié en la mesa de la cocina”. ¿Qué conector encaja mejor?",
               choices: ["Por ejemplo,", "Además,", "Por eso", "En cambio,"],
               answer: 2,
               hint: "¿La segunda oración agrega algo, da un ejemplo, contrasta o cuenta lo que pasó a causa de la primera?",
@@ -488,13 +488,13 @@ const parrafoEs: CatalogueEntry = {
           kind: "slide",
           title: "Tres finales",
           blocks: [
-            { type: "text", text: "Oración temática: “El mercado de los domingos es mucho más que un lugar para comprar fruta.”" },
+            { type: "text", text: "Oración temática: “El mercado de los domingos es mucho más que un lugar para comprar fruta”." },
             {
               type: "points",
               items: [
-                "Copia: “El mercado de los domingos es mucho más que un lugar para comprar fruta.”",
-                "Agrega una idea nueva: “También deberían arreglar el parque del barrio.”",
-                "Cierra bien: “Para muchas familias del barrio, el mercado es el punto de encuentro de la semana.”",
+                "Copia: “El mercado de los domingos es mucho más que un lugar para comprar fruta”.",
+                "Agrega una idea nueva: “También deberían arreglar el parque del barrio”.",
+                "Cierra bien: “Para muchas familias del barrio, el mercado es el punto de encuentro de la semana”.",
               ],
             },
             { type: "text", text: "El último repite la idea con palabras nuevas y dice por qué importa." },
@@ -528,11 +528,11 @@ const parrafoEs: CatalogueEntry = {
           blocks: [
             {
               type: "text",
-              text: "Borrador: “El recreo. El recreo está bien y jugamos fútbol. Mi amigo tiene una mochila nueva. Debería ser más largo. Eso es todo.”",
+              text: "Borrador: “El recreo. El recreo está bien y jugamos fútbol. Mi amigo tiene una mochila nueva. Debería ser más largo. Eso es todo”.",
             },
             {
               type: "text",
-              text: "Versión revisada: “Nuestra escuela debería alargar el recreo diez minutos. Ahora dura 15 minutos, y casi cinco se van en formarnos y salir al patio. Un recreo más largo nos daría tiempo de jugar de verdad. Además, muchos compañeros dicen que se concentran mejor después de correr un rato. Diez minutos más afuera podrían significar una mejor tarde adentro.”",
+              text: "Versión revisada: “Nuestra escuela debería alargar el recreo diez minutos. Ahora dura 15 minutos, y casi cinco se van en formarnos y salir al patio. Un recreo más largo nos daría tiempo de jugar de verdad. Además, muchos compañeros dicen que se concentran mejor después de correr un rato. Diez minutos más afuera podrían significar una mejor tarde adentro”.",
             },
             {
               type: "text",
@@ -544,7 +544,7 @@ const parrafoEs: CatalogueEntry = {
           id: "s5",
           kind: "interactive",
           title: "¿Cierre sólido o débil?",
-          prompt: "Oración temática: “Ayudar en casa me enseñó a organizar mi tiempo.” Clasifica cada posible oración de cierre.",
+          prompt: "Oración temática: “Ayudar en casa me enseñó a organizar mi tiempo”. Clasifica cada posible oración de cierre.",
           widget: {
             kind: "sorter",
             categories: ["Cierre sólido", "Cierre débil"],
@@ -587,7 +587,7 @@ const parrafoEs: CatalogueEntry = {
             },
             {
               id: "q3",
-              prompt: "Oración temática: “Nuestro parque necesita más sombra.” ¿Cuál es la oración de cierre más sólida?",
+              prompt: "Oración temática: “Nuestro parque necesita más sombra”. ¿Cuál es la oración de cierre más sólida?",
               choices: [
                 "Unos cuantos árboles más convertirían un parque caluroso y vacío en un lugar que las familias usen todo el verano.",
                 "Nuestro parque necesita más sombra.",

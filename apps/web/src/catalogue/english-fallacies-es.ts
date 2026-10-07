@@ -46,7 +46,7 @@ const falaciasEs: CatalogueEntry = {
             },
             {
               type: "text",
-              text: "“Don Ernesto dice que hace falta un semáforo en la esquina de la escuela, pero ni siquiera sabe usar su celular, así que no le hagas caso.”",
+              text: "“Don Ernesto dice que hace falta un semáforo en la esquina de la escuela, pero ni siquiera sabe usar su celular, así que no le hagas caso”.",
             },
             {
               type: "text",
@@ -70,8 +70,8 @@ const falaciasEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Argumento real: “La cafetería debería tener un día a la semana sin bebidas azucaradas.”",
-                "Respuesta de hombre de paja: “¿O sea que quieres prohibir todo lo dulce y que comamos puras verduras? Qué exageración.”",
+                "Argumento real: “La cafetería debería tener un día a la semana sin bebidas azucaradas”.",
+                "Respuesta de hombre de paja: “¿O sea que quieres prohibir todo lo dulce y que comamos puras verduras? Qué exageración”.",
                 "Nadie habló de prohibir lo dulce. La respuesta ataca algo que nadie dijo.",
               ],
             },
@@ -110,7 +110,7 @@ const falaciasEs: CatalogueEntry = {
           questions: [
             {
               id: "q1",
-              prompt: "“No le creas a Andrés lo del torneo. Ni siquiera sabe amarrarse los cordones.” ¿Qué falacia es?",
+              prompt: "“No le creas a Andrés lo del torneo. Ni siquiera sabe amarrarse los cordones”. ¿Qué falacia es?",
               choices: ["Ataque personal", "Hombre de paja", "No hay falacia"],
               answer: 0,
               hint: "¿De qué habla la respuesta: del torneo o de Andrés?",
@@ -118,7 +118,7 @@ const falaciasEs: CatalogueEntry = {
             },
             {
               id: "q2",
-              prompt: "Lucía: “La escuela debería empezar media hora más tarde.” Andrés: “Lucía quiere que durmamos todo el día y no aprendamos nada.” ¿Qué hizo Andrés?",
+              prompt: "Lucía: “La escuela debería empezar media hora más tarde”. Andrés: “Lucía quiere que durmamos todo el día y no aprendamos nada”. ¿Qué hizo Andrés?",
               choices: [
                 "Cambió la idea de Lucía por una versión exagerada y atacó esa versión",
                 "Dio pruebas contra empezar más tarde",
@@ -147,10 +147,10 @@ const falaciasEs: CatalogueEntry = {
               id: "q4",
               prompt: "La señora Pérez propone que la biblioteca abra los domingos. ¿Qué respuesta discute su argumento en vez de atacarla a ella?",
               choices: [
-                "“Seguro lo quiere para ella sola.”",
-                "“Abrir el domingo requeriría dos turnos más de personal, y el presupuesto de la biblioteca acaba de bajar, así que primero habría que conseguir el dinero.”",
-                "“Nunca ha sabido administrar nada.”",
-                "“A nadie le cae bien la señora Pérez.”",
+                "“Seguro lo quiere para ella sola”.",
+                "“Abrir el domingo requeriría dos turnos más de personal, y el presupuesto de la biblioteca acaba de bajar, así que primero habría que conseguir el dinero”.",
+                "“Nunca ha sabido administrar nada”.",
+                "“A nadie le cae bien la señora Pérez”.",
               ],
               answer: 1,
               hint: "Busca la respuesta que habla de la biblioteca, no de la señora Pérez.",
@@ -188,11 +188,11 @@ const falaciasEs: CatalogueEntry = {
               type: "text",
               text: "La falacia del efecto arrastre, también llamada ad populum, dice que algo es cierto o correcto porque mucha gente lo cree o lo hace.",
             },
-            { type: "text", text: "“Este reto ya lo hicieron millones de personas en redes, así que no puede ser peligroso.”" },
+            { type: "text", text: "“Este reto ya lo hicieron millones de personas en redes, así que no puede ser peligroso”." },
             { type: "text", text: "Que millones lo hayan hecho muestra que el reto es popular. No muestra que sea seguro." },
             {
               type: "text",
-              text: "La popularidad sí es buena prueba cuando la afirmación trata de popularidad: “Fue el libro más prestado de la biblioteca este año.”",
+              text: "La popularidad sí es buena prueba cuando la afirmación trata de popularidad: “Fue el libro más prestado de la biblioteca este año”.",
             },
           ],
         },
@@ -208,8 +208,8 @@ const falaciasEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Falacia: “Un futbolista famoso dice que este cereal es el desayuno más sano, así que debe serlo.” Un futbolista no es experto en nutrición, y seguramente le pagan por decirlo.",
-                "Justo: “Los especialistas en sueño recomiendan que los adolescentes duerman de 8 a 10 horas cada noche.” Son expertos en su campo y sus estudios coinciden.",
+                "Falacia: “Un futbolista famoso dice que este cereal es el desayuno más sano, así que debe serlo”. Un futbolista no es experto en nutrición, y seguramente le pagan por decirlo.",
+                "Justo: “Los especialistas en sueño recomiendan que los adolescentes duerman de 8 a 10 horas cada noche”. Son expertos en su campo y sus estudios coinciden.",
               ],
             },
             {
@@ -230,8 +230,8 @@ const falaciasEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "“Únete a los millones que ya lo usan.” Efecto arrastre.",
-                "“El celular más vendido del país.” Efecto arrastre, a menos que solo hable de ventas.",
+                "“Únete a los millones que ya lo usan”. Efecto arrastre.",
+                "“El celular más vendido del país”. Efecto arrastre, a menos que solo hable de ventas.",
                 "Una cantante famosa promocionando un producto del que no sabe nada especial. Falsa autoridad.",
               ],
             },
@@ -263,7 +263,7 @@ const falaciasEs: CatalogueEntry = {
           questions: [
             {
               id: "q1",
-              prompt: "“Cuatro de cada cinco chicos de la escuela juegan este juego, así que es el mejor juego del mundo.” ¿Qué falacia es?",
+              prompt: "“Cuatro de cada cinco chicos de la escuela juegan este juego, así que es el mejor juego del mundo”. ¿Qué falacia es?",
               choices: ["Efecto arrastre", "Falsa autoridad", "Hombre de paja", "Ataque personal"],
               answer: 0,
               hint: "¿Qué razón se da para decir que es el mejor?",
@@ -338,7 +338,7 @@ const falaciasEs: CatalogueEntry = {
           title: "Falso dilema: solo dos puertas",
           blocks: [
             { type: "text", text: "Un falso dilema ofrece solo dos opciones cuando hay más." },
-            { type: "text", text: "“O prohibimos los celulares en la escuela, o nadie va a volver a poner atención.”" },
+            { type: "text", text: "“O prohibimos los celulares en la escuela, o nadie va a volver a poner atención”." },
             {
               type: "text",
               text: "Hay otras opciones: guardar los celulares durante la clase, tener zonas sin celular o poner reglas claras sobre cuándo se pueden usar.",
@@ -363,7 +363,7 @@ const falaciasEs: CatalogueEntry = {
             },
             {
               type: "text",
-              text: "“Si dejamos que pongan música en la hora de estudio, luego van a querer música en los exámenes, después nadie va a estudiar y toda la escuela va a reprobar.”",
+              text: "“Si dejamos que pongan música en la hora de estudio, luego van a querer música en los exámenes, después nadie va a estudiar y toda la escuela va a reprobar”.",
             },
             {
               type: "text",
@@ -387,7 +387,7 @@ const falaciasEs: CatalogueEntry = {
             },
             {
               type: "text",
-              text: "“Les pregunté a tres amigos de mi grupo de 30 y a ninguno le gusta el nuevo menú de la cafetería, así que no le gusta a nadie del grupo.”",
+              text: "“Les pregunté a tres amigos de mi grupo de 30 y a ninguno le gusta el nuevo menú de la cafetería, así que no le gusta a nadie del grupo”.",
             },
             {
               type: "text",
@@ -424,7 +424,7 @@ const falaciasEs: CatalogueEntry = {
           questions: [
             {
               id: "q1",
-              prompt: "“O apoyas el nuevo estadio, o no te importa nuestra ciudad.” ¿Qué falacia es?",
+              prompt: "“O apoyas el nuevo estadio, o no te importa nuestra ciudad”. ¿Qué falacia es?",
               choices: ["Falso dilema", "Pendiente resbaladiza", "Generalización apresurada", "Efecto arrastre"],
               answer: 0,
               hint: "¿Cuántas opciones ofrece? ¿Hay más?",
@@ -501,8 +501,8 @@ const falaciasEs: CatalogueEntry = {
             {
               type: "points",
               items: [
-                "Mamá: “¿Por qué tu cuarto sigue desordenado?” Hijo: “Pues el garaje de papá está peor.” El garaje es otro asunto.",
-                "Periodista: “¿El nuevo centro comercial va a aumentar el tráfico frente a la escuela?” Constructora: “Este centro comercial tendrá la mejor zona de comida de la región.” La zona de comida no responde a la pregunta del tráfico.",
+                "Mamá: “¿Por qué tu cuarto sigue desordenado?” Hijo: “Pues el garaje de papá está peor”. El garaje es otro asunto.",
+                "Periodista: “¿El nuevo centro comercial va a aumentar el tráfico frente a la escuela?” Constructora: “Este centro comercial tendrá la mejor zona de comida de la región”. La zona de comida no responde a la pregunta del tráfico.",
               ],
             },
             { type: "text", text: "El tema nuevo puede incluso ser cierto. Sigue siendo una pista falsa si no responde a lo que se preguntó." },
@@ -560,7 +560,7 @@ const falaciasEs: CatalogueEntry = {
               { id: "perro", text: "Sí, se me olvidó darle de comer al perro, pero ¿ya viste qué calificación saqué en matemáticas?", answer: 0 },
               {
                 id: "puente",
-                text: "Periodista: “¿Por qué la reparación del puente costó el doble de lo planeado?” Alcaldesa: “Nuestra ciudad tiene los mejores parques de la región.”",
+                text: "Periodista: “¿Por qué la reparación del puente costó el doble de lo planeado?” Alcaldesa: “Nuestra ciudad tiene los mejores parques de la región”.",
                 answer: 0,
               },
               { id: "julian", text: "¿Por qué escuchar las ideas de Julián sobre el presupuesto? Siempre llega tarde a clase.", answer: 1 },
@@ -583,7 +583,7 @@ const falaciasEs: CatalogueEntry = {
           questions: [
             {
               id: "q1",
-              prompt: "Maestra: “Tu ensayo lleva dos días de retraso.” Alumno: “La comida de la cafetería es horrible.” ¿Qué falacia es?",
+              prompt: "Maestra: “Tu ensayo lleva dos días de retraso”. Alumno: “La comida de la cafetería es horrible”. ¿Qué falacia es?",
               choices: ["Pista falsa", "Hombre de paja", "Generalización apresurada", "Falso dilema"],
               answer: 0,
               hint: "¿La respuesta del alumno tiene algo que ver con el ensayo?",
@@ -591,7 +591,7 @@ const falaciasEs: CatalogueEntry = {
             },
             {
               id: "q2",
-              prompt: "“Todo el mundo está comprando la nueva consola, así que debe valer lo que cuesta.” ¿Qué falacia es?",
+              prompt: "“Todo el mundo está comprando la nueva consola, así que debe valer lo que cuesta”. ¿Qué falacia es?",
               choices: ["Efecto arrastre", "Falsa autoridad", "Pendiente resbaladiza", "Pista falsa"],
               answer: 0,
               hint: "¿Cuál es la única razón que se da?",
@@ -599,7 +599,7 @@ const falaciasEs: CatalogueEntry = {
             },
             {
               id: "q3",
-              prompt: "“Un chef famoso dice que este coche es el más seguro del mercado.” ¿Qué falacia es?",
+              prompt: "“Un chef famoso dice que este coche es el más seguro del mercado”. ¿Qué falacia es?",
               choices: ["Falsa autoridad", "Efecto arrastre", "Ataque personal", "Falso dilema"],
               answer: 0,
               hint: "¿Un chef es experto en seguridad de coches?",
