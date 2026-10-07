@@ -399,6 +399,10 @@ const SUBJECT_TOPICS: [Exclude<Subject, "other">, RegExp][] = [
   ["science", words("lab|laboratorio|experiment|experimento|plants?|plantas?|animals?|animales|cells?|c[eé]lulas?|planets?|planetas?")],
   ["english", words("essay|ensayo|book report|vocabulary|vocabulario|poetry|poes[ií]a|poems?|poemas?|paragraph|p[aá]rrafo|story|cuento")],
 ];
+// The form of the work outranks its topic: "a paragraph about plants" is writing, whatever it is about.
+const TASK_FORMS: [Exclude<Subject, "other">, RegExp][] = [
+  ["english", words("essay|ensayo|book report|informe de lectura|paragraph|p[aá]rrafo|poem|poema|journal entry|summary|resumen|persuasive letter|carta")],
+];
 function subjectIn(text: string, list: typeof SUBJECT_NAMES): Subject | undefined {
   return list
     .map(([s, re]) => [s, re.exec(text)?.index ?? Infinity] as const)
@@ -491,7 +495,7 @@ export function classifyIntake(text: string, ctx: IntakeContext): IntakeGuess {
   // pasted page); then the subject's own name; then the skills; then topic words. When exactly one of
   // the learner's classes is in that subject, it is picked; the family sees it and can change it.
   const inClass = classNamed(rest, ctx.classes) ?? classNamed(about, ctx.classes);
-  const said = inClass?.subject ?? subjectIn(rest, SUBJECT_NAMES) ?? subjectIn(about, SUBJECT_NAMES);
+  const said = inClass?.subject ?? subjectIn(rest, SUBJECT_NAMES) ?? subjectIn(about, SUBJECT_NAMES) ?? subjectIn(rest, TASK_FORMS);
   const skillIds = skillsFor(about, title, said);
   const subject = said ?? getSkill(skillIds[0] ?? "")?.subject ?? subjectIn(about, SUBJECT_TOPICS);
   const cls = inClass ?? onlyClassIn(ctx.classes, subject);

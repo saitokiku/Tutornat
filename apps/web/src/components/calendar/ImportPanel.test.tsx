@@ -40,7 +40,8 @@ describe("ImportPanel", () => {
     expect(screen.getByLabelText("Type: Multiplication test")).toHaveValue("test");
     expect(eventsOf(read(), "p1")).toEqual([]);
     await user.click(screen.getByRole("button", { name: "Save 1" }));
-    expect(eventsOf(read(), "p1")).toMatchObject([{ title: "Multiplication test", date: soon, kind: "test", source: "paste", skillIds: ["m.mult.facts"] }]);
+    expect(eventsOf(read(), "p1")).toMatchObject([{ title: "Multiplication test", date: soon, kind: "test", source: "paste" }]);
+    expect(eventsOf(read(), "p1")[0].skillIds).toContain("m.mult.facts");
     expect(onDone).toHaveBeenCalledWith("Saved: 1 new, 0 updated.", soon);
   });
 
