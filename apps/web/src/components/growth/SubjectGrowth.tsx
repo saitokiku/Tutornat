@@ -254,6 +254,7 @@ function SkillList({ statuses, practiced, subject, now }: { statuses: Statuses; 
                 <span className="block text-sm text-ink">{skill.title[locale]}</span>
                 <span className="block text-xs text-muted">
                   {statusLine(x, now, locale)}
+                  {skill.standard && <span className="font-opmono"> · {skill.standard}</span>}
                   {x.stuck && <span className="text-warn"> · {t("child.stuck")}</span>}
                 </span>
               </span>

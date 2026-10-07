@@ -98,7 +98,9 @@ describe("SubjectGrowth", () => {
     expect(within(row).getByText(/^Practicing/)).toBeInTheDocument();
     unmount();
     render(<SubjectGrowth {...props("math")} results={[]} detail />);
-    expect(screen.getByText("Skills (1)")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Skills (1)"));
+    // When it was proved, and the standard behind it.
+    expect(screen.getByText("Add within 5").closest("li")).toHaveTextContent(/Proved .*Sep 29.* · K\.OA\.A\.5/);
     expect(screen.queryByText("Count to 10")).not.toBeInTheDocument();
   });
 
