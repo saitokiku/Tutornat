@@ -274,14 +274,24 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
 
   async function connect(r: Run) {
     const c = audio();
-    if (c.state === "suspended") await c.resume().catch(() => {});
+    const locked = () => c.state === "suspended" && out.state !== "paused";
+    if (locked()) {
+      // Browsers keep audio locked until a tap (see warm()); resume() may then never settle, so don't wait on it.
+      await Promise.race([c.resume().catch(() => {}), new Promise((ok) => setTimeout(ok, 300))]);
+      if (locked()) throw new VoiceError("speak", "audio is locked until the page is tapped");
+    }
     const t = await takeToken();
     if (r.done) return;
     prefetch(); // the next reply starts faster
     const ws = new WS(ttsSocketUrl(t));
     r.ws = ws;
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new VoiceError("network", "connect timeout")), CONNECT_TIMEOUT_MS);
+      const timer = setTimeout(() => {
+        reject(new VoiceError("network", "connect timeout"));
+        try {
+          ws.close();
+        } catch {}
+      }, CONNECT_TIMEOUT_MS);
       ws.onopen = () => (clearTimeout(timer), resolve());
       ws.onerror = () => (clearTimeout(timer), reject(new VoiceError("network")));
       ws.onclose = () => (clearTimeout(timer), reject(new VoiceError("network")));

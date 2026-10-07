@@ -172,7 +172,12 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn {
     s.binaryType = "arraybuffer";
     ws = s;
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new VoiceError("network", "connect timeout")), CONNECT_TIMEOUT_MS);
+      const timer = setTimeout(() => {
+        reject(new VoiceError("network", "connect timeout"));
+        try {
+          s.close();
+        } catch {}
+      }, CONNECT_TIMEOUT_MS);
       s.onopen = () => (clearTimeout(timer), resolve());
       s.onerror = () => (clearTimeout(timer), reject(new VoiceError("network")));
       s.onclose = (e) => (clearTimeout(timer), reject(new VoiceError(e.code === 1008 ? "unavailable" : "network", `close ${e.code}`)));

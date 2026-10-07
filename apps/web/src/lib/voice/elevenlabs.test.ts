@@ -187,6 +187,17 @@ describe("ElevenLabs streaming read-aloud", () => {
     expect(fb!.said).toEqual([["One.", "Two."]]);
   });
 
+  it("when the browser keeps audio locked (no tap yet), the fallback reads instead of hanging", async () => {
+    const { audio, out, fb, seen } = setup({ fallback: true });
+    audio.state = "suspended";
+    audio.resume = () => new Promise(() => {}); // never settles, as in a browser waiting for a gesture
+    void out.speak("One. Two.");
+    await vi.advanceTimersByTimeAsync(350);
+    expect(seen.errors).toEqual(["speak"]);
+    expect(FakeSocket.all).toHaveLength(0);
+    expect(fb!.said).toEqual([["One.", "Two."]]);
+  });
+
   it("warm() gets the next token ready so speaking starts sooner", async () => {
     const { fetch, out } = setup();
     out.warm();
