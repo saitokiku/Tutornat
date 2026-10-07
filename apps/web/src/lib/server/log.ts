@@ -1,12 +1,13 @@
 // Structured server logs with personal data scrubbed out: one JSON object per line on stderr/stdout,
 // which Vercel's log drains and any error tracker can read. Never logged: request bodies, learner
-// names, emails, phone numbers, transcripts, answers, secrets. Callers pass facts (route, status,
-// counts); scrub() is the second line of defence for anything that slips into a message.
+// names, emails, phone numbers, transcripts, answers, anything typed (titles, topics, queries), secrets.
+// Callers pass facts (route, status, counts); scrub() is the second line of defence for anything that
+// slips into a message.
 // No "server-only" import: instrumentation.ts loads this in both the Node and Edge runtimes.
 
 /** Keys whose values are personal or conversational. Their values are dropped whatever they hold. */
 const DROP_KEYS =
-  /^(name|nickname|display_?name|first_?name|last_?name|full_?name|learner|child|email|to|from|phone|tel|address|transcript|lines|messages?|text|prompt|content|say|notes?|body|answer|response|password|pass|salt|hash|password_?hash|token|secret|api_?key|authorization|cookie|set-cookie)$/i;
+  /^(name|nickname|display_?name|first_?name|last_?name|full_?name|learner|child|email|to|from|phone|tel|address|transcript|lines|messages?|text|prompt|content|say|notes?|body|answer|response|title|goal|topic|q|query|interests|password|pass|salt|hash|password_?hash|token|secret|api_?key|authorization|cookie|set-cookie)$/i;
 
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,}/gi;
 // Digit runs with phone/card punctuation. Only runs holding 10+ digits are masked, so dates

@@ -63,6 +63,11 @@ describe("scrub", () => {
     expect(JSON.stringify(out)).not.toMatch(/Ada|Maria|hunter|3\/4|hello/);
   });
 
+  it("drops what a family typed: titles, goals, topics, search queries, interests", () => {
+    const out = scrub({ event: { title: "Ada's spelling test", kind: "test" }, course: { goal: "fractions for Ada", topic: "Ada's dog" }, q: "Ada Lopez", query: "where does Ada live", interests: ["horses"] });
+    expect(out).toEqual({ event: { title: "[redacted]", kind: "test" }, course: { goal: "[redacted]", topic: "[redacted]" }, q: "[redacted]", query: "[redacted]", interests: "[redacted]" });
+  });
+
   it("masks free text in values it keeps", () => {
     expect(scrub({ detail: "bounce from kid@example.com", list: ["555-123-4567", 4] })).toEqual({ detail: "bounce from [email example.com]", list: ["[number]", 4] });
   });
