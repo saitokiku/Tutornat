@@ -1,6 +1,20 @@
 // Static teaching pictures, drawn from the palette. Each is an <svg role="img"> labelled by the
 // scene's alt text, so the picture is never the only channel.
 import type { Visual } from "@/lib/types";
+import {
+  ArrayVisual,
+  BaseTenVisual,
+  CircleVisual,
+  ClockVisual,
+  ColumnVisual,
+  CoordVisual,
+  DotsVisual,
+  PrismVisual,
+  RectVisual,
+  RightTriangleVisual,
+  TenFrameVisual,
+  TriangleVisual,
+} from "./visuals-practice";
 
 const INK = "var(--color-ink)";
 const MUTED = "var(--color-muted)";
@@ -18,6 +32,30 @@ export function VisualView({ visual, alt, tint = "var(--color-math)" }: { visual
       return <MoonVisual phase={visual.phase} alt={alt} size={140} />;
     case "line-graph":
       return <LineGraphVisual {...visual} alt={alt} tint={tint} />;
+    case "dots":
+      return <DotsVisual {...visual} alt={alt} tint={tint} />;
+    case "ten-frame":
+      return <TenFrameVisual {...visual} alt={alt} tint={tint} />;
+    case "base-ten":
+      return <BaseTenVisual {...visual} alt={alt} tint={tint} />;
+    case "clock":
+      return <ClockVisual {...visual} alt={alt} tint={tint} />;
+    case "array":
+      return <ArrayVisual {...visual} alt={alt} tint={tint} />;
+    case "column":
+      return <ColumnVisual {...visual} alt={alt} tint={tint} />;
+    case "rect":
+      return <RectVisual {...visual} alt={alt} tint={tint} />;
+    case "triangle":
+      return <TriangleVisual {...visual} alt={alt} tint={tint} />;
+    case "circle":
+      return <CircleVisual {...visual} alt={alt} tint={tint} />;
+    case "right-triangle":
+      return <RightTriangleVisual {...visual} alt={alt} tint={tint} />;
+    case "prism":
+      return <PrismVisual {...visual} alt={alt} tint={tint} />;
+    case "coord":
+      return <CoordVisual {...visual} alt={alt} tint={tint} />;
   }
 }
 
