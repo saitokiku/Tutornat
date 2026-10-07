@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { rowsOf, type Db } from "./client";
+import { APPLIED_MIGRATION_SQL, newestMigration, rowsOf, type Db } from "./client";
 import { accounts, attempts, consentReceipts, courses, profiles, RECORD_TABLES, sessions } from "./schema";
 import { testDb } from "./testing";
 import { SYNC_LISTS } from "./wire";
@@ -21,6 +21,12 @@ describe("schema", () => {
     for (const t of ["accounts", "sessions", "password_resets", "auth_throttle", "attempts", "consent_receipts", "plan_done"]) expect(tables).toContain(t);
     // Every list the browser syncs has a home: attempts on its own, the rest as record tables.
     expect(SYNC_LISTS.filter((l) => l !== "attempts").sort()).toEqual(Object.keys(RECORD_TABLES).sort());
+  });
+
+  it("records the newest migration where a cold start looks before taking the migration lock", async () => {
+    const [row] = rowsOf<{ at: string }>(await db.execute(sql.raw(APPLIED_MIGRATION_SQL)));
+    expect(Number(row.at)).toBe(newestMigration());
+    expect(newestMigration()).toBeGreaterThan(0);
   });
 
   it("keeps one account per email", async () => {

@@ -1,5 +1,5 @@
 import "server-only";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "./schema";
@@ -10,9 +10,11 @@ import * as schema from "./schema";
 //   pglite:memory                    in-process and thrown away when the server stops
 // Without it the app runs browser-only, exactly as before, and nothing here is touched.
 //
-// Pending migrations (apps/web/drizzle) are applied on first use, under an advisory lock so two
-// cold-starting instances never apply the same one twice. A deploy can also run them ahead of time
-// with `npx drizzle-kit migrate --config drizzle/drizzle.config.ts`.
+// Pending migrations (apps/web/drizzle) are applied on first use, over a direct connection and under
+// an advisory lock so two cold-starting instances never apply the same one twice. A deploy can also
+// run them ahead of time with `npx drizzle-kit migrate --config drizzle/drizzle.config.ts`; for that,
+// and for the runtime check to find them, the `drizzle` folder ships with the server
+// (outputFileTracingIncludes in next.config.ts).
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
@@ -67,20 +69,52 @@ async function open(url: string): Promise<Db> {
   }
   const { Pool } = await import("pg");
   const { drizzle } = await import("drizzle-orm/node-postgres");
-  const { migrate } = await import("drizzle-orm/node-postgres/migrator");
+  await migratePostgres(url);
   const pool = new Pool({ connectionString: url, max: Number(process.env.KAIZEN_DB_POOL ?? 5) });
-  if (existsSync(path.join(MIGRATIONS, "meta", "_journal.json"))) {
-    // One connection for the whole run, so the session-level lock covers every statement.
-    const conn = await pool.connect();
-    try {
-      await conn.query("select pg_advisory_lock($1)", [MIGRATION_LOCK]);
-      await migrate(drizzle(conn, { schema }), { migrationsFolder: MIGRATIONS });
-    } finally {
-      await conn.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK]).catch(() => {});
-      conn.release();
-    }
-  } else {
-    console.warn("[db] migrations folder not deployed; expecting `drizzle-kit migrate` to have run");
-  }
   return drizzle(pool, { schema }) as unknown as Db;
+}
+
+/** When the newest migration a database has was made (drizzle's own bookkeeping). */
+export const APPLIED_MIGRATION_SQL = `select max(created_at)::text as at from "drizzle"."__drizzle_migrations"`;
+
+/** The newest migration in the deployed folder (its `when`), or null when the folder wasn't deployed. */
+export function newestMigration(): number | null {
+  const journal = path.join(MIGRATIONS, "meta", "_journal.json");
+  if (!existsSync(journal)) return null;
+  const { entries } = JSON.parse(readFileSync(journal, "utf8")) as { entries: { when: number }[] };
+  return Math.max(0, ...entries.map((e) => e.when));
+}
+
+/**
+ * Applies pending migrations to a real Postgres. Runs over a direct connection
+ * (DATABASE_URL_UNPOOLED, which Neon's Vercel integration sets): a pooler in transaction mode can't
+ * hold the session lock that keeps two cold starts from migrating at once. When the database already
+ * has the newest migration, nothing is locked.
+ */
+async function migratePostgres(url: string) {
+  const newest = newestMigration();
+  if (newest === null) {
+    console.warn("[db] migrations folder not deployed; expecting `drizzle-kit migrate` to have run");
+    return;
+  }
+  const { Client } = await import("pg");
+  const { drizzle } = await import("drizzle-orm/node-postgres");
+  const { migrate } = await import("drizzle-orm/node-postgres/migrator");
+  const client = new Client({ connectionString: process.env.DATABASE_URL_UNPOOLED?.trim() || url });
+  await client.connect();
+  try {
+    const applied = await client
+      .query<{ at: string | null }>(APPLIED_MIGRATION_SQL)
+      .then((r) => Number(r.rows[0]?.at ?? 0))
+      .catch(() => 0); // no bookkeeping table yet: a new database
+    if (applied >= newest) return;
+    await client.query("select pg_advisory_lock($1)", [MIGRATION_LOCK]);
+    try {
+      await migrate(drizzle(client, { schema }), { migrationsFolder: MIGRATIONS });
+    } finally {
+      await client.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK]).catch(() => {});
+    }
+  } finally {
+    await client.end().catch(() => {});
+  }
 }
