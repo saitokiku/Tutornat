@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { EventForm } from "@/components/calendar/EventForm";
 import { ImportPanel } from "@/components/calendar/ImportPanel";
@@ -28,7 +29,7 @@ export default function CalendarPage() {
   );
 }
 
-type Panel = { mode: "add"; date?: string } | { mode: "edit"; event: SchoolEvent } | { mode: "import" } | null;
+type Panel = { mode: "add"; date?: string; kind?: "test" } | { mode: "edit"; event: SchoolEvent } | { mode: "import" } | null;
 
 function Calendar() {
   const t = useT();
@@ -40,7 +41,8 @@ function Calendar() {
   const [now] = useState(() => Date.now());
   const today = localDate(now);
   const [start, setStart] = useState(() => weekStart(today));
-  const [panel, setPanel] = useState<Panel>(null);
+  const params = useSearchParams();
+  const [panel, setPanel] = useState<Panel>(() => (params.get("add") ? { mode: "add", kind: params.get("add") === "test" ? "test" : undefined } : null));
   const [message, setMessage] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const events = useStore((s) => (profile ? eventsOf(s, profile.id) : []));
@@ -97,7 +99,7 @@ function Calendar() {
 
       {message && <Notice tone="good">{message}</Notice>}
       <div ref={panelRef} className="scroll-mt-6">
-        {panel?.mode === "add" && <EventForm key={`add:${panel.date}`} profileId={profile.id} date={panel.date ?? today} classes={classes} locale={profile.locale} onDone={() => setPanel(null)} />}
+        {panel?.mode === "add" && <EventForm key={`add:${panel.date}`} profileId={profile.id} date={panel.date ?? today} kind={panel.kind} classes={classes} locale={profile.locale} onDone={() => setPanel(null)} />}
         {panel?.mode === "edit" && <EventForm key={panel.event.id} profileId={profile.id} event={panel.event} classes={classes} locale={profile.locale} onDone={() => setPanel(null)} />}
         {panel?.mode === "import" && (
           <ImportPanel

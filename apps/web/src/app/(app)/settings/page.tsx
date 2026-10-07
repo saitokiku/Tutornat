@@ -11,7 +11,25 @@ import { gradeLabel, useLocale, useT } from "@/i18n";
 import { signOut } from "@/lib/auth";
 import { currentAccount, currentLearner, learnersOf, renameAccount, updateLearner } from "@/lib/profiles";
 import { clearAll, update, useStore } from "@/lib/store";
+import { useAiMode } from "@/lib/ai/client";
+import { goalsOf } from "@/lib/family";
+import { GoalsPicker } from "@/components/profiles/GoalsPicker";
 import type { Account } from "@/lib/types";
+
+function AiStatusLine() {
+  const t = useT();
+  const mode = useAiMode();
+  if (!mode) return <p className="text-sm text-muted">{t("common.loading")}</p>;
+  return (
+    <div className="space-y-2">
+      <p className="flex items-center gap-2 text-sm font-medium text-ink">
+        <span aria-hidden="true" className={`size-2 rounded-full ${mode === "demo" ? "bg-warn" : "bg-good"}`} />
+        {mode === "demo" ? t("settings.aiDemo") : t("settings.aiOn")}
+      </p>
+      <p className="max-w-prose text-sm text-muted">{mode === "demo" ? t("settings.aiDemoBody") : t("settings.aiOnBody")}</p>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   return (
@@ -37,6 +55,7 @@ function Settings() {
   const account = useStore(currentAccount) as Account;
   const learner = useStore(currentLearner);
   const kids = useStore(learnersOf);
+  const goals = useStore(goalsOf);
   const prefLocale = useStore((s) => s.prefs.locale);
   const [name, setName] = useState(account.displayName);
   const [saved, setSaved] = useState(false);
@@ -114,15 +133,26 @@ function Settings() {
         </div>
       </Section>
 
+      <Section title={t("settings.goals")}>
+        <GoalsPicker key={(goals ?? []).join()} initial={goals ?? []} compact />
+      </Section>
+
+      <Section title={t("settings.ai")}>
+        <AiStatusLine />
+      </Section>
+
       <Section title={t("settings.learners")}>
         <ul className="space-y-2">
           {kids.map((k) => (
-            <li key={k.id} className="flex items-center gap-3 text-sm text-ink">
+            <li key={k.id} className="flex flex-wrap items-center gap-3 text-sm text-ink">
               <Avatar profile={k} size="sm" />
               {k.nickname}
               <span className="text-muted">
                 · {gradeLabel(locale, k.grade)} · {t(`lang.${k.locale}` as const)}
               </span>
+              <Link href={`/family/${k.id}`} className="ml-auto text-xs font-medium text-muted underline underline-offset-4 hover:text-ink">
+                {t("settings.learnerSettings")}
+              </Link>
             </li>
           ))}
         </ul>

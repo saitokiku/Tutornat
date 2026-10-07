@@ -13,6 +13,7 @@ import { gradeLabel, useLocale, useT } from "@/i18n";
 import { findLesson, neededHelp, startOfWeek, summarizeWeek } from "@/lib/activity";
 import { addFromCatalogue } from "@/lib/courses";
 import { relativeDay, shortDate } from "@/lib/format";
+import { weekFacts } from "@/lib/family";
 import { addNote, learnersOf, removeNote, selectLearner } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -64,7 +65,10 @@ function ChildCard({ child, now }: { child: Profile; now: number }) {
   const [assigned, setAssigned] = useState(false);
 
   const week = startOfWeek(now);
-  const w = summarizeWeek(events, week);
+  const lessonWeek = summarizeWeek(events, week);
+  const practice = useStore((s) => weekFacts(s, child.id, now));
+  // Lesson checks and practice answers together: on your own / with help / not yet.
+  const w = { ...lessonWeek, own: lessonWeek.own + practice.own, help: lessonWeek.help + practice.helped, missed: lessonWeek.missed + practice.missed };
   const help = neededHelp(events, week).slice(0, 4);
   const last = events.reduce((m, e) => Math.max(m, e.at), 0);
   const options = catalogueFor(child.grade, child.locale).filter((c) => !courses.some((x) => x.catalogueId === c.id));
@@ -124,9 +128,14 @@ function ChildCard({ child, now }: { child: Profile; now: number }) {
               </ul>
             )}
           </div>
-          <Link href={`/growth?learner=${child.id}`} className="inline-flex text-sm font-medium text-muted underline decoration-border underline-offset-4 hover:text-ink">
-            {t("family.growth")}
-          </Link>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link href={`/family/${child.id}`} className="inline-flex min-h-10 items-center text-sm font-medium text-ink underline decoration-border underline-offset-4 hover:text-accent">
+              {t("family.details", { name: child.nickname })}
+            </Link>
+            <Link href={`/growth?learner=${child.id}`} className="inline-flex min-h-10 items-center text-sm font-medium text-muted underline decoration-border underline-offset-4 hover:text-ink">
+              {t("family.growth")}
+            </Link>
+          </div>
 
           {options.length > 0 && (
             <div className="space-y-2 border-t border-border pt-4">

@@ -13,6 +13,8 @@ import { gradeLabel, useLocale, useT } from "@/i18n";
 import { signOut } from "@/lib/auth";
 import { createLearner, learnersOf, removeLearner, selectLearner, updateLearner } from "@/lib/profiles";
 import { read, useStore } from "@/lib/store";
+import { goalsOf } from "@/lib/family";
+import { GoalsPicker } from "@/components/profiles/GoalsPicker";
 
 export default function ProfilesPage() {
   const t = useT();
@@ -24,6 +26,7 @@ export default function ProfilesPage() {
   const [form, setForm] = useState<"add" | string | null>(null); // "add" or a learner id being edited
   const [confirm, setConfirm] = useState<string | null>(null);
   const unlocked = useStore((s) => Boolean(s.session.unlocked));
+  const goals = useStore(goalsOf);
   // Parent-only actions wait behind the grown-up gate when a child was the last one using the app.
   const [gate, setGate] = useState<"parent" | "manage" | "add" | null>(null);
   // Forms and manage mode are grown-up only; a kept-alive page must not reopen them for a child.
@@ -65,6 +68,11 @@ export default function ProfilesPage() {
       <main className="mx-auto max-w-3xl px-5 pb-20 pt-6 sm:px-8 sm:pt-12">
         <h1 className="text-center font-brand text-t1 font-semibold text-ink sm:text-d3">{t("profiles.title")}</h1>
         {learners.length === 0 && <p className="mt-3 text-center text-sm text-muted">{t("profiles.empty")}</p>}
+        {unlocked && goals === undefined && learners.length > 0 && (
+          <div className="mt-8">
+            <GoalsPicker />
+          </div>
+        )}
 
         {learners.length > 0 && (
           <ul className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">

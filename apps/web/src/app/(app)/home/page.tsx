@@ -14,7 +14,9 @@ import { MagicBox } from "@/components/magic-box/MagicBox";
 import { ComingUp } from "@/components/today/ComingUp";
 import { TodayPlan } from "@/components/today/TodayPlan";
 import { Hear, HearContext, useHear } from "@/components/stage/hear";
-import { Button, SubjectDot } from "@/components/ui";
+import { Button, SubjectDot, btn } from "@/components/ui";
+import { IconChat } from "@/components/icons";
+import { goalsOf } from "@/lib/family";
 import { useT } from "@/i18n";
 import { courseProgress } from "@/lib/activity";
 import { dayLabel } from "@/lib/format";
@@ -45,14 +47,27 @@ function Home() {
   const school = useStore((s) => comingUp(s.events.filter((e) => e.profileId === learner.id), localDate(now)));
   const classes = useStore((s) => s.classes.filter((c) => c.profileId === learner.id));
   const young = bandOf(learner.grade) === "k2";
+  const goals = useStore(goalsOf);
   const picks = catalogueFor(learner.grade, learner.locale).filter((c) => bandOf(c.grade) === bandOf(learner.grade));
   const ready = courses.filter((c) => c.status === "ready");
   const hasLesson = [...plan.lead, ...plan.more].some((i) => i.kind === "lesson");
 
   const greeting = (
-    <header>
-      <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("home.hello", { name: learner.nickname })}</h1>
-      <p className="mt-1 text-sm text-muted">{dayLabel(now, learner.locale)}</p>
+    <header className="flex flex-wrap items-end gap-3">
+      <div className="mr-auto">
+        <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("home.hello", { name: learner.nickname })}</h1>
+        <p className="mt-1 text-sm text-muted">{dayLabel(now, learner.locale)}</p>
+      </div>
+      {!young && (
+        <div className="flex flex-wrap gap-2">
+          <Link href="/talk" className={btn(goals?.includes("help") ? "primary" : "secondary", "md")}>
+            <IconChat size={16} /> {t("today.helpNow")}
+          </Link>
+          <Link href="/calendar?add=test" className={btn("secondary", "md")}>
+            {t("today.testComing")}
+          </Link>
+        </div>
+      )}
     </header>
   );
 
@@ -88,8 +103,9 @@ function Home() {
   return (
     <div className="space-y-10">
       {greeting}
+      {goals?.includes("organized") && <ComingUp events={school} classes={classes} locale={learner.locale} now={now} />}
       <TodayPlan plan={plan} learner={learner} now={now} young={false} />
-      <ComingUp events={school} classes={classes} locale={learner.locale} now={now} />
+      {!goals?.includes("organized") && <ComingUp events={school} classes={classes} locale={learner.locale} now={now} />}
       <section aria-labelledby="learn-new" className="space-y-3">
         <h2 id="learn-new" className="font-brand text-t2 font-semibold text-ink">
           {t("today.learnNew")}

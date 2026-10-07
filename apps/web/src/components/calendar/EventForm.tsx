@@ -12,11 +12,11 @@ import { SkillPicker } from "./SkillPicker";
 export const KINDS: EventKind[] = ["test", "quiz", "homework", "project", "no-school", "event"];
 
 /** Add or edit one school item. Inline, not a modal: the week stays visible beside it. */
-export function EventForm({ profileId, event, date, classes, locale, onDone }: { profileId: string; event?: SchoolEvent; date?: string; classes: SchoolClass[]; locale: Locale; onDone: () => void }) {
+export function EventForm({ profileId, event, date, kind, classes, locale, onDone }: { profileId: string; event?: SchoolEvent; date?: string; kind?: EventKind; classes: SchoolClass[]; locale: Locale; onDone: () => void }) {
   const t = useT();
   const [form, setForm] = useState<EventInput>(() => ({
     title: event?.title ?? "",
-    kind: event?.kind ?? "test",
+    kind: event?.kind ?? kind ?? "test",
     date: event?.date ?? date ?? "",
     time: event?.time ?? "",
     classId: event?.classId ?? "",
