@@ -1,181 +1,90 @@
-import type { Locale, Visual } from "@/lib/types";
+import type { Locale } from "@/lib/types";
 import type { Rng } from "../rng";
-import { tr } from "../text";
-import type { Choice, ItemBody, MathPart, Skill } from "../types";
+import type { Skill } from "../types";
+import { fromBank, type BankLevel } from "./k5-more/bank";
+import { daylight, habitatSurvey, weatherChart } from "./k5-more/computed-early";
+import { BANKS_K } from "./k5-more/grade-k";
 
 // K–5 science, second strand: the NGSS performance expectations the first strand (early.ts) does not
 // reach, so every grade K–5 has six to eight skills. Most skills are hand-written question banks
-// ("draft": not yet reviewed by a teacher). Weather charts, living-thing surveys, weather data, motion
-// patterns, conservation of mass and Earth's water are computed from numbers the generator picks.
-// K–2 entries are picture-first: a picture on every question and on every choice, and every line can
-// be read aloud, so a child who cannot read yet answers by looking and listening. Every wrong choice
-// carries a kebab-case `why` tag naming the mistake it stands for; the key never carries one.
+// ("draft": not yet reviewed by a teacher) in ./k5-more/grade-*.ts. Weather tallies, daylight, a
+// habitat survey, climate data, motion patterns, wave graphs, conservation of mass and Earth's water
+// are computed from numbers the generator picks (./k5-more/computed-*.ts).
 
-/** An English / Spanish pair. A seed picks the same entry in both languages. */
-export type Pair = readonly [en: string, es: string];
-/** A choice. `why` is set on every wrong choice and never on the key. */
-export type Option = { t: Pair; say?: Pair; pic?: string; why?: string };
-export type Entry = {
-  /** The prompt; "▢" marks the answer blank. */
-  q: Pair;
-  /** The read-aloud line when the prompt has symbols. Defaults to `q`. */
-  say?: Pair;
-  pic?: string;
-  visual?: Visual;
-  alt?: Pair;
-  /** The choices; the first is the key. They are shuffled per seed. */
-  a: readonly Option[];
-  /** Hint 1 (a nudge) and hint 3 (the first step). Hint 2, the strategy, comes from the level unless `strat` is set. */
-  h: readonly [Pair, Pair];
-  strat?: Pair;
-  /** The worked solution, ending with the answer. */
-  s: readonly Pair[];
-};
-export type BankLevel = { strat: Pair; seconds: number; items: readonly Entry[] };
+export type { BankLevel, Entry, Option, Pair } from "./k5-more/bank";
 
-/** The key. */
-const k = (en: string, es: string, pic?: string): Option => (pic ? { t: [en, es], pic } : { t: [en, es] });
-/** A wrong choice and the misconception it stands for. */
-const x = (why: string, en: string, es: string, pic?: string): Option => (pic ? { t: [en, es], pic, why } : { t: [en, es], why });
+export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K };
 
-/** Prompt text to parts, turning each "▢" into the answer blank. */
-function parts(text: string): MathPart[] {
-  const out: MathPart[] = [];
-  text.split("▢").forEach((piece, i) => {
-    if (i > 0) out.push({ blank: true });
-    if (piece) out.push(piece);
-  });
-  return out;
-}
+const fromBanks = (id: string) => (r: Rng, level: number, locale: Locale) => fromBank(r, BANKS[id][level - 1], locale);
 
-function fromBank(r: Rng, level: BankLevel, locale: Locale): ItemBody {
-  const e = r.pick(level.items);
-  const t = (p: Pair) => tr(locale, p[0], p[1]);
-  const order = r.shuffle(e.a.map((_, i) => i));
-  const choices: Choice[] = order.map((i) => {
-    const c = e.a[i];
-    return { label: t(c.t), say: t(c.say ?? c.t), ...(c.pic ? { picture: c.pic } : {}), ...(c.why ? { why: c.why } : {}) };
-  });
-  return {
-    prompt: parts(t(e.q)),
-    say: t(e.say ?? e.q),
-    ...(e.pic ? { picture: e.pic } : {}),
-    ...(e.visual ? { visual: e.visual } : {}),
-    ...(e.alt ? { alt: t(e.alt) } : {}),
-    choices,
-    input: "choices",
-    answer: { kind: "choice", index: order.indexOf(0) },
-    hints: [t(e.h[0]), t(e.strat ?? level.strat), t(e.h[1])],
-    steps: e.s.map(t),
-    seconds: level.seconds,
-  };
-}
-
-const SAME = "⚖️";
-const NONE = "🚫";
-
-export const BANKS: Record<string, readonly BankLevel[]> = {
-  // ── Kindergarten ──────────────────────────────────────────────────────────────────────────
-  "s.sun.warms": [
-    {
-      strat: ["Sunlight warms what it shines on. Shade stays cooler.", "La luz del sol calienta lo que toca. La sombra está más fresca."],
-      seconds: 12,
-      items: [
-        { q: ["A rock sits in the sun all day. How does it feel?", "Una piedra está al sol todo el día. ¿Cómo se siente?"], pic: "🪨", alt: ["A gray rock", "Una piedra gris"], a: [k("Warm", "Caliente", "☀️"), x("thinks-sun-cools", "Cold", "Fría", "🧊"), x("no-change-in-sun", "Just like at night", "Igual que de noche", "🌙")], h: [["What does sunlight do to things it touches?", "¿Qué hace la luz del sol con lo que toca?"], ["The sun shined on the rock for hours.", "El sol brilló sobre la piedra por horas."]], s: [["Sunlight warms the rock. It feels warm.", "La luz del sol calienta la piedra. Se siente caliente."]] },
-        { q: ["One cup of water is in the sun. One is in the shade. Which gets warmer?", "Un vaso de agua está al sol. Otro está a la sombra. ¿Cuál se calienta más?"], pic: "💧", alt: ["A drop of water", "Una gota de agua"], a: [k("The cup in the sun", "El vaso al sol", "☀️"), x("thinks-shade-warms", "The cup in the shade", "El vaso a la sombra", "🌳"), x("no-change-in-sun", "They stay the same", "Los dos quedan igual", SAME)], h: [["Which cup gets sunlight on it?", "¿A qué vaso le llega la luz del sol?"], ["The shade blocks the sunlight.", "La sombra tapa la luz del sol."]], s: [["Sunlight warms the water. So the cup in the sun gets warmer.", "La luz del sol calienta el agua. Por eso el vaso al sol se calienta más."]] },
-        { q: ["At the beach, which sand feels hotter?", "En la playa, ¿qué arena se siente más caliente?"], pic: "🏖️", alt: ["A sunny beach with an umbrella", "Una playa soleada con una sombrilla"], a: [k("Sand in the sun", "La arena al sol", "☀️"), x("thinks-shade-warms", "Sand under the umbrella", "La arena bajo la sombrilla", "⛱️"), x("no-change-in-sun", "They feel the same", "Se sienten igual", SAME)], h: [["Where does sunlight reach the sand?", "¿Dónde le llega la luz del sol a la arena?"], ["The umbrella blocks the sunlight.", "La sombrilla tapa la luz del sol."]], s: [["Sunlight warms the sand. Sand in the sun feels hotter.", "La luz del sol calienta la arena. La arena al sol se siente más caliente."]] },
-        { q: ["A car sits in the sun all afternoon. How do its seats feel?", "Un carro está al sol toda la tarde. ¿Cómo se sienten sus asientos?"], pic: "🚗", alt: ["A parked car", "Un carro estacionado"], a: [k("Hot", "Muy calientes", "🔥"), x("thinks-sun-cools", "Cold", "Fríos", "🧊"), x("no-change-in-sun", "Just like in the morning", "Igual que en la mañana", "🌅")], h: [["What shined on the car all afternoon?", "¿Qué brilló sobre el carro toda la tarde?"], ["Sunlight came in through the windows.", "La luz del sol entró por las ventanas."]], s: [["Sunlight warmed the seats for hours. They feel hot.", "La luz del sol calentó los asientos por horas. Se sienten muy calientes."]] },
-        { q: ["One snowman is in the sun. One is in the shade. Which melts first?", "Un muñeco de nieve está al sol. Otro está a la sombra. ¿Cuál se derrite primero?"], pic: "⛄", alt: ["A snowman", "Un muñeco de nieve"], a: [k("The one in the sun", "El que está al sol", "☀️"), x("thinks-shade-warms", "The one in the shade", "El que está a la sombra", "🌳"), x("no-change-in-sun", "Neither one melts", "Ninguno se derrite", NONE)], h: [["Which snowman gets warmed?", "¿Qué muñeco se calienta?"], ["Sunlight shines on only one snowman.", "La luz del sol le llega a un solo muñeco."]], s: [["Sunlight warms the snow. The snowman in the sun melts first.", "La luz del sol calienta la nieve. El muñeco al sol se derrite primero."]] },
-        { q: ["You put an ice cube in a sunny spot. What happens?", "Pones un cubito de hielo en un lugar soleado. ¿Qué pasa?"], pic: "🧊", alt: ["An ice cube", "Un cubito de hielo"], a: [k("It melts", "Se derrite", "💧"), x("thinks-sun-cools", "It gets harder", "Se pone más duro", "🪨"), x("no-change-in-sun", "It stays the same", "Se queda igual", SAME)], h: [["Does sunlight warm things or cool them?", "¿La luz del sol calienta o enfría las cosas?"], ["The sun warms the ice cube.", "El sol calienta el cubito de hielo."]], s: [["Warm ice turns to water. It melts.", "El hielo caliente se vuelve agua. Se derrite."]] },
-        { q: ["Which shirt gets warmer in the sun?", "¿Qué camiseta se calienta más al sol?"], pic: "👕", alt: ["A T-shirt", "Una camiseta"], a: [k("A black shirt", "Una camiseta negra", "⬛"), x("dark-colors-stay-cool", "A white shirt", "Una camiseta blanca", "⬜"), x("color-does-not-matter", "They warm the same", "Se calientan igual", SAME)], h: [["Think about a dark car seat on a sunny day.", "Piensa en un asiento oscuro en un día de sol."], ["Dark colors take in more sunlight.", "Los colores oscuros absorben más luz del sol."]], s: [["Black takes in more sunlight. The black shirt gets warmer.", "El negro absorbe más luz del sol. La camiseta negra se calienta más."]] },
-        { q: ["After the rain, which puddle dries up first?", "Después de la lluvia, ¿qué charco se seca primero?"], pic: "🌧️", alt: ["A rain cloud", "Una nube de lluvia"], a: [k("The puddle in the sun", "El charco al sol", "☀️"), x("thinks-shade-warms", "The puddle in the shade", "El charco a la sombra", "🌳"), x("no-change-in-sun", "They dry at the same time", "Se secan al mismo tiempo", SAME)], h: [["Which puddle gets warmed?", "¿Qué charco se calienta?"], ["Warm water dries up faster.", "El agua caliente se seca más rápido."]], s: [["The sun warms one puddle. That puddle dries first.", "El sol calienta un charco. Ese charco se seca primero."]] },
-        { q: ["On a sunny day, when is the slide hottest?", "En un día de sol, ¿cuándo está más caliente el tobogán?"], pic: "🌞", alt: ["A smiling sun", "Un sol sonriente"], a: [k("In the afternoon", "En la tarde", "🕒"), x("forgets-time-in-sun", "Early in the morning", "Temprano en la mañana", "🌅"), x("thinks-night-is-warm", "At night", "De noche", "🌙")], h: [["When has the sun shined on it the longest?", "¿Cuándo le ha dado el sol por más tiempo?"], ["In the morning, the sun just came up.", "En la mañana, el sol acaba de salir."]], s: [["By afternoon, the sun has warmed the slide for hours. It is hottest then.", "En la tarde, el sol ya calentó el tobogán por horas. Está más caliente."]] },
-        { q: ["A small pool of water sits in the sun all day. How does the water change?", "Una piscina pequeña está al sol todo el día. ¿Cómo cambia el agua?"], pic: "💦", alt: ["Splashing water", "Agua que salpica"], a: [k("It gets warmer", "Se calienta", "🌡️"), x("thinks-sun-cools", "It gets colder", "Se enfría", "🧊"), x("no-change-in-sun", "It does not change", "No cambia", SAME)], h: [["What shines on the pool all day?", "¿Qué brilla sobre la piscina todo el día?"], ["Sunlight warms water.", "La luz del sol calienta el agua."]], s: [["The sun shines on the water all day. It gets warmer.", "El sol brilla sobre el agua todo el día. Se calienta."]] },
-        { q: ["What warms the ground on a sunny day?", "¿Qué calienta el suelo en un día de sol?"], pic: "🌱", alt: ["A small plant in the ground", "Una plantita en la tierra"], a: [k("The sun", "El sol", "☀️"), x("wrong-heat-source", "The moon", "La luna", "🌙"), x("wrong-heat-source", "The clouds", "Las nubes", "☁️")], h: [["What shines bright in the day sky?", "¿Qué brilla fuerte en el cielo de día?"], ["Its light lands on the ground.", "Su luz llega al suelo."]], s: [["Sunlight lands on the ground and warms it. The sun warms the ground.", "La luz del sol llega al suelo y lo calienta. El sol calienta el suelo."]] },
-        { q: ["You stand in the sun. Then you stand in the shade of a tree. Where do you feel cooler?", "Te paras al sol. Luego te paras a la sombra de un árbol. ¿Dónde sientes más fresco?"], pic: "🧒", alt: ["A child", "Un niño"], a: [k("In the shade", "A la sombra", "🌳"), x("thinks-sun-cools", "In the sun", "Al sol", "☀️"), x("no-change-in-sun", "Both feel the same", "Se siente igual", SAME)], h: [["Where does the tree block the sunlight?", "¿Dónde tapa el árbol la luz del sol?"], ["Sunlight warms you when it shines on you.", "La luz del sol te calienta cuando te toca."]], s: [["The tree blocks sunlight. You feel cooler in the shade.", "El árbol tapa la luz del sol. Sientes más fresco a la sombra."]] },
-        { q: ["A cat naps in a sunny spot by the window. Why is the spot warm?", "Un gato duerme en un lugar soleado junto a la ventana. ¿Por qué está caliente?"], pic: "🐱", alt: ["A cat", "Un gato"], a: [k("Sunlight shines on it", "Le da la luz del sol", "☀️"), x("wrong-heat-source", "The moon warmed it", "La luna lo calentó", "🌙"), x("wrong-heat-source", "The glass makes heat", "El vidrio hace calor", "🪟")], h: [["What comes in through the window?", "¿Qué entra por la ventana?"], ["The spot is sunny.", "El lugar está soleado."]], s: [["Sunlight comes through the window and warms the spot.", "La luz del sol entra por la ventana y calienta el lugar."]] },
-      ],
-    },
-    {
-      strat: ["Shade blocks sunlight. Less sunlight means less warming.", "La sombra tapa la luz del sol. Con menos luz, se calienta menos."],
-      seconds: 15,
-      items: [
-        { q: ["Which keeps the sun off a sandbox best?", "¿Qué tapa mejor el sol de un arenero?"], pic: "🏖️", alt: ["Sand and a bucket", "Arena y una cubeta"], a: [k("A big umbrella", "Una sombrilla grande", "⛱️"), x("see-through-blocks-sun", "A clear plastic sheet", "Un plástico transparente", "🪟"), x("gap-lets-sun-in", "A net full of holes", "Una red llena de hoyos", "🥅")], h: [["Which one stops the light?", "¿Cuál detiene la luz?"], ["Light goes through clear things and through holes.", "La luz pasa por lo transparente y por los hoyos."]], s: [["A big umbrella blocks the sunlight and makes shade.", "Una sombrilla grande tapa la luz del sol y da sombra."]] },
-        { q: ["Your dog needs a cool place outside. What should you build?", "Tu perro necesita un lugar fresco afuera. ¿Qué debes construir?"], pic: "🐶", alt: ["A dog", "Un perro"], a: [k("A roof that makes shade", "Un techo que dé sombra", "🏠"), x("see-through-blocks-sun", "A glass box", "Una caja de vidrio", "🪟"), x("makes-it-hotter", "A black blanket in the sun", "Una manta negra al sol", "⬛")], h: [["What makes a spot cooler?", "¿Qué hace más fresco un lugar?"], ["Shade blocks sunlight.", "La sombra tapa la luz del sol."]], s: [["A roof blocks sunlight. The shade under it stays cool.", "Un techo tapa la luz del sol. La sombra debajo queda fresca."]] },
-        { q: ["Which hat keeps the most sun off your face?", "¿Qué sombrero te tapa más el sol de la cara?"], pic: "😎", alt: ["A smiling face with sunglasses", "Una cara sonriente con lentes de sol"], a: [k("A hat with a wide brim", "Un sombrero de ala ancha", "👒"), x("too-small-to-shade", "Sunglasses only", "Solo lentes de sol", "🕶️"), x("see-through-blocks-sun", "A clear plastic visor", "Una visera transparente", "🪟")], h: [["Which one makes shade on your whole face?", "¿Cuál da sombra a toda la cara?"], ["A wide brim sticks out all around.", "Un ala ancha sale por todos lados."]], s: [["The wide brim shades your face. It keeps the most sun off.", "El ala ancha da sombra a tu cara. Te tapa más el sol."]] },
-        { q: ["Why do people sit under trees on hot days?", "¿Por qué la gente se sienta bajo los árboles en días de calor?"], pic: "🌳", alt: ["A big tree", "Un árbol grande"], a: [k("The leaves block sunlight", "Las hojas tapan la luz del sol", "🍃"), x("makes-it-hotter", "Trees make the air hotter", "Los árboles calientan el aire", "🔥"), x("thinks-shade-warms", "The shade is warmer", "La sombra está más caliente", "🌡️")], h: [["What is under a big tree?", "¿Qué hay debajo de un árbol grande?"], ["Look up at the leaves.", "Mira las hojas arriba."]], s: [["The leaves block sunlight. The shade is cooler.", "Las hojas tapan la luz del sol. La sombra es más fresca."]] },
-        { q: ["A slide at the park gets too hot. What could help?", "Un tobogán del parque se pone muy caliente. ¿Qué ayudaría?"], pic: "🏞️", alt: ["A park", "Un parque"], a: [k("Build a roof over it", "Ponerle un techo encima", "🏠"), x("makes-it-hotter", "Paint it black", "Pintarlo de negro", "⬛"), x("see-through-blocks-sun", "Put a clear cover on it", "Ponerle una tapa transparente", "🪟")], h: [["What would stop the sunlight?", "¿Qué detendría la luz del sol?"], ["Shade keeps things cooler.", "La sombra mantiene las cosas más frescas."]], s: [["A roof blocks the sunlight. The slide stays cooler.", "Un techo tapa la luz del sol. El tobogán queda más fresco."]] },
-        { q: ["Which umbrella makes the best shade?", "¿Qué sombrilla da la mejor sombra?"], pic: "☀️", alt: ["A bright sun", "Un sol brillante"], a: [k("A thick cloth umbrella", "Una sombrilla de tela gruesa", "⛱️"), x("gap-lets-sun-in", "An umbrella with holes", "Una sombrilla con hoyos", "🕳️"), x("see-through-blocks-sun", "A see-through umbrella", "Una sombrilla transparente", "🌂")], h: [["Which one lets the least light through?", "¿Cuál deja pasar menos luz?"], ["Light goes through holes and clear things.", "La luz pasa por hoyos y por lo transparente."]], s: [["Thick cloth blocks the light. It makes the best shade.", "La tela gruesa tapa la luz. Da la mejor sombra."]] },
-        { q: ["Your shade tent has a big hole on top. What is it like under the hole?", "Tu carpa de sombra tiene un hoyo grande arriba. ¿Cómo está debajo del hoyo?"], pic: "⛺", alt: ["A tent", "Una carpa"], a: [k("Sunny and warm", "Soleado y caliente", "☀️"), x("gap-lets-sun-in", "Shady and cool", "Con sombra y fresco", "🌳"), x("thinks-sun-cools", "Cold like ice", "Frío como el hielo", "🧊")], h: [["What comes through a hole?", "¿Qué pasa por un hoyo?"], ["Sunlight can get through the hole.", "La luz del sol puede pasar por el hoyo."]], s: [["Sunlight comes through the hole. It is sunny and warm there.", "La luz del sol entra por el hoyo. Ahí está soleado y caliente."]] },
-        { q: ["Mia makes a paper shade for her plant. Where should it go?", "Mia hace una sombra de papel para su planta. ¿Dónde la pone?"], pic: "🪴", alt: ["A plant in a pot", "Una planta en una maceta"], a: [k("Between the sun and the plant", "Entre el sol y la planta", "☀️"), x("shade-on-wrong-side", "Under the pot", "Debajo de la maceta", "⬇️"), x("shade-on-wrong-side", "On the side away from the sun", "Del lado contrario al sol", "↩️")], h: [["Where does the sunlight come from?", "¿De dónde viene la luz del sol?"], ["The shade must block the light before it hits the plant.", "La sombra debe tapar la luz antes de llegar a la planta."]], s: [["Put the shade between the sun and the plant. Then it blocks the light.", "Pon la sombra entre el sol y la planta. Así tapa la luz."]] },
-        { q: ["Which makes the most shade on a hot day?", "¿Qué da más sombra en un día de calor?"], pic: "🌡️", alt: ["A thermometer", "Un termómetro"], a: [k("A big tree", "Un árbol grande", "🌳"), x("too-small-to-shade", "A small flower", "Una flor pequeña", "🌼"), x("too-small-to-shade", "A blade of grass", "Una hoja de pasto", "🌱")], h: [["Which one blocks the most sunlight?", "¿Cuál tapa más luz del sol?"], ["Bigger things make bigger shade.", "Las cosas grandes dan más sombra."]], s: [["A big tree blocks the most sunlight. It makes the most shade.", "Un árbol grande tapa más luz del sol. Da más sombra."]] },
-        { q: ["People get hot at a sunny bus stop. What would help?", "La gente pasa calor en una parada de autobús soleada. ¿Qué ayudaría?"], pic: "🚌", alt: ["A bus", "Un autobús"], a: [k("A roof over the bench", "Un techo sobre la banca", "🏠"), x("does-not-block-sun", "A trash can nearby", "Un bote de basura cerca", "🗑️"), x("see-through-blocks-sun", "A clear glass roof", "Un techo de vidrio transparente", "🪟")], h: [["What would make shade?", "¿Qué daría sombra?"], ["Light goes through clear glass.", "La luz pasa por el vidrio transparente."]], s: [["A solid roof blocks sunlight. The bench stays shady.", "Un techo sólido tapa la luz del sol. La banca queda a la sombra."]] },
-        { q: ["Why do people put a sunshade in a car window?", "¿Por qué ponen un parasol en la ventana del carro?"], pic: "🚗", alt: ["A parked car", "Un carro estacionado"], a: [k("It blocks the sunlight", "Tapa la luz del sol", "🌑"), x("makes-it-hotter", "It warms the seats", "Calienta los asientos", "🔥"), x("does-not-block-sun", "It lets more light in", "Deja entrar más luz", "💡")], h: [["What would warm the seats?", "¿Qué calentaría los asientos?"], ["A sunshade covers the window.", "Un parasol cubre la ventana."]], s: [["The sunshade blocks the sunlight. The car stays cooler.", "El parasol tapa la luz del sol. El carro queda más fresco."]] },
-        { q: ["Which roof keeps a doghouse coolest in the sun?", "¿Qué techo mantiene más fresca una casita de perro al sol?"], pic: "🐕", alt: ["A dog", "Un perro"], a: [k("A solid wood roof", "Un techo de madera sólida", "🪵"), x("gap-lets-sun-in", "A roof with big gaps", "Un techo con huecos grandes", "🕳️"), x("see-through-blocks-sun", "A clear plastic roof", "Un techo de plástico transparente", "🪟")], h: [["Which roof lets no sunlight in?", "¿Qué techo no deja entrar la luz del sol?"], ["Light gets in through gaps and clear plastic.", "La luz entra por huecos y por plástico transparente."]], s: [["Solid wood blocks the sunlight. The doghouse stays coolest.", "La madera sólida tapa la luz del sol. La casita queda más fresca."]] },
-        { q: ["Two ice cubes sit outside. One is under a shade. Which melts slower?", "Dos cubitos de hielo están afuera. Uno está bajo una sombra. ¿Cuál se derrite más lento?"], pic: "🧊", alt: ["An ice cube", "Un cubito de hielo"], a: [k("The one under the shade", "El que está bajo la sombra", "⛱️"), x("thinks-shade-warms", "The one in the sun", "El que está al sol", "☀️"), x("no-change-in-sun", "They melt at the same time", "Se derriten al mismo tiempo", SAME)], h: [["Which ice cube gets less sunlight?", "¿Qué cubito recibe menos luz del sol?"], ["The shade blocks the sunlight.", "La sombra tapa la luz del sol."]], s: [["The shaded ice warms less. It melts slower.", "El hielo a la sombra se calienta menos. Se derrite más lento."]] },
-      ],
-    },
-  ],
-  "s.living.change": [
-    {
-      strat: ["Living things change their home to meet their needs.", "Los seres vivos cambian su hogar para tener lo que necesitan."],
-      seconds: 12,
-      items: [
-        { q: ["A beaver cuts down small trees. What does it build?", "Un castor corta árboles pequeños. ¿Qué construye?"], pic: "🦫", alt: ["A beaver", "Un castor"], a: [k("A dam in a stream", "Una presa en un arroyo", "🪵"), x("wrong-action", "A nest in a tree", "Un nido en un árbol", "🐦"), x("wrong-action", "A hole in the sand", "Un hoyo en la arena", "🏖️")], h: [["Beavers live in water.", "Los castores viven en el agua."], ["Beavers pile up sticks and mud in water.", "Los castores juntan palos y lodo en el agua."]], s: [["A beaver builds a dam. The dam makes a pond.", "El castor construye una presa. La presa forma un estanque."]] },
-        { q: ["A squirrel digs small holes in the yard. Why?", "Una ardilla hace hoyitos en el jardín. ¿Por qué?"], pic: "🐿️", alt: ["A squirrel", "Una ardilla"], a: [k("To hide nuts", "Para esconder nueces", "🌰"), x("wrong-reason", "To find water to swim in", "Para buscar agua para nadar", "🏊"), x("wrong-reason", "To make the grass grow", "Para que crezca el pasto", "🌱")], h: [["What does a squirrel eat in winter?", "¿Qué come una ardilla en invierno?"], ["Squirrels save food for later.", "Las ardillas guardan comida para después."]], s: [["The squirrel hides nuts to eat later. It changed the yard with holes.", "La ardilla esconde nueces para después. Cambió el jardín con hoyos."]] },
-        { q: ["Tree roots grow under a sidewalk. What can happen?", "Las raíces de un árbol crecen bajo una acera. ¿Qué puede pasar?"], pic: "🌳", alt: ["A big tree", "Un árbol grande"], a: [k("The sidewalk cracks", "La acera se rompe", "🧱"), x("living-things-change-nothing", "Nothing happens to it", "No le pasa nada", NONE), x("wrong-action", "The sidewalk turns green", "La acera se pone verde", "🟩")], h: [["Roots get bigger as the tree grows.", "Las raíces crecen junto con el árbol."], ["Growing roots push hard on things.", "Las raíces que crecen empujan fuerte."]], s: [["Big roots push up the sidewalk. It cracks.", "Las raíces grandes empujan la acera. Se rompe."]] },
-        { q: ["A bird picks up twigs and grass. What is it making?", "Un pájaro recoge ramitas y pasto. ¿Qué está haciendo?"], pic: "🐦", alt: ["A bird", "Un pájaro"], a: [k("A nest", "Un nido", "🐣"), x("wrong-action", "A dam", "Una presa", "🪵"), x("wrong-action", "A tunnel", "Un túnel", "🕳️")], h: [["Where does a bird lay its eggs?", "¿Dónde pone sus huevos un pájaro?"], ["Birds weave twigs into a cup shape.", "Los pájaros tejen ramitas en forma de taza."]], s: [["The bird makes a nest for its eggs.", "El pájaro hace un nido para sus huevos."]] },
-        { q: ["Ants dig under the ground. What do they make?", "Las hormigas cavan bajo la tierra. ¿Qué hacen?"], pic: "🐜", alt: ["An ant", "Una hormiga"], a: [k("Tunnels", "Túneles", "🕳️"), x("wrong-action", "A web", "Una telaraña", "🕸️"), x("wrong-action", "A dam", "Una presa", "🪵")], h: [["Ants live together under the ground.", "Las hormigas viven juntas bajo la tierra."], ["They need paths to move around.", "Necesitan caminos para moverse."]], s: [["Ants dig tunnels to make their home.", "Las hormigas cavan túneles para hacer su hogar."]] },
-        { q: ["People need homes. How do they change the land?", "Las personas necesitan casas. ¿Cómo cambian la tierra?"], pic: "👨‍👩‍👧", alt: ["A family", "Una familia"], a: [k("They build houses", "Construyen casas", "🏠"), x("living-things-change-nothing", "They never change it", "Nunca la cambian", NONE), x("wrong-action", "They make it rain", "Hacen que llueva", "🌧️")], h: [["Where do people live?", "¿Dónde vive la gente?"], ["People are living things too.", "Las personas también son seres vivos."]], s: [["People build houses. That changes the land.", "La gente construye casas. Eso cambia la tierra."]] },
-        { q: ["A rabbit eats plants in a garden. How does the garden change?", "Un conejo come plantas en un huerto. ¿Cómo cambia el huerto?"], pic: "🐰", alt: ["A rabbit", "Un conejo"], a: [k("It has fewer plants", "Quedan menos plantas", "🥕"), x("wrong-action", "It gets more plants", "Tiene más plantas", "🌻"), x("living-things-change-nothing", "It does not change", "No cambia", NONE)], h: [["What happens to food that gets eaten?", "¿Qué pasa con la comida que se come?"], ["The rabbit eats some plants.", "El conejo se come algunas plantas."]], s: [["The rabbit eats plants. The garden has fewer plants.", "El conejo come plantas. Quedan menos plantas."]] },
-        { q: ["Earthworms dig through soil. How do they change it?", "Las lombrices cavan en la tierra. ¿Cómo la cambian?"], pic: "🪱", alt: ["A worm", "Una lombriz"], a: [k("They mix it and make holes", "La mezclan y le hacen hoyos", "🕳️"), x("wrong-action", "They turn it to rock", "La vuelven piedra", "🪨"), x("living-things-change-nothing", "They do not change it", "No la cambian", NONE)], h: [["Worms move through soil.", "Las lombrices se mueven por la tierra."], ["Moving through soil leaves little paths.", "Moverse por la tierra deja caminitos."]], s: [["Worms mix the soil and leave holes. Air and water get in.", "Las lombrices mezclan la tierra y dejan hoyos. Entra aire y agua."]] },
-        { q: ["A fox digs a den in a hill. Why?", "Un zorro cava una madriguera en una loma. ¿Por qué?"], pic: "🦊", alt: ["A fox", "Un zorro"], a: [k("To have a safe home", "Para tener un hogar seguro", "🏠"), x("wrong-reason", "To find snow", "Para buscar nieve", "❄️"), x("wrong-reason", "To plant a tree", "Para plantar un árbol", "🌳")], h: [["Where do baby foxes sleep?", "¿Dónde duermen los zorritos?"], ["A den is a hole an animal lives in.", "Una madriguera es un hoyo donde vive un animal."]], s: [["The fox digs a den for a safe home.", "El zorro cava una madriguera para tener un hogar seguro."]] },
-        { q: ["Elephants push over small trees. Why?", "Los elefantes tumban árboles pequeños. ¿Por qué?"], pic: "🐘", alt: ["An elephant", "Un elefante"], a: [k("To eat the leaves", "Para comer las hojas", "🍃"), x("wrong-reason", "To build a nest", "Para hacer un nido", "🐣"), x("wrong-reason", "To make a dam", "Para hacer una presa", "🪵")], h: [["What does an elephant need every day?", "¿Qué necesita un elefante cada día?"], ["Elephants eat plants.", "Los elefantes comen plantas."]], s: [["Elephants knock trees down to reach food. They eat the leaves.", "Los elefantes tumban árboles para alcanzar comida. Comen las hojas."]] },
-        { q: ["People need food. How do farmers change the land?", "Las personas necesitan comida. ¿Cómo cambian la tierra los granjeros?"], pic: "🚜", alt: ["A tractor", "Un tractor"], a: [k("They plant fields of crops", "Siembran campos de cultivos", "🌽"), x("living-things-change-nothing", "They leave it all alone", "La dejan como está", NONE), x("wrong-action", "They turn it into ocean", "La vuelven océano", "🌊")], h: [["Where does corn grow?", "¿Dónde crece el maíz?"], ["Farmers use the land to grow food.", "Los granjeros usan la tierra para cultivar comida."]], s: [["Farmers plant fields of crops. That changes the land.", "Los granjeros siembran campos. Eso cambia la tierra."]] },
-        { q: ["Grass grows on a hill. What do its roots do?", "Crece pasto en una loma. ¿Qué hacen sus raíces?"], pic: "🌿", alt: ["Green leaves", "Hojas verdes"], a: [k("Hold the soil in place", "Sujetan la tierra", "🌱"), x("wrong-action", "Turn the soil to sand", "Vuelven arena la tierra", "🏖️"), x("living-things-change-nothing", "Nothing at all", "Nada", NONE)], h: [["Roots spread out under the ground.", "Las raíces se extienden bajo la tierra."], ["Rain can wash bare soil away.", "La lluvia puede llevarse la tierra sin plantas."]], s: [["Roots hold the soil, so rain does not wash it away.", "Las raíces sujetan la tierra y la lluvia no se la lleva."]] },
-        { q: ["A dog digs to bury a bone. How did the yard change?", "Un perro cava para enterrar un hueso. ¿Cómo cambió el jardín?"], pic: "🐶", alt: ["A dog", "Un perro"], a: [k("It has a hole", "Tiene un hoyo", "🕳️"), x("living-things-change-nothing", "It stayed the same", "Quedó igual", NONE), x("wrong-action", "It grew a tree", "Le creció un árbol", "🌳")], h: [["What does digging leave behind?", "¿Qué deja cavar?"], ["The dog moved some dirt.", "El perro movió tierra."]], s: [["The dog dug a hole. The yard changed.", "El perro hizo un hoyo. El jardín cambió."]] },
-      ],
-    },
-    {
-      strat: ["People can help. Use less, reuse things and keep land and water clean.", "La gente puede ayudar. Usa menos, reutiliza y cuida la tierra y el agua."],
-      seconds: 12,
-      items: [
-        { q: ["You finish a plastic bottle. What is best for Earth?", "Terminas una botella de plástico. ¿Qué es mejor para la Tierra?"], pic: "🥤", alt: ["A drink cup with a straw", "Un vaso con popote"], a: [k("Put it in the recycling bin", "Ponerla en el contenedor de reciclaje", "♻️"), x("adds-pollution", "Drop it on the ground", "Tirarla al suelo", "⬇️"), x("adds-pollution", "Toss it in the river", "Tirarla al río", "🌊")], h: [["Plastic can be made into new things.", "El plástico se puede volver cosas nuevas."], ["Trash on the ground hurts animals.", "La basura en el suelo daña a los animales."]], s: [["Recycle the bottle. It can become something new.", "Recicla la botella. Puede volverse algo nuevo."]] },
-        { q: ["You brush your teeth. How can you save water?", "Te cepillas los dientes. ¿Cómo puedes ahorrar agua?"], pic: "🪥", alt: ["A toothbrush", "Un cepillo de dientes"], a: [k("Turn off the water while you brush", "Cerrar la llave mientras te cepillas", "🚰"), x("wastes-resources", "Let the water run", "Dejar correr el agua", "💦"), x("wastes-resources", "Fill the tub to brush", "Llenar la tina para cepillarte", "🛁")], h: [["Is water going down the drain while you brush?", "¿Se va agua por el desagüe mientras te cepillas?"], ["You only need water at the start and end.", "Solo necesitas agua al principio y al final."]], s: [["Turn the water off while you brush. You save water.", "Cierra la llave mientras te cepillas. Ahorras agua."]] },
-        { q: ["How can you carry food home from the store?", "¿Cómo puedes llevar la comida de la tienda a casa?"], pic: "🛒", alt: ["A shopping cart", "Un carrito de compras"], a: [k("Bring a cloth bag from home", "Llevar una bolsa de tela de casa", "👜"), x("wastes-resources", "Use a new bag each time", "Usar una bolsa nueva cada vez", "🛍️"), x("wastes-resources", "Throw bags away after one use", "Tirar las bolsas tras usarlas una vez", "🗑️")], h: [["Which bag can you use again and again?", "¿Qué bolsa puedes usar una y otra vez?"], ["Using things again makes less trash.", "Usar las cosas otra vez hace menos basura."]], s: [["A cloth bag can be used many times. It makes less trash.", "Una bolsa de tela se usa muchas veces. Hace menos basura."]] },
-        { q: ["You leave a room. What should you do with the lights?", "Sales de un cuarto. ¿Qué haces con las luces?"], pic: "💡", alt: ["A light bulb", "Un foco"], a: [k("Turn them off", "Apagarlas", "🌑"), x("wastes-resources", "Leave them on", "Dejarlas prendidas", "🔆"), x("wastes-resources", "Turn on more lights", "Prender más luces", "✨")], h: [["Does anyone need light in an empty room?", "¿Alguien necesita luz en un cuarto vacío?"], ["Lights use energy.", "Las luces usan energía."]], s: [["Turn the lights off. You save energy.", "Apaga las luces. Ahorras energía."]] },
-        { q: ["You see trash at the park. How can you help?", "Ves basura en el parque. ¿Cómo puedes ayudar?"], pic: "🏞️", alt: ["A park", "Un parque"], a: [k("Pick it up with gloves", "Recogerla con guantes", "🧤"), x("adds-pollution", "Add more trash", "Tirar más basura", "🗑️"), x("adds-pollution", "Kick it into the pond", "Patearla al estanque", "🦆")], h: [["Where should trash go?", "¿Dónde va la basura?"], ["Animals can get hurt by trash.", "La basura puede lastimar a los animales."]], s: [["Pick up the trash with gloves and put it in a bin.", "Recoge la basura con guantes y échala al bote."]] },
-        { q: ["Old paper is made into new paper. What is this called?", "El papel viejo se vuelve papel nuevo. ¿Cómo se llama esto?"], pic: "📄", alt: ["A sheet of paper", "Una hoja de papel"], a: [k("Recycling", "Reciclar", "♻️"), x("adds-pollution", "Littering", "Tirar basura", "🗑️"), x("wastes-resources", "Burning", "Quemar", "🔥")], h: [["The old paper gets used again.", "El papel viejo se usa otra vez."], ["Look for the word that means made new again.", "Busca la palabra que significa volver a hacer algo nuevo."]], s: [["Making new paper from old paper is recycling.", "Hacer papel nuevo con papel viejo es reciclar."]] },
-        { q: ["The park is close by. How can you go and keep the air clean?", "El parque está cerca. ¿Cómo vas y cuidas el aire?"], pic: "🌳", alt: ["A tree", "Un árbol"], a: [k("Walk or ride a bike", "Caminar o ir en bici", "🚲"), x("adds-pollution", "Ride in a big truck", "Ir en un camión grande", "🚚"), x("adds-pollution", "Drive around the block many times", "Dar muchas vueltas en carro", "🚗")], h: [["What makes smoke come out?", "¿Qué echa humo?"], ["Cars and trucks burn gas.", "Los carros y camiones queman gasolina."]], s: [["Walking and biking make no smoke. The air stays cleaner.", "Caminar y andar en bici no echan humo. El aire queda más limpio."]] },
-        { q: ["Birds live in a forest. Someone wants to cut down every tree. What is better?", "Unos pájaros viven en un bosque. Alguien quiere cortar todos los árboles. ¿Qué es mejor?"], pic: "🐦", alt: ["A bird", "Un pájaro"], a: [k("Leave many trees standing", "Dejar muchos árboles en pie", "🌳"), x("harms-habitat", "Cut all the trees", "Cortar todos los árboles", "🪓"), x("harms-habitat", "Scare the birds away", "Espantar a los pájaros", "📢")], h: [["Where do the birds make nests?", "¿Dónde hacen nidos los pájaros?"], ["Birds need trees for homes.", "Los pájaros necesitan árboles para vivir."]], s: [["Leave many trees. The birds keep their homes.", "Deja muchos árboles. Los pájaros conservan su hogar."]] },
-        { q: ["A honey jar is empty. How can you reuse it?", "Un frasco de miel está vacío. ¿Cómo lo reutilizas?"], pic: "🍯", alt: ["A honey pot", "Un frasco de miel"], a: [k("Keep pencils in it", "Guardar lápices en él", "✏️"), x("adds-pollution", "Throw it in the street", "Tirarlo en la calle", "🛣️"), x("wastes-resources", "Break it", "Romperlo", "💥")], h: [["Reuse means use it again.", "Reutilizar es usarlo otra vez."], ["What could a jar hold?", "¿Qué puede guardar un frasco?"]], s: [["Use the jar to hold pencils. You reuse it.", "Usa el frasco para guardar lápices. Lo reutilizas."]] },
-        { q: ["Fish live in a river. What keeps the river clean?", "Unos peces viven en un río. ¿Qué mantiene limpio el río?"], pic: "🐟", alt: ["A fish", "Un pez"], a: [k("Keep trash out of it", "No echarle basura", "🚯"), x("adds-pollution", "Pour paint into it", "Echarle pintura", "🎨"), x("adds-pollution", "Wash a dirty car in it", "Lavar un carro sucio en él", "🚗")], h: [["Fish need clean water.", "Los peces necesitan agua limpia."], ["Paint and dirt make water dirty.", "La pintura y la mugre ensucian el agua."]], s: [["Keep trash and dirt out. The river stays clean.", "No le eches basura ni mugre. El río queda limpio."]] },
-        { q: ["Your toy is broken. What uses the least new stuff?", "Tu juguete se rompió. ¿Qué usa menos cosas nuevas?"], pic: "🧸", alt: ["A teddy bear", "Un osito de peluche"], a: [k("Fix it", "Arreglarlo", "🔧"), x("wastes-resources", "Throw it away and buy a new one", "Tirarlo y comprar otro", "🗑️"), x("wastes-resources", "Buy two new toys", "Comprar dos juguetes nuevos", "🛒")], h: [["Can the toy still be used?", "¿Todavía se puede usar el juguete?"], ["New toys use new stuff.", "Los juguetes nuevos usan cosas nuevas."]], s: [["Fix the toy. You use it again and make less trash.", "Arregla el juguete. Lo usas otra vez y haces menos basura."]] },
-        { q: ["Food scraps rot and feed the soil. What is this called?", "Los restos de comida se pudren y alimentan la tierra. ¿Cómo se llama?"], pic: "🍌", alt: ["A banana", "Un plátano"], a: [k("Composting", "Hacer composta", "🌱"), x("adds-pollution", "Littering", "Tirar basura", "🗑️"), x("wastes-resources", "Burning", "Quemar", "🔥")], h: [["The scraps turn into rich soil.", "Los restos se vuelven tierra buena."], ["Gardeners do this in a bin or pile.", "Los jardineros lo hacen en un bote o un montón."]], s: [["Turning scraps into soil is composting.", "Volver tierra los restos de comida es hacer composta."]] },
-        { q: ["How can you save paper at school?", "¿Cómo puedes ahorrar papel en la escuela?"], pic: "✏️", alt: ["A pencil", "Un lápiz"], a: [k("Use both sides of the page", "Usar las dos caras de la hoja", "📄"), x("wastes-resources", "Write one line on each page", "Escribir una línea en cada hoja", "📃"), x("wastes-resources", "Throw away clean paper", "Tirar hojas limpias", "🗑️")], h: [["Does a page have one side or two?", "¿Una hoja tiene una cara o dos?"], ["Less paper used means fewer trees cut.", "Usar menos papel es cortar menos árboles."]], s: [["Write on both sides. You use less paper.", "Escribe en las dos caras. Usas menos papel."]] },
-      ],
-    },
-  ],
-  "s.weather.ready": [
-    {
-      strat: ["A forecast tells what weather is coming. Then we can get ready.", "El pronóstico dice qué tiempo viene. Así podemos prepararnos."],
-      seconds: 12,
-      items: [
-        { q: ["Thunder roars. You are at the pool. What should you do?", "Truena. Estás en la piscina. ¿Qué debes hacer?"], pic: "⛈️", alt: ["A cloud with rain and lightning", "Una nube con lluvia y rayos"], a: [k("Get out and go inside", "Salir y entrar a un edificio", "🏠"), x("unsafe-place", "Keep swimming", "Seguir nadando", "🏊"), x("unsafe-place", "Stand under a tall tree", "Pararte bajo un árbol alto", "🌳")], h: [["Thunder means lightning is near.", "Si truena, hay rayos cerca."], ["Water and tall trees are not safe in a storm.", "El agua y los árboles altos no son seguros en una tormenta."]], s: [["Get out of the water and go inside a building.", "Sal del agua y entra a un edificio."]] },
-        { q: ["The forecast says a big snowstorm is coming. What should your family do?", "El pronóstico dice que viene una gran nevada. ¿Qué debe hacer tu familia?"], pic: "🌨️", alt: ["A cloud with falling snow", "Una nube con nieve"], a: [k("Get food, water and warm clothes ready", "Tener lista comida, agua y ropa abrigada", "🧥"), x("ignores-forecast", "Plan a picnic", "Planear un pícnic", "🧺"), x("wrong-gear", "Pack swimsuits", "Empacar trajes de baño", "🩱")], h: [["What will it be like outside?", "¿Cómo estará afuera?"], ["You may need to stay home for days.", "Tal vez se queden en casa varios días."]], s: [["Get food, water and warm clothes ready before the snow.", "Ten lista comida, agua y ropa abrigada antes de la nevada."]] },
-        { q: ["How can we learn that a storm is coming?", "¿Cómo sabemos que viene una tormenta?"], pic: "🌩️", alt: ["A cloud with lightning", "Una nube con un rayo"], a: [k("Listen to the weather forecast", "Escuchar el pronóstico del tiempo", "📻"), x("wrong-weather-sign", "Count the flowers", "Contar las flores", "🌼"), x("wrong-weather-sign", "Look at the moon", "Mirar la luna", "🌙")], h: [["Who studies the weather?", "¿Quién estudia el tiempo?"], ["Weather scientists share news about storms.", "Los científicos del tiempo avisan de las tormentas."]], s: [["The weather forecast tells us when a storm is coming.", "El pronóstico del tiempo nos avisa cuando viene una tormenta."]] },
-        { q: ["A tornado warning sounds. Where should you go?", "Suena una alerta de tornado. ¿Adónde debes ir?"], pic: "🌪️", alt: ["A tornado", "Un tornado"], a: [k("A room with no windows on the lowest floor", "Un cuarto sin ventanas en el piso más bajo", "⬇️"), x("unsafe-place", "Outside to watch it", "Afuera para verlo", "👀"), x("unsafe-place", "Next to a big window", "Junto a una ventana grande", "🪟")], h: [["Tornado winds can break glass.", "Los vientos de un tornado pueden romper vidrios."], ["Go low and stay away from glass.", "Ve abajo y lejos de los vidrios."]], s: [["Go to a room with no windows on the lowest floor.", "Ve a un cuarto sin ventanas en el piso más bajo."]] },
-        { q: ["A hurricane is coming. What should the family pack?", "Viene un huracán. ¿Qué debe empacar la familia?"], pic: "🌀", alt: ["A swirling storm", "Una tormenta que gira"], a: [k("Water, canned food and batteries", "Agua, comida enlatada y pilas", "🔋"), x("wrong-gear", "Sleds and skis", "Trineos y esquís", "🛷"), x("wrong-gear", "Beach toys", "Juguetes de playa", "🏖️")], h: [["The power may go out for days.", "La luz se puede ir por días."], ["Think about what you need to stay safe.", "Piensa en lo que necesitas para estar seguro."]], s: [["Pack water, canned food and batteries.", "Empaca agua, comida enlatada y pilas."]] },
-        { q: ["It is very hot outside today. How do you stay safe?", "Hoy hace mucho calor afuera. ¿Cómo te cuidas?"], pic: "🌡️", alt: ["A thermometer", "Un termómetro"], a: [k("Drink water and rest in the shade", "Tomar agua y descansar a la sombra", "💧"), x("wrong-gear", "Wear a heavy coat", "Ponerte un abrigo grueso", "🧥"), x("ignores-forecast", "Run races at noon in the sun", "Correr carreras al mediodía bajo el sol", "🏃")], h: [["Your body needs to stay cool.", "Tu cuerpo necesita estar fresco."], ["Hot sun makes you lose water.", "El sol fuerte te hace perder agua."]], s: [["Drink water and rest in the shade.", "Toma agua y descansa a la sombra."]] },
-        { q: ["Lightning flashes. You are on a soccer field. Where do you go?", "Caen rayos. Estás en una cancha de fútbol. ¿Adónde vas?"], pic: "⚡", alt: ["A lightning bolt", "Un rayo"], a: [k("Inside a building or a car", "Dentro de un edificio o un carro", "🏫"), x("unsafe-place", "The middle of the field", "El centro de la cancha", "⚽"), x("unsafe-place", "Under a lone tree", "Bajo un árbol solo", "🌳")], h: [["Lightning hits tall things in open places.", "Los rayos caen en cosas altas en lugares abiertos."], ["You need a roof and walls around you.", "Necesitas techo y paredes alrededor."]], s: [["Go inside a building or a car.", "Entra a un edificio o a un carro."]] },
-        { q: ["The forecast says rain all day. What should you bring to school?", "El pronóstico dice que lloverá todo el día. ¿Qué llevas a la escuela?"], pic: "🌧️", alt: ["A rain cloud", "Una nube de lluvia"], a: [k("An umbrella or a raincoat", "Un paraguas o un impermeable", "☂️"), x("wrong-gear", "Sunglasses", "Lentes de sol", "🕶️"), x("wrong-gear", "A sled", "Un trineo", "🛷")], h: [["What will fall from the sky?", "¿Qué caerá del cielo?"], ["You want to stay dry.", "Quieres mantenerte seco."]], s: [["Bring an umbrella or a raincoat to stay dry.", "Lleva un paraguas o un impermeable para no mojarte."]] },
-        { q: ["Floodwater covers the road. What should a driver do?", "El agua de una inundación cubre el camino. ¿Qué debe hacer quien maneja?"], pic: "🌊", alt: ["A big wave of water", "Una ola grande de agua"], a: [k("Turn around and find another way", "Dar la vuelta y buscar otro camino", "↩️"), x("unsafe-place", "Drive through it fast", "Cruzarla rápido", "🚗"), x("unsafe-place", "Walk through it", "Cruzarla a pie", "🚶")], h: [["Moving water can be very strong.", "El agua que corre puede ser muy fuerte."], ["You cannot see how deep it is.", "No puedes ver qué tan honda es."]], s: [["Turn around and find another way. Never cross floodwater.", "Da la vuelta y busca otro camino. Nunca cruces una inundación."]] },
-        { q: ["Why do people check the weather forecast?", "¿Por qué la gente mira el pronóstico del tiempo?"], pic: "📺", alt: ["A TV", "Una tele"], a: [k("To get ready for the weather", "Para prepararse para el tiempo", "✅"), x("forecast-changes-weather", "To make the rain stop", "Para que deje de llover", "🌧️"), x("forecast-changes-weather", "To make the sun come out", "Para que salga el sol", "☀️")], h: [["Can a forecast change the weather?", "¿El pronóstico puede cambiar el tiempo?"], ["A forecast tells what is coming.", "El pronóstico dice lo que viene."]], s: [["People check the forecast to get ready.", "La gente mira el pronóstico para prepararse."]] },
-        { q: ["A blizzard is coming with lots of snow and wind. What do you do?", "Viene una ventisca con mucha nieve y viento. ¿Qué haces?"], pic: "❄️", alt: ["A snowflake", "Un copo de nieve"], a: [k("Stay inside where it is warm", "Quedarte adentro, donde está calientito", "🏠"), x("unsafe-place", "Go sledding far away", "Irte lejos en trineo", "🛷"), x("wrong-gear", "Go outside in shorts", "Salir en pantalones cortos", "🩳")], h: [["Is it safe to be outside in a blizzard?", "¿Es seguro estar afuera en una ventisca?"], ["Strong wind and snow make it hard to see.", "El viento y la nieve no dejan ver."]], s: [["Stay inside where it is warm until the blizzard ends.", "Quédate adentro, calientito, hasta que pase la ventisca."]] },
-        { q: ["Hail is falling. Hail is balls of ice. Where should you be?", "Cae granizo. El granizo son bolitas de hielo. ¿Dónde debes estar?"], pic: "🧊", alt: ["Pieces of ice", "Pedazos de hielo"], a: [k("Inside, away from windows", "Adentro, lejos de las ventanas", "🏠"), x("unsafe-place", "Outside catching it", "Afuera atrapándolo", "🙌"), x("unsafe-place", "On a bike ride", "Paseando en bici", "🚲")], h: [["Falling ice can hurt you.", "El hielo que cae te puede lastimar."], ["Hail can crack windows too.", "El granizo también puede romper ventanas."]], s: [["Stay inside, away from windows, until the hail stops.", "Quédate adentro, lejos de las ventanas, hasta que pare el granizo."]] },
-        { q: ["A storm knocks out the power. What helps you see at night?", "Una tormenta corta la luz. ¿Qué te ayuda a ver de noche?"], pic: "🌃", alt: ["A city at night", "Una ciudad de noche"], a: [k("A flashlight", "Una linterna", "🔦"), x("needs-power", "A lamp you plug in", "Una lámpara de enchufe", "🔌"), x("wrong-gear", "A kite", "Una cometa", "🪁")], h: [["Which one works with no power from the wall?", "¿Cuál funciona sin la luz de la casa?"], ["Batteries keep working when the power is out.", "Las pilas siguen funcionando sin luz."]], s: [["A flashlight runs on batteries. It works with no power.", "Una linterna usa pilas. Funciona sin luz."]] },
-      ],
-    },
-  ],
-  // @@more
-};
+export const SCIENCE_K_5_MORE: Skill[] = [
+  // ── Kindergarten ──
+  {
+    id: "s.weather.chart",
+    subject: "science",
+    grade: "K",
+    title: { en: "Weather tallies", es: "Contar el tiempo" },
+    standard: "K-ESS2-1",
+    prereqs: ["s.weather"],
+    content: "computed",
+    levels: 2,
+    generate: weatherChart,
+  },
+  {
+    id: "s.sun.warms",
+    subject: "science",
+    grade: "K",
+    title: { en: "Sunlight warms; shade cools", es: "El sol calienta; la sombra refresca" },
+    standard: "K-PS3-1",
+    prereqs: ["s.weather"],
+    content: "draft",
+    levels: 2,
+    generate: fromBanks("s.sun.warms"),
+  },
+  {
+    id: "s.living.change",
+    subject: "science",
+    grade: "K",
+    title: { en: "Living things change their home", es: "Los seres vivos cambian su entorno" },
+    standard: "K-ESS2-2",
+    prereqs: ["s.needs"],
+    content: "draft",
+    levels: 2,
+    generate: fromBanks("s.living.change"),
+  },
+  {
+    id: "s.weather.ready",
+    subject: "science",
+    grade: "K",
+    title: { en: "Getting ready for storms", es: "Prepararse para las tormentas" },
+    standard: "K-ESS3-2",
+    prereqs: ["s.weather"],
+    content: "draft",
+    levels: 1,
+    generate: fromBanks("s.weather.ready"),
+  },
+  // ── Grade 1 ──
+  {
+    id: "s.daylight.hours",
+    subject: "science",
+    grade: "1",
+    title: { en: "Daylight through the year", es: "La luz del día durante el año" },
+    standard: "1-ESS1-2",
+    prereqs: ["s.weather.chart"],
+    content: "computed",
+    levels: 3,
+    generate: daylight,
+  },
+  // ── Grade 2 ──
+  {
+    id: "s.habitat.survey",
+    subject: "science",
+    grade: "2",
+    title: { en: "Counting living things in habitats", es: "Contar seres vivos en los hábitats" },
+    standard: "2-LS4-1",
+    prereqs: ["s.habitats"],
+    content: "computed",
+    levels: 3,
+    generate: habitatSurvey,
+  },
+];
