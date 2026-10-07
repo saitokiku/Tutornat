@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fakeLayout } from "@/components/spotlight/test-layout";
 import { makeItem, SKILLS } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { answerSpots, hintSpot } from "./spot-hints";
-import { isSpotId } from "./spotlight";
+import { guardSpots, isSpotId, resetSpotlight, spot, spotStatus, visibleSpots } from "./spotlight";
 
 const ladder = (item: Item) => item.hints.map((_, i) => hintSpot(item, i));
 const both = (skillId: string, level = 1, seed = 1) => (["en", "es"] as const).map((l) => ladder(makeItem(skillId, level, seed, l)));
@@ -49,10 +50,13 @@ describe("hintSpot", () => {
         for (const seed of [1, 2, 3]) {
           const [en, es] = both(skill.id, level, seed);
           expect(es, `${skill.id} L${level} seed ${seed}`).toEqual(en);
+          const guarded = answerSpots(makeItem(skill.id, level, seed, "en"));
           for (const id of en.filter((x): x is string => x !== null)) {
             found++;
             expect(isSpotId(id)).toBe(true);
             expect(id, skill.id).toMatch(allowed);
+            // Never inside what the guard keeps dark for that item.
+            expect(guarded.some((g) => id === g || id.startsWith(`${g}.`)), `${skill.id} ${id}`).toBe(false);
           }
         }
     expect(found).toBeGreaterThan(40);
@@ -60,15 +64,51 @@ describe("hintSpot", () => {
 });
 
 describe("answerSpots", () => {
-  it("guards the correct choice", () => {
-    const item = makeItem("m.compare.10", 1, 4, "en");
-    expect(item.answer.kind).toBe("choice");
-    expect(answerSpots(item)).toEqual([`practice.choice.${(item.answer as { index: number }).index}`]);
+  afterEach(() => {
+    resetSpotlight();
+    document.body.innerHTML = "";
+    vi.restoreAllMocks();
   });
 
-  it("guards the answer's tick on a number-line pad", () => {
-    const item = { ...makeItem("m.frac.numberline", 1, 1, "en"), input: "number-line", pad: { kind: "number-line", min: 0, max: 1, step: 0.25 }, answer: { kind: "fraction", n: 3, d: 4 } } as Item;
-    expect(answerSpots(item)).toEqual(["practice.pad.numberline.tick.3"]);
-    expect(answerSpots(makeItem("m.add.10", 1, 1, "en"))).toEqual([]);
+  it("guards every choice, not just the right one, so a glow that fails can't single it out", () => {
+    const item = makeItem("m.compare.10", 1, 4, "en");
+    expect(item.answer.kind).toBe("choice");
+    expect(answerSpots(item)).toEqual(["practice.choices", ...(item.choices ?? []).map((_, i) => `practice.choice.${i}`)]);
+  });
+
+  it("guards the keys wherever the answer is typed, and every point or part of a touch pad", () => {
+    const keys = answerSpots(makeItem("m.next.number", 1, 1, "en"));
+    expect(keys).toContain("practice.pad.keys");
+    expect(keys).toContain("practice.pad.key.7");
+    expect(answerSpots(makeItem("m.frac.unit", 1, 1, "en"))).toContain("practice.pad.keys");
+    const line = { ...makeItem("m.frac.numberline", 1, 1, "en"), input: "number-line", pad: { kind: "number-line", min: 0, max: 1, step: 0.25 }, answer: { kind: "fraction", n: 3, d: 4 } } as Item;
+    expect(answerSpots(line)).toEqual(["practice.pad.numberline.ticks", ...[0, 1, 2, 3, 4].map((k) => `practice.pad.numberline.tick.${k}`)]);
+    const bar = { ...line, input: "fraction-bar", pad: { kind: "fraction-bar", maxParts: 3 } } as Item;
+    expect(answerSpots(bar)).toEqual(["practice.pad.fractionbar.parts", "practice.pad.fractionbar.part.0", "practice.pad.fractionbar.part.1", "practice.pad.fractionbar.part.2"]);
+    expect(answerSpots({ ...line, input: "clock" } as Item)).toEqual(["practice.pad.clock.face"]);
+  });
+
+  it("on screen: a keypad item's digits can't be pointed at by any id, the slot the answer goes in can", () => {
+    fakeLayout();
+    const item = makeItem("m.next.number", 1, 1, "en");
+    expect(item.input).toBe("keypad");
+    const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"].map((k) => `<button type="button" aria-label="${k}">${k}</button>`).join("");
+    document.body.innerHTML = `
+      <h1 data-spot="practice.prompt">What comes next?</h1>
+      <output aria-label="Your answer" data-spot="practice.pad.output">?</output>
+      <div role="group" aria-label="Keypad" data-spot="practice.pad.keys">${digits}</div>
+      <button type="button" data-spot="practice.hint">Hint</button>`;
+    const release = guardSpots(answerSpots(item));
+    for (const k of ["0", "2", "7"]) {
+      expect(spot(`auto.button.${k}`, { say: "Tap this one." }), k).toBe(false);
+      expect(spotStatus(`auto.button.${k}`)).toBe("guarded");
+    }
+    expect(spot("practice.pad.keys")).toBe(false);
+    // The keys still show in the list; the problem and the rest of the screen can be pointed at.
+    expect(visibleSpots().map((s) => s.id)).toContain("auto.button.2");
+    expect(spot("practice.prompt", { say: "Read it again." })).toBe(true);
+    expect(spot("practice.pad.output")).toBe(true);
+    release();
+    expect(spot("auto.button.2")).toBe(true);
   });
 });

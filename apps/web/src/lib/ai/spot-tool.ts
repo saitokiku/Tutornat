@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { SPOT_ID, spot, spotSteps } from "@/lib/spotlight";
+import { SPOT_ID, spot, spotStatus, spotSteps, type SpotStatus } from "@/lib/spotlight";
 
 // point_at: the tutor points at something on the learner's screen. Like the board tools in tools.ts
 // (show_visual), the server only checks the input and echoes; the browser does the pointing from the
@@ -38,6 +38,7 @@ export const SPOT_GUIDE = `Pointing at the screen (point_at): you can make one t
 - Use only ids from the on-screen list; never make one up. If what you mean is not listed, say it in words.
 - Keep the caption under 90 characters, and still say in your reply what you are pointing at: some learners cannot see the glow.
 - Never point to give away an answer: never at the correct choice, never at the answer itself, never at a step the learner has not reached yet.
+- While a question is open, the place the answer goes (the choices, the keypad, an answer pad's points) cannot be pointed at. Point at the problem instead, or say it in words.
 - Don't point every turn.`;
 
 /** SPOT_GUIDE plus the on-screen list, for the system prompt. Empty when nothing was sent. */
@@ -49,7 +50,24 @@ export function spotsPrompt(spots: TutorSpotContext | undefined): string {
 
 type ToolPart = { type: string; state?: string; toolCallId?: string; input?: unknown };
 
-const done = new Set<string>();
+// How each tool call went the first time it ran, so the transcript only offers "Show me again" for a
+// pointing the learner actually saw. A store (like lib/store.ts) so the chip appears when the run lands.
+const results = new Map<string, SpotStatus>();
+const watchers = new Set<() => void>();
+
+export const pointResult = (toolCallId: string | undefined): SpotStatus | undefined => (toolCallId ? results.get(toolCallId) : undefined);
+export function subscribePoints(fn: () => void) {
+  watchers.add(fn);
+  return () => {
+    watchers.delete(fn);
+  };
+}
+
+/** Why a point did not light: guarded if any of its targets is, else missing. */
+export function pointStatus(input: PointAtInput): SpotStatus {
+  const all = [input.target, ...(input.steps ?? []).map((s) => s.target)].map(spotStatus);
+  return all.includes("ok") ? "ok" : all.includes("guarded") ? "guarded" : "missing";
+}
 
 /**
  * Performs a tool-point_at part once it has its full input. Safe to call on every render: each tool
@@ -59,13 +77,15 @@ const done = new Set<string>();
 export function runSpotFromToolPart(part: ToolPart, opts: { force?: boolean } = {}): boolean {
   if (part.type !== "tool-point_at" || (part.state !== "input-available" && part.state !== "output-available")) return false;
   const key = part.toolCallId;
-  if (key && done.has(key) && !opts.force) return false;
+  if (key && results.has(key) && !opts.force) return false;
   const parsed = PointAtInput.safeParse(part.input);
   if (!parsed.success) return false;
-  if (key) {
-    if (done.size > 500) done.clear();
-    done.add(key);
-  }
   const { target, say, steps } = parsed.data;
-  return steps?.length ? spotSteps([{ id: target, say }, ...steps.map((s) => ({ id: s.target, say: s.say }))]) : spot(target, { say });
+  const ok = steps?.length ? spotSteps([{ id: target, say }, ...steps.map((s) => ({ id: s.target, say: s.say }))]) : spot(target, { say });
+  if (key && !results.has(key)) {
+    if (results.size > 500) results.clear();
+    results.set(key, ok ? "ok" : pointStatus(parsed.data));
+    watchers.forEach((fn) => fn());
+  }
+  return ok;
 }

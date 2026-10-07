@@ -106,14 +106,28 @@ The tutor points to direct attention, never to answer. It never points at the co
 answer, or at a step the learner has not reached.
 
 - The prompt says so (`SPOT_GUIDE`), but the model does not know the answer key (the prompt never
-  contains it), so it could point at the right choice by accident. So the page enforces it:
-  **`guardSpots(answerSpots(item))`** while an item is up makes the correct choice
-  (`practice.choice.<i>`) and the answer's tick on a number-line pad unpointable — by any id,
-  marked or auto, and anything inside them. The request quietly fails.
-- Guarded targets **stay in the visible list**. Leaving the right choice out would point at it by
-  omission.
+  contains it), so it could point at the right choice, or at the 7 on the keypad, by accident. So the
+  page enforces it: **`guardSpots(answerSpots(item))`** while an item is up makes **the whole place the
+  answer is given** unpointable — by any id, marked or auto, and anything inside it:
+
+  | Input | Guarded |
+  |---|---|
+  | choices | `practice.choices` and every `practice.choice.<i>` — all of them, not just the right one |
+  | keypad, fraction, remainder | `practice.pad.keys` (the keys group) and `practice.pad.key.<0-9 / minus / point>` |
+  | expr | `practice.pad.symbols` (the helper keys) |
+  | number-line pad | `practice.pad.numberline.ticks` and every `practice.pad.numberline.tick.<k>` |
+  | fraction-bar pad | `practice.pad.fractionbar.parts` and every `practice.pad.fractionbar.part.<k>` |
+  | clock pad | `practice.pad.clock.face` |
+
+  Guarding all of it, not only the answer, matters: if only the right choice stayed dark, a glow that
+  fails to appear (or a "Show me again" that does nothing) would single it out. The slot the answer
+  goes in (`practice.pad.output`, `practice.pad.fraction.top` / `.bottom`) and the problem itself stay
+  pointable.
+- Guarded targets **stay in the visible list**, and a failed point looks the same whatever the reason:
+  nothing lights, and the transcript keeps no "Show me again" for it.
 - `hintSpot` only names parts of what is given (the prompt, the picture) or the empty slot an answer
-  goes in, never a choice. A test runs it over every skill, level and language.
+  goes in, never a choice or a key. A test runs it over every skill, level and language and checks no
+  id falls inside that item's guard.
 
 ## The AI tool — `lib/ai/spot-tool.ts`
 
@@ -126,9 +140,14 @@ answer, or at a step the learner has not reached.
   about, where something lives in the app; one target at a time; ids only from the list; say it in
   words too; never an answer), plus the list, quoted as screen text, not instructions.
 - `runSpotFromToolPart(part, { force? })` — performs a `tool-point_at` part once its input is complete;
-  safe to call on every render (once per tool call; `force` re-runs it for "Show me again").
+  safe to call on every render (once per tool call; `force` re-runs it for "Show me again"). The first
+  run's outcome is kept per tool call (`pointResult(toolCallId)`, `subscribePoints`): `ok`, `missing`
+  or `guarded`. `spotStatus(id)` / `pointStatus(input)` say the same without lighting anything.
 - `components/spotlight/SpotAgain.tsx` — what a point_at part leaves in the transcript: one "Show me
-  again" chip; says "That isn't on the screen any more" if the target is gone.
+  again" chip, only for a pointing that lit (a missing or guarded one leaves nothing). The caption is
+  the chip's `aria-description`, not its text, so the chat log's live region doesn't read it a second
+  time. Says "That isn't on the screen anymore." if the target has since gone; a target guarded since
+  then just stays dark.
 
 ## Demo tutor — `lib/spot-hints.ts`
 
@@ -180,13 +199,16 @@ something that exists twice for layout (rail tab and bottom-bar tab): the first 
 | `practice.feedback` | the right / not yet line |
 | `practice.hints`, `practice.hints.<i>`, `practice.steps` | hint list, one hint, "Show me how" box |
 | `practice.answer` | the AnswerInput wrapper |
-| `practice.pad.key.<k>` | keypad keys: `0`–`9`, `minus`, `point`, `back`, `clear` |
-| `practice.pad.fraction.top` / `.bottom` | fraction pad fields |
-| `practice.pad.remainder.q` / `.r` | remainder pad fields |
-| `practice.pad.text`, `practice.pad.symbol.<n>` | text / algebra field, its helper keys |
-| `practice.choice.<i>` | choice tiles (the correct one is guarded) |
-| `practice.pad.numberline`, `practice.pad.numberline.tick.<k>` | number-line pad, its points (k = steps from `pad.min`; the answer's is guarded) |
-| `practice.pad.fractionbar.part.<k>`, `practice.pad.clock.hour` / `.minute` | the other touch pads |
+| `practice.pad.output` | the keypad's answer display (the slot; pointable) |
+| `practice.pad.keys` | the keys group (`Keys`' `role="group"` div) — **guarded** |
+| `practice.pad.key.<k>` | keypad keys: `0`–`9`, `minus`, `point`, `back` — inside the guarded group |
+| `practice.pad.fraction.top` / `.bottom` | fraction pad boxes, with `data-spot-label` = `t("practice.numerator")` / `t("practice.denominator")` (their aria-label carries the value) |
+| `practice.pad.remainder.q` / `.r` | remainder pad boxes, `data-spot-label` = quotient / remainder |
+| `practice.pad.text`, `practice.pad.symbols`, `practice.pad.symbol.<n>` | text / algebra field, its helper keys group (**guarded** for expr), one key |
+| `practice.choices`, `practice.choice.<i>` | the choice list, and each choice on its **`<li>`** (so its Hear button is inside) — all **guarded** |
+| `practice.pad.numberline`, `practice.pad.numberline.ticks`, `practice.pad.numberline.tick.<k>` | number-line pad, the group of its points (**guarded**), one point (k = steps from `pad.min`) |
+| `practice.pad.fractionbar.parts`, `practice.pad.fractionbar.part.<k>` | fraction-bar pad: its parts group (**guarded**), one part |
+| `practice.pad.clock.hour` / `.minute`, `practice.pad.clock.face` | clock pad: the hand controls, the face with its numbers (**guarded**) |
 | `practice.check`, `practice.hint`, `practice.show-how`, `practice.ask-tutor`, `practice.skip`, `practice.next` | the buttons |
 | `practice.finish`, `practice.finish.again` | finish heading, practise-again action |
 
@@ -213,9 +235,10 @@ pass none. The whole SVG is `visual.<kind>` with the hyphen dropped: `visual.fra
 
 **Lesson stage** (`components/stage/Stage.tsx`, `scenes.tsx`, `widgets/*`) — `stage.back`,
 `stage.scenes`, `stage.scene.<i>`, `stage.title`, `stage.board`, `stage.read-aloud`, `stage.prev`,
-`stage.next`, `stage.finish`, `stage.tutor`; quiz: `stage.quiz.prompt`, `stage.choice.<i>` (the answer
-guarded), `stage.check`, `stage.hint`, `stage.why`, `stage.next-question`; widgets:
-`widget.fractionbar.part.<i>`, `widget.fractionbar.more`, `widget.fractionbar.fewer`,
+`stage.next`, `stage.finish`, `stage.tutor`; quiz: `stage.quiz.prompt`, `stage.choices` and
+`stage.choice.<i>` on each `<li>` (all guarded while unanswered), `stage.check`, `stage.hint`,
+`stage.why`, `stage.next-question`; widgets: `widget.answer` (the part a widget's answer is set in,
+guarded until checked), `widget.fractionbar.part.<i>`, `widget.fractionbar.more`, `widget.fractionbar.fewer`,
 `widget.fractionbar.check`, `widget.numberline.point.<k>`, `widget.slider`,
 `widget.sorter.item.<i>`, `widget.sorter.bin.<b>`, `widget.moon.phase.<i>`, `widget.matter.temp`.
 
@@ -281,8 +304,12 @@ Never mark destructive controls (`course.delete`): the tutor has no reason to po
      the part ids above; the Runner and the lesson stage pass it, the tutor's cards don't.
    - optional: when the learner taps Hint, `const id = hintSpot(item, hints)` → `spot(id, { cue: "point", ms: 5000 })`
      (no caption: the hint is already on screen; the arrow shows where it applies).
-8. **Lesson stage** — the stage and widget ids; in `QuizView`, `guardSpots([`stage.choice.${q.answer}`])`
-   while a question is unanswered.
+8. **Lesson stage** — the stage and widget ids. While a quiz question is unanswered, guard all of its
+   choices: `useEffect(() => guardSpots(["stage.choices", ...q.choices.map((_, i) => `stage.choice.${i}`)]), [q]);`
+   in `QuizView` (choices on the `<li>`, the list `stage.choices`). While an interactive widget is
+   unchecked, guard the part the learner sets to answer, marked `widget.answer` on each widget (the
+   sorter's bins, the number line's points, the fraction bar's parts, the moon phases, the clock face,
+   the grid cells): `useEffect(() => (checked ? undefined : guardSpots(["widget.answer"])), [checked]);`.
 9. **Shell, Today, calendar, courses, family, talk** — the ids above with `spotAttr`; on both the rail
    link and the bottom-bar link for each tab.
 10. **Tutor drawer on phones** (`components/tutor/TutorDrawer.tsx`): the sheet covers the page, and the

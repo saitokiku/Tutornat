@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { runSpotFromToolPart } from "@/lib/ai/spot-tool";
 import { currentSpot, guardSpots, resetSpotlight, spot, spotSteps } from "@/lib/spotlight";
 import { SpotAgain } from "./SpotAgain";
 import { SpotlightLayer } from "./SpotlightLayer";
@@ -260,22 +261,69 @@ describe("SpotlightLayer", () => {
 });
 
 describe("SpotAgain", () => {
-  const part = (target: string) => ({ type: "tool-point_at", state: "output-available", toolCallId: `again-${target}`, input: { target, say: "Tap Hint." } });
+  const part = (target: string, id = `again-${target}`) => ({ type: "tool-point_at", state: "output-available", toolCallId: id, input: { target, say: "This one is bigger." } });
 
-  it("brings the pointing back, or says it is gone", async () => {
-    render(
+  it("appears once the pointing has lit, brings it back, and says when the target is gone", async () => {
+    const { rerender } = render(
       <>
         <Practice />
         <SpotAgain part={part("practice.hint")} />
-        <SpotAgain part={part("calendar.add")} />
         <SpotlightLayer />
       </>,
     );
-    const [here, gone] = screen.getAllByRole("button", { name: /Show me again/ });
-    await userEvent.click(here);
+    expect(screen.queryByRole("button", { name: /Show me again/ })).toBeNull();
+    lit(() => runSpotFromToolPart(part("practice.hint")));
+    const chip = screen.getByRole("button", { name: "Show me again" });
+    // The caption is its description, not its text: the chat log (a live region) has already said it.
+    expect(chip).toHaveAccessibleDescription("This one is bigger.");
+    expect(chip).not.toHaveTextContent("bigger");
+    act(() => resetSpotlight());
+    await userEvent.click(chip);
     expect(currentSpot()?.id).toBe("practice.hint");
-    await userEvent.click(gone);
-    expect(screen.getByText("That isn't on the screen any more.")).toBeInTheDocument();
+    rerender(
+      <>
+        <Practice withHint={false} />
+        <SpotAgain part={part("practice.hint")} />
+        <SpotlightLayer />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Show me again" }));
+    expect(screen.getByText("That isn't on the screen anymore.")).toBeInTheDocument();
+  });
+
+  it("leaves nothing for a pointing that never lit: a guarded answer looks like any other miss", () => {
+    render(
+      <>
+        <Practice />
+        <SpotAgain part={part("practice.check", "guarded")} />
+        <SpotAgain part={part("calendar.add", "missing")} />
+        <SpotlightLayer />
+      </>,
+    );
+    const release = guardSpots(["practice.check"]);
+    lit(() => runSpotFromToolPart(part("practice.check", "guarded")));
+    lit(() => runSpotFromToolPart(part("calendar.add", "missing")));
+    expect(currentSpot()).toBeNull();
+    expect(screen.queryByRole("button", { name: /Show me again/ })).toBeNull();
+    expect(document.body).not.toHaveTextContent("This one is bigger.");
+    release();
+  });
+
+  it("stays quiet when its target has been guarded since: no glow, and no claim that it is gone", async () => {
+    render(
+      <>
+        <Practice />
+        <SpotAgain part={part("practice.check", "later")} />
+        <SpotlightLayer />
+      </>,
+    );
+    lit(() => runSpotFromToolPart(part("practice.check", "later")));
+    act(() => resetSpotlight());
+    const release = guardSpots(["practice.check"]);
+    await userEvent.click(screen.getByRole("button", { name: "Show me again" }));
+    expect(currentSpot()).toBeNull();
+    expect(screen.queryByText(/isn't on the screen/)).toBeNull();
+    release();
   });
 
   it("renders nothing for other parts", () => {

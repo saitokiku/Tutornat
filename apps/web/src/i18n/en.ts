@@ -1567,7 +1567,7 @@ const en = {
   "spot.dir.right": "to the right",
   "spot.hintHere": "The hint is about this part.",
   "spot.again": "Show me again",
-  "spot.gone": "That isn't on the screen any more.",
+  "spot.gone": "That isn't on the screen anymore.",
 } as const;
 
 export default en;

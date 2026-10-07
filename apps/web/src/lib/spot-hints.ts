@@ -6,7 +6,7 @@ import type { Item, MathPart } from "@/practice/types";
 // column sum). Otherwise null — the demo tutor then just says the hint. Ids follow docs/spotlight.md.
 //
 // Honesty: these rules only ever name parts of what is given (the prompt, the picture) or the empty
-// slot the answer goes in. They never name a choice, and answerSpots lists what must never be lit.
+// slot the answer goes in. They never name a choice or a key, and answerSpots lists what must never be lit.
 
 type Rule = (item: Item, hint: string) => string | null;
 
@@ -118,17 +118,34 @@ export function hintSpot(item: Item, rung: number): string | null {
   return null;
 }
 
+const range = (n: number) => Array.from({ length: Math.max(0, n) }, (_, i) => i);
+const KEYS = [...range(10).map(String), "minus", "point"];
+
 /**
- * Targets that would give the answer away for this item: the correct choice, the answer's tick on a
- * number-line pad. The practice screen passes these to guardSpots while the item is up.
+ * What the tutor must not point at while this item is up: the whole place the answer is given — every
+ * choice (not just the right one, so a glow that fails to appear can't single it out), the keypad's
+ * keys, the algebra symbol keys, every point of a number-line pad, every part of a fraction-bar pad,
+ * the face of a clock pad. Group ids and their parts are both listed, so the guard holds however the
+ * screen is marked. The practice screen passes these to guardSpots while the item is up.
  */
 export function answerSpots(item: Item): string[] {
-  const out: string[] = [];
-  const a = item.answer;
-  if (a.kind === "choice") out.push(`practice.choice.${a.index}`);
-  if (item.pad?.kind === "number-line") {
-    const value = a.kind === "number" ? a.value : a.kind === "fraction" ? a.n / a.d : null;
-    if (value !== null) out.push(`practice.pad.numberline.tick.${Math.round((value - item.pad.min) / item.pad.step)}`);
+  const pad = item.pad;
+  switch (item.input) {
+    case "choices":
+      return ["practice.choices", ...range(item.choices?.length ?? 0).map((i) => `practice.choice.${i}`)];
+    case "keypad":
+    case "fraction":
+    case "remainder":
+      return ["practice.pad.keys", ...KEYS.map((k) => `practice.pad.key.${k}`)];
+    case "expr":
+      return ["practice.pad.symbols"];
+    case "number-line":
+      return ["practice.pad.numberline.ticks", ...(pad?.kind === "number-line" ? range(Math.round((pad.max - pad.min) / pad.step) + 1).map((k) => `practice.pad.numberline.tick.${k}`) : [])];
+    case "fraction-bar":
+      return ["practice.pad.fractionbar.parts", ...(pad?.kind === "fraction-bar" ? range(pad.maxParts).map((k) => `practice.pad.fractionbar.part.${k}`) : [])];
+    case "clock":
+      return ["practice.pad.clock.face"];
+    default:
+      return [];
   }
-  return out;
 }

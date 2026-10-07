@@ -382,6 +382,14 @@ function pick(id: string): Element | null {
   return el && !guardedBy(el) ? el : null;
 }
 
+export type SpotStatus = "ok" | "missing" | "guarded";
+
+/** Whether an id can be lit right now, and if not, why: not on screen (or not an id), or guarded. Changes nothing. */
+export function spotStatus(id: string): SpotStatus {
+  const el = resolveSpot(id);
+  return !el ? "missing" : guardedBy(el) ? "guarded" : "ok";
+}
+
 /** Lights one element. False when the id is unknown, hidden or guarded (and nothing changes). */
 export function spot(id: string, opts: SpotOptions = {}): boolean {
   if (opts.steps?.length) return spotSteps([{ id, say: opts.say ?? "" }, ...opts.steps], opts);
