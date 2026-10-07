@@ -88,10 +88,13 @@ export function Finish({ course, lesson, learner, tally, seconds, next }: { cour
 
         {/* The clean stop comes first; the next lesson is only offered. */}
         <div className="flex flex-wrap items-center gap-3">
-          <Link href="/home" className={btn("primary", "md", bigButton(young))}>
-            <IconHome size={16} /> {t("stg.finish.done")}
-          </Link>
-          <Hear text={t("stg.finish.done")} />
+          {/* The read-aloud stays beside the button it reads, even when the row wraps. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/home" className={btn("primary", "md", bigButton(young))}>
+              <IconHome size={16} /> {t("stg.finish.done")}
+            </Link>
+            <Hear text={t("stg.finish.done")} />
+          </div>
           <Link href={`/courses/${course.id}`} className={btn("ghost", "md", bigButton(young))}>
             {t("stage.backToCourse")}
           </Link>
@@ -109,7 +112,7 @@ export function Finish({ course, lesson, learner, tally, seconds, next }: { cour
               </div>
               <Hear text={`${t("stg.finish.startNext")}: ${next.title}`} />
             </div>
-            <Link href={`/learn/${course.id}/${next.id}`} className={btn("secondary", "md", bigButton(young))}>
+            <Link href={`/learn/${course.id}/${next.id}`} className={btn("secondary", "md", `text-center ${bigButton(young)}`)}>
               {t("stg.finish.startNext")} <IconArrowRight size={16} />
             </Link>
           </section>
