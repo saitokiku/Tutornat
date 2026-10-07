@@ -8,10 +8,16 @@ It serves four jobs in one product: **help right now** (homework, a test tomorro
 (an at-home tutoring center), **homeschool** (skill maps, lessons, reading log, dated records) and
 **staying on top** (school calendar import, test prep that schedules itself).
 
-**Status:** works end to end in the browser on demo data. The AI tutor and lesson writer are built
-and switch on when the deployment has an AI provider; without one, a demo tutor uses vetted hints and
-worked examples. Server accounts, the database and the children's-privacy consent flow come next —
-see [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/STATUS.md](docs/STATUS.md).
+**Next build:** [one integrated learning workspace](docs/plans/2026-10-07-integrated-learning-release.md)
+with visual teaching, natural voice, shared attention and meaningful use across ages. Read the
+[product design](docs/specs/2026-10-07-one-learning-workspace.md) and
+[quality-first model/voice/Jev strategy](docs/specs/2026-10-07-models-voice-and-jev.md).
+
+**Current evidence:** the practice/stage/tutor and server scaffolding are substantial, but the
+[audit](docs/reviews/2026-10-07-system-audit.md) found broken handoffs and evidence/authorization gaps.
+At `d8d8166`, verify passes (2,372 tests); the full browser suite has 148 passes, 22 failures and
+16 skips. Live-family readiness and natural voice have not been established. See
+[docs/STATUS.md](docs/STATUS.md) for completed work versus external release gates.
 
 | | |
 |---|---|
@@ -46,8 +52,8 @@ KAIZEN_AI=gateway              # or, on Vercel, the deployment's own OIDC token 
 See `apps/web/.env.example`. On Vercel an Anthropic key is ignored unless `KAIZEN_AI=anthropic` is set,
 because the project still holds keys from earlier attempts; requests always go to Anthropic's own API.
 
-Settings shows which one is live. `npm run verify` runs lint, type check, 724 unit tests and a
-production build. `npm run e2e` runs six journeys and an accessibility audit at desktop and phone
+Settings shows which one is configured. `npm run verify` runs lint, type check, unit tests and a
+production build. `npm run e2e` runs journeys and accessibility checks at desktop and phone
 sizes (`CI=1 npm run e2e` when a dev server is already running).
 
 ## What's here
@@ -63,13 +69,16 @@ sizes (`CI=1 npm run e2e` when a dev server is already running).
 | `modules/` | Everything reusable from the earlier attempts — parked, not built. |
 | `docs/` | Decisions, specs, plans, roadmap, status; `docs/history/` for earlier attempts. |
 
-## The rules it keeps
+## Intended product rules
+
+These are requirements; the audit identifies enforcement gaps to close in the next build.
 
 - **Practice is not proof.** Answers are on your own, with help, or not yet. A skill is *proved* only
   by two short checks with no help available, on fresh problems, on different days at least six days
   apart, the first at least 48 hours after the last help.
-- **Code checks answers; AI talks.** The tutor asks before telling, never gives a live answer before a
-  try, and calls tools for hints, checking and worked examples. No answer key is in its prompt.
+- **Code checks answers; the tutor teaches.** Help responds to the actual question and can explain,
+  demonstrate or invite a try. Assessment help is explicitly recorded. No answer key is in the prompt.
 - **Safety before any model.** A crisis or abuse disclosure gets a fixed referral (988, Childhelp) and
   a note for the family. Names never reach a model. Transcripts are visible to grown-ups.
-- **No engagement tricks.** No streaks to lose, no points, no "come back" nudges.
+- **Engagement serves learning.** Prediction, manipulation and creative work should lead to greater
+  independence. Measure outcomes; do not substitute time spent or returning for demonstrated learning.
