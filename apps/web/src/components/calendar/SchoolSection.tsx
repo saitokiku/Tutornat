@@ -77,7 +77,7 @@ function Classes({ profile, classes }: { profile: Profile; classes: SchoolClass[
             </select>
           )}
         </Field>
-        <Field label={t("school.teacher")} hint={t("calendar.optional")}>{(a) => <input {...a} className="k-input" value={teacher} maxLength={60} onChange={(e) => setTeacher(e.target.value)} />}</Field>
+        <Field label={t("school.teacher")}>{(a) => <input {...a} className="k-input" value={teacher} maxLength={60} placeholder={t("calendar.optional")} onChange={(e) => setTeacher(e.target.value)} />}</Field>
         <Button type="submit" variant="secondary" disabled={!name.trim()}>
           {t("school.addClass")}
         </Button>

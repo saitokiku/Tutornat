@@ -14,8 +14,10 @@ type P = { alt: string; tint: string };
 /** Counters in rows of five; groups side by side. The last `crossed` counters of the last group are taken away. */
 export function DotsVisual({ groups, crossed = 0, alt, tint }: P & { groups: number[]; crossed?: number }) {
   const r = 11, gap = 6, cell = r * 2 + gap, groupGap = 28;
-  const widths = groups.map((n) => Math.max(1, Math.min(n, 5)) * cell - gap);
-  const rows = Math.max(1, ...groups.map((n) => Math.ceil(n / 5)));
+  // One group counts in rows of five (ten-frame thinking); several groups (equal groups) sit in two even rows.
+  const perRow = (n: number) => (groups.length === 1 || n <= 5 ? 5 : Math.ceil(n / 2));
+  const widths = groups.map((n) => Math.max(1, Math.min(n, perRow(n))) * cell - gap);
+  const rows = Math.max(1, ...groups.map((n) => Math.ceil(n / perRow(n))));
   const w = widths.reduce((a, b) => a + b, 0) + groupGap * (groups.length - 1) + 8;
   const h = rows * cell - gap + 8;
   const lefts = widths.map((_, g) => 4 + widths.slice(0, g).reduce((a, b) => a + b, 0) + groupGap * g);
@@ -25,7 +27,7 @@ export function DotsVisual({ groups, crossed = 0, alt, tint }: P & { groups: num
         const left = lefts[g];
         const last = g === groups.length - 1;
         return Array.from({ length: n }, (_, i) => {
-          const cx = left + (i % 5) * cell + r, cy = 4 + Math.floor(i / 5) * cell + r;
+          const cx = left + (i % perRow(n)) * cell + r, cy = 4 + Math.floor(i / perRow(n)) * cell + r;
           const gone = last && i >= n - crossed;
           return (
             <g key={`${g}-${i}`}>

@@ -211,7 +211,7 @@ export function ChoiceTiles({ choices, onPick, disabled, young, picked }: { choi
             disabled={disabled}
             onClick={() => onPick(i)}
             aria-pressed={picked === i}
-            className={`flex w-full items-center justify-center gap-3 rounded-md border-2 bg-panel px-4 text-center text-ink shadow-soft transition-colors hover:border-ink/40 disabled:opacity-60 aria-pressed:border-accent aria-pressed:bg-accent/5 ${
+            className={`flex w-full items-center justify-center gap-3 rounded-md border-2 border-border bg-panel px-4 text-center text-ink shadow-soft transition-colors hover:border-ink/40 disabled:opacity-60 aria-pressed:border-accent aria-pressed:bg-accent/5 ${
               young ? "min-h-20 text-2xl" : "min-h-16 text-lg"
             } ${c.say ? "pr-14" : ""}`}
           >

@@ -15,7 +15,7 @@ test("a family's first evening", async ({ page }, info) => {
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Lessons your child can touch.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Help tonight. Progress every day.");
   await noOverflow(page);
   await page.getByRole("link", { name: "Get started" }).first().click();
 

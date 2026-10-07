@@ -43,4 +43,18 @@ test("main screens have no serious accessibility violations", async ({ page }, i
   await audit(page, "growth");
   await page.goto("/settings");
   await audit(page, "settings");
+  await page.goto("/practice");
+  await audit(page, "practice");
+  await page.getByRole("button", { name: /^Start/ }).first().click();
+  await expect(page).toHaveURL(/\/practice\/.+/);
+  await audit(page, "set");
+  await page.getByRole("button", { name: /^Hint/ }).click();
+  await page.getByRole("button", { name: /Ask the tutor/ }).click();
+  await audit(page, "set-with-tutor");
+  await page.goto("/calendar");
+  await audit(page, "calendar");
+  await page.goto("/talk");
+  await audit(page, "talk");
+  await page.goto("/me");
+  await audit(page, "me");
 });
