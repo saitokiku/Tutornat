@@ -12,7 +12,7 @@ Each phase swaps what's behind the screens, not the screens. Status lives in [ST
 
 ## Next — make it real for families (launch blockers)
 
-The detailed review and phased plan: [plans/2026-10-07-real-product-plan.md](plans/2026-10-07-real-product-plan.md).
+The plan for 1.0: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md) (gap review in [plans/2026-10-07-real-product-plan.md](plans/2026-10-07-real-product-plan.md)).
 
 1. **Accounts and a database.** Replace the bodies of `apps/web/src/lib/*.ts` with server calls;
    Postgres. Port trellis's invariants (append-only answers, assistance latch, 48 h clock) from

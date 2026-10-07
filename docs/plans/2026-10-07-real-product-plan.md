@@ -1,5 +1,7 @@
 # From demo to the real product — review and plan
 
+> Superseded the same day by [2026-10-07-kaizenedu-1.0-plan.md](2026-10-07-kaizenedu-1.0-plan.md), which carries the build plan. Sections 1–3 here remain the gap review.
+
 2026-10-07, after the second overnight build. Owner's ask: "Review what you can fix, what's keeping it
 from being my ideal product in reality and then write a plan to build it."
 
