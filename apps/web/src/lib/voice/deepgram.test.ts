@@ -6,16 +6,16 @@ import { VoiceError } from "./types";
 
 const reply = (status: number, body: unknown) => ({ ok: status < 400, status, json: async () => body }) as Response;
 
-function setup({ tokenStatus = 200, micError = null as VoiceError | null, young = false } = {}) {
+function setup({ tokenStatus = 200, tokenBody = null as unknown, micError = null as VoiceError | null, young = false } = {}) {
   let n = 0;
-  const fetch = vi.fn<typeof globalThis.fetch>(async () => reply(tokenStatus, { token: `jwt${++n}`, expiresIn: 30, model: "nova-3", language: "en-US" }));
-  const mic = { onFrame: null as ((pcm: Int16Array, level: number) => void) | null, stop: vi.fn(), level: 0.42 };
+  const fetch = vi.fn<typeof globalThis.fetch>(async () => reply(tokenStatus, tokenBody ?? { token: `jwt${++n}`, expiresIn: 30, model: "nova-3", language: "en-US" }));
+  const mic = { onFrame: null as ((pcm: Int16Array, level: number, frameLevel: number) => void) | null, stop: vi.fn(), level: 0.42 };
   const capture: MicCapture = async ({ onFrame }) => {
     if (micError) throw micError;
     mic.onFrame = onFrame;
     return { level: () => mic.level, stop: mic.stop };
   };
-  const input = deepgramSpeechIn({ locale: "en", consent: true, young, fetch, WebSocket: asWebSocket(FakeSocket), capture });
+  const input = deepgramSpeechIn({ locale: "en", consent: true, under13: true, names: ["Ada"], young, fetch, WebSocket: asWebSocket(FakeSocket), capture });
   const seen = { partial: [] as string[], final: [] as string[], turns: [] as string[], speech: 0, errors: [] as string[] };
   input.onPartial((t) => seen.partial.push(t));
   input.onFinal((t) => seen.final.push(t));
@@ -28,7 +28,7 @@ function setup({ tokenStatus = 200, micError = null as VoiceError | null, young 
 const flush = () => vi.advanceTimersByTimeAsync(1);
 const results = (transcript: string, isFinal: boolean, speechFinal = false) => ({ type: "Results", is_final: isFinal, speech_final: speechFinal, channel: { alternatives: [{ transcript }] } });
 
-async function listening(s: ReturnType<typeof setup>, opts?: Parameters<ReturnType<typeof setup>["input"]["start"]>[0]) {
+async function listening(s: ReturnType<typeof setup>, opts: Parameters<ReturnType<typeof setup>["input"]["start"]>[0] = { turns: "auto" }) {
   const started = s.input.start(opts);
   await flush();
   const ws = FakeSocket.last();
@@ -47,7 +47,7 @@ afterEach(() => vi.useRealTimers());
 describe("Deepgram live listening", () => {
   it("opens the stream with a short-lived token and the turn-taking options, opted out of model training", async () => {
     const s = setup();
-    const started = s.input.start({ keyterms: ["numerator", "denominator"] });
+    const started = s.input.start({ keyterms: ["numerator", "denominator", "Ada Lovelace", "ADA"] });
     await flush();
     const ws = FakeSocket.last();
     expect(ws.protocols).toEqual(["bearer", "jwt1"]);
@@ -57,15 +57,17 @@ describe("Deepgram live listening", () => {
       model: "nova-3", language: "en-US", encoding: "linear16", sample_rate: "16000", channels: "1", interim_results: "true",
       endpointing: "300", utterance_end_ms: "1000", vad_events: "true", filler_words: "true", mip_opt_out: "true",
     });
+    // Hints that mention the learner's name never leave the device.
     expect(url.searchParams.getAll("keyterm")).toEqual(["numerator", "denominator"]);
-    expect(JSON.parse(String(s.fetch.mock.calls[0][1]?.body))).toEqual({ consent: true, locale: "en" });
+    expect(ws.url).not.toMatch(/ada/i);
+    expect(JSON.parse(String(s.fetch.mock.calls[0][1]?.body))).toEqual({ consent: true, under13: true, locale: "en" });
     // Audio from before the socket opened is sent once it does.
-    s.mic.onFrame!(new Int16Array([1, 2, 3]), 0.5);
+    s.mic.onFrame!(new Int16Array([1, 2, 3]), 0.5, 0.5);
     expect(ws.binary()).toHaveLength(0);
     ws.open();
     await started;
     expect(ws.binary()).toHaveLength(1);
-    s.mic.onFrame!(new Int16Array([4, 5]), 0.5);
+    s.mic.onFrame!(new Int16Array([4, 5]), 0.5, 0.5);
     expect(ws.binary().map((b) => Array.from(new Int16Array(b)))).toEqual([[1, 2, 3], [4, 5]]);
     expect(s.input.listening).toBe(true);
     expect(s.input.level()).toBe(0.42);
@@ -152,8 +154,47 @@ describe("Deepgram live listening", () => {
     expect(s.mic.stop).toHaveBeenCalled();
   });
 
+  it("is push-to-talk unless asked for hands-free turns", async () => {
+    const s = setup();
+    const started = s.input.start();
+    await flush();
+    const ws = FakeSocket.last();
+    ws.open();
+    await started;
+    ws.receive(results("Twelve.", true, true));
+    ws.receive({ type: "UtteranceEnd" });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(s.seen.turns).toEqual([]);
+    s.input.stop();
+    ws.drop(1000);
+    expect(s.seen.turns).toEqual(["Twelve."]);
+  });
+
+  it("only a refusal that says consent is about consent", async () => {
+    const other = setup({ tokenStatus: 403, tokenBody: { error: "origin" } });
+    await expect(other.input.start()).rejects.toMatchObject({ code: "unavailable" });
+    const busy = setup({ tokenStatus: 429, tokenBody: { error: "rate" } });
+    await expect(busy.input.start()).rejects.toMatchObject({ code: "unavailable" });
+  });
+
+  it("renews the voice pass once when it has run out", async () => {
+    let calls = 0;
+    const fetch = vi.fn<typeof globalThis.fetch>(async (url) => {
+      if (url === "/api/voice/status") return reply(200, { tts: false, stt: true });
+      return ++calls === 1 ? reply(401, { error: "session" }) : reply(200, { token: "jwt", expiresIn: 30, model: "nova-3", language: "en-US" });
+    });
+    const capture: MicCapture = async () => ({ level: () => 0, stop: vi.fn() });
+    const input = deepgramSpeechIn({ locale: "en", consent: true, under13: false, fetch, WebSocket: asWebSocket(FakeSocket), capture });
+    const started = input.start();
+    await flush();
+    FakeSocket.last().open();
+    await started;
+    expect(fetch.mock.calls.map((c) => c[0])).toEqual(["/api/voice/stt-token", "/api/voice/status", "/api/voice/stt-token"]);
+    expect(input.listening).toBe(true);
+  });
+
   it("refuses without consent and lets go of the microphone", async () => {
-    const s = setup({ tokenStatus: 403 });
+    const s = setup({ tokenStatus: 403, tokenBody: { error: "consent" } });
     await expect(s.input.start()).rejects.toMatchObject({ code: "consent" });
     expect(s.mic.stop).toHaveBeenCalled();
     expect(FakeSocket.all).toHaveLength(0);

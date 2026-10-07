@@ -43,8 +43,10 @@ export interface SpeechOut {
   pause(): void;
   resume(): void;
   cancel(): void;
-  /** Call from a tap or key press: lets later audio start on browsers that need a gesture, and readies the voice. */
+  /** Call from a tap or key press: lets later audio start on browsers that need a gesture, and readies the voice. Never throws. */
   warm(): void;
+  /** Stops speaking and lets go of what the voice holds (an audio context). Call when the screen goes away. */
+  dispose(): void;
   /**
    * The word being spoken, as an index into the words of everything passed to this speak() call
    * (`text.split(/\s+/).filter(Boolean)` of the text, or of the stream's sentences joined in order).
@@ -56,9 +58,13 @@ export interface SpeechOut {
 }
 
 export type ListenOptions = {
-  /** "auto" (default): turns end by themselves (silence, punctuation, pauses) and listening goes on. "manual": push-to-talk; stop() ends the turn. */
+  /**
+   * "manual" (default): push-to-talk; the turn ends at stop(). "auto": hands-free; turns end by
+   * themselves (silence, punctuation, pauses) and listening goes on — use it for the window around
+   * one reply (so the learner can answer or barge in), not for an open microphone.
+   */
   turns?: "auto" | "manual";
-  /** Words the recognizer should expect (lesson vocabulary). Never names. Vendor only. */
+  /** Words the recognizer should expect (lesson vocabulary). Never names: any word matching a learner's name is dropped. Vendor only. */
   keyterms?: string[];
 };
 
@@ -71,8 +77,8 @@ export interface SpeechIn {
   stop(): void;
   /** Stops listening and throws away what was heard. */
   abort(): void;
-  /** Input level 0..1 for a meter (0 when not listening or not measured). */
-  level(): number;
+  /** Input level 0..1 for a meter (0 when not listening); null when this recognizer can't measure it — hide the meter then. */
+  level(): number | null;
   /** Everything heard in the current turn so far, as it is recognized. */
   onPartial(fn: (text: string) => void): Unsubscribe;
   /** One finished piece of the current turn. */

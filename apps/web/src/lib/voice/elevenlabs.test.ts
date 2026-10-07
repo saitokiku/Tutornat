@@ -2,17 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sentenceFeed } from "./chunk";
 import { elevenLabsSpeechOut, pcm16ToFloat32, ttsSocketUrl, type TtsToken } from "./elevenlabs";
 import { alignmentFor, asAudio, asWebSocket, FakeAudio, FakeSocket, fakeOut, pcmBase64 } from "./fakes";
+import { VoiceError } from "./types";
 
 const TOKEN: TtsToken = { token: "sutkn_1", voiceId: "voice1", modelId: "eleven_flash_v2_5", languageCode: "en", outputFormat: "pcm_24000", zeroRetention: false };
 
 const reply = (status: number, body: unknown) => ({ ok: status < 400, status, json: async () => body }) as Response;
 
-function setup({ fetchStatus = 200, fallback = false } = {}) {
+function setup({ fetchStatus = 200, fetchBody = null as unknown, fallback = false } = {}) {
   const audio = new FakeAudio();
   let n = 0;
-  const fetch = vi.fn<typeof globalThis.fetch>(async () => reply(fetchStatus, { ...TOKEN, token: `sutkn_${++n}` }));
+  const fetch = vi.fn<typeof globalThis.fetch>(async () => reply(fetchStatus, fetchBody ?? { ...TOKEN, token: `sutkn_${++n}` }));
   const fb = fallback ? fakeOut({ auto: false }) : null;
-  const out = elevenLabsSpeechOut({ locale: "en", consent: true, names: ["Ada"], fetch, WebSocket: asWebSocket(FakeSocket), audioContext: asAudio(audio), fallback: fb });
+  const out = elevenLabsSpeechOut({ locale: "en", consent: true, under13: true, names: ["Ada"], fetch, WebSocket: asWebSocket(FakeSocket), audioContext: asAudio(audio), fallback: fb });
   const seen = { starts: 0, ends: [] as boolean[], words: [] as number[], errors: [] as string[] };
   out.onStart(() => seen.starts++);
   out.onEnd((e) => seen.ends.push(e.cancelled));
@@ -46,8 +47,8 @@ describe("ElevenLabs streaming read-aloud", () => {
       { text: "Count the dots. ", flush: true },
       { text: "" },
     ]);
-    // Our route gets only consent and language; never a name.
-    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({ consent: true, locale: "en" });
+    // Our route gets only consent, age band and language; never a name.
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({ consent: true, under13: true, locale: "en" });
     expect(JSON.stringify(ws.sent)).not.toContain("Ada");
     expect(out.state).toBe("waiting");
     expect(seen.starts).toBe(0);
@@ -140,12 +141,12 @@ describe("ElevenLabs streaming read-aloud", () => {
     expect(audio.state).toBe("running");
   });
 
-  it("without consent the browser voice reads everything", async () => {
-    const { out, fb, seen } = setup({ fetchStatus: 403, fallback: true });
+  it("without consent the browser voice reads everything, and that is not an error to show", async () => {
+    const { out, fb, seen } = setup({ fetchStatus: 403, fetchBody: { error: "consent" }, fallback: true });
     const done = out.speak("Your turn, Ada. Count the dots.");
     await flush();
     await flush();
-    expect(seen.errors).toEqual(["consent"]);
+    expect(seen.errors).toEqual([]);
     expect(FakeSocket.all).toHaveLength(0);
     expect(fb!.said).toEqual([["Your turn, Ada.", "Count the dots."]]);
     expect(seen.starts).toBe(1);
@@ -163,7 +164,7 @@ describe("ElevenLabs streaming read-aloud", () => {
     await flush();
     ws.receive({ audio: pcmBase64(500), alignment: alignmentFor("Your turn. ") });
     ws.drop(1006);
-    expect(seen.errors).toEqual(["network"]);
+    expect(seen.errors).toEqual([]); // the reply is still read aloud: nothing to tell the family
     // The audio we have plays out first.
     await vi.advanceTimersByTimeAsync(100);
     expect(fb!.said).toEqual([]);
@@ -183,7 +184,7 @@ describe("ElevenLabs streaming read-aloud", () => {
     await flush();
     FakeSocket.last().receive({ error: "quota_exceeded", message: "quota" });
     await flush();
-    expect(seen.errors).toEqual(["unavailable"]);
+    expect(seen.errors).toEqual([]);
     expect(fb!.said).toEqual([["One.", "Two."]]);
   });
 
@@ -193,9 +194,59 @@ describe("ElevenLabs streaming read-aloud", () => {
     audio.resume = () => new Promise(() => {}); // never settles, as in a browser waiting for a gesture
     void out.speak("One. Two.");
     await vi.advanceTimersByTimeAsync(350);
-    expect(seen.errors).toEqual(["speak"]);
+    expect(seen.errors).toEqual([]);
     expect(FakeSocket.all).toHaveLength(0);
     expect(fb!.said).toEqual([["One.", "Two."]]);
+  });
+
+  it("with nothing to take over, any failure is a read-aloud failure", async () => {
+    for (const [status, body] of [[403, { error: "origin" }], [403, { error: "consent" }], [502, { error: "vendor" }]] as const) {
+      const { out, seen } = setup({ fetchStatus: status, fetchBody: body });
+      const done = out.speak("One.");
+      await vi.advanceTimersByTimeAsync(100);
+      await done;
+      expect(seen.errors, JSON.stringify(body)).toEqual(["speak"]);
+      expect(seen.ends).toEqual([false]);
+    }
+  });
+
+  it("a failure of the browser voice that took over is reported", async () => {
+    const { out, fb, seen } = setup({ fetchStatus: 502, fetchBody: { error: "vendor" }, fallback: true });
+    void out.speak("One.");
+    await flush();
+    await flush();
+    expect(fb!.said).toEqual([["One."]]);
+    expect(seen.errors).toEqual([]);
+    fb!.fail(new VoiceError("speak", "synthesis-failed"));
+    expect(seen.errors).toEqual(["speak"]);
+  });
+
+  it("dispose stops speaking and closes the audio context", async () => {
+    const { audio, out, fetch } = setup();
+    out.warm();
+    void out.speak("One.");
+    await flush();
+    out.dispose();
+    expect(audio.state).toBe("closed");
+    expect(out.state).toBe("idle");
+    const calls = fetch.mock.calls.length;
+    await out.speak("Two.");
+    out.warm();
+    expect(fetch.mock.calls.length).toBe(calls);
+  });
+
+  it("warm() never throws, even where audio can't start", async () => {
+    const out = elevenLabsSpeechOut({
+      locale: "en",
+      consent: true,
+      under13: false,
+      fetch: vi.fn(async () => reply(200, TOKEN)),
+      WebSocket: asWebSocket(FakeSocket),
+      audioContext: () => {
+        throw new Error("AudioContext is not defined");
+      },
+    });
+    expect(() => out.warm()).not.toThrow();
   });
 
   it("warm() gets the next token ready so speaking starts sooner", async () => {

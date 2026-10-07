@@ -1,6 +1,7 @@
 import type { Locale } from "@/lib/types";
 import { asyncQueue, sentencesFrom } from "./chunk";
 import { speakable } from "./speakable";
+import { requestToken } from "./token";
 import { asVoiceError, countWords, emitter, VoiceError, type OutState, type SpeakSource, type SpeechOut, type Unsubscribe } from "./types";
 
 // ElevenLabs streaming text-to-speech over their WebSocket (`/v1/text-to-speech/{voice}/stream-input`).
@@ -59,8 +60,10 @@ export function ttsSocketUrl(t: TtsToken): string {
 
 export type ElevenLabsOptions = {
   locale: Locale;
-  /** Voice is allowed for this learner (a grown-up consented, or they're 13 or older). Sent to our route, which refuses without it. */
+  /** A grown-up allowed voice for this learner. Sent to our route with under13; it refuses an under-13 learner without consent. */
   consent: boolean;
+  /** The learner may be under 13. */
+  under13: boolean;
   /** Learner names: removed from the text before it leaves the device. */
   names?: string[];
   /** 0.7–1.2; 0.95 by default. */
@@ -115,25 +118,13 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
   let ctx: AudioContext | null = null;
   let run: Run | null = null;
   let spare: { at: number; token: Promise<TtsToken> } | null = null;
+  let disposed = false;
 
   const audio = () => (ctx ??= (o.audioContext ?? (() => new AudioContext()))());
 
   async function fetchToken(): Promise<TtsToken> {
-    let res: Response;
-    try {
-      res = await f(o.tokenUrl ?? "/api/voice/tts-token", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ consent: o.consent, locale: o.locale }),
-        cache: "no-store",
-      });
-    } catch {
-      throw new VoiceError("network");
-    }
-    if (res.status === 403) throw new VoiceError("consent");
-    if (!res.ok) throw new VoiceError("unavailable");
-    const t = (await res.json().catch(() => null)) as TtsToken | null;
-    if (!t?.token || !t.voiceId) throw new VoiceError("unavailable");
+    const t = await requestToken<TtsToken>(f, o.tokenUrl ?? "/api/voice/tts-token", { consent: o.consent, under13: o.under13, locale: o.locale });
+    if (!t.token || !t.voiceId) throw new VoiceError("unavailable", "token reply");
     return t;
   }
   const prefetch = () => {
@@ -236,20 +227,27 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
       }),
       fb.onBoundary((i) => ev.boundary.emit(base + i)),
       fb.onEnd(({ cancelled }) => finish(r, cancelled)),
+      fb.onError((e) => ev.error.emit(new VoiceError("speak", `fallback: ${e.message}`))),
     );
     void fb.speak(r.fb);
     if (state === "paused") fb.pause();
   }
 
-  /** The vendor failed: let the audio we already have play out, then the fallback reads the rest. */
+  /**
+   * The vendor failed: let the audio we already have play out, then the fallback reads the rest. With a
+   * fallback this is not an error the family needs to see (the reply is still read aloud); without
+   * one it is a read-aloud failure ("speak"), whatever the cause.
+   */
   function fail(r: Run, e: unknown) {
     if (r.failed || r.done) return;
     r.failed = true;
-    ev.error.emit(asVoiceError(e));
     try {
       r.ws?.close(1000);
     } catch {}
-    if (!o.fallback) return; // tick() ends the run once the stream is over and the audio has played
+    if (!o.fallback) {
+      ev.error.emit(new VoiceError("speak", `${asVoiceError(e).code}: ${asVoiceError(e).message}`));
+      return; // tick() ends the run once the stream is over and the audio has played
+    }
     r.fb = asyncQueue<string>();
     const unheard = r.sentences.filter((s) => s.spokenEnd > r.aligned);
     r.fbBase = unheard[0]?.base ?? r.nextBase;
@@ -357,6 +355,7 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
     },
     speak(source) {
       out.cancel();
+      if (disposed) return Promise.resolve();
       state = "waiting";
       return new Promise<void>((resolve) => {
         const r: Run = {
@@ -389,10 +388,12 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
       finish(r, true);
     },
     warm() {
-      const c = audio();
-      if (c.state === "suspended") void c.resume().catch(() => {});
-      // A silent sample started inside the tap unlocks audio on iOS.
+      if (disposed) return;
+      // Runs inside a tap that also sends a message or starts reading: it must never throw.
       try {
+        const c = audio();
+        if (c.state === "suspended") void c.resume().catch(() => {});
+        // A silent sample started inside the tap unlocks audio on iOS.
         const b = c.createBuffer(1, 1, TTS_SAMPLE_RATE);
         const s = c.createBufferSource();
         s.buffer = b;
@@ -401,6 +402,15 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
       } catch {}
       if (!spare) prefetch();
       o.fallback?.warm();
+    },
+    dispose() {
+      out.cancel();
+      disposed = true;
+      spare = null;
+      o.fallback?.dispose();
+      const c = ctx;
+      ctx = null;
+      if (c && c.state !== "closed") void c.close().catch(() => {});
     },
     onBoundary: ev.boundary.on,
     onStart: ev.start.on,

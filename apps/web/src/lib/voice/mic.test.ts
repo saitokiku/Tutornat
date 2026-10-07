@@ -1,6 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import en from "@/i18n/en";
-import { createResampler, judgeLevels, levelOf, levelOutOfTen, micCapture, micError, micSelfTest, rms, selfTestKey, smoothLevel, toInt16, voiceErrorKey, type MicCapture } from "./mic";
+import { fakeIn } from "./fakes";
+import {
+  createResampler,
+  judgeLevels,
+  levelOf,
+  levelOutOfTen,
+  listenSelfTest,
+  listenTestKey,
+  micCapture,
+  micError,
+  micOffKey,
+  micSelfTest,
+  rms,
+  selfTestKey,
+  smoothLevel,
+  toInt16,
+  voiceErrorKey,
+  type MicCapture,
+} from "./mic";
 import { VoiceError, type VoiceErrorCode } from "./types";
 
 afterEach(() => {
@@ -59,6 +77,42 @@ describe("microphone errors", () => {
     const codes: VoiceErrorCode[] = ["unsupported", "denied", "no-device", "busy", "network", "consent", "unavailable", "speak"];
     for (const c of codes) expect(en[voiceErrorKey(c)], c).toBeTruthy();
     for (const s of ["ok", "quiet", "silent", "denied"] as const) expect(en[selfTestKey(s)], s).toBeTruthy();
+    expect(en[listenTestKey({ status: "words", text: "hi" })]).toContain("{text}");
+    expect(en[listenTestKey({ status: "nothing" })]).toBeTruthy();
+    expect(listenTestKey({ status: "network" })).toBe("voice.error.network");
+    expect(en[micOffKey("idle")]).toBeTruthy();
+    expect(en[micOffKey("hidden")]).toBeTruthy();
+  });
+});
+
+describe("listening self-test", () => {
+  it("shows the words the recognizer heard", async () => {
+    vi.useFakeTimers();
+    const input = fakeIn();
+    const start = vi.spyOn(input, "start");
+    input.stop = () => {
+      input.listening = false;
+      queueMicrotask(() => input.endOfTurn("I had eggs"));
+    };
+    const p = listenSelfTest(input, { durationMs: 5000 });
+    await vi.advanceTimersByTimeAsync(1000);
+    input.partial("I had");
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(await p).toEqual({ status: "words", text: "I had eggs" });
+    expect(start).toHaveBeenCalledWith({ turns: "manual" });
+  });
+
+  it("says when no words came through, and reports a refused microphone", async () => {
+    vi.useFakeTimers();
+    const quiet = fakeIn();
+    const p = listenSelfTest(quiet, { durationMs: 1000 });
+    await vi.advanceTimersByTimeAsync(3100);
+    expect(await p).toEqual({ status: "nothing" });
+    const refused = fakeIn();
+    refused.start = async () => {
+      throw new VoiceError("denied");
+    };
+    expect(await listenSelfTest(refused)).toEqual({ status: "denied" });
   });
 });
 
@@ -77,7 +131,7 @@ describe("mic self-test", () => {
     const stop = vi.fn();
     const onLevel = vi.fn();
     const capture: MicCapture = async ({ onFrame }) => {
-      const timer = setInterval(() => onFrame(new Int16Array(683), 0.7), 43);
+      const timer = setInterval(() => onFrame(new Int16Array(683), 0.7, 0.7), 43);
       return {
         level: () => 0.7,
         stop: () => {
@@ -93,6 +147,30 @@ describe("mic self-test", () => {
     expect(r.speechMs).toBeGreaterThan(2500);
     expect(stop).toHaveBeenCalledOnce();
     expect(onLevel).toHaveBeenCalledWith(0.7);
+  });
+
+  it("a cough is not a voice, even though the meter lingers after it", async () => {
+    vi.useFakeTimers();
+    // What micCapture does with each frame: the meter rises at once and falls gently.
+    const frames = [0, 0, 0.9, 0.9, 0.9, 0.9, ...Array(60).fill(0)]; // ≈170 ms of loud sound
+    const meter: number[] = [];
+    const capture: MicCapture = async ({ onFrame }) => {
+      let level = 0;
+      let i = 0;
+      const timer = setInterval(() => {
+        const frameLevel = frames[i++] ?? 0;
+        level = smoothLevel(level, frameLevel);
+        meter.push(level);
+        onFrame(new Int16Array(683), level, frameLevel);
+      }, 43);
+      return { level: () => level, stop: () => clearInterval(timer) };
+    };
+    const result = micSelfTest({ durationMs: 3000, capture });
+    await vi.advanceTimersByTimeAsync(3000);
+    const r = await result;
+    expect(meter.filter((l) => l >= 0.5).length * 43).toBeGreaterThanOrEqual(250); // the meter alone would have passed it
+    expect(r.status).toBe("quiet");
+    expect(r.speechMs).toBeLessThan(250);
   });
 
   it("reports a refused microphone instead of throwing", async () => {

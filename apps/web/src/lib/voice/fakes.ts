@@ -141,6 +141,11 @@ export function fakeOut({ auto = true, kind = "browser" as SpeechOut["kind"] } =
       state = "speaking";
     },
     warm: () => {},
+    disposed: false,
+    dispose: () => {
+      out.cancel();
+      out.disposed = true;
+    },
     speak(source: SpeakSource) {
       out.cancel();
       state = "waiting";
@@ -163,6 +168,7 @@ export function fakeOut({ auto = true, kind = "browser" as SpeechOut["kind"] } =
     },
     finish: () => end(false),
     boundary: (i: number) => ev.boundary.emit(i),
+    fail: (e: VoiceError) => ev.error.emit(e),
     onBoundary: ev.boundary.on,
     onStart: ev.start.on,
     onEnd: ev.end.on,
@@ -172,15 +178,21 @@ export function fakeOut({ auto = true, kind = "browser" as SpeechOut["kind"] } =
 }
 
 /** A SpeechIn the test speaks into. */
-export function fakeIn() {
+export function fakeIn({ kind = "browser" as SpeechIn["kind"] } = {}) {
   const ev = { partial: emitter<[string]>(), final: emitter<[string]>(), turn: emitter<[string]>(), speech: emitter<[]>(), error: emitter<[VoiceError]>() };
-  return {
-    kind: "browser" as const,
-    listening: true,
-    start: async () => {},
-    stop: () => {},
-    abort: () => {},
-    level: () => 0,
+  const input = {
+    kind,
+    listening: true as boolean,
+    start: async () => {
+      input.listening = true;
+    },
+    stop: () => {
+      input.listening = false;
+    },
+    abort: () => {
+      input.listening = false;
+    },
+    level: (): number | null => null,
     onPartial: ev.partial.on,
     onFinal: ev.final.on,
     onEndOfTurn: ev.turn.on,
@@ -190,5 +202,7 @@ export function fakeIn() {
     speechStart: () => ev.speech.emit(),
     partial: (t: string) => ev.partial.emit(t),
     endOfTurn: (t: string) => ev.turn.emit(t),
+    error: (e: VoiceError) => ev.error.emit(e),
   } satisfies SpeechIn & Record<string, unknown>;
+  return input;
 }

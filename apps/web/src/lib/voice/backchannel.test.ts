@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isBackchannel, isFillerOnly, words } from "./backchannel";
-import { echoVerdict, shouldBargeIn } from "./bargein";
+import { echoScore, echoVerdict, echoWords, shouldBargeIn } from "./bargein";
 
 describe("backchannel filter", () => {
   it.each(["mhm", "Mhm.", "mm-hmm", "Mmmhmm", "uh-huh", "ok", "OK.", "okay okay", "yeah", "yes", "oh okay", "got it", "I see", "hmm"])("%s is a backchannel", (t) => {
@@ -65,5 +65,20 @@ describe("barge-in rule", () => {
     expect(echoVerdict("three", "three fourths")).toBe("maybe");
     expect(echoVerdict("seven", "three fourths")).toBe("no");
     expect(echoVerdict("I think seven", "three fourths")).toBe("no");
+  });
+
+  it("echo follows the tutor's words in order; an answer built from them doesn't", () => {
+    const q = "Which is bigger, three fourths or two thirds?";
+    expect(echoVerdict("two thirds is bigger", q)).toBe("no");
+    expect(echoVerdict("bigger is which", q)).toBe("no");
+    expect(echoVerdict("which is bigger three fourths", q)).toBe("echo");
+    expect(echoVerdict("which is bigger tree fourths", q)).toBe("echo"); // one word misheard
+    expect(echoScore(echoWords("two thirds is bigger"), echoWords(q))).toBe(0.5);
+  });
+
+  it("compares numbers however the recognizer writes them", () => {
+    expect(echoWords("Five times two equals ten")).toEqual(["5", "times", "2", "equals", "10"]);
+    expect(echoWords("tres cuartos")).toEqual(["3", "cuartos"]);
+    expect(echoVerdict("5 times 2 equals 10", "five times two equals ten")).toBe("echo");
   });
 });

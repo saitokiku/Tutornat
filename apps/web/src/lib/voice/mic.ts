@@ -1,5 +1,5 @@
 import type { Key } from "@/i18n/en";
-import { VoiceError, type VoiceErrorCode } from "./types";
+import { asVoiceError, VoiceError, type SpeechIn, type VoiceErrorCode } from "./types";
 
 // The microphone, for the vendor recognizer and the self-test: echo cancellation on (so the tutor's
 // voice from the speakers isn't heard as the learner), 16 kHz 16-bit mono frames out, and a level.
@@ -14,7 +14,8 @@ export type Capture = {
 };
 
 export type CaptureOptions = {
-  onFrame: (pcm: Int16Array, level: number) => void;
+  /** Each frame: the audio, the smoothed level for a meter, and this frame's own level (for judging). */
+  onFrame: (pcm: Int16Array, level: number, frameLevel: number) => void;
   targetRate?: number;
   mediaDevices?: Pick<MediaDevices, "getUserMedia">;
   AudioContext?: typeof AudioContext;
@@ -126,8 +127,9 @@ export const micCapture: MicCapture = async ({ onFrame, targetRate = MIC_RATE, m
     let stopped = false;
     node.port.onmessage = (e: MessageEvent<Float32Array>) => {
       if (stopped) return;
-      level = smoothLevel(level, levelOf(rms(e.data)));
-      onFrame(toInt16(resample(e.data)), level);
+      const frameLevel = levelOf(rms(e.data));
+      level = smoothLevel(level, frameLevel);
+      onFrame(toInt16(resample(e.data)), level, frameLevel);
     };
     source.connect(node);
     node.connect(ctx.destination); // the tap writes silence; connecting keeps it running everywhere
@@ -148,7 +150,11 @@ export const micCapture: MicCapture = async ({ onFrame, targetRate = MIC_RATE, m
   }
 };
 
-// Self-test: "say a few words" for three seconds, then tell the family plainly what we heard.
+// Self-test, in two parts a settings screen can run one after the other:
+//  - micSelfTest: "say a few words" for three seconds; does the microphone pick up sound, and how loud?
+//    It measures loudness only, so its best answer is "picking up sound", never "we heard you".
+//  - listenSelfTest: the same few words through the recognizer the learner will use; shows the words
+//    it heard, so a family can see that listening works (and in which language).
 
 export type SelfTestStatus = "ok" | "quiet" | "silent" | VoiceErrorCode;
 export type SelfTest = { status: SelfTestStatus; peak: number; speechMs: number };
@@ -157,12 +163,19 @@ export type SelfTest = { status: SelfTestStatus; peak: number; speechMs: number 
 export const SPEECH_LEVEL = 0.5;
 export const QUIET_LEVEL = 0.25;
 
-/** Judges levels collected over the test. Pure. */
+/** Judges each frame's own level (not the meter's smoothed one) over the test. Pure. */
 export function judgeLevels(levels: number[], frameMs: number): SelfTest {
   const peak = levels.reduce((m, l) => Math.max(m, l), 0);
   const speechMs = Math.round(levels.filter((l) => l >= SPEECH_LEVEL).length * frameMs);
   return { status: speechMs >= 250 ? "ok" : peak >= QUIET_LEVEL ? "quiet" : "silent", peak, speechMs };
 }
+
+const waitFor = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    if (signal?.aborted) return resolve();
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => (clearTimeout(t), resolve()), { once: true });
+  });
 
 export async function micSelfTest({
   durationMs = 3000,
@@ -176,31 +189,66 @@ export async function micSelfTest({
   try {
     cap = await capture({
       targetRate: MIC_RATE,
-      onFrame: (pcm, level) => {
+      onFrame: (pcm, level, frameLevel) => {
         frameMs = (pcm.length / MIC_RATE) * 1000;
-        levels.push(level);
+        levels.push(frameLevel);
         onLevel?.(level);
       },
     });
   } catch (e) {
     return { status: micError(e).code, peak: 0, speechMs: 0 };
   }
-  await new Promise<void>((resolve) => {
-    if (signal?.aborted) return resolve();
-    const t = setTimeout(resolve, durationMs);
-    signal?.addEventListener("abort", () => (clearTimeout(t), resolve()), { once: true });
-  });
+  await waitFor(durationMs, signal);
   cap.stop();
   return judgeLevels(levels, frameMs || 43);
 }
 
-/** The sentence to show for a self-test result. */
+export type ListenTest = { status: "words"; text: string } | { status: "nothing" } | { status: VoiceErrorCode };
+
+/**
+ * Listens for `durationMs` with push-to-talk and returns the words heard. Use an input no conversation
+ * is subscribed to (a voice() built for the settings screen), or the words would go to the tutor.
+ */
+export async function listenSelfTest(input: SpeechIn, { durationMs = 5000, signal }: { durationMs?: number; signal?: AbortSignal } = {}): Promise<ListenTest> {
+  let text = "";
+  const subs = [input.onPartial((t) => (text = t)), input.onEndOfTurn((t) => (text = t))];
+  const done = () => subs.forEach((u) => u());
+  try {
+    await input.start({ turns: "manual" });
+  } catch (e) {
+    done();
+    return { status: asVoiceError(e).code };
+  }
+  await waitFor(durationMs, signal);
+  // stop() hands over the last words as the turn; give the recognizer a moment to send them.
+  const last = new Promise<void>((resolve) => {
+    const u = input.onEndOfTurn(() => (u(), resolve()));
+    setTimeout(() => (u(), resolve()), 2000);
+  });
+  input.stop();
+  await last;
+  done();
+  const heard = text.trim();
+  return heard ? { status: "words", text: heard } : { status: "nothing" };
+}
+
+/** The sentence to show for a microphone self-test result. */
 export function selfTestKey(status: SelfTestStatus): Key {
   if (status === "ok") return "voice.selfTest.ok";
   if (status === "quiet") return "voice.selfTest.quiet";
   if (status === "silent") return "voice.selfTest.silent";
   return voiceErrorKey(status);
 }
+
+/** The sentence to show for a listening self-test result; "voice.selfTest.words" takes {text}. */
+export function listenTestKey(r: ListenTest): Key {
+  if (r.status === "words") return "voice.selfTest.words";
+  if (r.status === "nothing") return "voice.selfTest.noWords";
+  return voiceErrorKey(r.status);
+}
+
+/** The sentence to show when the microphone turned itself off. */
+export const micOffKey = (why: "idle" | "hidden"): Key => (why === "idle" ? "voice.micOff.idle" : "voice.micOff.hidden");
 
 /** The sentence to show for a voice error. Every one ends with what still works. */
 export function voiceErrorKey(code: VoiceErrorCode): Key {

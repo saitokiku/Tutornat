@@ -23,11 +23,13 @@ export type BrowserOutOptions = {
   locale: Locale;
   /** 0.95 by default: a touch slower than the browser's default, easier for children to follow. */
   rate?: number;
+  /** Learner names: left out whenever the voice may run online (not on this device). */
+  names?: string[];
   synth?: Synth;
   Utterance?: typeof SpeechSynthesisUtterance;
 };
 
-export function browserSpeechOut({ locale, rate = 0.95, synth, Utterance }: BrowserOutOptions): SpeechOut | null {
+export function browserSpeechOut({ locale, rate = 0.95, names = [], synth, Utterance }: BrowserOutOptions): SpeechOut | null {
   const s = synth ?? (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis : undefined);
   const U = Utterance ?? (typeof SpeechSynthesisUtterance !== "undefined" ? SpeechSynthesisUtterance : undefined);
   if (!s || !U) return null;
@@ -70,11 +72,14 @@ export function browserSpeechOut({ locale, rate = 0.95, synth, Utterance }: Brow
           if (streamDone && pending === 0) me.finish(false);
         };
         const voice = pickVoice(synthesis.getVoices(), locale);
+        // An online voice (or the browser's default, when its voices haven't loaded) sends the text to
+        // the company that runs it: names stay here.
+        const leaveOut = voice?.localService ? [] : names;
         void (async () => {
           try {
             for await (const sentence of sentencesFrom(source)) {
               if (done) return;
-              const sp = speakable(sentence, locale);
+              const sp = speakable(sentence, locale, leaveOut);
               const offset = base;
               base += countWords(sentence);
               if (!sp.text) continue;
@@ -141,9 +146,14 @@ export function browserSpeechOut({ locale, rate = 0.95, synth, Utterance }: Brow
     warm() {
       // iOS lets speech start later only if something was spoken inside a tap.
       if (state !== "idle") return;
-      const u = new Utt("");
-      u.volume = 0;
-      synthesis.speak(u);
+      try {
+        const u = new Utt("");
+        u.volume = 0;
+        synthesis.speak(u);
+      } catch {}
+    },
+    dispose() {
+      out.cancel();
     },
     onBoundary: ev.boundary.on,
     onStart: ev.start.on,
@@ -308,7 +318,7 @@ export function browserSpeechIn({ locale, young = false, Recognition, now = () =
       discard = false;
       quickEnds = 0;
       tracker = turnTracker({
-        options: opts.turns === "manual" ? TURN_MANUAL : young ? TURN_YOUNG : TURN_DEFAULT,
+        options: opts.turns === "auto" ? (young ? TURN_YOUNG : TURN_DEFAULT) : TURN_MANUAL,
         onEnd: (text) => ev.turn.emit(text),
         now,
       });
@@ -347,7 +357,7 @@ export function browserSpeechIn({ locale, young = false, Recognition, now = () =
         r?.abort();
       } catch {}
     },
-    level: () => 0,
+    level: () => null, // the browser's recognizer has the microphone; we can't measure it
     onPartial: ev.partial.on,
     onFinal: ev.final.on,
     onEndOfTurn: ev.turn.on,

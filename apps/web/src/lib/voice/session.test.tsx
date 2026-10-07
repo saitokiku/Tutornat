@@ -92,14 +92,14 @@ describe("useVoiceSession", () => {
     expect(result.current.ready).toBe(false);
     await flush();
     expect(result.current).toMatchObject({ ready: true, canSpeak: true, canListen: true, allowed: true, vendor: { out: "browser", in: "browser" } });
-    expect(result.current.disclosure).toEqual(["voice.source.browser"]);
+    expect(result.current.disclosure).toEqual(["voice.source.browser", "voice.source.browserRead"]);
   });
 
   it("without a grown-up's consent an under-13 learner gets read-aloud only", async () => {
     const { result } = mount({ consent: false });
     await flush();
     expect(result.current).toMatchObject({ canSpeak: true, canListen: false, allowed: false });
-    expect(result.current.disclosure).toEqual(["voice.source.readOnly"]);
+    expect(result.current.disclosure).toEqual(["voice.source.readOnly", "voice.source.browserRead"]);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -120,10 +120,10 @@ describe("useVoiceSession", () => {
     expect(result.current.word).toBeNull();
   });
 
-  it("listens, shows what it hears, and hands over the finished turn", async () => {
+  it("hands-free: listens, shows what it hears, and hands over the finished turn", async () => {
     const { result, onTurn } = mount();
     await flush();
-    await act(() => result.current.listen());
+    await act(() => result.current.listen({ turns: "auto" }));
     expect(result.current.listening).toBe(true);
     const rec = Rec.all[0];
     act(() => rec.hear("twelve", false));
@@ -177,8 +177,84 @@ describe("useVoiceSession", () => {
       Rec.all[0].onerror!({ error: "not-allowed" });
       await p;
     });
-    expect(result.current.error).toBe("denied");
+    expect(result.current.inError).toBe("denied");
+    expect(result.current.outError).toBeNull();
     expect(result.current.listening).toBe(false);
+  });
+
+  it("a reply that can't be read aloud is a read-aloud error, not a listening one", async () => {
+    const { result } = mount();
+    await flush();
+    await act(async () => {
+      void result.current.say("Count the dots.");
+      await vi.advanceTimersByTimeAsync(5);
+    });
+    act(() => synth.queue[0].onerror!({ error: "synthesis-failed" }));
+    expect(result.current.outError).toBe("speak");
+    expect(result.current.inError).toBeNull();
+  });
+
+  it("listening is push-to-talk: a pause doesn't end the turn, done() does", async () => {
+    const { result, onTurn } = mount();
+    await flush();
+    await act(() => result.current.listen());
+    act(() => Rec.all[0].hear("twelve.", true));
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    expect(onTurn).not.toHaveBeenCalled();
+    await act(async () => {
+      result.current.done();
+      await vi.advanceTimersByTimeAsync(5);
+    });
+    expect(onTurn).toHaveBeenCalledWith("twelve.");
+  });
+
+  it("the tutor's own voice is set aside, and can still be sent", async () => {
+    const { result, onTurn } = mount();
+    await flush();
+    await act(() => result.current.listen({ turns: "auto" }));
+    await act(async () => {
+      void result.current.say("Each part is one fourth of the bar.");
+      await vi.advanceTimersByTimeAsync(5);
+    });
+    act(() => synth.queue[0].onstart!());
+    const rec = Rec.all[0];
+    act(() => rec.onspeechstart!());
+    act(() => rec.hear("each part is one fourth of the bar", false));
+    act(() => synth.queue[0].onend!());
+    act(() => rec.hear("each part is one fourth of the bar.", true));
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    expect(onTurn).not.toHaveBeenCalled();
+    expect(result.current.setAside).toBe("each part is one fourth of the bar.");
+    act(() => result.current.sendSetAside());
+    expect(onTurn).toHaveBeenCalledWith("each part is one fourth of the bar.");
+    expect(result.current.setAside).toBeNull();
+  });
+
+  it("the microphone turns itself off after 30 s of quiet and says so", async () => {
+    const { result } = mount();
+    await flush();
+    await act(() => result.current.listen());
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(Rec.all[0].stop).toHaveBeenCalled();
+    expect(result.current.listening).toBe(false);
+    expect(result.current.micOff).toBe("idle");
+    await act(() => result.current.listen());
+    expect(result.current.micOff).toBeNull();
+  });
+
+  it("the browser recognizer has no level to show", async () => {
+    const { result } = mount();
+    await flush();
+    expect(result.current.level()).toBeNull();
+  });
+
+  it("warm() never throws inside the tap", async () => {
+    const { result } = mount();
+    await flush();
+    synth.speak.mockImplementationOnce(() => {
+      throw new Error("not allowed");
+    });
+    expect(() => result.current.warm()).not.toThrow();
   });
 
   it("stops speaking and listening when the screen goes away", async () => {

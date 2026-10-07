@@ -1,5 +1,7 @@
 import type { Locale } from "@/lib/types";
 import { MIC_RATE, micCapture, micError, type Capture, type MicCapture } from "./mic";
+import { hasName } from "./speakable";
+import { requestToken } from "./token";
 import { TURN_DEFAULT, TURN_MANUAL, TURN_YOUNG, turnTracker, type TurnTracker } from "./turn";
 import { asVoiceError, emitter, VoiceError, type ListenOptions, type SpeechIn } from "./types";
 
@@ -46,8 +48,12 @@ export function sttSocketUrl(t: SttToken, keyterms: string[] = []): string {
 
 export type DeepgramOptions = {
   locale: Locale;
-  /** Voice is allowed for this learner. Sent to our route, which refuses without it. */
+  /** A grown-up allowed the microphone for this learner. Sent to our route, which refuses without it. */
   consent: boolean;
+  /** The learner may be under 13. */
+  under13: boolean;
+  /** Learner names: never sent, so recognizer hints that mention one are dropped. */
+  names?: string[];
   /** K–5: longer pauses before a turn ends. */
   young?: boolean;
   fetch?: typeof fetch;
@@ -83,21 +89,8 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn {
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
 
   async function fetchToken(): Promise<SttToken> {
-    let res: Response;
-    try {
-      res = await f(o.tokenUrl ?? "/api/voice/stt-token", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ consent: o.consent, locale: o.locale }),
-        cache: "no-store",
-      });
-    } catch {
-      throw new VoiceError("network");
-    }
-    if (res.status === 403) throw new VoiceError("consent");
-    if (!res.ok) throw new VoiceError("unavailable");
-    const t = (await res.json().catch(() => null)) as SttToken | null;
-    if (!t?.token) throw new VoiceError("unavailable");
+    const t = await requestToken<SttToken>(f, o.tokenUrl ?? "/api/voice/stt-token", { consent: o.consent, under13: o.under13, locale: o.locale });
+    if (!t.token) throw new VoiceError("unavailable", "token reply");
     return t;
   }
 
@@ -220,9 +213,9 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn {
       discard = false;
       reconnects = 0;
       buffered = [];
-      keyterms = opts.keyterms ?? [];
+      keyterms = (opts.keyterms ?? []).filter((k) => !hasName(k, o.names ?? []));
       tracker = turnTracker({
-        options: opts.turns === "manual" ? TURN_MANUAL : o.young ? TURN_YOUNG : TURN_DEFAULT,
+        options: opts.turns === "auto" ? (o.young ? TURN_YOUNG : TURN_DEFAULT) : TURN_MANUAL,
         onEnd: (text) => ev.turn.emit(text),
         now,
       });

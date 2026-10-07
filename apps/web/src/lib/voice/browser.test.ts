@@ -19,7 +19,7 @@ class FakeUtt {
 const voice = (name: string, lang: string, localService: boolean) => ({ name, lang, localService, default: false, voiceURI: name }) as SpeechSynthesisVoice;
 const VOICES = [voice("Cloud US", "en-US", false), voice("Local UK", "en-GB", true), voice("Local US", "en-US", true), voice("Local MX", "es-MX", true)];
 
-function synth() {
+function synth(voices = VOICES) {
   const s = {
     queue: [] as FakeUtt[],
     speak: vi.fn((u: FakeUtt) => void s.queue.push(u)),
@@ -30,14 +30,14 @@ function synth() {
     }),
     pause: vi.fn(),
     resume: vi.fn(),
-    getVoices: () => VOICES,
+    getVoices: () => voices,
   };
   return s;
 }
 
-function outSetup() {
-  const s = synth();
-  const out = browserSpeechOut({ locale: "en", synth: s as unknown as SpeechSynthesis, Utterance: FakeUtt as unknown as typeof SpeechSynthesisUtterance })!;
+function outSetup({ voices = VOICES, names = [] as string[], locale = "en" as "en" | "es" } = {}) {
+  const s = synth(voices);
+  const out = browserSpeechOut({ locale, names, synth: s as unknown as SpeechSynthesis, Utterance: FakeUtt as unknown as typeof SpeechSynthesisUtterance })!;
   const seen = { starts: 0, ends: [] as boolean[], words: [] as number[], errors: [] as string[] };
   out.onStart(() => seen.starts++);
   out.onEnd((e) => seen.ends.push(e.cancelled));
@@ -57,6 +57,32 @@ describe("browser read-aloud", () => {
     expect(pickVoice(VOICES, "en")?.name).toBe("Local US");
     expect(pickVoice(VOICES, "es")?.name).toBe("Local MX");
     expect(pickVoice([], "en")).toBeNull();
+  });
+
+  it("an on-device voice may say the learner's name; an online one never gets it", async () => {
+    const local = outSetup({ names: ["Ada"] });
+    void local.out.speak("Nice work, Ada.");
+    await tick();
+    expect(local.s.queue.map((u) => u.text)).toEqual(["Nice work, Ada."]);
+    // Spanish on a computer with only English voices: Chrome would use its online Spanish voice.
+    const online = outSetup({ names: ["Ada"], locale: "es", voices: [voice("Local US", "en-US", true), voice("Google español", "es-ES", false)] });
+    void online.out.speak("Muy bien, Ada.");
+    await tick();
+    expect(online.s.queue.map((u) => u.text)).toEqual(["Muy bien."]);
+    // Voices not loaded yet: the browser picks its default, which may be online.
+    const unknown = outSetup({ names: ["Ada"], voices: [] });
+    void unknown.out.speak("Your turn, Ada.");
+    await tick();
+    expect(unknown.s.queue.map((u) => u.text)).toEqual(["Your turn."]);
+  });
+
+  it("dispose stops speaking", async () => {
+    const { s, out } = outSetup();
+    void out.speak("One. Two.");
+    await tick();
+    out.dispose();
+    expect(s.cancel).toHaveBeenCalled();
+    expect(out.state).toBe("idle");
   });
 
   it("speaks sentence by sentence, says math in words, and highlights the written words", async () => {
@@ -189,9 +215,9 @@ describe("browser listening", () => {
     expect(browserSpeechIn({ locale: "en", Recognition: undefined })).toBeNull();
   });
 
-  it("listens continuously in the learner's language and ends a turn after a pause", async () => {
+  it("hands-free: listens continuously in the learner's language and ends a turn after a pause", async () => {
     const { input, seen, rec } = inSetup();
-    await input.start();
+    await input.start({ turns: "auto" });
     expect(rec()).toMatchObject({ lang: "en-US", continuous: true, interimResults: true });
     rec().onspeechstart!();
     rec().hear("three", false);
@@ -203,6 +229,15 @@ describe("browser listening", () => {
     expect(seen.turns).toEqual([]);
     await vi.advanceTimersByTimeAsync(200);
     expect(seen.turns).toEqual(["three fourths"]);
+  });
+
+  it("is push-to-talk by default and can't measure a level", async () => {
+    const { input, seen, rec } = inSetup();
+    await input.start();
+    rec().hear("three fourths", true);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(seen.turns).toEqual([]);
+    expect(input.level()).toBeNull();
   });
 
   it("starts again when the browser ends recognition on its own", async () => {
