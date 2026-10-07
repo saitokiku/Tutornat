@@ -26,7 +26,7 @@ const WORDS: Record<string, string[]> = {
   "m.sub.2digit": ["borrowing", "regrouping", "two-digit subtraction", "pedir prestado"],
   "m.skip.count": ["skip counting", "count by", "contar de 2 en 2"],
   "m.addsub.1000": ["three-digit", "within 1000", "hasta 1000"],
-  "m.mult.groups": ["equal groups", "arrays", "multiplication meaning", "grupos iguales"],
+  "m.mult.groups": ["equal groups", "arrays", "repeated addition", "grupos iguales", "suma repetida"],
   "m.mult.easy": ["times tables", "multiplication facts"],
   "m.mult.facts": ["times tables", "multiplication tables", "multiplication facts", "multiplication", "times table", "tablas de multiplicar", "multiplicación"],
   "m.div.facts": ["division facts", "dividing", "division", "divide", "división", "dividir"],

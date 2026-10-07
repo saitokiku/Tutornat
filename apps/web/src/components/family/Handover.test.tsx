@@ -1,12 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Activity, type ComponentProps } from "react";
+import { Activity, StrictMode, act, type ComponentProps, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import FamilyPage from "@/app/(app)/family/page";
 import PracticePage from "@/app/(app)/practice/page";
 import { RULES } from "@/learning/engine";
 import type { Attempt } from "@/learning/types";
 import { nudgesFor } from "@/lib/nudges";
+import { useScopeKey } from "@/components/shell/route";
 import { read, resetMemory, update } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { HandoverScope, useHandover } from "./Handover";
@@ -27,13 +28,20 @@ vi.mock("next/link", () => ({
 }));
 const replace = vi.fn();
 let search = "";
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace }), usePathname: () => "/family", useSearchParams: () => new URLSearchParams(search) }));
+let path = "/family";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace }), usePathname: () => path, useSearchParams: () => new URLSearchParams(search) }));
 
 afterEach(() => {
   resetMemory();
   replace.mockClear();
   vi.useRealTimers();
+  path = "/family";
 });
+
+/** The handover boundary must survive the shell's learner-specific page remount. */
+function Shell({ children }: { children: ReactNode }) {
+  return <HandoverScope><div key={useScopeKey()}>{children}</div></HandoverScope>;
+}
 
 // Wednesday 7 October 2026, 3 pm local.
 const NOW = new Date(2026, 9, 7, 15, 0).getTime();
@@ -52,7 +60,7 @@ describe("handing the device to a child from the family overview", () => {
       s.session = { accountId: "acc", profileId: "parent", unlocked: true };
       s.attempts = [...hard(3, "a"), ...hard(2, "b"), ...hard(1, "c")];
     });
-    render(<FamilyPage />);
+    render(<Shell><FamilyPage /></Shell>);
     const link = screen.getByRole("link", { name: "Hand over to Ada to practice: Equivalent fractions" });
     expect(link).toHaveAttribute("href", "/practice?subject=math&again=m.frac.equiv");
     link.focus();
@@ -61,6 +69,33 @@ describe("handing the device to a child from the family overview", () => {
     // The page stepped aside; nothing redirected the navigation.
     expect(replace).not.toHaveBeenCalled();
     expect(screen.queryByRole("heading", { name: "Family" })).not.toBeInTheDocument();
+  });
+
+  it("still steps aside when the shell starts the page fresh for the child (its content is keyed by who is learning)", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    const hard = (day: number, setId: string): Attempt[] =>
+      Array.from({ length: 5 }, (_, i) => ({ id: `${setId}${i}`, profileId: "ada", at: NOW - day * D + i * 1000, skillId: "m.frac.equiv", level: 1, seed: i, setId, mode: "prep", correct: i < 1, assisted: false, seconds: 20 }));
+    update((s) => {
+      s.accounts = [{ id: "acc", email: "m@example.test", displayName: "Maria", salt: "", passwordHash: "", createdAt: 0 }];
+      s.profiles = [ada];
+      s.session = { accountId: "acc", profileId: "parent", unlocked: true };
+      s.attempts = [...hard(3, "a"), ...hard(2, "b"), ...hard(1, "c")];
+    });
+    // As AppShell does: a new learner gets their pages fresh.
+    const { unmount } = render(
+      <Shell>
+        <FamilyPage />
+      </Shell>,
+    );
+    await userEvent.click(screen.getByRole("link", { name: "Hand over to Ada to practice: Equivalent fractions" }));
+    expect(read().session.profileId).toBe("ada");
+    // The remounted page did not mount its grown-ups-only Guard in the child's session.
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: "Family" })).not.toBeInTheDocument();
+    unmount();
+    // A later visit by the child is an ordinary one: the Guard sends them to their own Today.
+    render(<Shell><FamilyPage /></Shell>);
+    expect(replace).toHaveBeenCalledWith("/home");
   });
 
   it("shows the page again when the grown-up comes back to it (Next keeps visited pages hidden, not unmounted)", async () => {
@@ -87,8 +122,29 @@ describe("handing the device to a child from the family overview", () => {
     await userEvent.click(screen.getByRole("button", { name: "Hand over" }));
     expect(screen.queryByRole("button", { name: "Hand over" })).not.toBeInTheDocument();
     rerender(page("hidden"));
+    // Back through the grown-up gate.
+    act(() => update((s) => void (s.session.profileId = "parent")));
     rerender(page("visible"));
     expect(screen.getByRole("button", { name: "Hand over" })).toBeVisible();
+  });
+
+  it("Back to a cached Family page as the child remounts its guard, including StrictMode", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    update((s) => {
+      s.accounts = [{ id: "acc", email: "m@example.test", displayName: "Maria", salt: "", passwordHash: "", createdAt: 0 }];
+      s.profiles = [ada];
+      s.session = { accountId: "acc", profileId: "parent", unlocked: true };
+      s.attempts = [1, 2, 3].flatMap((day) => Array.from({ length: 5 }, (_, i) => ({ id: `${day}-${i}`, profileId: "ada", at: NOW - day * D + i * 1000, skillId: "m.frac.equiv", level: 1, seed: i, setId: `set-${day}`, mode: "prep" as const, correct: i === 0, assisted: false, seconds: 20 })));
+    });
+    const page = (mode: "visible" | "hidden") => <StrictMode><Shell><Activity mode={mode}><FamilyPage /></Activity></Shell></StrictMode>;
+    const { rerender } = render(page("visible"));
+    await userEvent.click(screen.getByRole("link", { name: "Hand over to Ada to practice: Equivalent fractions" }));
+    expect(replace).not.toHaveBeenCalled();
+    path = "/practice";
+    rerender(page("hidden"));
+    path = "/family";
+    rerender(page("visible"));
+    expect(replace).toHaveBeenCalledWith("/home");
   });
 });
 

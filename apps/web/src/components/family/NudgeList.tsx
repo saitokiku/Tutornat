@@ -55,7 +55,7 @@ export function nudgeAction(n: Nudge, name: string, locale: Locale): { text: str
 /**
  * Nudges for one learner, each a sentence and one action link. Grown-ups only: it renders nothing in
  * a child's session. Showing them records a nudge act (once a day each), from an effect. Hand-over
- * links switch to the child; put the page inside a HandoverScope so they land where they point.
+ * links switch to the child; AppShell's HandoverScope keeps them landing where they point.
  */
 export function NudgeList({ child, nudges }: { child: Profile; nudges: Nudge[] }) {
   const t = useT();

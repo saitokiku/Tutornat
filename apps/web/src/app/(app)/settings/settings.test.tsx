@@ -168,12 +168,16 @@ describe("Weekly email in Settings", () => {
     expect(sw).toHaveAttribute("aria-checked", "true");
     expect(weeklyOf(read(), accountId)?.on).toBe(true);
     expect(posts).toEqual([]);
+    // The inbox document loads only when requested, and is discarded on close.
+    expect(screen.queryByTitle("Weekly email preview")).not.toBeInTheDocument();
     // The preview is the real email for this week so far: numbers, no names.
     await user.click(screen.getByText("Preview this week's email"));
     const text = screen.getByLabelText("Plain text", { selector: "pre" });
     expect(text).toHaveTextContent("Right on own: 1");
     expect(text.textContent).not.toMatch(/Ada|Bo\b|Maria/);
-    expect(screen.getByTitle("Weekly email preview")).toHaveAttribute("sandbox", "");
+    expect(await screen.findByTitle("Weekly email preview")).toHaveAttribute("sandbox", "");
+    await user.click(screen.getByText("Preview this week's email"));
+    await waitFor(() => expect(screen.queryByTitle("Weekly email preview")).not.toBeInTheDocument());
   });
 
   it("says nothing would go out for an empty week", async () => {

@@ -203,7 +203,7 @@ test.describe("with reduced motion", () => {
       await noOverflow(page);
       const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
       const bad = r.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-      expect(bad.map((v) => `${widgets[i].title}: ${v.id} — ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
+      expect(bad.map((v) => `${widgets[i].title}: ${v.id} — ${v.nodes.map((n) => `${n.target.join(" ")}: ${n.failureSummary}`).join(" | ")}`)).toEqual([]);
       if (i < widgets.length - 1) await page.getByRole("button", { name: /^Next/ }).click();
     }
   });

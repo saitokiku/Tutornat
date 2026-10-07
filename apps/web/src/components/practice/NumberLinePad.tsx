@@ -52,6 +52,7 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
     place(nearestPoint((x - INSET) / (W - 2 * INSET), count));
   };
   const onKey = (e: KeyboardEvent) => {
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
     const moves: Record<string, () => number> = {
       ArrowRight: () => (placed ? index + 1 : start),
       ArrowUp: () => (placed ? index + 1 : start),

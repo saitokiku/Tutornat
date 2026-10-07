@@ -80,7 +80,7 @@ function Side({ item, others, locale, subject }: { item: Item; others: Extras; l
                     “{c.say}”
                   </span>
                 )}
-                {i === key && <span className="text-xs font-semibold text-good">{t("trust.review.key")}</span>}
+                {i === key && <span className="text-xs font-semibold text-ink">{t("trust.review.key")}</span>}
                 {c.why && <span className="font-opmono text-xs text-warn">{t("trust.review.why", { why: c.why })}</span>}
               </li>
             ))}

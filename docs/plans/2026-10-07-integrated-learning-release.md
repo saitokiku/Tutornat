@@ -2,8 +2,9 @@
 
 > **For agentic workers:** Use `superpowers:subagent-driven-development` or
 > `superpowers:executing-plans` to implement task-by-task. Checkboxes track verified work, not dispatch.
-> Read the linked specifications and the task's dependencies before editing. This plan is proposed;
-> no implementation task below was completed by the planning pass.
+> Read the linked specifications and the task's dependencies before editing. The owner approved
+> implementation on 2026-10-07. The planning pass completed no implementation task; live progress
+> is recorded in [release evidence](../reviews/integrated-release-evidence.md).
 
 **Goal:** Make one continuous, visual learning session work from a person's question through useful
 teaching, their own action, honest evidence and later continuation, with natural voice and shared input.
@@ -223,16 +224,16 @@ Recover applicable portions of `43d4b71`/`5d6ca5f` after inspecting their diffs.
 
 **Interfaces:** preserve current routes and action APIs. Produces a trustworthy browser baseline.
 
-- [ ] Write regression `hint_then_keyboard_fraction_submits_once`: hint → numerator/denominator entry
+- [x] Write regression `hint_then_keyboard_fraction_submits_once`: hint → numerator/denominator entry
   → Enter; assert one intended response, no extra hint and no tutor opened by accidental focus.
   Add touch equivalent and IME-composition Enter case in `Runner.test.tsx`/`practice.spec.ts`.
-- [ ] Run that test first and record the actual failure; distinguish the audit's focus reproduction
+- [x] Run that test first and record the actual failure; distinguish the audit's focus reproduction
   from the older “Enter takes another hint” report.
-- [ ] Diagnose all 11 failing scenarios in baseline JSON. Repair behavior/contrast; where a selector
+- [x] Diagnose all 11 failing scenarios in baseline JSON. Repair behavior/contrast; where a selector
   is ambiguous, scope it to the intended role/card and retain the substantive assertion.
-- [ ] Inventory all 16 skips in `docs/reviews/integrated-release-evidence.md` (new): reason, environment,
+- [x] Inventory all 16 skips in `docs/reviews/integrated-release-evidence.md` (new): reason, environment,
   owner, activation test. Move required local coverage out of skips; do not lower axe thresholds.
-- [ ] Run `npx playwright test --workers=4` with a dedicated `E2E_PORT`; expect zero unexplained failures.
+- [x] Run `npx playwright test --workers=4` with a dedicated `E2E_PORT`; expect zero unexplained failures.
   Commit/push `fix: restore current learning journeys and answer focus` after the merge gate in §4.
 
 ### T02 — Make assistance and first responses durable

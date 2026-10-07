@@ -66,10 +66,11 @@ test("over the daily cap the tutor says so kindly, in its own voice, and practic
   // A tutor message, not an error and not a safety referral.
   await expect(page.getByText(en["tutor.error"])).toHaveCount(0);
   await expect(page.getByText("988", { exact: false })).toHaveCount(0);
-  await expect(log.getByText(en["tutor.practiceCard"])).toBeVisible();
+  const board = page.getByRole("region", { name: "Board" });
+  await expect(board.getByText(en["tutor.practiceCard"])).toBeVisible();
   await noOverflow(page);
   // The practice card works by keyboard as well as by tap.
-  const start = log.getByRole("button", { name: en["practice.start"] });
+  const start = board.getByRole("button", { name: en["practice.start"] });
   await start.focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/practice\/.+/);

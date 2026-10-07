@@ -119,6 +119,10 @@ bar `k-vt-rail` / `k-vt-tabbar` (and a focus header `k-vt-header`) so they never
 instant), but colour, opacity and outline changes still play, and enters become a 160ms fade — a press, a
 selection and an arrival stay legible.
 
+Control labels keep contrast throughout a state change. Buttons and chips switch foreground,
+background and disabled opacity together; border, shadow and press motion can still animate.
+Small answer-key labels use ink over the pale green review row.
+
 ## Browser surfaces
 
 All themed from the palette in `globals.css`; screens never restyle them.

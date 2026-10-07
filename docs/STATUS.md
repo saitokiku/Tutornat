@@ -1,19 +1,22 @@
 # Status
 
-> **2026-10-07 review complete; next implementation wave not started.** Start with
+> **2026-10-07 T01 verified; T02 next.** Start with
 > [HANDOFF.md](HANDOFF.md) and [the integrated release plan](plans/2026-10-07-integrated-learning-release.md).
 
-Current review base: `d8d8166`. Fresh verify: **PASS, 2,372 tests**. Full browser suite:
-**148 passed / 22 failed / 16 skipped**; see [baseline](reviews/2026-10-07-baseline.json).
+Current review base: `d8d8166`. T01 verify: **PASS, 2,385 tests**. Full browser suite:
+**174 passed / 0 failed / 16 skipped**; see [release evidence](reviews/integrated-release-evidence.md).
+The original [baseline](reviews/2026-10-07-baseline.json) records the repaired failures.
 The [audit](reviews/2026-10-07-system-audit.md) separates working pieces from integration gaps.
 
 - **Done:** system/predecessor review, hands-on synthetic journey, product spec, current model/voice/Jev
-  research, task contracts and dependency order.
-- **Not started:** integrated release T01–T13. Earlier Queue 4 ordering below is superseded by the new plan.
+  research, task contracts and dependency order; T01 current journey/input repairs.
+- **Next:** T02 durable help and first-response evidence in the isolated implementation worktree. See
+  [release evidence](reviews/integrated-release-evidence.md).
+- **Not started:** T02–T13. Earlier Queue 4 ordering below is superseded by the new plan.
 - **External gates:** deployment credentials/provider access, child-data and content/Spanish review,
   real-device audio and pilot participants. No owner decision blocks local implementation planning.
 - **Owner direction:** fused child/adult capability, multimodal teaching, optional future face/gaze,
-  maximum quality before cost, ornamentation later. No product code changed in this review.
+  maximum quality before cost, ornamentation later. The historical review itself changed no product code.
 
 ## Earlier Queue 4 — the 1.0 build (historical order)
 

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PracticeSet, Slot } from "@/learning/types";
@@ -9,8 +9,10 @@ import type { Grade, Profile } from "@/lib/types";
 import { makeItem } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { Runner, speakableSteps } from "./Runner";
+import { TutorDock } from "./tutor-dock";
 
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
+const openTutor = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: nav.push, replace: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => "/practice/x",
@@ -20,6 +22,7 @@ vi.mock("next/navigation", () => ({
 afterEach(() => {
   resetMemory();
   nav.push.mockReset();
+  openTutor.mockReset();
 });
 
 async function learner(grade: Grade) {
@@ -37,7 +40,7 @@ function setOf(p: Profile, kind: PracticeSet["kind"], slots: Slot[]): PracticeSe
 
 /** Renders a set and waits until its first problem has focus, the way the runner presents it. */
 async function show(set: PracticeSet, p: Profile) {
-  render(<Runner set={set} learner={p} exitHref="/practice" />);
+  render(<TutorDock.Provider value={{ open: openTutor }}><Runner set={set} learner={p} exitHref="/practice" /></TutorDock.Provider>);
   await settled();
 }
 
@@ -102,6 +105,53 @@ describe("Runner", () => {
       ["steps", undefined, "0", "next-try-right", "m.frac.unit"],
     ]);
     expect(acts.every((a) => a.outcome === undefined && a.profileId === p.id)).toBe(true);
+  });
+
+  it.each(["Tab", "slash"])("hint_then_keyboard_fraction_submits_once (%s)", async (move) => {
+    const p = await learner("3");
+    // Seed 11 shows one of four equal parts shaded.
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    await show(set, p);
+    await userEvent.click(screen.getByRole("button", { name: /^Hint/ }));
+    if (move === "Tab") await userEvent.click(screen.getByRole("button", { name: /^Top number:/ }));
+    await userEvent.keyboard("1");
+    if (move === "Tab") await userEvent.tab();
+    else await userEvent.keyboard("/");
+    await userEvent.keyboard("4{Enter}");
+
+    expect(read().attempts).toEqual([expect.objectContaining({ response: "1/4", correct: true, assisted: true })]);
+    expect(read().acts.filter((a) => a.kind === "hint")).toHaveLength(1);
+    expect(screen.getByText("Right, with help.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(openTutor).not.toHaveBeenCalled();
+  });
+
+  it("a hinted fraction can be entered by touch and checked once", async () => {
+    const p = await learner("3");
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    await show(set, p);
+    await userEvent.click(screen.getByRole("button", { name: /^Hint/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Top number:/ }));
+    await userEvent.click(screen.getByRole("button", { name: "1" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Bottom number:/ }));
+    await userEvent.click(screen.getByRole("button", { name: "4" }));
+    await userEvent.click(screen.getByRole("button", { name: "Check" }));
+    expect(read().attempts).toEqual([expect.objectContaining({ response: "1/4", correct: true, assisted: true })]);
+    expect(read().acts.filter((a) => a.kind === "hint")).toHaveLength(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it.each([{ isComposing: true }, { keyCode: 229 }])("composition Enter does not submit a fraction (%j)", async (composition) => {
+    const p = await learner("3");
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    await show(set, p);
+    await userEvent.keyboard("1/4");
+    const field = screen.getByRole("button", { name: /^Bottom number:/ });
+    field.focus();
+    fireEvent.keyDown(field, { key: "Enter", ...composition });
+    expect(read().attempts).toEqual([]);
+    await userEvent.keyboard("{Enter}");
+    expect(read().attempts).toEqual([expect.objectContaining({ response: "1/4", correct: true, assisted: false })]);
   });
 
   it("a wrong answer in a check is stored with the misconception it shows", async () => {
