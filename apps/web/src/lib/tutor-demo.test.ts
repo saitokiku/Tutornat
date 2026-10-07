@@ -1,10 +1,27 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import type { Book, Definition, Poem, WikiSummary } from "@/knowledge";
-import { sameProblem } from "@/components/tutor/similar";
-import { makeItem } from "@/practice/skills";
+import { sameNumbers, sameProblem } from "@/components/tutor/similar";
+import { makeItem, SKILLS } from "@/practice/skills";
+import type { Item } from "@/practice/types";
 import type { BoardCard } from "./tutor";
-import { aboutIn, askOf, dateIn, demoAnswer, demoOpening, demoPhoto, lessonFor, problemSkill, skillTitled, topicOf, type DemoContext, type DemoFetchers, type DemoState } from "./tutor-demo";
+import {
+  aboutIn,
+  askOf,
+  dateIn,
+  demoAnswer,
+  demoOpening,
+  demoPhoto,
+  lessonFor,
+  lookupTopic,
+  openTalk,
+  problemSkill,
+  skillTitled,
+  topicOf,
+  type DemoContext,
+  type DemoFetchers,
+  type DemoState,
+} from "./tutor-demo";
 
 const FALLACY: WikiSummary = {
   title: "Fallacy",
@@ -14,9 +31,11 @@ const FALLACY: WikiSummary = {
   license: "CC BY-SA 4.0",
 };
 
+const FALACIA: WikiSummary = { title: "Falacia", extract: "Una falacia es un argumento que parece válido, pero no lo es.", url: "https://es.wikipedia.org/wiki/Falacia", lang: "es", license: "CC BY-SA 4.0" };
+
 function fakes(over: Partial<DemoFetchers> = {}) {
   const f = {
-    wiki: vi.fn(async (topic: string): Promise<WikiSummary | null> => (/fallac|falacia/.test(topic) ? FALLACY : null)),
+    wiki: vi.fn(async (topic: string, lang: string): Promise<WikiSummary | null> => (/fallac|falacia/.test(topic) ? (lang === "es" ? FALACIA : FALLACY) : null)),
     define: vi.fn(async (word: string): Promise<Definition[]> => (word === "denominator" ? [{ word: "denominator", partOfSpeech: "noun", text: "The number below the line in a fraction." }] : [])),
     books: vi.fn(async (): Promise<Book[]> => [{ title: "Dinosaurs Before Dark", author: "Mary Pope Osborne", year: 1992, url: "https://openlibrary.org/works/OL1W", source: "Open Library", kind: "borrow" }]),
     poems: vi.fn(async (): Promise<Poem[]> => [{ title: "Hope is the thing with feathers", author: "Emily Dickinson", lines: ["Hope is the thing with feathers", "That perches in the soul"], url: "https://poetrydb.org/title/Hope" }]),
@@ -29,6 +48,23 @@ function fakes(over: Partial<DemoFetchers> = {}) {
 const ctx = (over: Partial<DemoContext> = {}): DemoContext => ({ locale: "en", grade: "8", today: "2026-10-07", seed: () => 4242, ...over });
 const fresh = (): DemoState => ({ hintsGiven: 0, tries: 0, shown: [] });
 const types = (cards: BoardCard[]) => cards.map((c) => c.type);
+
+/** The answer to a problem, as it would be written in a reply. */
+function answersOf(item: Item): string[] {
+  const a = item.answer;
+  if (a.kind === "number") return [String(a.value)];
+  if (a.kind === "fraction") return [`${a.n}/${a.d}`];
+  if (a.kind === "choice") return [item.choices?.[a.index]?.label ?? ""];
+  if (a.kind === "text") return a.accept;
+  if (a.kind === "expr") return [a.expr];
+  return [];
+}
+/** True when `text` shows `answer`: a number on its own, or a written answer as whole words. */
+function shows(text: string, answer: string): boolean {
+  const esc = answer.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+  if (/^-?\d+(\.\d+)?(\/\d+)?$/.test(answer)) return new RegExp(`(^|[^\\d/.])${esc}($|[^\\d/])`).test(text);
+  return answer.trim().length >= 5 && new RegExp(`\\b${esc}\\b`, "i").test(text);
+}
 
 describe("reading the learner's ask", () => {
   it("finds the topic inside a question", () => {
@@ -66,6 +102,27 @@ describe("reading the learner's ask", () => {
     expect(askOf("is it 7/12", false)).toMatchObject({ kind: "check" });
     expect(askOf("hello", false)).toEqual({ kind: "greet" });
     expect(askOf("what is a logical fallacy", false)).toEqual({ kind: "topic", topic: "logical fallacy" });
+  });
+
+  it("looks up only a question about something or a few words naming it, never chatter or anything personal", () => {
+    expect(lookupTopic("what is a logical fallacy")).toBe("logical fallacy");
+    expect(lookupTopic("¿Qué es la fotosíntesis?")).toBe("fotosíntesis");
+    expect(lookupTopic("the American Civil War")).toBe("american civil war");
+    expect(lookupTopic("dinosaurs")).toBe("dinosaurs");
+    expect(lookupTopic("how do I add fractions")).toBe("add fractions");
+    expect(lookupTopic("I like my dog")).toBeNull();
+    expect(lookupTopic("my teacher Mrs. Lopez gave us a lot of homework today")).toBeNull();
+    expect(lookupTopic("what is my name")).toBeNull();
+    expect(lookupTopic("who is your favorite")).toBeNull();
+    expect(lookupTopic("¿cuál es tu nombre?")).toBeNull();
+    expect(askOf("I like my dog", false)).toEqual({ kind: "topic" });
+  });
+
+  it("asking for help or for the answer, and an empty “What does … mean?”, are not topics", () => {
+    for (const text of ["help", "Help me please", "what do i do", "just tell me the answer", "what's the answer?", "ayúdame", "¿qué hago?", "dime la respuesta", "idk"]) expect(askOf(text, false), text).toEqual({ kind: "hint" });
+    expect(askOf("What does  mean?", false)).toEqual({ kind: "which" });
+    expect(askOf("¿Qué significa ?", false)).toEqual({ kind: "which" });
+    expect(askOf("the answer is 12", false).kind).toBe("check");
   });
 
   it("with a problem on screen, the quick asks mean help with it", () => {
@@ -163,7 +220,8 @@ describe("the demo tutor on a topic", () => {
     expect(f.wiki).toHaveBeenCalledWith("falacia", "es");
     expect(f.define).not.toHaveBeenCalled();
     expect(r.cards.find((c) => c.type === "practice")).toEqual({ type: "practice", skillId: "e.fallacies" });
-    expect(r.text).toMatch(/^Esto dice Wikipedia sobre Fallacy\./);
+    expect(r.text).toMatch(/^Esto dice Wikipedia sobre Falacia\./);
+    expect(r.cards[0]).toMatchObject({ type: "fact", lang: "es", url: "https://es.wikipedia.org/wiki/Falacia" });
   });
 
   it("adds the dictionary for a one-word topic and leads with practice for young learners", async () => {
@@ -179,6 +237,60 @@ describe("the demo tutor on a topic", () => {
     const r = await demoAnswer("zxqv", ctx(), fresh(), fakes({ wiki: async () => Promise.reject(new Error("offline")) }));
     expect(r.cards.filter((c) => c.type !== "resources")).toEqual([]);
     expect(r.text).toContain("I couldn't find zxqv");
+  });
+
+  it("a sentence that isn't a topic is never searched; help and an empty gap get a way forward", async () => {
+    const f = fakes();
+    const chatter = await demoAnswer("I like my dog", ctx(), fresh(), f);
+    expect(chatter.text).toBe("I'm not sure what to look up. Ask about a topic, like “what is a volcano?”, type the problem you're stuck on, or ask me to find a book.");
+    expect(chatter.cards).toEqual([]);
+    const help = await demoAnswer("help", ctx(), fresh(), f);
+    expect(help.text).toMatch(/^Type the problem you're on/);
+    const answer = await demoAnswer("just tell me the answer", ctx(), fresh(), f);
+    expect(answer.text).toMatch(/^Type the problem you're on/);
+    const gap = await demoAnswer("What does  mean?", ctx(), fresh(), f);
+    expect(gap.text).toBe("Which word? Type it in the box, like: What does denominator mean?");
+    expect(f.wiki).not.toHaveBeenCalled();
+    expect(f.define).not.toHaveBeenCalled();
+    // A sentence about schoolwork still finds the practice that fits, without a search.
+    const homework = await demoAnswer("my long division homework is so hard", ctx({ grade: "5" }), fresh(), f);
+    expect(homework.cards.find((c) => c.type === "practice")).toEqual({ type: "practice", skillId: "m.div.long" });
+    expect(homework.text).toMatch(/^That sounds like /);
+    expect(f.wiki).not.toHaveBeenCalled();
+  });
+
+  it("shows Wikipedia's answer only when it is about the topic and fit for a child", async () => {
+    const offTopic = await demoAnswer("what is a sloth", ctx(), fresh(), fakes({ wiki: async () => ({ ...FALLACY, title: "Georgia Ku", extract: "Georgia Ku is a singer." }) }));
+    expect(offTopic.cards.some((c) => c.type === "fact")).toBe(false);
+    expect(offTopic.text).not.toMatch(/Wikipedia says/);
+    const unfit = await demoAnswer("what is a red light district", ctx(), fresh(), fakes({ wiki: async () => ({ ...FALLACY, title: "Red-light district", extract: "A red-light district is an area with many brothels." }) }));
+    expect(unfit.cards.some((c) => c.type === "fact")).toBe(false);
+    const fit = await demoAnswer("what are dinosaurs", ctx(), fresh(), fakes({ wiki: async () => ({ ...FALLACY, title: "Dinosaur", extract: "Dinosaurs are a diverse group of reptiles." }) }));
+    expect(fit.cards[0]).toMatchObject({ type: "fact", title: "Dinosaur" });
+  });
+
+  it("an example on the learner's own typed problem never has their numbers, however often they ask", async () => {
+    const typed = "2 + 3";
+    let hits = 0;
+    for (let seed = 1; seed <= 120; seed++) {
+      const k = ctx({ grade: "K", seed: () => seed });
+      const first = await demoAnswer(typed, k, fresh(), fakes());
+      const again = await demoAnswer("Show me an example", { ...k, seed: () => seed * 31 + 7 }, first.state, fakes());
+      const deeper = await demoAnswer("Explain it a different way", { ...k, seed: () => seed * 17 + 3 }, { ...again.state, shown: [] }, fakes());
+      for (const r of [first, again, deeper])
+        for (const card of r.cards)
+          if (card.type === "worked") {
+            hits++;
+            expect(sameNumbers(card.item, typed), `seed ${seed}: ${card.item.say}`).toBe(false);
+          }
+    }
+    expect(hits).toBeGreaterThan(200);
+  });
+
+  it("a lesson only written in the other language says which language it is in", () => {
+    const card = lessonFor("ethos", "8", "es");
+    expect(card).toMatchObject({ type: "lesson", lang: "en" });
+    expect(lessonFor("logical fallacy", "8", "en")).toMatchObject({ lang: "en" });
   });
 
   it("then explains it a different way without repeating, and shows an example of the skill", async () => {
@@ -252,7 +364,7 @@ describe("the demo tutor beside a problem", () => {
 
   it("opens with the demo line once and the first vetted hint", () => {
     const o = demoOpening(c);
-    expect(o.text.split("\n")[0]).toBe("I'm the demo tutor: I answer from real sources and checked practice, without AI.");
+    expect(o.text.split("\n")[0]).toBe("I'm the demo tutor: I answer from real sources and our practice, without AI.");
     expect(o.text).toContain(item.hints[0]);
     expect(o.state).toMatchObject({ hintsGiven: 1, skillId: "m.frac.addlike" });
     expect(demoOpening(ctx({ grade: "K" })).text.split("\n")[0]).toBe("I'm the demo tutor.");
@@ -276,19 +388,67 @@ describe("the demo tutor beside a problem", () => {
     expect((await demoAnswer("hint please", c, s, fakes())).text).toMatch(/last hint/);
   });
 
-  it("won't give the answer before a try; explains differently with a picture, a worked one, then the first step", async () => {
+  it("won't give the answer before a try; explains differently with a worked one, then the next hints", async () => {
     const s = demoOpening(c).state;
     expect((await demoAnswer("just tell me the answer", c, s, fakes())).text).toMatch(/one try first/);
+    // The problem's own picture is already on screen beside it: never sent again as "a different way".
     const withVisual = makeItem("m.frac.unit", 1, 3, "en");
+    expect(withVisual.visual).toBeDefined();
     const cv = ctx({ item: withVisual, grade: "3" });
-    let state = demoOpening(cv).state;
-    const kinds: string[] = [];
-    for (let i = 0; i < 3; i++) {
+    let state = demoOpening(cv).state; // the opening gave hint 1
+    const said: string[] = [];
+    for (let i = 0; i < 4; i++) {
       const r = await demoAnswer("Explain it a different way", cv, state, fakes());
-      kinds.push(r.cards[0]?.type ?? (r.text === withVisual.steps[0] ? "step" : "text"));
+      said.push(r.cards[0]?.type ?? r.text);
       state = r.state;
     }
-    expect(kinds).toEqual(withVisual.visual ? ["visual", "worked", "step"] : ["worked", "step", "text"]);
+    const TRY = "Give it one try first, even a guess. Then I'll show you how.";
+    expect(said).toEqual(["worked", ...withVisual.hints.slice(1), TRY, TRY, TRY].slice(0, 4));
+    expect(said).not.toContain("visual");
+
+    // After a real try, the first worked step, then the problem's own "Show me how".
+    const tried = { ...state, tries: 1 };
+    const step = await demoAnswer("Explain it a different way", cv, tried, fakes());
+    expect(step.text).toBe(withVisual.steps[0]);
+    expect((await demoAnswer("Explain it a different way", cv, step.state, fakes())).text).toMatch(/Show me how/);
+  });
+
+  it("before a try, “why”, “how do I start” and a second “different way” never show a worked step (5/6 + 4/6 = 9/6)", async () => {
+    // m.frac.addlike level 2 addition: step 1 is the whole sum.
+    const sum = Array.from({ length: 80 }, (_, i) => makeItem("m.frac.addlike", 2, i + 1, "en")).find((x) => x.steps.length > 1 && x.prompt.some((p) => p === " + "))!;
+    expect(sum).toBeDefined();
+    const cs = ctx({ item: sum, grade: "4" });
+    let state = demoOpening(cs).state;
+    for (const ask of ["Explain it a different way", "Explain it a different way", "why?", "how do I start", "Explain the first step", "explain"]) {
+      const r = await demoAnswer(ask, cs, state, fakes());
+      expect(r.text, ask).not.toContain(sum.steps[0]);
+      expect(sum.steps.some((s) => r.text.includes(s)), ask).toBe(false);
+      state = r.state;
+    }
+  });
+
+  it("before a try, no reply beside any problem on the map shows a worked step or the answer", async () => {
+    const asks = ["Explain the first step", "why", "how do I start", "Explain it a different way", "Explain it a different way", "Explain it a different way", "just tell me the answer", "Give me a hint", "Give me a hint", "Give me a hint"];
+    for (const skill of SKILLS) {
+      for (let level = 1; level <= skill.levels; level++) {
+        for (const seed of [1, 2, 3]) {
+          const mine = makeItem(skill.id, level, seed, "en");
+          const cs = ctx({ item: mine, grade: skill.grade, seed: () => seed + 100 });
+          let state = demoOpening(cs).state;
+          for (const ask of asks) {
+            const r = await demoAnswer(ask, cs, state, fakes());
+            const where = `${skill.id} L${level} seed ${seed}: ${ask}`;
+            for (const card of r.cards) if (card.type === "worked") expect(sameProblem(card.item, mine), where).toBe(false);
+            state = r.state;
+            // The problem's own vetted hint ladder is the one thing it may say (its top rung can be a
+            // partial step, like "8 + 2 = 10" for 8 + 3); everything else is checked.
+            if (mine.hints.includes(r.text)) continue;
+            expect(mine.steps.some((s) => r.text.includes(s)), `${where} → ${r.text}`).toBe(false);
+            for (const a of answersOf(mine)) expect(shows(r.text, a), `${where} → ${r.text}`).toBe(false);
+          }
+        }
+      }
+    }
   });
 
   it("a similar one is never the learner's own problem, even when the seed would draw it", async () => {
@@ -315,5 +475,17 @@ describe("the demo tutor beside a problem", () => {
   it("a photo in demo mode says it needs the AI tutor and asks for the problem typed", () => {
     expect(demoPhoto(c, fresh()).text).toBe("Reading a photo needs the AI tutor, which isn't connected here. Type the problem instead and I'll help with it.");
     expect(demoPhoto(ctx({ locale: "es" }), fresh()).text).toContain("Escribe el problema");
+    // A pre-reader isn't asked to type.
+    expect(demoPhoto(ctx({ grade: "K" }), fresh()).text).toBe("I can't read photos here. Ask a grown-up to type the problem for you.");
+  });
+});
+
+describe("opening an open conversation", () => {
+  it("names a young learner's choices out loud, in the order the chips show them", () => {
+    expect(openTalk("en", "K", ["Count to 10", "Letter sounds"])).toBe("What do you want to learn about? Count to 10, Letter sounds, or a poem? Tap one.");
+    expect(openTalk("es", "1", ["Contar hasta 10", "Sonidos de las letras"])).toBe("¿Sobre qué quieres aprender? ¿Contar hasta 10, Sonidos de las letras o un poema? Toca uno.");
+    expect(openTalk("en", "K")).toBe("What do you want to learn about? Tap one.");
+    expect(openTalk("en", "6", ["Ratios"])).toBe("What would you like to learn or work on?");
+    expect(demoOpening(ctx({ grade: "K", choices: ["Count to 10"] })).text).toBe("I'm the demo tutor.\nWhat do you want to learn about? Count to 10 or a poem? Tap one.");
   });
 });

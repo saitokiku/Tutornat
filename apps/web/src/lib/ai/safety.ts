@@ -12,7 +12,7 @@ const CRISIS =
 const ABUSE =
   /\b(someone|somebody|my (dad|mom|father|mother|uncle|brother|stepdad|stepmom|coach|teacher)|he|she|they) (hits?|hurts?|touches?|beats?) me\b|\b(being|been|get|getting) (abused|hit|beaten)\b|\bme (pega|golpea|toca|lastima)\b|\babus(o|an) de m[ií]\b/i;
 const OFF_LIMITS =
-  /\b(porn|sex(y|ual)?|nude|naked|drugs?|weed|vape|vaping|alcohol|beer|vodka|gun|kill (him|her|them|someone)|bomb|weapon|droga|marihuana|desnud|sexo|arma|pistola|bomba)\b/i;
+  /\b(porn\w*|sex(y|ual)?|nude|naked|erotic\w*|brothels?|prostitut\w*|drugs?|weed|cannabis|marijuana|cocaine|heroin|meth(amphetamine)?|fentanyl|lsd|vape|vaping|alcohol|beer|vodka|gun|kill (him|her|them|someone)|bomb|weapon|droga|marihuana|coca[ií]na|hero[ií]na|burdel|prostitu\w*|desnud|sexo|arma|pistola|bomba)\b/i;
 /** School science that uses a word on the off-limits list (grade 7 life science: how living things reproduce). */
 const SCHOOL_TERMS = /\b(sexual(?: (?:and|or|vs\.?|versus) asexual)? reproduction|reproducci[oó]n (?:a?sexual)(?: (?:y|o) (?:a?sexual))?)\b/gi;
 
@@ -40,6 +40,13 @@ export function screen(text: string, locale: Locale): Screen {
   if (OFF_LIMITS.test(text.replace(SCHOOL_TERMS, " "))) return { kind: "offLimits", reply: t.offLimits };
   return { kind: "ok" };
 }
+
+/**
+ * True when text a source sent back (a Wikipedia extract, a dictionary sense, a book title) passes the
+ * same screen as the learner's own words. Children see and hear these cards, so a source answer that
+ * would have been screened out as a question is not shown either.
+ */
+export const suitable = (text: string) => screen(text, "en").kind === "ok";
 
 /** California SB 243: remind a known minor to take a break every three hours in a sitting. */
 export const BREAK_EVERY_MS = 3 * 3600_000;

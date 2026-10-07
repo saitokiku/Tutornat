@@ -52,10 +52,11 @@ describe("sameNumbers", () => {
     expect(sameNumbers(sum, "how do I add")).toBe(false);
   });
 
-  it("re-draws a worked example that would solve the problem they typed", () => {
+  it("re-draws a worked example that would solve any problem they typed", () => {
     for (let seed = 1; seed <= 150; seed++) {
-      const like = similarItem("m.add.5", 1, "en", seed, { typed: "3 + 1" })!;
+      const like = similarItem("m.add.5", 1, "en", seed, { typed: ["3 + 1", "hello", "2 + 2"] })!;
       expect(sameNumbers(like, "3 + 1"), `seed ${seed}`).toBe(false);
+      expect(sameNumbers(like, "2 + 2"), `seed ${seed}`).toBe(false);
     }
   });
 });

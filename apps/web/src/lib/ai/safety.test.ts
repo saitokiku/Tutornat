@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { screen } from "./safety";
+import { screen, suitable } from "./safety";
 
 // The screen in front of every tutor turn, AI or demo: fixed referrals written by people, and school
 // science that happens to use a word on the off-limits list still gets taught.
@@ -28,5 +28,14 @@ describe("safety screen", () => {
     expect(screen("sexual stuff", "en").kind).toBe("offLimits");
     expect(screen("where can I buy a vape", "en").kind).toBe("offLimits");
     expect(screen("dónde compro marihuana", "es").kind).toBe("offLimits");
+    expect(screen("what is a brothel", "en").kind).toBe("offLimits");
+    expect(screen("tell me about cocaine", "en").kind).toBe("offLimits");
+    expect(screen("¿qué es la heroína?", "es").kind).toBe("offLimits");
+  });
+
+  it("screens what a source sends back the same way, for cards children see and hear", () => {
+    expect(suitable("A fallacy is the use of invalid or otherwise faulty reasoning.")).toBe(true);
+    expect(suitable("A brothel is a place where people engage in sexual activity with prostitutes.")).toBe(false);
+    expect(suitable("Sexual reproduction is a type of reproduction that involves two parents.")).toBe(true);
   });
 });

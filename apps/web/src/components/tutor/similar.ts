@@ -42,15 +42,16 @@ export function sameNumbers(item: Item, typed: string): boolean {
 }
 
 /**
- * A fresh problem of the skill that is not the learner's own: not the item on screen (`avoid`), and not
- * one with exactly the numbers they typed (`typed`). Draws up to 20 seeds from the first; null when the
- * skill has nothing else at that level.
+ * A fresh problem of the skill that is not the learner's own: not the item on screen (`avoid.item`), and
+ * not one with exactly the numbers of anything they typed in the conversation (`avoid.typed`, each
+ * message on its own). Draws up to 20 seeds from the first; null when the skill has nothing else at
+ * that level.
  */
-export function similarItem(skillId: string, level: number, locale: Locale, seed: number, avoid?: { item?: Item | null; typed?: string }): Item | null {
+export function similarItem(skillId: string, level: number, locale: Locale, seed: number, avoid?: { item?: Item | null; typed?: readonly string[] }): Item | null {
   for (let i = 0; i < 20; i++) {
     const item = makeItem(skillId, level, (seed + i * 7919) >>> 0, locale);
     if (avoid?.item && sameProblem(item, avoid.item)) continue;
-    if (avoid?.typed && sameNumbers(item, avoid.typed)) continue;
+    if (avoid?.typed?.some((text) => sameNumbers(item, text))) continue;
     return item;
   }
   return null;

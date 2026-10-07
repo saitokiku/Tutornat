@@ -1922,7 +1922,7 @@ const en = {
   "acct.consent.neededAiParent": "AI features are off for {name} until you record consent.",
   "acct.consent.neededVoiceParent": "Voice is off for {name} until you record consent.",
   // -- tutor
-  "tut.demo.intro": "I'm the demo tutor: I answer from real sources and checked practice, without AI.",
+  "tut.demo.intro": "I'm the demo tutor: I answer from real sources and our practice, without AI.",
   "tut.demo.introYoung": "I'm the demo tutor.",
   "tut.open.young": "What do you want to learn about? Tap one.",
   "tut.demo.topic": "Here is what Wikipedia says about {title}.",
@@ -1943,7 +1943,7 @@ const en = {
   "tut.demo.calendarNoDate": "Which day is it? Add it with the date and it shows on your plan.",
   "tut.demo.cantCheck": "I can't check answers to problems typed here. The practice set checks every answer as you go.",
   "tut.demo.problem": "That looks like {skill}. Here is one like it, worked out step by step. Try yours the same way.",
-  "tut.demo.problemOther": "I can give a hint, show a similar problem worked out, or show the first step. Tap one below.",
+  "tut.demo.problemOther": "I can give a hint, show a similar problem worked out, or explain it a different way. Tap one below.",
   "tut.demo.picture": "Here it is as a picture.",
   "tut.demo.lesson": "Here are the key points from the lesson “{lesson}”.",
   "tut.demo.noMore": "That's everything I have on this here. The practice set explains each problem step by step.",
@@ -2011,6 +2011,15 @@ const en = {
   "tut.demo.hintWorked": "Look at step 1 of the worked example on the board. Do that same step on yours.",
   "tut.label.ai": "Replies written by AI",
   "tut.demo.noSimilar": "I don't have a different one like it to work out. Ask for a hint, or start the practice: it explains each problem step by step.",
+  "tut.open.youngChoices": "What do you want to learn about? {choices}? Tap one.",
+  "tut.open.poemChoice": "a poem",
+  "tut.photo.demoYoung": "I can't read photos here. Ask a grown-up to type the problem for you.",
+  "tut.demo.whichWord": "Which word? Type it in the box, like: What does denominator mean?",
+  "tut.demo.soundsLike": "That sounds like {skill}.",
+  "tut.demo.unsure": "I'm not sure what to look up. Ask about a topic, like “what is a volcano?”, type the problem you're stuck on, or ask me to find a book.",
+  "tut.card.inEnglish": "In English",
+  "tut.card.inSpanish": "In Spanish",
+  "tut.quick.label": "Quick asks",
 } as const;
 
 export default en;

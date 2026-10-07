@@ -26,12 +26,16 @@ export const threadsOf = (s: StoreState, profileId: string) =>
 
 /**
  * A conversation turned to a skill: the tutor's help is meant to make the next try on it right. One act
- * per conversation (thread) and day, with the practice set when the tutor sat beside one; the outcome is
- * resolved later from the evidence, never here.
+ * per conversation (ref = thread id), skill and day, with the practice set when the tutor sat beside one;
+ * a conversation that moves from fallacies to fractions records both. The outcome is resolved later from
+ * the evidence, never here.
  */
-export function logTutorAct(profileId: string, threadId: string, skillId: string, setId?: string) {
+export function logTutorAct(profileId: string, threadId: string, skillId: string, setId?: string, now = Date.now()) {
   if (!getSkill(skillId)) return;
-  logAct({ profileId, kind: "tutor", intent: "next-try-right", skillId, ref: threadId, ...(setId ? { setId } : {}) }, { once: true });
+  const day = new Date(now).toDateString();
+  const logged = read().acts.some((a) => a.profileId === profileId && a.kind === "tutor" && a.ref === threadId && a.skillId === skillId && new Date(a.at).toDateString() === day);
+  if (logged) return;
+  logAct({ profileId, kind: "tutor", intent: "next-try-right", skillId, ref: threadId, ...(setId ? { setId } : {}) }, { at: now });
 }
 
 /**
@@ -51,8 +55,8 @@ export type BoardCard =
   | { type: "fact"; title: string; extract: string; url: string; lang: Locale }
   /** Dictionary senses (Wiktionary, through Datamuse). */
   | { type: "definition"; word: string; senses: { partOfSpeech: string; text: string }[]; url: string }
-  /** Key points from a ready-made KaizenEDU lesson. */
-  | { type: "lesson"; catalogueId: string; courseTitle: string; lessonId: string; lessonTitle: string; lead?: string; points: string[] }
+  /** Key points from a ready-made KaizenEDU lesson, in the language it is written in (`lang`). */
+  | { type: "lesson"; catalogueId: string; courseTitle: string; lessonId: string; lessonTitle: string; lead?: string; points: string[]; lang?: Locale }
   | { type: "books"; topic: string; list: { title: string; author?: string; year?: number; url: string; source: string; kind: "borrow" | "audio" | "read" }[] }
   | { type: "poem"; title: string; author: string; lines: string[]; url: string }
   | { type: "standard"; code: string; text: string; subject: string; url: string };

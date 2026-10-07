@@ -1924,7 +1924,7 @@ const es: Record<Key, string> = {
   "acct.consent.neededAiParent": "Las funciones con IA están apagadas para {name} hasta que registres tu consentimiento.",
   "acct.consent.neededVoiceParent": "La voz está apagada para {name} hasta que registres tu consentimiento.",
   // -- tutor
-  "tut.demo.intro": "Soy el tutor de demostración: respondo con fuentes reales y práctica revisada, sin IA.",
+  "tut.demo.intro": "Soy el tutor de demostración: respondo con fuentes reales y nuestra práctica, sin IA.",
   "tut.demo.introYoung": "Soy el tutor de demostración.",
   "tut.open.young": "¿Sobre qué quieres aprender? Toca uno.",
   "tut.demo.topic": "Esto dice Wikipedia sobre {title}.",
@@ -1945,7 +1945,7 @@ const es: Record<Key, string> = {
   "tut.demo.calendarNoDate": "¿Qué día es? Agrégalo con la fecha y aparece en tu plan.",
   "tut.demo.cantCheck": "No puedo revisar respuestas de problemas escritos aquí. La práctica revisa cada respuesta mientras avanzas.",
   "tut.demo.problem": "Parece de {skill}. Aquí hay uno parecido, resuelto paso a paso. Intenta el tuyo de la misma forma.",
-  "tut.demo.problemOther": "Puedo darte una pista, mostrarte un problema parecido resuelto o mostrarte el primer paso. Toca una opción abajo.",
+  "tut.demo.problemOther": "Puedo darte una pista, mostrarte un problema parecido resuelto o explicártelo de otra manera. Toca una opción abajo.",
   "tut.demo.picture": "Aquí está en un dibujo.",
   "tut.demo.lesson": "Estas son las ideas clave de la lección “{lesson}”.",
   "tut.demo.noMore": "Eso es todo lo que tengo sobre esto aquí. La práctica explica cada problema paso a paso.",
@@ -2013,6 +2013,15 @@ const es: Record<Key, string> = {
   "tut.demo.hintWorked": "Mira el paso 1 del ejemplo resuelto en la pizarra. Haz ese mismo paso en el tuyo.",
   "tut.label.ai": "Respuestas escritas por IA",
   "tut.demo.noSimilar": "No tengo otro parecido para resolver. Pide una pista o empieza la práctica: explica cada problema paso a paso.",
+  "tut.open.youngChoices": "¿Sobre qué quieres aprender? ¿{choices}? Toca uno.",
+  "tut.open.poemChoice": "un poema",
+  "tut.photo.demoYoung": "Aquí no puedo leer fotos. Pídele a un adulto que escriba el problema por ti.",
+  "tut.demo.whichWord": "¿Qué palabra? Escríbela en el cuadro, por ejemplo: ¿Qué significa denominador?",
+  "tut.demo.soundsLike": "Eso tiene que ver con {skill}.",
+  "tut.demo.unsure": "No sé bien qué buscar. Pregunta por un tema, como “¿qué es un volcán?”, escribe el problema en el que estás atorado o pídeme que busque un libro.",
+  "tut.card.inEnglish": "En inglés",
+  "tut.card.inSpanish": "En español",
+  "tut.quick.label": "Preguntas rápidas",
 };
 
 export default es;

@@ -8,6 +8,7 @@ import type { EventKind } from "@/planner/types";
 import { getSkill, SKILLS } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { linkOf, resourcesFor } from "@/resources";
+import { suitable } from "./ai/safety";
 import type { BoardCard } from "./tutor";
 import { similarItem } from "@/components/tutor/similar";
 import { wiktionaryUrl } from "@/components/tutor/sources";
@@ -16,7 +17,8 @@ import type { Grade, Locale, Scene } from "./types";
 // The demo tutor: what the tutor can do with no AI connected. It answers from real, named sources and
 // vetted material only — Wikipedia extracts with their links, dictionary senses, the key points of our
 // own lessons, the practice that fits, a problem's hint ladder and worked steps, and a fresh problem of
-// the same kind worked out. It never solves the learner's own problem and says once that it is the demo.
+// the same kind worked out. It never solves the learner's own problem, never shows a worked step before
+// a try, and says once that it is the demo.
 
 export type DemoFetchers = {
   wiki: (topic: string, lang: Locale) => Promise<WikiSummary | null>;
@@ -38,6 +40,8 @@ export type DemoContext = {
   homework?: { title: string; notes?: string };
   /** The lesson on the stage, when the tutor sits beside one. */
   lesson?: { title: string };
+  /** The topics a young learner can tap at the start, so the spoken opening names them. */
+  choices?: string[];
   /** Fresh seeds for worked examples (random in the browser, fixed in tests). */
   seed: () => number;
 };
@@ -49,8 +53,10 @@ export type DemoState = {
   skillId?: string;
   /** The topic last asked about, for "explain it a different way". */
   topic?: string;
-  /** What has been shown already ("visual", "similar", "lesson", "definition"), so nothing repeats. */
+  /** What has been shown already ("similar", "step", "lesson", "definition"), so nothing repeats. */
   shown: string[];
+  /** Problems the learner typed in this conversation: no worked example may have their numbers. */
+  typed?: string[];
 };
 
 export type DemoTurn = { text: string; cards: BoardCard[]; state: DemoState };
@@ -62,30 +68,36 @@ export const young = (grade: Grade) => grade === "K" || grade === "1" || grade =
 export type Ask =
   | { kind: "greet" | "thanks" | "hint" | "similar" | "different" | "answer" | "step" | "check" | "other" }
   | { kind: "define"; word: string }
+  /** "What does … mean?" sent with the gap still empty. */
+  | { kind: "which" }
   | { kind: "book"; topic: string }
   | { kind: "poem"; author?: string }
   | { kind: "calendar" }
   | { kind: "problem"; skillId: string }
   /** A skill named by its own title, as the skill chips send it. */
   | { kind: "skill"; skillId: string }
-  | { kind: "topic"; topic: string };
+  /** `topic` is set only when there is something to look up (see lookupTopic). */
+  | { kind: "topic"; topic?: string };
 
 const clip = (s: string) => s.replace(/^[\s"'“”‘’¿¡]+|[\s"'“”‘’?!.,;:¿¡]+$/g, "").trim();
 const ARTICLE = /^(?:an?|the|el|la|los|las|un|una|unos|unas|lo)\s+/i;
 
+// How a question about something starts, in English and Spanish.
+const FRAMES = [
+  /^(?:what|who|where)\s+(?:is|are|was|were)\s+(.+)$/,
+  /^(?:what'?s|whats|who'?s)\s+(.+)$/,
+  /^(?:tell me|teach me|explain|show me|i want to learn|i want to know|learn)\s+(?:about\s+|how\s+)?(.+)$/,
+  /^(?:how|why)\s+(?:do|does|did|is|are|can|do you)\s+(.+)$/,
+  /^(?:qu[eé]|qui[eé]n(?:es)?|cu[aá]l(?:es)?)\s+(?:es|son|fue|era|eran)\s+(.+)$/,
+  /^(?:h[aá]blame|cu[eé]ntame|expl[ií]came|ens[eé][ñn]ame|quiero aprender|quiero saber)\s+(?:de|sobre|acerca de)?\s*(.+)$/,
+  /^(?:c[oó]mo|por qu[eé])\s+(?:se\s+|funciona\s+|funcionan\s+)?(.+)$/,
+];
+const sentence = (text: string) => clip(text.toLowerCase().replace(/\s+/g, " "));
+
 /** The thing asked about: "what is a logical fallacy?" → "logical fallacy"; "¿qué es la fotosíntesis?" → "fotosíntesis". */
 export function topicOf(text: string): string {
-  let s = clip(text.toLowerCase().replace(/\s+/g, " "));
-  const frames = [
-    /^(?:what|who|where)\s+(?:is|are|was|were)\s+(.+)$/,
-    /^(?:what'?s|whats|who'?s)\s+(.+)$/,
-    /^(?:tell me|teach me|explain|show me|i want to learn|i want to know|learn)\s+(?:about\s+|how\s+)?(.+)$/,
-    /^(?:how|why)\s+(?:do|does|did|is|are|can|do you)\s+(.+)$/,
-    /^(?:qu[eé]|qui[eé]n(?:es)?|cu[aá]l(?:es)?)\s+(?:es|son|fue|era|eran)\s+(.+)$/,
-    /^(?:h[aá]blame|cu[eé]ntame|expl[ií]came|ens[eé][ñn]ame|quiero aprender|quiero saber)\s+(?:de|sobre|acerca de)?\s*(.+)$/,
-    /^(?:c[oó]mo|por qu[eé])\s+(?:se\s+|funciona\s+|funcionan\s+)?(.+)$/,
-  ];
-  for (const re of frames) {
+  let s = sentence(text);
+  for (const re of FRAMES) {
     const m = re.exec(s);
     if (m) {
       s = m[1];
@@ -98,6 +110,30 @@ export function topicOf(text: string): string {
     .replace(/\s+(?:work|works|happen|happens|mean|means|form|forms|funciona|funcionan)$/, "");
   return clip(s).slice(0, 80);
 }
+
+/** Words about the learner or the people around them: a topic with these is personal, not a lookup. */
+const PERSONAL = /\b(?:i|im|ive|me|my|mine|myself|you|your|yours|we|our|us|mi|mis|tu|tus|yo|nosotros|nuestr[ao]s?)\b/;
+
+/**
+ * What to look up for a sentence, or null when it isn't a topic: only a question about something ("what
+ * is a fallacy", "¿qué es la fotosíntesis?") or a few words naming it ("the water cycle") is looked up.
+ * Chatter ("I like my dog"), requests for help and anything about the learner never leave the device as
+ * a search.
+ */
+export function lookupTopic(text: string): string | null {
+  const s = sentence(text);
+  const topic = topicOf(text);
+  const words = tokens(topic);
+  if (!words.length || topic.length < 2 || PERSONAL.test(plain(topic).replace(/'/g, ""))) return null;
+  if (!FRAMES.some((re) => re.test(s)) && (s.split(" ").length > 4 || words.length > 3)) return null;
+  return topic;
+}
+
+/** True when a source's answer is about what was asked: its title shares a word with the topic. */
+const isAbout = (title: string, topic: string) => {
+  const asked = new Set(tokens(topic));
+  return tokens(title).some((w) => asked.has(w));
+};
 
 const KIND_WORDS: [RegExp, EventKind][] = [
   [/\b(tests?|exams?|ex[aá]men(?:es)?|final)\b/i, "test"],
@@ -211,12 +247,18 @@ export function problemSkill(text: string): string | null {
 /** A day named in words or digits: today, tomorrow, a weekday, or a date like 10/21. */
 const DATE_WORD = /\b(today|tomorrow|tonight|next week|monday|tuesday|wednesday|thursday|friday|saturday|sunday|hoy|ma[ñn]ana|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}\/\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}|\d{1,2} de [a-z]+)\b/i;
 
+/** Asking for help, or for the answer, in so many words (accents already removed). */
+const HELP =
+  /^(?:help(?: me)?(?: please)?|please help(?: me)?|ayuda(?:me)?|necesito ayuda|i need help|i'?m stuck|im stuck|estoy atorad[oa]|what do i do|what should i do|what now|que hago|i don'?t know|idk|no se)$/;
+const ANSWER = /\b(?:tell me|give me|just|what'?s|what is|dime|dame|cual es)\b.*\b(?:the answers?|la respuesta|las respuestas)\b/;
+
 /** What the learner is asking for. With a problem on screen, the words mean help with that problem. */
 export function askOf(text: string, hasProblem: boolean): Ask {
   const s = text.toLowerCase().trim();
   const p = plain(s);
   if (/^(hi|hello|hey|hola|buenas|buenos dias|good (morning|afternoon|evening))\b[\s!.,]*$/.test(p)) return { kind: "greet" };
   if (/^(thanks|thank you|thx|gracias|muchas gracias)\b/.test(p)) return { kind: "thanks" };
+  if (/^(?:what does|que significa|que quiere decir)(?:\s+mean)?$/.test(clip(p).replace(/\s+/g, " "))) return { kind: "which" };
   const titled = hasProblem ? null : skillTitled(text);
   if (titled) return { kind: "skill", skillId: titled };
   const define =
@@ -239,14 +281,14 @@ export function askOf(text: string, hasProblem: boolean): Ask {
     if (/first step|start|why|how come|explain|primer paso|empiezo|por qu[eé]|expl[ií]ca/.test(s)) return { kind: "step" };
     return { kind: "other" };
   }
-  if (/\b(hint|pista)\b/.test(s)) return { kind: "hint" };
+  if (/\b(hint|pista)\b/.test(s) || HELP.test(clip(p).replace(/\s+/g, " ")) || ANSWER.test(p)) return { kind: "hint" };
   if (/\b(similar|example|ejemplo|parecido|another one|otro)\b/.test(s)) return { kind: "similar" };
   if (/different way|another way|other way|explain (it )?again|de otra (manera|forma)|otra vez|don.?t (get|understand)|no entiendo/.test(s)) return { kind: "different" };
   if (/where do i start|how do i start|first step|por d[oó]nde empiezo|primer paso/.test(s)) return { kind: "step" };
   if (/^(is it|i got|my answer is|the answer is|es|me dio|mi respuesta es)\s+-?\d/.test(s)) return { kind: "check" };
   const skillId = problemSkill(s);
   if (skillId) return { kind: "problem", skillId };
-  return { kind: "topic", topic: topicOf(text) };
+  return { kind: "topic", topic: lookupTopic(text) ?? undefined };
 }
 
 /* ------------------------------------------------------------------ knowledge */
@@ -302,6 +344,8 @@ export function lessonFor(topic: string, grade: Grade, locale: Locale): LessonCa
           lessonTitle: lesson.title,
           lead: points ? texts[0]?.slice(0, 240) : undefined,
           points: (points?.type === "points" ? points.items : texts).slice(0, 4),
+          // A course only written in the other language says so, and is read in that language's voice.
+          lang: entry.locale,
         },
       };
     }
@@ -317,8 +361,17 @@ const safe = async <T>(p: () => Promise<T>, fallback: T): Promise<T> => {
   }
 };
 
-/** Dictionary senses for exactly this word or phrase: a dictionary may answer with one spelled like it. */
-const sensesOf = async (fetchers: DemoFetchers, word: string) => (await safe(() => fetchers.define(word), [])).filter((d) => sameWord(d.word, word));
+/**
+ * Dictionary senses for exactly this word or phrase (a dictionary may answer with one spelled like it),
+ * leaving out any sense the safety screen would turn away.
+ */
+const sensesOf = async (fetchers: DemoFetchers, word: string) => (await safe(() => fetchers.define(word), [])).filter((d) => sameWord(d.word, word) && suitable(d.text));
+
+/** Wikipedia's summary of a topic, only when it is about that topic and fit to show a child. */
+const wikiOn = async (fetchers: DemoFetchers, topic: string, lang: Locale) => {
+  const w = await safe(() => fetchers.wiki(topic, lang), null);
+  return w && isAbout(w.title, topic) && suitable(`${w.title} ${w.extract}`) ? w : null;
+};
 
 const factCard = (w: WikiSummary): BoardCard => ({ type: "fact", title: w.title, extract: w.extract, url: w.url, lang: w.lang });
 const definitionCard = (word: string, defs: Definition[]): BoardCard => ({
@@ -328,9 +381,9 @@ const definitionCard = (word: string, defs: Definition[]): BoardCard => ({
   url: wiktionaryUrl(defs[0]?.word ?? word),
 });
 const practiceCard = (skillId: string): BoardCard => ({ type: "practice", skillId });
-/** One like it, worked out: never the problem on screen, nor one with the numbers the learner typed. */
-const workedCard = (skillId: string, ctx: DemoContext, level = 1, typed?: string): BoardCard[] => {
-  const item = similarItem(skillId, level, ctx.locale, ctx.seed(), { item: ctx.item, typed });
+/** One like it, worked out: never the problem on screen, nor one with the numbers of a problem they typed. */
+const workedCard = (skillId: string, ctx: DemoContext, state: DemoState, level = 1): BoardCard[] => {
+  const item = similarItem(skillId, level, ctx.locale, ctx.seed(), { item: ctx.item, typed: state.typed });
   return item ? [{ type: "worked", item }] : [];
 };
 const sourcesCard = (ctx: DemoContext, topic: string, skillId?: string): BoardCard[] => {
@@ -352,11 +405,22 @@ export function demoOpening(ctx: DemoContext): DemoTurn {
   }
   if (ctx.homework) return { text: `${intro}\n${t(l, "tutor.open.homework", { title: ctx.homework.title })}`, cards: [], state };
   if (ctx.lesson) return { text: `${intro}\n${t(l, "tutor.open.lesson")}`, cards: [], state: { ...state, topic: ctx.lesson.title } };
-  return { text: `${intro}\n${t(l, young(ctx.grade) ? "tut.open.young" : "tutor.open.talk")}`, cards: [], state };
+  return { text: `${intro}\n${openTalk(ctx.locale, ctx.grade, ctx.choices)}`, cards: [], state };
 }
 
-/** A photo in demo mode: nothing is read or sent anywhere; the learner is asked to type the problem. */
-export const demoPhoto = (ctx: DemoContext, state: DemoState): DemoTurn => ({ text: t(ctx.locale, "tut.photo.demo"), cards: [], state });
+/**
+ * How an open conversation starts. A young learner who may not read hears the choices named, in the
+ * order the chips show them: "What do you want to learn about? Count to 10, Letter sounds, or a poem?"
+ */
+export function openTalk(locale: Locale, grade: Grade, choices: string[] = []): string {
+  if (!young(grade)) return t(locale, "tutor.open.talk");
+  if (!choices.length) return t(locale, "tut.open.young");
+  const list = new Intl.ListFormat(locale === "es" ? "es-US" : "en-US", { type: "disjunction" }).format([...choices, t(locale, "tut.open.poemChoice")]);
+  return t(locale, "tut.open.youngChoices", { choices: list });
+}
+
+/** A photo in demo mode: nothing is read or sent anywhere; the learner is asked to type the problem (a young one, to ask a grown-up to). */
+export const demoPhoto = (ctx: DemoContext, state: DemoState): DemoTurn => ({ text: t(ctx.locale, young(ctx.grade) ? "tut.photo.demoYoung" : "tut.photo.demo"), cards: [], state });
 
 /** One demo reply. Knowledge comes through `fetchers` (the /api/know routes in the browser, fakes in tests). */
 export async function demoAnswer(text: string, ctx: DemoContext, state: DemoState, fetchers: DemoFetchers): Promise<DemoTurn> {
@@ -372,15 +436,17 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       return { text: say("tut.demo.greet"), cards: [], state };
     case "thanks":
       return { text: say("tut.demo.thanks"), cards: [], state };
+    case "which":
+      return { text: say("tut.demo.whichWord"), cards: [], state };
     case "define": {
       const defs = l === "en" ? await sensesOf(fetchers, ask.word) : [];
       if (defs.length) return { text: say("tut.demo.define", { word: ask.word }), cards: [definitionCard(ask.word, defs)], state: next({}, ["definition"]) };
-      const wiki = await safe(() => fetchers.wiki(ask.word, l), null);
+      const wiki = PERSONAL.test(plain(ask.word)) ? null : await wikiOn(fetchers, ask.word, l);
       if (wiki) return { text: say("tut.demo.defineWiki", { word: ask.word }), cards: [factCard(wiki)], state };
       return { text: say("tut.demo.noDefinition", { word: ask.word }), cards: [], state };
     }
     case "book": {
-      const books = await safe(() => fetchers.books(ask.topic), []);
+      const books = (await safe(() => fetchers.books(ask.topic), [])).filter((b) => suitable(b.title));
       if (!books.length) return { text: say("tut.demo.noBooks", { topic: ask.topic }), cards: [], state };
       return {
         text: say("tut.demo.books", { topic: ask.topic }),
@@ -389,8 +455,9 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       };
     }
     case "poem": {
-      const poems = ask.author ? await safe(() => fetchers.poems(ask.author!), []) : [];
-      const poem = poems[0] ?? (await safe(() => fetchers.shortPoems(), []))[0];
+      const fit = (p: Poem) => suitable(`${p.title} ${p.lines.join(" ")}`);
+      const poems = ask.author ? (await safe(() => fetchers.poems(ask.author!), [])).filter(fit) : [];
+      const poem = poems[0] ?? (await safe(() => fetchers.shortPoems(), [])).find(fit);
       if (!poem) return { text: say("tut.demo.noPoem"), cards: [], state };
       return {
         text: say(l === "es" ? "tut.demo.poemEnglish" : "tut.demo.poem", { title: poem.title, author: poem.author }),
@@ -415,11 +482,13 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
     case "check":
       return { text: say("tut.demo.cantCheck"), cards: state.skillId ? [practiceCard(state.skillId)] : [], state };
     case "problem": {
+      // Their own problem is remembered for the whole conversation: no later example may have its numbers.
       const skill = getSkill(ask.skillId)!;
+      const mine = { ...state, typed: [...(state.typed ?? []), text.slice(0, 200)].slice(-5) };
       return {
         text: say("tut.demo.problem", { skill: skill.title[l] }),
-        cards: [...workedCard(ask.skillId, ctx, 1, text), practiceCard(ask.skillId)],
-        state: next({ skillId: ask.skillId, topic: skill.title[l] }, ["similar"]),
+        cards: [...workedCard(ask.skillId, ctx, mine), practiceCard(ask.skillId)],
+        state: { ...mine, skillId: ask.skillId, topic: skill.title[l], shown: [...state.shown, "similar"] },
       };
     }
     case "skill": {
@@ -427,7 +496,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       // is ours, not a topic, so it is not looked up on Wikipedia.
       const skill = getSkill(ask.skillId)!;
       const lesson = lessonFor(skill.title[l], ctx.grade, l);
-      const shown: BoardCard[] = [...(lesson ? [lesson] : []), ...workedCard(ask.skillId, ctx)];
+      const shown: BoardCard[] = [...(lesson ? [lesson] : []), ...workedCard(ask.skillId, ctx, state)];
       const cards = young(ctx.grade) ? [practiceCard(ask.skillId), ...shown] : [...shown, practiceCard(ask.skillId)];
       return {
         text: say(young(ctx.grade) ? "tut.demo.skillYoung" : "tut.demo.skill", { skill: skill.title[l] }),
@@ -439,12 +508,16 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
 
   // With a problem on screen: its own vetted hints and steps, and problems like it worked out.
   if (item) {
-    // The first worked step, unless it is the whole solution (one-step problems: "3 and 1 make 4") and
-    // they haven't tried yet; then the next vetted hint instead, or a nudge to try.
+    // The problem's worked steps wait for a real try: on many problems step 1 already is the answer
+    // ("5/6 + 4/6 = 9/6", "8 × 4 = 32"). Before a try the next rung is the next vetted hint, then a
+    // nudge to try; after one, the first worked step, then the problem's own "Show me how".
     const firstStep = (): DemoTurn => {
-      if (item.steps.length > 1 || state.tries > 0) return { text: item.steps[0], cards: [], state: next({}, ["step"]) };
-      if (state.hintsGiven < item.hints.length) return { text: item.hints[state.hintsGiven], cards: [], state: next({ hintsGiven: state.hintsGiven + 1 }, ["step"]) };
-      return { text: say("tutor.demo.tryFirst"), cards: [], state: next({}, ["step"]) };
+      if (state.tries < 1) {
+        if (state.hintsGiven < item.hints.length) return { text: item.hints[state.hintsGiven], cards: [], state: next({ hintsGiven: state.hintsGiven + 1 }) };
+        return { text: say("tutor.demo.tryFirst"), cards: [], state };
+      }
+      if (!shown("step")) return { text: item.steps[0], cards: [], state: next({}, ["step"]) };
+      return { text: say("tutor.demo.showHow"), cards: [], state };
     };
     switch (ask.kind) {
       case "hint": {
@@ -452,7 +525,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
         return { text: item.hints[state.hintsGiven], cards: [], state: next({ hintsGiven: state.hintsGiven + 1 }) };
       }
       case "similar": {
-        const worked = workedCard(item.skillId, ctx, item.level);
+        const worked = workedCard(item.skillId, ctx, state, item.level);
         if (!worked.length) return { text: say("tut.demo.noSimilar"), cards: [], state };
         return { text: say("tutor.demo.similar"), cards: worked, state: next({}, ["similar"]) };
       }
@@ -461,11 +534,11 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       case "step":
         return firstStep();
       case "different": {
-        if (item.visual && !shown("visual")) return { text: say("tut.demo.picture"), cards: [{ type: "visual", visual: item.visual, description: item.alt ?? "" }], state: next({}, ["visual"]) };
-        const worked = shown("similar") ? [] : workedCard(item.skillId, ctx, item.level);
+        // The problem's own picture is already on screen beside it, so a different way starts with one
+        // like it worked out, then the next rung of help.
+        const worked = shown("similar") ? [] : workedCard(item.skillId, ctx, state, item.level);
         if (worked.length) return { text: say("tutor.demo.similar"), cards: worked, state: next({}, ["similar"]) };
-        if (!shown("step")) return firstStep();
-        return { text: say("tutor.demo.showHow"), cards: [], state };
+        return firstStep();
       }
       default:
         return { text: say("tut.demo.problemOther"), cards: [], state };
@@ -476,7 +549,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
   switch (ask.kind) {
     case "similar":
       if (state.skillId) {
-        const worked = workedCard(state.skillId, ctx);
+        const worked = workedCard(state.skillId, ctx, state);
         if (worked.length) return { text: say("tutor.demo.similar"), cards: worked, state: next({}, ["similar"]) };
         return { text: say("tut.demo.noSimilar"), cards: [practiceCard(state.skillId)], state };
       }
@@ -490,7 +563,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       const skillId = state.skillId ?? skills[0];
       return {
         text: say("tut.demo.homeworkStart"),
-        cards: skillId ? [...workedCard(skillId, ctx), practiceCard(skillId)] : [],
+        cards: skillId ? [...workedCard(skillId, ctx, state), practiceCard(skillId)] : [],
         state: skillId ? next({ skillId }, ["similar"]) : state,
       };
     }
@@ -502,31 +575,41 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
         const defs = await sensesOf(fetchers, topic);
         if (defs.length) return { text: say("tut.demo.define", { word: topic }), cards: [definitionCard(topic, defs)], state: next({}, ["definition"]) };
       }
-      const worked = state.skillId && !shown("similar") ? workedCard(state.skillId, ctx) : [];
+      const worked = state.skillId && !shown("similar") ? workedCard(state.skillId, ctx, state) : [];
       if (worked.length) return { text: say("tutor.demo.similar"), cards: worked, state: next({}, ["similar"]) };
       return { text: say("tut.demo.noMore"), cards: state.skillId ? [practiceCard(state.skillId)] : [], state };
     }
   }
 
   // A topic: the cited extract, the definition, our lesson's key points, practice that fits, sources.
-  const topic = ask.kind === "topic" && ask.topic ? ask.topic : clip(text).slice(0, 80);
-  const about = ctx.homework ? `${text} ${ctx.homework.title}` : text;
-  const skills = matchSkills(about, undefined, 2, ctx.grade);
+  // Only a real topic is looked up (lookupTopic); any other sentence still finds the practice that fits,
+  // but nothing of it leaves the device.
+  const topic = ask.kind === "topic" ? ask.topic : undefined;
+  const skills = matchSkills(ctx.homework ? `${text} ${ctx.homework.title}` : text, undefined, 2, ctx.grade);
+  const skillTitle = skills[0] ? getSkill(skills[0])!.title[l] : undefined;
   // A word or a two-word term ("photosynthesis", "logical fallacy") also gets its dictionary sense.
-  const term = topic.split(" ").length <= 2;
+  const term = !!topic && topic.split(" ").length <= 2;
   const [wiki, defs] = await Promise.all([
-    safe(() => fetchers.wiki(topic, l), null),
-    l === "en" && term ? sensesOf(fetchers, topic) : Promise.resolve([] as Definition[]),
+    topic ? wikiOn(fetchers, topic, l) : Promise.resolve(null),
+    topic && l === "en" && term ? sensesOf(fetchers, topic) : Promise.resolve([] as Definition[]),
   ]);
-  const lesson = lessonFor(topic, ctx.grade, l);
-  const knowledge: BoardCard[] = [...(wiki ? [factCard(wiki)] : []), ...(defs.length ? [definitionCard(topic, defs)] : []), ...(lesson ? [lesson] : [])];
+  const lesson = topic || skillTitle ? lessonFor(topic ?? skillTitle!, ctx.grade, l) : null;
+  const knowledge: BoardCard[] = [...(wiki ? [factCard(wiki)] : []), ...(topic && defs.length ? [definitionCard(topic, defs)] : []), ...(lesson ? [lesson] : [])];
   const practice = skills.map(practiceCard);
   const cards = young(ctx.grade) ? [...practice, ...knowledge] : [...knowledge, ...practice];
-  cards.push(...sourcesCard(ctx, topic, skills[0]));
-  const lead = wiki ? say("tut.demo.topic", { title: wiki.title }) : knowledge.length || practice.length ? say("tut.demo.topicNoWiki", { topic }) : say("tut.demo.nothing", { topic });
+  cards.push(...sourcesCard(ctx, topic ?? skillTitle ?? "", skills[0]));
+  const lead = wiki
+    ? say("tut.demo.topic", { title: wiki.title })
+    : topic && (knowledge.length || practice.length)
+      ? say("tut.demo.topicNoWiki", { topic })
+      : topic
+        ? say("tut.demo.nothing", { topic })
+        : skillTitle
+          ? say("tut.demo.soundsLike", { skill: skillTitle })
+          : say("tut.demo.unsure");
   return {
     text: practice.length ? `${lead} ${say("tut.demo.tryPractice")}` : lead,
-    cards,
-    state: next({ skillId: skills[0] ?? state.skillId, topic }, [...(lesson ? ["lesson"] : []), ...(defs.length ? ["definition"] : [])]),
+    cards: topic || skills.length ? cards : [],
+    state: next({ skillId: skills[0] ?? state.skillId, topic: topic ?? skillTitle ?? state.topic }, [...(lesson ? ["lesson"] : []), ...(defs.length ? ["definition"] : [])]),
   };
 }
