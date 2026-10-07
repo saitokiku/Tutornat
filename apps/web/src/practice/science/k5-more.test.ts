@@ -30,6 +30,13 @@ const PLAN = [
   ["s.landforms.water", "2", "2-ESS2-2", [], 2, "draft"],
   ["s.wind.water.land", "2", "2-ESS2-1", ["s.landforms.water"], 2, "draft"],
   ["s.heat.cool", "2", "2-PS1-4", ["s.states.matter"], 2, "draft"],
+  ["s.climate.data", "3", "3-ESS2-1", ["s.weather.chart"], 3, "computed"],
+  ["s.traits.inherited", "3", "3-LS3-1", ["s.parents.young"], 2, "draft"],
+  ["s.fossils.past", "3", "3-LS4-1", ["s.habitats"], 1, "draft"],
+  ["s.adapt.survive", "3", "3-LS4-3", ["s.traits.inherited", "s.habitats"], 2, "draft"],
+  ["s.magnets.static", "3", "3-PS2-3", ["s.forces"], 2, "draft"],
+  ["s.motion.patterns", "3", "3-PS2-2", ["s.forces"], 3, "computed"],
+  ["s.wave.shape", "4", "4-PS4-1", ["s.sound.vibrate"], 3, "computed"],
 ] as const;
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => i * 104729 + 7);
@@ -243,7 +250,17 @@ describe.each(COMPUTED.map((s) => [s.id, s] as const))("computed %s", (id, skill
     eachItem(id, (en, es, level, where) => {
       expect(es.answer, `${where} key moved between languages`).toEqual(en.answer);
       expect(es.input, where).toBe(en.input);
-      expect(es.visual, where).toEqual(en.visual);
+      expect(es.pad, where).toEqual(en.pad);
+      // The drawing is the same in both languages; only axis labels are translated.
+      const shape = (item: Item) => (item.visual?.kind === "line-graph" ? item.visual.points : item.visual);
+      expect(shape(es), where).toEqual(shape(en));
+      if (en.input === "number-line") {
+        expect(en.pad?.kind, where).toBe("number-line");
+        if (en.pad?.kind === "number-line" && en.answer.kind === "number") {
+          const { min, max, step } = en.pad;
+          expect(en.answer.value >= min && en.answer.value <= max && Number.isInteger((en.answer.value - min) / step), `${where} key off the line`).toBe(true);
+        }
+      }
       for (const item of [en, es]) {
         expect(item.hints.length, where).toBe(3);
         expect(item.steps.length, where).toBeGreaterThanOrEqual(1);
@@ -354,6 +371,105 @@ describe("s.habitat.survey", () => {
       if (level === 2) expect(Number(keyLabel(en)) + sorted[1][1], where).toBe(sorted[0][1]);
       if (level === 3) expect(keyLabel(en), where).toBe((/fewest/.test(text) ? sorted[2] : sorted[0])[0]);
       expect(keyLabel(es) === keyLabel(en) || level !== 2, where).toBe(true);
+    });
+  });
+});
+
+describe("s.climate.data", () => {
+  it("keys the warmest, coldest, difference or climate type from the listed data, with seasons that fit the hemisphere", () => {
+    eachItem("s.climate.data", (en, es, level, where) => {
+      const text = promptText(en);
+      if (level === 3) {
+        const towns = [...text.matchAll(/(\S+)'s town gets (\d+) inches/g)].map((m) => [m[1], Number(m[2])] as const);
+        expect(towns.length, where).toBe(3);
+        const byRain = [...towns].sort((p, q) => p[1] - q[1]);
+        const desert = /desert climate/.test(text);
+        const want = desert ? byRain[0] : byRain[2];
+        expect(keyLabel(en), where).toBe(`${want[0]}'s town`);
+        // Deserts get under 10 inches of rain a year; rainforests get well over 60.
+        if (desert) expect(want[1], where).toBeLessThan(10);
+        else expect(want[1], where).toBeGreaterThan(60);
+        return;
+      }
+      const temps = Object.fromEntries([...text.matchAll(/(January|April|July|October) (\d+)°F/g)].map((m) => [m[1], Number(m[2])]));
+      expect(Object.keys(temps).length, where).toBe(4);
+      const south = /south of the equator/.test(text);
+      // Summer is in July north of the equator and in January south of it.
+      if (south) expect(temps.January, where).toBeGreaterThan(temps.July);
+      else expect(temps.July, where).toBeGreaterThan(temps.January);
+      const sorted = Object.entries(temps).sort((p, q) => q[1] - p[1]);
+      expect(sorted[0][1], where).toBeGreaterThan(sorted[1][1]);
+      expect(sorted[2][1], where).toBeGreaterThan(sorted[3][1]);
+      if (level === 1) {
+        const warmest = /warmest\?$/.test(text);
+        expect(keyLabel(en), where).toBe(warmest ? sorted[0][0] : sorted[3][0]);
+        const july = en.choices!.find((c) => c.label === (warmest ? "July" : "January"));
+        if (south && july && july.label !== keyLabel(en)) expect(july.why, where).toBe("assumed-northern-seasons");
+      } else {
+        expect(Number(keyLabel(en)) + sorted[3][1], where).toBe(sorted[0][1]);
+      }
+    });
+  });
+});
+
+describe("s.motion.patterns", () => {
+  it("keys balanced and unbalanced forces, the next time in a pattern and the number of full trips", () => {
+    eachItem("s.motion.patterns", (en, es, level, where) => {
+      const text = promptText(en);
+      if (level === 1) {
+        const rope = /red team has (\d+) kids and the blue team has (\d+) kids/.exec(text);
+        const box = /(\d+) kids push a box from the left side\. (\d+) kids push it from the right side\./.exec(text);
+        const m = rope ?? box;
+        expect(m, where).toBeTruthy();
+        const [left, right] = [Number(m![1]), Number(m![2])];
+        const want = rope
+          ? left === right ? "It does not move" : left > right ? "It moves toward the red team" : "It moves toward the blue team"
+          : left === right ? "It stays still" : left > right ? "It slides to the right" : "It slides to the left";
+        expect(keyLabel(en), where).toBe(want);
+      } else if (level === 2) {
+        const [a, b, c] = /at (\d+), (\d+) and (\d+) seconds/.exec(text)!.slice(1).map(Number);
+        expect(b - a, where).toBe(c - b);
+        expect(b - a, where).toBeGreaterThan(0);
+        expect(en.input, where).toBe("number-line");
+        expect(Number(keyLabel(en)), where).toBe(c + (c - b));
+      } else {
+        const [, p, unit] = /every (\d+) (seconds|minutes)/.exec(text)!;
+        const [, total, unit2] = / in (\d+) (seconds|minutes)\?$/.exec(text)!;
+        expect(unit2, where).toBe(unit);
+        expect(Number(keyLabel(en)) * Number(p), where).toBe(Number(total));
+      }
+    });
+  });
+});
+
+describe("s.wave.shape", () => {
+  it("reads amplitude and wavelength from the drawn wave, and compares waves from their numbers", () => {
+    eachItem("s.wave.shape", (en, es, level, where) => {
+      const text = promptText(en);
+      if (level === 3) {
+        const [a1, w1, a2, w2] = /Wave A has an amplitude of (\d+) \w+ and a wavelength of (\d+) \w+\. Wave B has an amplitude of (\d+) \w+ and a wavelength of (\d+) \w+\./
+          .exec(text)!
+          .slice(1)
+          .map(Number);
+        if (/bigger amplitude\?$/.test(text)) expect(keyLabel(en), where).toBe(a1 > a2 ? "Wave A" : "Wave B");
+        else if (/longer wavelength\?$/.test(text)) expect(keyLabel(en), where).toBe(w1 > w2 ? "Wave A" : "Wave B");
+        else {
+          expect(w1, `${where} energy question needs equal wavelengths`).toBe(w2);
+          expect(keyLabel(en), where).toBe(a1 > a2 ? "Wave A" : "Wave B");
+        }
+        return;
+      }
+      if (en.visual?.kind !== "line-graph") throw new Error(`${where} expected a line graph`);
+      const ys = en.visual.points.map((p) => p[1]);
+      const [top, bottom] = [Math.max(...ys), Math.min(...ys)];
+      const crests = en.visual.points.filter((p) => p[1] === top).map((p) => p[0]);
+      const gaps = crests.slice(1).map((x, i) => x - crests[i]);
+      expect(new Set(gaps).size, `${where} crests evenly spaced`).toBe(1);
+      for (const x of crests) expect(Number.isInteger(x), `${where} crest on a labeled tick`).toBe(true);
+      expect(top, `${where} height axis counts by ones`).toBeLessThanOrEqual(6);
+      const rest = Number(/rests at a height of (\d+)/.exec(text)![1]);
+      expect(rest * 2, `${where} rest line is midway`).toBe(top + bottom);
+      expect(Number(keyLabel(en)), where).toBe(level === 1 ? top - rest : gaps[0]);
     });
   });
 });

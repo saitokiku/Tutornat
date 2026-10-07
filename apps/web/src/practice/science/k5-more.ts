@@ -2,9 +2,11 @@ import type { Locale } from "@/lib/types";
 import type { Rng } from "../rng";
 import type { Skill } from "../types";
 import { fromBank, type BankLevel } from "./k5-more/bank";
+import { climateData, motionPatterns, waveShape } from "./k5-more/computed-3-4";
 import { daylight, habitatSurvey, weatherChart } from "./k5-more/computed-early";
 import { BANKS_1 } from "./k5-more/grade-1";
 import { BANKS_2 } from "./k5-more/grade-2";
+import { BANKS_3 } from "./k5-more/grade-3";
 import { BANKS_K } from "./k5-more/grade-k";
 
 // K–5 science, second strand: the NGSS performance expectations the first strand (early.ts) does not
@@ -15,7 +17,7 @@ import { BANKS_K } from "./k5-more/grade-k";
 
 export type { BankLevel, Entry, Option, Pair } from "./k5-more/bank";
 
-export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1, ...BANKS_2 };
+export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1, ...BANKS_2, ...BANKS_3 };
 
 const fromBanks = (id: string) => (r: Rng, level: number, locale: Locale) => fromBank(r, BANKS[id][level - 1], locale);
 
@@ -46,4 +48,13 @@ export const SCIENCE_K_5_MORE: Skill[] = [
   draft({ id: "s.landforms.water", grade: "2", en: "Landforms, water and maps", es: "Formas del terreno, agua y mapas", standard: "2-ESS2-2", prereqs: [], levels: 2 }),
   draft({ id: "s.wind.water.land", grade: "2", en: "Wind and water change land", es: "El viento y el agua cambian la tierra", standard: "2-ESS2-1", prereqs: ["s.landforms.water"], levels: 2 }),
   draft({ id: "s.heat.cool", grade: "2", en: "Heating and cooling", es: "Calentar y enfriar", standard: "2-PS1-4", prereqs: ["s.states.matter"], levels: 2 }),
+  // ── Grade 3 ──
+  computed({ id: "s.climate.data", grade: "3", en: "Weather and climate data", es: "Datos del tiempo y del clima", standard: "3-ESS2-1", prereqs: ["s.weather.chart"], levels: 3 }, climateData),
+  draft({ id: "s.traits.inherited", grade: "3", en: "Inherited traits and environment", es: "Rasgos heredados y ambiente", standard: "3-LS3-1", prereqs: ["s.parents.young"], levels: 2 }),
+  draft({ id: "s.fossils.past", grade: "3", en: "Fossils and past environments", es: "Fósiles y ambientes del pasado", standard: "3-LS4-1", prereqs: ["s.habitats"], levels: 1 }),
+  draft({ id: "s.adapt.survive", grade: "3", en: "Adaptations and survival", es: "Adaptaciones y supervivencia", standard: "3-LS4-3", prereqs: ["s.traits.inherited", "s.habitats"], levels: 2 }),
+  draft({ id: "s.magnets.static", grade: "3", en: "Static electricity and magnets", es: "Electricidad estática e imanes", standard: "3-PS2-3", prereqs: ["s.forces"], levels: 2 }),
+  computed({ id: "s.motion.patterns", grade: "3", en: "Forces and patterns of motion", es: "Fuerzas y patrones de movimiento", standard: "3-PS2-2", prereqs: ["s.forces"], levels: 3 }, motionPatterns),
+  // ── Grade 4 ──
+  computed({ id: "s.wave.shape", grade: "4", en: "Wave amplitude and wavelength", es: "Amplitud y longitud de onda", standard: "4-PS4-1", prereqs: ["s.sound.vibrate"], levels: 3 }, waveShape),
 ];
