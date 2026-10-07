@@ -72,6 +72,17 @@ describe("writer gates beyond the shared ones", () => {
     expect(gateWritten({ ...good, summary: "Perfecto. Ahora sombrea otra parte." }, { grade: "3", locale: "es" })).toContain('praise word "Perfecto"');
   });
 
+  it("tell Spanish praise from Spanish that describes", () => {
+    const es = { grade: "5", locale: "es" as const };
+    const says = (summary: string) => gateWritten({ ...good, title: "Los metales", summary }, es).filter((p) => p.startsWith("praise"));
+    expect(says("El cobre conduce muy bien el calor. Por eso las ollas son de metal.")).toEqual([]);
+    expect(says("Es un cuento fantástico con un dragón. Lee la primera parte.")).toEqual([]);
+    expect(says("Muy bien. Ahora sombrea otra parte de la barra.")).toContain('praise word "Muy bien"');
+    expect(says("Genial, ahora sombrea otra parte de la barra.")).toContain('praise word "Genial"');
+    expect(says("Lo hiciste muy bien con la barra de la fracción.")).toContain('praise word "Lo hiciste muy bien"');
+    expect(says("Es una idea increíble para la barra de la fracción.")).toContain('praise word "increíble"');
+  });
+
   it("keep the order: show it first, a quiz to check it, a project only at the end", () => {
     const quizFirst = { ...good, scenes: [good.scenes[2], good.scenes[0], good.scenes[1]] };
     expect(gateWritten(quizFirst, req)).toEqual(expect.arrayContaining(["does not start by showing the idea", "no quiz to check it"]));
@@ -140,18 +151,48 @@ describe("the shared course cache", () => {
     expect(cachedCourse(req)).toBeNull();
   });
 
-  it("is keyed by what the writer was told: grade, language, length and interests, not recent practice or files", async () => {
+  it("is keyed by what the writer was told: grade, language, length and interests, not recent practice", async () => {
     const req: CourseRequest = { ...base, goal: "fractions on a number line", length: "lesson", interests: ["Soccer", "dinosaurs"] };
     const model = writer([outline("Number lines", 1), good]);
-    await run({ ...req, working: ["m.frac.addlike"], sources: [{ name: "Ada-worksheet.pdf", kind: "pdf" }] }, model);
+    await run({ ...req, working: ["m.frac.addlike"] }, model);
     const sent = JSON.stringify(model.doGenerateCalls.map((c) => c.prompt));
     expect(sent).toContain("Soccer");
-    expect(sent).not.toMatch(/Ada-worksheet|Add fractions/);
+    expect(sent).not.toMatch(/Add fractions|m\.frac\.addlike/);
     expect(cachedCourse({ ...req, interests: ["dinosaurs", "soccer"] })).not.toBeNull();
+    expect(cachedCourse({ ...req, working: ["m.mult.facts"] })).not.toBeNull();
     expect(cachedCourse({ ...req, interests: [] })).toBeNull();
     expect(cachedCourse({ ...req, grade: "4" })).toBeNull();
     expect(cachedCourse({ ...req, locale: "es" })).toBeNull();
     expect(cachedCourse({ ...req, length: "short" })).toBeNull();
+  });
+
+  it("writes from a family's attached files by name, and never shares that course or serves it a shared one", async () => {
+    const req: CourseRequest = { ...base, goal: "help me study for my test", length: "lesson" };
+    await run(req, writer([outline("Study skills", 1), good]));
+    expect(cachedCourse(req)).not.toBeNull();
+    const withFile = { ...req, sources: [{ name: "Unit 4 Photosynthesis study guide.pdf", kind: "pdf" }] };
+    // The same goal with a file attached is that family's own course: the cached one is not served.
+    expect(cachedCourse(withFile)).toBeNull();
+    const model = writer([outline("Photosynthesis", 1), good]);
+    await run(withFile, model);
+    expect(JSON.stringify(model.doGenerateCalls.map((c) => c.prompt))).toContain("Unit 4 Photosynthesis study guide.pdf");
+    expect(cachedCourse(withFile)).toBeNull();
+    expect((cachedCourse(req)![1] as { title: string }).title).toBe("Study skills");
+  });
+
+  it("stops before the next lesson once a cost cap is reached, says so, and caches nothing", async () => {
+    const req = { ...base, goal: "quarters on a budget" };
+    let spentOut = false;
+    const model = writer([outline("Quarters", 3), good, good, good]);
+    const events: CourseEvent[] = [];
+    for await (const e of writeCourse(req, model, undefined, () => (spentOut ? { scope: "day", message: "The lesson writer is done for today." } : null))) {
+      events.push(e);
+      if (e.type === "lesson") spentOut = true;
+    }
+    expect(events.map((e) => e.type)).toEqual(["step", "outline", "step", "lesson", "error"]);
+    expect(events.at(-1)).toEqual({ type: "error", error: "budget", scope: "day", message: "The lesson writer is done for today." });
+    expect(model.doGenerateCalls).toHaveLength(2);
+    expect(cachedCourse(req)).toBeNull();
   });
 
   it("forgets a course after thirty days", async () => {
@@ -167,5 +208,26 @@ describe("the shared course cache", () => {
     expect(goalKey("Quiero aprender sobre la fotosíntesis")).toBe("fotosintesis");
     expect(goalKey("What are fractions")).toBe("fractions");
     expect(courseKey({ ...base, goal: "Teach me fractions" })).toBe(courseKey({ ...base, goal: "fractions!" }));
+    expect(goalKey("long-division")).toBe(goalKey("long division"));
+    expect(goalKey("What is 1/2 + 1/4?")).toBe(goalKey("1/2+1/4"));
+    expect(goalKey("x − 5 = 12")).toBe(goalKey("x-5=12"));
+    expect(goalKey("2 * 3")).toBe(goalKey("2×3"));
+    expect(goalKey("½ + ¼")).toBe(goalKey("1/2 + 1/4"));
+  });
+
+  it("keeps the math in a goal: a different sign, operation or number is a different course", () => {
+    const differ = (a: string, b: string) => expect(goalKey(a), `${a} | ${b}`).not.toBe(goalKey(b));
+    differ("solve x + 5 = 12", "solve x - 5 = 12");
+    differ("solve x + 5 = 12", "solve x × 5 = 12");
+    differ("solve x - 5 = 12", "solve x × 5 = 12");
+    differ("1/2 + 1/4", "1.2 + 1.4");
+    differ("-3 + 5", "3 + 5");
+    differ("x > 4", "x < 4");
+    differ("(2 + 3) × 4", "2 + 3 × 4");
+    differ("25%", "25");
+    differ("3:45", "3 45");
+    expect(goalKey("solve x - 5 = 12")).toBe("solve x - 5 = 12");
+    expect(goalKey("1.2 + 1.4")).toBe("1.2 + 1.4");
+    expect(goalKey("??")).toBe("");
   });
 });

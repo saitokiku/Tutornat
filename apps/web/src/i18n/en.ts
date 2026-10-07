@@ -1810,7 +1810,7 @@ const en = {
   "ai.budget.practice.month": "Your family has used this month's AI-written questions. They're back on {date}. Practice from the skill map still works.",
   "ai.budget.extract.day": "Reading school papers with AI is done for today. You can add the dates by hand now, or try again tomorrow.",
   "ai.budget.extract.month": "Your family has used this month's AI time. Reading school papers with AI is back on {date}; you can add the dates by hand now.",
-  "ai.budget.coach.day": "The weekly note is done for today. Everything on this page is still here, and you can try again tomorrow.",
+  "ai.budget.coach.day": "No more weekly notes today. Everything on this page is still here; try again tomorrow.",
   "ai.budget.coach.month": "Your family has used this month's AI time. The weekly note is back on {date}.",
 } as const;
 

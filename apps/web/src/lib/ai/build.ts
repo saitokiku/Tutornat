@@ -15,9 +15,12 @@ export const CourseRequest = z.object({
   length: z.enum(["lesson", "short", "full"]),
   locale: z.enum(["en", "es"]),
   interests: z.array(z.string().max(40)).max(6).optional(),
-  // Accepted from the browser but never given to the writer: a written course is shared with the
-  // next family that asks for it, and these come from one learner's answers and files.
+  // Accepted from the browser but not given to the writer: one learner's recent practice would make
+  // a course nobody else could be given, and it is a weak hint next to the goal.
   working: z.array(z.string().max(60)).max(8).optional(),
+  // Given to the writer by name: what a family attached is often the real topic ("Unit 4
+  // Photosynthesis study guide.pdf" with "help me study for my test"). A course written from them is
+  // that family's own and is never cached or shared.
   sources: z.array(z.object({ name: z.string().max(120), kind: z.string().max(10) })).max(30).optional(),
 });
 export type CourseRequest = z.infer<typeof CourseRequest>;
@@ -48,22 +51,24 @@ const AGE: Record<ReturnType<typeof band>, string> = {
 
 const langLine = (l: "en" | "es") => (l === "es" ? "Write everything in Spanish (neutral Latin-American, as a US bilingual family reads it)." : "Write everything in English.");
 
-/** What the writer is told about the learner: grade and interests only (see CourseRequest). */
+/** What the writer is told about the learner: grade, interests, and the names of attached files (see CourseRequest). */
 function learnerLine(req: CourseRequest) {
   const parts = [`Grade: ${req.grade === "K" ? "kindergarten" : req.grade === "adult" ? "adult" : `grade ${req.grade}`}.`, AGE[band(req.grade)]];
   if (req.interests?.length) parts.push(`Interests: ${req.interests.join(", ")}.`);
+  if (req.sources?.length) parts.push(`They attached: ${req.sources.map((s) => s.name).join(", ")} (names only; build on the goal).`);
   return parts.join(" ");
 }
 
 /* ------------------------------------------------------------------ voice rules, checked in code */
 
 /**
- * Praise and hype the voice rules forbid: canned praise anywhere, and words like "great" or "perfect"
- * when they stand alone as an exclamation ("Great.", "¡Perfecto!"). Describing words stay allowed:
- * "a perfect square", "the Great Lakes", "copper is an excellent conductor".
+ * Praise and hype the voice rules forbid: canned praise anywhere, and words like "great", "perfect"
+ * or "muy bien" when they stand alone as an exclamation ("Great.", "¡Muy bien!", "Genial, ahora…").
+ * Describing words stay allowed: "a perfect square", "the Great Lakes", "copper is an excellent
+ * conductor", "el cobre conduce muy bien el calor", "un cuento fantástico".
  */
 const PRAISE =
-  /\b(great job|good job|great work|good work|nice (job|work|try)|well done|good thinking|great thinking|great question|good question|you'?re so smart|that'?s (great|awesome|perfect|excellent|amazing|wonderful)|awesome|amazing|fantastic|terrific|superb|buen trabajo|bien hecho|muy bien|genial|incre[ií]ble|fant[aá]stico|estupend[oa])\b|(?:^|[.!?¡]\s*)(great|excellent|perfect|wonderful|brilliant|nice|excelente|perfecto|maravilloso|magn[ií]fico)\b(?=\s*[.!,])/im;
+  /\b(great job|good job|great work|good work|nice (job|work|try)|well done|good thinking|great thinking|great question|good question|you[’']?re so smart|that[’']?s (great|awesome|perfect|excellent|amazing|wonderful)|awesome|amazing|fantastic|terrific|superb|buen trabajo|bien hecho|(lo )?(hiciste|has hecho|haces) muy bien|incre[ií]ble|estupend[oa])\b|(?:^|[.!?¡]\s*)(great|excellent|perfect|wonderful|brilliant|nice|excelente|perfecto|maravilloso|magn[ií]fico|muy bien|qu[eé] bien|genial|fant[aá]stico)\b(?=\s*[.!,])/im;
 
 /** The praise in `text`, if any, as written. */
 export const praiseIn = (text: string) => text.match(PRAISE)?.[0].replace(/^[.!?¡\s]+/, "");
@@ -177,8 +182,8 @@ export function gateWritten(l: LessonOut, req: Pick<CourseRequest, "grade" | "lo
 
 // Courses that passed every gate, kept so the next family that asks for the same thing gets it at
 // once with no model call. Keyed by everything the writer was told: the goal (normalized), grade,
-// language, length, subject and interests; nothing else about a learner reaches the writer (see
-// CourseRequest), so one family's details never end up in another family's course.
+// language, length, subject and interests. A request with attached files is never read from or
+// written to it (see CourseRequest), so one family's details never end up in another family's course.
 // Not Next's 'use cache': that memoizes a function on a miss, while this must be filled only after a
 // streamed course has passed the gates and read without writing on a miss (and POST handlers are
 // never cached by Next). ponytail: in-memory per server instance, 500 courses for 30 days; moves to a
@@ -189,26 +194,39 @@ const CACHE_TTL = 30 * 86_400_000;
 type Cached = { title: string; lessons: LessonOut[]; at: number };
 const courses = new Map<string, Cached>();
 
-/** "I want to learn about the Water Cycle!" and "water cycle" ask for the same course. */
+// Math symbols are part of a goal's meaning ("x + 5 = 12" is not "x - 5 = 12"), each written one
+// way; sentence punctuation is not.
+const SAME_SYMBOL: Record<string, string> = { "−": "-", "–": "-", "*": "×", "·": "×", "⁄": "/", "∕": "/" };
+
+/** "I want to learn about the Water Cycle!" and "water cycle" ask for the same course; "1/2 + 1/4" and "1.2 + 1.4" do not. */
 export function goalKey(goal: string) {
-  return goal
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
+  const tokens =
+    goal
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      // "long-division" is "long division"; "x-5" and "3-5" keep their minus.
+      .replace(/(?<=\p{L}{2})-(?=\p{L})/gu, " ")
+      .match(/\p{N}+(?:[.,:]\p{N}+)*|\p{L}+|[-+×÷*/=<>≤≥≠%^()√−–·⁄∕]/gu) ?? [];
+  return tokens
+    .map((t) => SAME_SYMBOL[t] ?? t)
+    .join(" ")
     .replace(/^(i (want|would like) to (learn|know)( about)?|teach me( about)?|tell me about|learn( about)?|how (do|to)|what (is|are)|quiero (aprender|saber)( sobre| de)?|ensename( sobre)?|aprender( sobre)?|que (es|son)|como)\s+/, "")
     .replace(/^(the|a|an|el|la|los|las|un|una)\s+/, "")
     .replace(/\s+/g, " ");
 }
 
-/** The cache key: what the writer was told, normalized. Bump the version when WRITER changes meaningfully. */
+/** The cache key: what the writer was told, normalized. Bump the version when WRITER, the gates or goalKey change meaningfully. */
 export function courseKey(req: CourseRequest) {
   const interests = [...new Set((req.interests ?? []).map((i) => i.trim().toLowerCase()).filter(Boolean))].sort();
-  return JSON.stringify([1, goalKey(req.goal), req.grade, req.locale, req.length, req.subject, interests]);
+  return JSON.stringify([2, goalKey(req.goal), req.grade, req.locale, req.length, req.subject, interests]);
 }
 
+/** A course may be shared unless it was written from a family's own files, or from a goal with nothing in it to key on. */
+const shareable = (req: CourseRequest) => !req.sources?.length && goalKey(req.goal) !== "";
+
 function remember(req: CourseRequest, title: string, lessons: LessonOut[], now: number) {
+  if (!shareable(req)) return;
   courses.delete(courseKey(req));
   courses.set(courseKey(req), { title, lessons, at: now });
   if (courses.size > CACHE_MAX) courses.delete(courses.keys().next().value!);
@@ -216,6 +234,7 @@ function remember(req: CourseRequest, title: string, lessons: LessonOut[], now: 
 
 /** A course another family already got for the same request, as the same events, with fresh ids; null on a miss. */
 export function cachedCourse(req: CourseRequest, now = Date.now()): CourseEvent[] | null {
+  if (!shareable(req)) return null;
   const key = courseKey(req);
   const hit = courses.get(key);
   if (!hit || now - hit.at > CACHE_TTL) return (courses.delete(key), null);
@@ -237,14 +256,20 @@ export type CourseEvent =
   | { type: "outline"; title: string; count: number }
   | { type: "lesson"; lesson: LessonOut & { id: string } }
   | { type: "skipped"; title: string; reason: string }
-  | { type: "error"; error: string }
+  /** `message` is said to the family as it stands (a spend cap reached: error "budget"). */
+  | { type: "error"; error: string; scope?: "day" | "month"; message?: string }
   | { type: "done" };
+
+/** A spend cap reached partway, and the family's message for it (lib/server/budget.ts). */
+export type SpendStop = { scope: "day" | "month"; message: string };
 
 /**
  * Streams a course: an outline, then each lesson as it passes the gates (one retry with the reasons,
  * else skipped and said). A course whose every lesson passed is cached for the next family.
+ * `spent` is asked before each lesson: once it reports a cost cap the course stops there with an
+ * error event carrying the family's message; the lessons already sent stay theirs, and it is not cached.
  */
-export async function* writeCourse(req: CourseRequest, model: LanguageModel, signal?: AbortSignal): AsyncGenerator<CourseEvent> {
+export async function* writeCourse(req: CourseRequest, model: LanguageModel, signal?: AbortSignal, spent?: () => SpendStop | null): AsyncGenerator<CourseEvent> {
   yield { type: "step", step: "planning" };
   const n = LESSONS[req.length];
   const system = `${WRITER}\n\n${langLine(req.locale)}`;
@@ -261,6 +286,8 @@ export async function* writeCourse(req: CourseRequest, model: LanguageModel, sig
   const written: LessonOut[] = [];
   for (const [i, plan] of plans.entries()) {
     if (signal?.aborted) return;
+    const stop = spent?.();
+    if (stop) return yield { type: "error", error: "budget", ...stop };
     let made: LessonOut | null = null;
     let problems: string[] = [];
     for (let attempt = 0; attempt < 2 && !made; attempt++) {

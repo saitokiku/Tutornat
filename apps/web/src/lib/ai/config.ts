@@ -10,6 +10,8 @@ import { gateway, wrapLanguageModel, type LanguageModel, type LanguageModelMiddl
 //   AI_GATEWAY_API_KEY                → Vercel AI Gateway, Anthropic models only
 //   KAIZEN_AI=gateway (on Vercel)     → AI Gateway with the deployment's own OIDC token
 //   none of these                     → demo: the scripted tutor and template lessons
+//   KAIZEN_AI=off, or any spend cap   → demo, whatever keys are set: the switch for turning the AI
+//   set to 0 (lib/server/budget.ts)     off without touching keys; every screen then works without it
 //
 // Requests always go to Anthropic's own API address; an inherited ANTHROPIC_BASE_URL is ignored so
 // learners' messages can't be routed through an unknown relay.
@@ -19,7 +21,16 @@ import { gateway, wrapLanguageModel, type LanguageModel, type LanguageModelMiddl
 export type AiMode = "anthropic" | "gateway" | "demo";
 export type Role = "talk" | "build" | "quick";
 
+// The spend caps (lib/server/budget.ts). A cap of 0 allows no AI at all, so it reads as AI off rather
+// than as a cap reached every day ("back tomorrow" would be false).
+const CAPS = ["KAIZEN_AI_DAILY_TURNS", "KAIZEN_AI_DAILY_USD", "KAIZEN_AI_MONTHLY_TURNS", "KAIZEN_AI_MONTHLY_USD", "KAIZEN_AI_ADDRESS_DAILY_TURNS", "KAIZEN_AI_ADDRESS_DAILY_USD"];
+const zero = (name: string) => {
+  const v = process.env[name]?.trim();
+  return !!v && Number(v) === 0;
+};
+
 export function aiMode(): AiMode {
+  if (process.env.KAIZEN_AI === "off" || CAPS.some(zero)) return "demo";
   const onVercel = !!process.env.VERCEL;
   if (process.env.ANTHROPIC_API_KEY && (!onVercel || process.env.KAIZEN_AI === "anthropic")) return "anthropic";
   if (process.env.AI_GATEWAY_API_KEY || (process.env.KAIZEN_AI === "gateway" && onVercel)) return "gateway";

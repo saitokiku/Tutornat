@@ -1,6 +1,6 @@
 import { model } from "@/lib/ai/config";
 import { cachedCourse, CourseRequest, writeCourse, type CourseEvent } from "@/lib/ai/build";
-import { meter, spendGate } from "@/lib/server/budget";
+import { capMessage, meter, overSpend, spendGate } from "@/lib/server/budget";
 import { limited } from "@/lib/server/rate";
 
 export const maxDuration = 300;
@@ -24,7 +24,8 @@ function ndjson(events: AsyncIterable<CourseEvent> | Iterable<CourseEvent>, sign
 
 // Streams one JSON event per line: steps, the outline, each lesson that passed the gates, skips, done.
 // A course another family already got for the same request comes straight from the cache: no model
-// call and nothing counted against the spend caps.
+// call and nothing counted against the spend caps. Over a cap, the stream is one error event with the
+// family's message (error "budget"); a course that reaches a cost cap partway stops the same way.
 export async function POST(req: Request) {
   const m = await model("build", meter(req));
   if (!m) return Response.json({ error: "demo" }, { status: 503 });
@@ -35,5 +36,9 @@ export async function POST(req: Request) {
   if (hit) return ndjson(hit, req.signal);
   const capped = await spendGate(req, "course", parsed.data.locale);
   if (capped) return capped;
-  return ndjson(writeCourse(parsed.data, m, req.signal), req.signal);
+  const spent = () => {
+    const scope = overSpend(req);
+    return scope && { scope, message: capMessage("course", scope, parsed.data.locale) };
+  };
+  return ndjson(writeCourse(parsed.data, m, req.signal, spent), req.signal);
 }

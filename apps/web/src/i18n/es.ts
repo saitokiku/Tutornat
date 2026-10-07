@@ -1810,9 +1810,9 @@ const es: Record<Key, string> = {
   "ai.budget.course.month": "Tu familia ya usó las lecciones escritas de este mes. Vuelven el {date}. Las plantillas y los cursos listos siguen funcionando.",
   "ai.budget.practice.day": "Las preguntas escritas por IA terminaron por hoy. La práctica del mapa de habilidades sigue funcionando.",
   "ai.budget.practice.month": "Tu familia ya usó las preguntas escritas por IA de este mes. Vuelven el {date}. La práctica del mapa de habilidades sigue funcionando.",
-  "ai.budget.extract.day": "Leer papeles de la escuela con IA terminó por hoy. Puedes agregar las fechas a mano ahora, o intentarlo mañana.",
-  "ai.budget.extract.month": "Tu familia ya usó el tiempo de IA de este mes. Leer papeles de la escuela con IA vuelve el {date}; puedes agregar las fechas a mano ahora.",
-  "ai.budget.coach.day": "La nota de la semana terminó por hoy. Todo lo de esta página sigue aquí, y puedes intentarlo mañana.",
+  "ai.budget.extract.day": "La lectura con IA de papeles de la escuela terminó por hoy. Puedes agregar las fechas a mano ahora, o intentarlo mañana.",
+  "ai.budget.extract.month": "Tu familia ya usó el tiempo de IA de este mes. La lectura con IA de papeles de la escuela vuelve el {date}; puedes agregar las fechas a mano ahora.",
+  "ai.budget.coach.day": "Hoy ya no se pueden escribir más notas de la semana. Todo lo de esta página sigue aquí; inténtalo mañana.",
   "ai.budget.coach.month": "Tu familia ya usó el tiempo de IA de este mes. La nota de la semana vuelve el {date}.",
 };
 
