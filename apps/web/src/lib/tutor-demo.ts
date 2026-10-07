@@ -5,7 +5,7 @@ import { addDays, fromLocalDate } from "@/planner/dates";
 import { readSchoolText } from "@/planner/intake";
 import { matchSkills, tokens } from "@/planner/skillmatch";
 import type { EventKind } from "@/planner/types";
-import { getSkill, makeItem } from "@/practice/skills";
+import { getSkill, makeItem, SKILLS } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { linkOf, resourcesFor } from "@/resources";
 import type { BoardCard } from "./tutor";
@@ -63,6 +63,8 @@ export type Ask =
   | { kind: "poem"; author?: string }
   | { kind: "calendar" }
   | { kind: "problem"; skillId: string }
+  /** A skill named by its own title, as the skill chips send it. */
+  | { kind: "skill"; skillId: string }
   | { kind: "topic"; topic: string };
 
 const clip = (s: string) => s.replace(/^[\s"'“”‘’¿¡]+|[\s"'“”‘’?!.,;:¿¡]+$/g, "").trim();
@@ -87,7 +89,10 @@ export function topicOf(text: string): string {
       break;
     }
   }
-  s = s.replace(ARTICLE, "").replace(/\s+(?:work|works|happen|happens|mean|means|form|forms|funciona|funcionan)$/, "");
+  s = s
+    .replace(/^(?:i|you|we)\s+/, "")
+    .replace(ARTICLE, "")
+    .replace(/\s+(?:work|works|happen|happens|mean|means|form|forms|funciona|funcionan)$/, "");
   return clip(s).slice(0, 80);
 }
 
@@ -108,6 +113,14 @@ const WEEKDAYS = [
   ["saturday", "sabado"],
 ];
 const plain = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+
+// Skill titles in both languages, for a learner who taps (or types) a skill's own name.
+let titles: Map<string, string> | null = null;
+/** The skill whose title is exactly this text, in either language, ignoring case, accents and end marks. */
+export function skillTitled(text: string): string | null {
+  titles ??= new Map(SKILLS.flatMap((s) => [[plain(s.title.en), s.id] as const, [plain(s.title.es), s.id] as const]));
+  return titles.get(plain(clip(text))) ?? null;
+}
 
 /** A day the learner named: an explicit date, "tomorrow"/"mañana", "today"/"hoy" or a weekday (the next one). */
 export function dateIn(text: string, today: string): string | null {
@@ -201,6 +214,8 @@ export function askOf(text: string, hasProblem: boolean): Ask {
   const p = plain(s);
   if (/^(hi|hello|hey|hola|buenas|buenos dias|good (morning|afternoon|evening))\b[\s!.,]*$/.test(p)) return { kind: "greet" };
   if (/^(thanks|thank you|thx|gracias|muchas gracias)\b/.test(p)) return { kind: "thanks" };
+  const titled = hasProblem ? null : skillTitled(text);
+  if (titled) return { kind: "skill", skillId: titled };
   const define =
     /what does\s+["“']?(.+?)["”']?\s+mean\b/.exec(s) ??
     /(?:meaning of|definition of|define)\s+["“']?(.+?)["”']?[?.!]*$/.exec(s) ??
@@ -392,6 +407,19 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
         state: next({ skillId: ask.skillId, topic: skill.title[l] }, ["similar"]),
       };
     }
+    case "skill": {
+      // A skill on the map, by name: our lesson's key points, one worked out, and the practice. Its title
+      // is ours, not a topic, so it is not looked up on Wikipedia.
+      const skill = getSkill(ask.skillId)!;
+      const lesson = lessonFor(skill.title[l], ctx.grade, l);
+      const shown: BoardCard[] = [...(lesson ? [lesson] : []), workedCard(ask.skillId, ctx)];
+      const cards = young(ctx.grade) ? [practiceCard(ask.skillId), ...shown] : [...shown, practiceCard(ask.skillId)];
+      return {
+        text: say(young(ctx.grade) ? "tut.demo.skillYoung" : "tut.demo.skill", { skill: skill.title[l] }),
+        cards: [...cards, ...sourcesCard(ctx, skill.title[l], ask.skillId)],
+        state: next({ skillId: ask.skillId, topic: skill.title[l] }, ["similar", ...(lesson ? ["lesson"] : [])]),
+      };
+    }
   }
 
   // With a problem on screen: its own vetted hints and steps, and problems like it worked out.
@@ -424,6 +452,8 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
       if (state.skillId) return { text: say("tutor.demo.similar"), cards: [workedCard(state.skillId, ctx)], state: next({}, ["similar"]) };
       return { text: say("tut.demo.hintTalk"), cards: [], state };
     case "hint":
+      // After a worked example, the next nudge is its first step, done the same way on their own problem.
+      if (state.skillId && shown("similar")) return { text: say("tut.demo.hintWorked"), cards: [], state };
       return { text: say("tut.demo.hintTalk"), cards: state.skillId ? [practiceCard(state.skillId)] : [], state };
     case "step": {
       const skills = ctx.homework ? matchSkills(`${ctx.homework.title} ${ctx.homework.notes ?? ""}`, undefined, 1, ctx.grade) : [];

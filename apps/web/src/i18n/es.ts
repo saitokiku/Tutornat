@@ -2008,6 +2008,10 @@ const es: Record<Key, string> = {
   "tut.kind.resources": "fuentes",
   "tut.kind.visual": "dibujo",
   "tut.kind.worked": "ejemplo resuelto",
+  "tut.demo.skill": "{skill}: aquí hay uno resuelto paso a paso y una práctica corta con pistas.",
+  "tut.demo.skillYoung": "Vamos con {skill}. Aquí hay uno hecho para ti. Toca Empezar para probar algunos.",
+  "tut.demo.hintWorked": "Mira el paso 1 del ejemplo resuelto en la pizarra. Haz ese mismo paso en el tuyo.",
+  "tut.label.ai": "Respuestas escritas por IA",
 };
 
 export default es;

@@ -108,7 +108,10 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
   const router = useRouter();
   const locale = learner.locale;
   const young = youngGrade(learner);
-  const [added, setAdded] = useState(false);
+  // A date already on this learner's calendar shows as added, so the same card can't add it twice.
+  const added = useStore(
+    (s) => card.type === "calendar" && !!card.date && s.events.some((e) => e.profileId === learner.id && e.date === card.date && e.kind === card.kind && e.title === card.title.replace(/\s+/g, " ").trim()),
+  );
   const reviewed = useStore((s) => (card.type === "practice" && getSkill(card.skillId) ? isReviewed(s, getSkill(card.skillId)!) : true));
   const label = cardLabel(card, t, locale);
   switch (card.type) {
@@ -176,12 +179,7 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
                 <IconCheck size={16} /> {t("tutor.added")}
               </span>
             ) : (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (addEvent(learner.id, { title: card.title, kind: card.kind, date: card.date!, skillIds: card.skillIds }, "tutor")) setAdded(true);
-                }}
-              >
+              <Button variant="secondary" onClick={() => addEvent(learner.id, { title: card.title, kind: card.kind, date: card.date!, skillIds: card.skillIds }, "tutor")}>
                 <IconPlus size={16} /> {t("tutor.addToCalendar")}
               </Button>
             )}
@@ -255,8 +253,6 @@ export function CardView({ card, learner, id }: { card: BoardCard; learner: Prof
             <span className="min-w-0 flex-1 text-xs text-muted">{t("tut.card.fromLesson", { lesson: card.lessonTitle, course: card.courseTitle })}</span>
             <Button
               variant="secondary"
-              size="sm"
-              className="min-h-11"
               onClick={() => {
                 const courseId = addFromCatalogue(card.catalogueId, learner.id);
                 if (courseId) router.push(`/learn/${courseId}/${card.lessonId}`);
@@ -329,6 +325,13 @@ export function Worked({ item }: { item: Item }) {
           <VisualView visual={item.visual} alt={item.alt ?? ""} tint={tint} />
         </div>
       )}
+      {item.picture && item.alt && (
+        <div className="mb-2 flex justify-center">
+          <span role="img" aria-label={item.alt} className="text-5xl leading-none">
+            {item.picture}
+          </span>
+        </div>
+      )}
       <p className="font-medium text-ink">
         <MathText parts={item.prompt} />
       </p>
@@ -346,11 +349,10 @@ export type BoardItem = { key: string; card: BoardCard };
 
 /**
  * The board beside the conversation: the right column on wide screens, a panel above the conversation
- * on phones that can be folded away. Newest first.
+ * on phones that can be folded away. `items` come newest reply first.
  */
 export function Board({ items, learner, open, onToggle }: { items: BoardItem[]; learner: Profile; open: boolean; onToggle: () => void }) {
   const t = useT();
-  const shown = [...items].reverse();
   return (
     <section aria-labelledby="board-title" className="flex min-h-0 flex-col border-b border-border bg-paper lg:w-[44%] lg:max-w-xl lg:border-b-0 lg:border-l lg:pl-6">
       <div className="flex items-center gap-2 py-2 lg:py-3">
@@ -371,11 +373,11 @@ export function Board({ items, learner, open, onToggle }: { items: BoardItem[]; 
           </button>
         )}
       </div>
-      {shown.length === 0 ? (
+      {items.length === 0 ? (
         <p className="pb-2 text-xs text-muted lg:rounded-md lg:border lg:border-dashed lg:border-border lg:px-4 lg:py-6 lg:text-center lg:text-sm">{t("talk.boardEmpty")}</p>
       ) : (
         <div id="board-cards" className={`${open ? "block" : "hidden"} max-h-[38dvh] min-h-0 space-y-3 overflow-y-auto pb-3 lg:block lg:max-h-none lg:flex-1`}>
-          {shown.map((x) => (
+          {items.map((x) => (
             <CardView key={x.key} id={`card-${x.key}`} card={x.card} learner={learner} />
           ))}
         </div>

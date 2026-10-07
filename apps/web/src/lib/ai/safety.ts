@@ -13,6 +13,8 @@ const ABUSE =
   /\b(someone|somebody|my (dad|mom|father|mother|uncle|brother|stepdad|stepmom|coach|teacher)|he|she|they) (hits?|hurts?|touches?|beats?) me\b|\b(being|been|get|getting) (abused|hit|beaten)\b|\bme (pega|golpea|toca|lastima)\b|\babus(o|an) de m[ií]\b/i;
 const OFF_LIMITS =
   /\b(porn|sex(y|ual)?|nude|naked|drugs?|weed|vape|vaping|alcohol|beer|vodka|gun|kill (him|her|them|someone)|bomb|weapon|droga|marihuana|desnud|sexo|arma|pistola|bomba)\b/i;
+/** School science that uses a word on the off-limits list (grade 7 life science: how living things reproduce). */
+const SCHOOL_TERMS = /\b(sexual(?: (?:and|or|vs\.?|versus) asexual)? reproduction|reproducci[oó]n (?:a?sexual)(?: (?:y|o) (?:a?sexual))?)\b/gi;
 
 const TEXT = {
   en: {
@@ -35,7 +37,7 @@ export function screen(text: string, locale: Locale): Screen {
   const t = TEXT[locale];
   if (CRISIS.test(text)) return { kind: "crisis", reply: t.crisis };
   if (ABUSE.test(text)) return { kind: "abuse", reply: t.abuse };
-  if (OFF_LIMITS.test(text)) return { kind: "offLimits", reply: t.offLimits };
+  if (OFF_LIMITS.test(text.replace(SCHOOL_TERMS, " "))) return { kind: "offLimits", reply: t.offLimits };
   return { kind: "ok" };
 }
 

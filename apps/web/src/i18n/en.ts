@@ -2006,6 +2006,10 @@ const en = {
   "tut.kind.resources": "sources",
   "tut.kind.visual": "picture",
   "tut.kind.worked": "worked example",
+  "tut.demo.skill": "{skill}: here is one worked out step by step, and a short practice set with hints.",
+  "tut.demo.skillYoung": "Let's do {skill}. Here is one done for you. Tap Start to try some.",
+  "tut.demo.hintWorked": "Look at step 1 of the worked example on the board. Do that same step on yours.",
+  "tut.label.ai": "Replies written by AI",
 } as const;
 
 export default en;

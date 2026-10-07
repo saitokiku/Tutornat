@@ -50,6 +50,7 @@ describe("the AI tutor", () => {
     render(<TutorChat board setup={{ learner, surface: "talk", title: "Talk" }} />);
     await screen.findByText("What would you like to learn or work on?");
     expect(screen.queryByText(/demo tutor/)).not.toBeInTheDocument();
+    expect(screen.getByText("· Replies written by AI")).toBeInTheDocument(); // AI output says so
 
     await user.upload(screen.getByTestId("tutor-photo"), new File(["x"], "worksheet.jpg", { type: "image/jpeg" }));
     expect(await screen.findByText("Photo ready to send")).toBeInTheDocument();

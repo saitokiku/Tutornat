@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Book, Definition, Poem, WikiSummary } from "@/knowledge";
 import { makeItem } from "@/practice/skills";
 import type { BoardCard } from "./tutor";
-import { aboutIn, askOf, dateIn, demoAnswer, demoOpening, demoPhoto, lessonFor, problemSkill, topicOf, type DemoContext, type DemoFetchers, type DemoState } from "./tutor-demo";
+import { aboutIn, askOf, dateIn, demoAnswer, demoOpening, demoPhoto, lessonFor, problemSkill, skillTitled, topicOf, type DemoContext, type DemoFetchers, type DemoState } from "./tutor-demo";
 
 const FALLACY: WikiSummary = {
   title: "Fallacy",
@@ -38,6 +38,16 @@ describe("reading the learner's ask", () => {
     expect(topicOf("¿Qué es la fotosíntesis?")).toBe("fotosíntesis");
     expect(topicOf("Háblame de los volcanes")).toBe("volcanes");
     expect(topicOf("dinosaurs")).toBe("dinosaurs");
+    expect(topicOf("how do you find the slope of a line")).toBe("find the slope of a line");
+  });
+
+  it("knows a skill by its own name, in either language", () => {
+    expect(skillTitled("Spot the fallacy")).toBe("e.fallacies");
+    expect(skillTitled("detectar falacias")).toBe("e.fallacies");
+    expect(skillTitled("Contar hasta 10.")).toBe("m.count.10");
+    expect(skillTitled("spot a fallacy")).toBeNull();
+    expect(askOf("Count up to 10", false)).toEqual({ kind: "skill", skillId: "m.count.10" });
+    expect(askOf("Count up to 10", true).kind).not.toBe("skill"); // beside a problem, words are about it
   });
 
   it("tells definitions, books, poems, dates, problems and topics apart", () => {
@@ -195,6 +205,28 @@ describe("the demo tutor on a topic", () => {
     expect(JSON.stringify(r)).not.toContain("11/12");
     const check = await demoAnswer("is it 11/12", ctx(), r.state, fakes());
     expect(check.text).toContain("can't check");
+    // Asked for a hint next, it points at the first step of the worked one, to do the same on theirs.
+    const hint = await demoAnswer("Give me a hint", ctx({ grade: "5" }), r.state, fakes());
+    expect(hint.text).toBe("Look at step 1 of the worked example on the board. Do that same step on yours.");
+  });
+
+  it("a skill chip goes straight to the skill: our lesson, one worked out, the practice — no Wikipedia", async () => {
+    const f = fakes();
+    const r = await demoAnswer("Spot the fallacy", ctx(), fresh(), f);
+    expect(f.wiki).not.toHaveBeenCalled();
+    expect(r.text).toBe("Spot the fallacy: here is one worked out step by step, and a short practice set with hints.");
+    expect(types(r.cards).slice(0, 3)).toEqual(["lesson", "worked", "practice"]);
+    expect(r.cards[2]).toEqual({ type: "practice", skillId: "e.fallacies" });
+    expect(r.state).toMatchObject({ skillId: "e.fallacies" });
+
+    // A kindergartner: practice first, said in a few short words.
+    const k = await demoAnswer("Count up to 10", ctx({ grade: "K" }), fresh(), f);
+    expect(k.cards[0]).toEqual({ type: "practice", skillId: "m.count.10" });
+    expect(k.cards.some((c) => c.type === "worked")).toBe(true);
+    expect(k.text).toBe("Let's do Count up to 10. Here is one done for you. Tap Start to try some.");
+    const es = await demoAnswer("Contar hasta 10", ctx({ grade: "K", locale: "es" }), fresh(), f);
+    expect(es.text).toMatch(/^Vamos con Contar hasta 10\./);
+    expect(f.wiki).not.toHaveBeenCalled();
   });
 });
 

@@ -114,7 +114,7 @@ function AiChat({ setup, board }: { setup: ChatSetup; board: boolean }) {
       error={error ? t(/photo_too_big/.test(failure) ? "tut.photo.tooBig" : /bad_photo/.test(failure) ? "tut.photo.unreadable" : "tutor.error") : null}
       onSend={(text, photo) => sendMessage({ text, files: photo ? [{ type: "file", mediaType: photo.mediaType, url: photo.url, filename: "problem.jpg" }] : undefined }, { body: { context } })}
       onStop={stop}
-      label={null}
+      label={t("tut.label.ai")}
       readsPhotos
       skillId={skillId}
     />
@@ -268,7 +268,9 @@ function ChatView({
         }
       });
     }
-    const talked = entries.some((e) => e.role === "learner");
+    // Beside a problem the conversation is about its skill from the start (opening the drawer is help);
+    // elsewhere, once the learner has asked something and the talk has turned to a skill.
+    const talked = !!setup.item || entries.some((e) => e.role === "learner");
     if (talked && skillId && !handled.current.has(`act:${skillId}`)) {
       handled.current.add(`act:${skillId}`);
       logTutorAct(learner.id, threadId, skillId);
@@ -330,17 +332,23 @@ function ChatView({
 
   const define: Quick = { label: t("tut.quick.define"), fill: [t("tut.quick.defineStart"), t("tut.quick.defineEnd")] };
   const book: Quick = { label: t("tut.quick.book"), fill: [t("tut.quick.bookStart"), ""] };
+  const explain: Quick = { label: t("tutor.quick.explain") };
   const asks: Quick[] = setup.item
-    ? [{ label: t("tutor.quick.hint") }, { label: t("tutor.quick.similar") }, { label: t("tutor.quick.explain") }, ...(young ? [] : [define])]
+    ? [{ label: t("tutor.quick.hint") }, { label: t("tutor.quick.similar") }, explain, ...(young ? [] : [define])]
     : setup.homework
-      ? [{ label: t("tutor.quick.whereStart") }, { label: t("tutor.quick.explain") }, define]
-      : skillId && entries.some((e) => e.role === "learner")
-        ? [{ label: t("tut.quick.example") }, { label: t("tutor.quick.explain") }, ...(young ? [{ label: t("tut.quick.poem") }] : [define, book])]
-        : young
-          ? [...topics.map((id) => ({ label: getSkill(id)!.title[locale] })), { label: t("tut.quick.poem") }]
-          : [define, book, ...topics.slice(0, 2).map((id) => ({ label: getSkill(id)!.title[locale] }))];
+      ? [{ label: t("tutor.quick.whereStart") }, explain, define]
+      : setup.lesson
+        ? [explain, ...(young ? [] : [define])]
+        : skillId && entries.some((e) => e.role === "learner")
+          ? young
+            ? [{ label: t("tut.quick.example") }, explain, { label: t("tut.quick.poem") }]
+            : [{ label: t("tutor.quick.hint") }, { label: t("tut.quick.example") }, explain, define, book]
+          : young
+            ? [...topics.map((id) => ({ label: getSkill(id)!.title[locale] })), { label: t("tut.quick.poem") }]
+            : [define, book, ...topics.slice(0, 2).map((id) => ({ label: getSkill(id)!.title[locale] }))];
 
-  const items: BoardItem[] = board ? entries.flatMap((e) => e.cards.flatMap((card, i) => (card.type === "note" ? [] : [{ key: `${e.id}-${i}`, card }]))) : [];
+  // The newest reply's cards on top, each reply's cards in the order the tutor gave them.
+  const items: BoardItem[] = board ? [...entries].reverse().flatMap((e) => e.cards.flatMap((card, i) => (card.type === "note" ? [] : [{ key: `${e.id}-${i}`, card }]))) : [];
   const show = (key: string) => {
     setBoardOpen(true);
     requestAnimationFrame(() => {
@@ -481,14 +489,14 @@ function ChatView({
               }
             }}
             placeholder={listen.listening ? t("tutor.listening") : setup.item ? t("tutor.placeholder") : t("tutor.placeholderTalk")}
-            className="min-h-11 min-w-0 flex-1 resize-none rounded-sm border border-border bg-panel px-3 py-2.5 text-sm text-ink placeholder:text-muted/80 focus:border-accent focus:outline-none"
+            className={`${young ? "min-h-14 text-base" : "min-h-11 text-sm"} min-w-0 flex-1 resize-none rounded-sm border border-border bg-panel px-3 py-2.5 text-ink placeholder:text-muted/80 focus:border-accent focus:outline-none`}
           />
           {busy && onStop ? (
-            <button type="button" onClick={onStop} aria-label={t("tutor.stop")} className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-panel text-ink">
+            <button type="button" onClick={onStop} aria-label={t("tutor.stop")} className={`grid ${young ? "size-14" : "size-11"} shrink-0 place-items-center rounded-full border border-border bg-panel text-ink`}>
               <IconStop size={18} />
             </button>
           ) : (
-            <button type="submit" aria-label={t("tutor.send")} disabled={(!input.trim() && !pending) || busy} className="grid size-11 shrink-0 place-items-center rounded-full bg-ink text-paper disabled:opacity-30">
+            <button type="submit" aria-label={t("tutor.send")} disabled={(!input.trim() && !pending) || busy} className={`grid ${young ? "size-14" : "size-11"} shrink-0 place-items-center rounded-full bg-ink text-paper disabled:opacity-30`}>
               <IconArrowRight size={18} />
             </button>
           )}

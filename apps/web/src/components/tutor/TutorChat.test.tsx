@@ -56,6 +56,8 @@ describe("Talk with the demo tutor", () => {
     expect(within(practice).getByText("Draft questions")).toBeInTheDocument();
     expect(within(board).getByRole("article", { name: "When appeals mislead" })).toBeInTheDocument();
     expect(requests.some((u) => u.startsWith("/api/know/wiki?q=logical+fallacy&lang=en"))).toBe(true);
+    // The cited fact leads; the reply's cards keep the tutor's order.
+    expect(within(board).getAllByRole("article").map((a) => a.getAttribute("aria-label"))).toEqual(["Fallacy", "When appeals mislead", "Practice: Spot the fallacy", "More to read and watch"]);
 
     // The conversation points at the board; Enter on it moves focus to the newest card.
     const pointer = screen.getByRole("button", { name: "On the board: Wikipedia, lesson, practice, sources" });
@@ -137,7 +139,37 @@ describe("a young learner", () => {
     const chips = screen.getAllByRole("button").filter((b) => b.className.includes("min-h-14") && b !== poem);
     expect(chips.length).toBeGreaterThan(0); // the next skills on their map, to tap
     await user.click(chips[0]);
-    expect(await screen.findAllByRole("button", { name: "Start" })).not.toHaveLength(0);
+    const start = await screen.findAllByRole("button", { name: "Start" });
+    expect(start[0].className).toContain("min-h-14");
+    expect(screen.getByRole("region", { name: "Board" }).querySelector("article")).toHaveAccessibleName(/^Practice: /); // practice first
+    expect(requests.some((u) => u.startsWith("/api/know/wiki"))).toBe(false); // a skill on the map, not a search
+    expect(screen.getByRole("button", { name: "Send" }).className).toContain("size-14");
+  });
+});
+
+describe("dates the tutor offers", () => {
+  it("adds a test in one tap, and the same date can't be added twice", async () => {
+    const user = userEvent.setup();
+    render(<TutorChat board setup={{ learner: learner({ grade: "4" }), surface: "talk", title: "Talk" }} />);
+    await user.type(await screen.findByRole("textbox"), "I have a fractions test on Friday{Enter}");
+    const card = await screen.findByRole("article", { name: "Fractions test" });
+    await user.click(within(card).getByRole("button", { name: "Add to calendar" }));
+    expect(within(card).getByRole("status")).toHaveTextContent("Added");
+    expect(read().events).toEqual([expect.objectContaining({ profileId: "p1", title: "Fractions test", kind: "test", source: "tutor" })]);
+
+    await user.type(screen.getByRole("textbox"), "I have a fractions test on Friday{Enter}");
+    await waitFor(() => expect(screen.getAllByRole("article", { name: "Fractions test" })).toHaveLength(2));
+    for (const c of screen.getAllByRole("article", { name: "Fractions test" })) expect(within(c).queryByRole("button", { name: "Add to calendar" })).not.toBeInTheDocument();
+    expect(read().events).toHaveLength(1);
+  });
+});
+
+describe("the tutor on the lesson stage", () => {
+  it("offers another way to explain the lesson and the meaning of a word", async () => {
+    render(<TutorChat setup={{ learner: learner(), surface: "lesson", lesson: { title: "When appeals mislead", scene: "False authority" }, title: "When appeals mislead" }} />);
+    expect(await screen.findByRole("button", { name: "Explain it a different way" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "What does … mean?" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Find me a book about …" })).not.toBeInTheDocument();
   });
 });
 
@@ -148,6 +180,8 @@ describe("the drawer beside a problem", () => {
     const user = userEvent.setup();
     render(<TutorChat setup={{ learner: learner({ grade: "4" }), surface: "practice", item, tries: 0, title: "Fractions" }} />);
     expect(await screen.findByText(new RegExp(item.hints[0].slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))).toBeInTheDocument();
+    // Opening the tutor on a problem is help on that skill: one teaching act, before anything is typed.
+    expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ profileId: "p1", intent: "next-try-right", skillId: "m.frac.addlike" })]);
     await tabTo(user, screen.getByRole("button", { name: "Give me a hint" }));
     await user.keyboard("{Enter}");
     expect(await screen.findByText(item.hints[1])).toBeInTheDocument();
