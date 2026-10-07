@@ -94,6 +94,16 @@ describe("topic → skill", () => {
     expect(matchSkills("what is")).toEqual([]);
   });
 
+  it("does not mistake an everyday compound for a school word", () => {
+    for (const q of ["what is a power plant", "what is a prime minister", "who invented the cell phone", "what is a rock band", "what is a volume knob", "¿qué es un primer ministro?", "¿quién inventó el teléfono celular?"])
+      expect(matchSkills(q), q).toEqual([]);
+    // The school words themselves still work, next to a compound too.
+    expect(matchSkills("what is a prime number")[0]).toBe("m.factors");
+    expect(matchSkills("what do plants need")[0]).toBe("s.needs");
+    expect(matchSkills("animal cells, not the cell phone")).toContain("s.cells");
+    expect(matchSkills("the rock cycle")[0]).toBe("s.rocks");
+  });
+
   it("does not mistake calendar words for practice", () => {
     expect(matchSkills("what time is my test")).toEqual([]);
     expect(matchSkills("give me a tip")).toEqual([]);

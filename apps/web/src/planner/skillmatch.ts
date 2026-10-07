@@ -211,11 +211,46 @@ export function sameWord(a: string, b: string): boolean {
   return !!words(a) && words(a) === words(b);
 }
 
+/**
+ * Everyday compounds whose words are also school words: "power plant" is not about plants or powers,
+ * "prime minister" not about primes. They are taken out of a question before it is matched.
+ */
+const COMPOUNDS = [
+  "power plant",
+  "power station",
+  "power ranger",
+  "prime minister",
+  "prime time",
+  "cell phone",
+  "cell tower",
+  "rock band",
+  "rock music",
+  "rock and roll",
+  "rock star",
+  "volume knob",
+  "volume button",
+  "space station",
+  "planta de energia",
+  "planta electrica",
+  "primer ministro",
+  "telefono celular",
+  "musica rock",
+  "banda de rock",
+].map(tokens);
+
 /** True when `part` appears in `whole` as consecutive words. */
 function contains(whole: string[], part: string[]): boolean {
   if (!part.length || part.length > whole.length) return false;
   for (let i = 0; i + part.length <= whole.length; i++) if (part.every((w, j) => whole[i + j] === w)) return true;
   return false;
+}
+
+/** The words with every everyday compound taken out ("what is a power plant" → nothing to match). */
+function withoutCompounds(words: string[]): string[] {
+  const out = [...words];
+  for (const c of COMPOUNDS)
+    for (let i = 0; i + c.length <= out.length; i++) if (c.every((w, j) => out[i + j] === w)) out.splice(i, c.length, "");
+  return out.filter(Boolean);
 }
 
 type Entry = { id: string; subject: Subject; grade: Grade; phrases: string[][]; title: string[][]; titleWords: Set<string> };
@@ -244,7 +279,7 @@ function entries(): Entry[] {
  * With `grade`, ties go to the skill closest to the learner's grade.
  */
 export function matchSkills(text: string, subject?: Subject, limit = 3, grade?: Grade): string[] {
-  const words = tokens(text);
+  const words = withoutCompounds(tokens(text));
   if (!words.length || norm(text).length < 3) return [];
   const scored: [Entry, number][] = [];
   for (const e of entries()) {
