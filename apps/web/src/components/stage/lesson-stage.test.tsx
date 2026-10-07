@@ -179,6 +179,7 @@ describe("Stage", () => {
     await userEvent.click(screen.getByLabelText("The Sun"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
     expect(read().activity.find((e) => e.type === "quiz_answered")).toMatchObject({ correct: true, assisted: true });
+    expect(screen.getByText("That's right, with help.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Finish lesson/ }));
     const row = (label: string) => screen.getByText(label).parentElement!.querySelector("dd")!.textContent;
     expect([row("Right on your own"), row("Right with help")]).toEqual(["0", "1"]);

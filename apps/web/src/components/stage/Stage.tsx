@@ -236,7 +236,7 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                   {boardNote && <Notice>{t("stage.whiteboardOff")}</Notice>}
                   {scene.kind === "slide" && <SlideView scene={scene} subject={course.subject} />}
                   {scene.kind === "interactive" && <InteractiveView scene={scene} subject={course.subject} onAnswer={onAnswer} onSay={onSay} lang={course.locale} />}
-                  {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSay={onSay} onHelp={onHelp} />}
+                  {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSay={onSay} onHelp={onHelp} helped={showTutor} />}
                   {scene.kind === "project" && <ProjectView scene={scene} />}
                 </div>
                 <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">

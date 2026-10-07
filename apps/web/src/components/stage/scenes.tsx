@@ -135,11 +135,12 @@ export function InteractiveView({ scene, subject, onAnswer, onSay, lang }: { sce
 }
 
 /**
- * One question at a time. A hint, or reading the explanation after a miss, marks the answer as helped.
+ * One question at a time. A hint, reading the explanation after a miss, or the tutor open beside the
+ * question (`helped`) marks the answer as helped, and the verdict says so.
  * Focus never drops to the page: Check stays in place (dimmed until a new choice), a hint or an
  * explanation takes focus when it opens, and the next question's prompt takes focus when it comes.
  */
-export function QuizView({ scene, onAnswer, onSay, onHelp }: { scene: QuizScene; onAnswer: OnAnswer; onSay?: OnSay; onHelp?: OnHelp }) {
+export function QuizView({ scene, onAnswer, onSay, onHelp, helped = false }: { scene: QuizScene; onAnswer: OnAnswer; onSay?: OnSay; onHelp?: OnHelp; helped?: boolean }) {
   const t = useT();
   const { young } = useHear();
   const [qi, setQi] = useState(0);
@@ -151,7 +152,7 @@ export function QuizView({ scene, onAnswer, onSay, onHelp }: { scene: QuizScene;
   const hintBox = useRef<HTMLDivElement>(null);
   const whyBox = useRef<HTMLDivElement>(null);
   const q = scene.questions[qi];
-  const assisted = hint || why;
+  const assisted = hint || why || helped;
   const spoken = quizSpeech(q);
 
   useEffect(() => {
