@@ -7,13 +7,18 @@ import type { SpeakSource } from "./types";
 
 const TERMINAL = ".?!…";
 const CLOSERS = `"'”’)]»`;
+// Month abbreviations, English and Spanish ("Oct. 12", "12 dic. 2026").
+const MONTHS = ["jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec", "ene", "abr", "ago", "dic"];
 // Abbreviations whose period never ends a sentence (lowercased, without the final period).
 const ABBREV = new Set([
   "mr", "mrs", "ms", "mx", "dr", "prof", "st", "jr", "sr", "vs", "e.g", "i.e", "fig", "approx", "p", "pp", "vol", "ch", "no", "nos",
-  "u.s", "a.m", "p.m", "sra", "srta", "dra", "ud", "uds", "lic", "ing", "núm", "pág", "cap", "aprox", "av", "ee", "uu", "ee.uu", "a.c", "d.c",
+  "u.s", "a.m", "p.m", "sra", "srta", "dra", "ud", "uds", "lic", "ing", "núm", "pág", "págs", "cap", "aprox", "av", "ee", "uu", "ee.uu", "a.c", "d.c",
+  "etc", "ej",
+  ...MONTHS,
 ]);
-// "no." is a real word too ("I said no."), so it only counts as an abbreviation before a number.
-const BEFORE_NUMBER_ONLY = new Set(["no", "nos", "p", "pp", "fig", "vol", "ch", "núm", "pág", "cap"]);
+// "no." is a real word too ("I said no.", "Vamos al mar."), so these only count as abbreviations
+// before a number ("No. 5", "Oct. 12", "mar. 3").
+const BEFORE_NUMBER_ONLY = new Set(["no", "nos", "p", "pp", "fig", "vol", "ch", "núm", "pág", "págs", "cap", ...MONTHS]);
 
 export type ChunkOptions = {
   /** Split a run-on sentence at a clause (or, failing that, a space) once it grows past this. */

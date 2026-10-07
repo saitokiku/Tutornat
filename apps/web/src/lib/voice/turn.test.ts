@@ -33,6 +33,29 @@ describe("how a turn ends", () => {
     expect(shapeOf("Me too.")).toBe("done");
   });
 
+  it("reads the most common short answers as finished, in both languages", () => {
+    for (const done of ["Sí.", "¿Qué?", "¿Por qué?", "¿Cómo?", "Quiero más.", "I think so.", "It is.", "Yes.", "Why?", "Option A.", "Una."]) expect(shapeOf(done), done).toBe("done");
+    // Without punctuation (browser recognizers rarely add it): "sí" answers, "si" (if) joins.
+    expect(shapeOf("sí")).toBe("open");
+    expect(shapeOf("I think so")).toBe("open");
+    expect(shapeOf("tres más")).toBe("hold");
+    expect(shapeOf("y si")).toBe("hold");
+    expect(shapeOf("la respuesta es")).toBe("hold");
+    // A full stop the recognizer added after a pause doesn't end "and" or "porque".
+    expect(shapeOf("You add the top and.")).toBe("hold");
+    expect(shapeOf("Es más grande porque.")).toBe("hold");
+    expect(shapeOf("And?")).toBe("done");
+  });
+
+  it("ends a Spanish or English short answer as soon as an English one", () => {
+    for (const text of ["Sí.", "¿Por qué?", "Quiero más.", "I think so."]) {
+      expect(run([{ type: "final", text, at: 0, speechFinal: true }, ...ticks(100, 4000)]).ends, text).toEqual([{ at: 700, text }]);
+      expect(run([{ type: "final", text, at: 0, speechFinal: true }, ...ticks(100, 5000)], TURN_YOUNG).ends, text).toEqual([{ at: 1100, text }]);
+    }
+    // The recognizer's utterance end ends it at once, too.
+    expect(run([{ type: "final", text: "Sí.", at: 0 }, { type: "utterance-end", at: 300 }]).ends).toEqual([{ at: 300, text: "Sí." }]);
+  });
+
   it("ends soon after words that sound finished", () => {
     const { ends } = run([{ type: "partial", text: "it's", at: 0 }, { type: "final", text: "It's 12.", at: 400, speechFinal: true }, ...ticks(500, 1500)]);
     expect(ends).toEqual([{ at: 1100, text: "It's 12." }]);

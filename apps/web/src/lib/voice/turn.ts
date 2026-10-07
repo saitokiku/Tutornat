@@ -47,12 +47,21 @@ export const emptyTurn = (): TurnState => ({ finals: [], interim: "", lastAt: nu
 
 export const turnText = (s: TurnState) => [...s.finals, s.interim].join(" ").replace(/\s+/g, " ").trim();
 
+// Words that leave a thought unfinished when nothing follows them ("you add the top and", "es tres
+// más"). Matched on the word as written, accents kept: "si" (if) and "que" (that) join, "sí" (yes)
+// and "qué" (what) answer. Ending punctuation is read first ("I think so.", "It is.", "Quiero más.").
 const JOINERS = new Set(
   [
-    "and", "but", "so", "or", "because", "cause", "then", "like", "the", "a", "an", "to", "of", "with", "if", "is", "plus", "minus", "times", "over", "than",
-    "y", "o", "pero", "porque", "entonces", "como", "el", "la", "los", "las", "un", "una", "de", "que", "con", "si", "mas", "menos", "por", "entre", "es",
+    "and", "but", "or", "because", "cause", "then", "like", "the", "a", "an", "to", "of", "with", "if", "is", "plus", "minus", "times", "over", "than",
+    "y", "o", "pero", "porque", "entonces", "como", "el", "la", "los", "las", "un", "una", "de", "que", "con", "si", "más", "menos", "por", "entre", "es",
   ],
 );
+// Recognizers put a full stop after a pause even mid-thought ("You add the top and."). After these
+// words a full stop still means "still going"; a question or exclamation mark doesn't.
+const STILL_GOING = new Set(["and", "but", "or", "because", "cause", "the", "an", "y", "o", "pero", "porque", "el", "los", "las", "con"]);
+
+/** The last word as written: lowercase, accents kept. */
+const lastWord = (t: string) => /[\p{L}\p{N}]+(?=[^\p{L}\p{N}]*$)/u.exec(t.toLowerCase().normalize("NFC"))?.[0] ?? "";
 
 export type TurnShape = "empty" | "filler" | "hold" | "done" | "open";
 
@@ -62,10 +71,11 @@ export function shapeOf(text: string): TurnShape {
   const w = words(t);
   if (!w.length) return "empty";
   if (isFillerOnly(t)) return "filler";
-  const last = w[w.length - 1];
-  if (FILLERS.has(last) || JOINERS.has(last) || /(\.\.\.|…|[,;:—–-])["'”’)]*$/.test(t)) return "hold";
-  if (/[.?!]["'”’)]*$/.test(t)) return "done";
-  return "open";
+  if (FILLERS.has(w[w.length - 1]) || /(\.\.\.|…|[,;:—–-])["'”’)]*$/.test(t)) return "hold";
+  const last = lastWord(t);
+  if (/[?!]["'”’)]*$/.test(t)) return "done";
+  if (/\.["'”’)]*$/.test(t)) return STILL_GOING.has(last) ? "hold" : "done";
+  return JOINERS.has(last) ? "hold" : "open";
 }
 
 /** How much silence ends a turn in this state. */

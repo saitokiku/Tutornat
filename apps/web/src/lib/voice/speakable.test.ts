@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fractionWords, speakable, wordAt } from "./speakable";
+import { fractionWords, hasName, speakable, wordAt } from "./speakable";
 
 const say = (s: string, locale: "en" | "es" = "en", names?: string[]) => speakable(s, locale, names).text;
 
@@ -54,10 +54,46 @@ describe("speakable text", () => {
   it("leaves the learner's name out and keeps the sentence ending", () => {
     expect(say("Your turn, Ada.", "en", ["Ada"])).toBe("Your turn.");
     expect(say("Ada, try the next one.", "en", ["Ada"])).toBe("try the next one.");
-    expect(say("Is this Ada's book?", "en", ["Ada"])).toBe("Is this book?");
+    expect(say("Is this Ada's book?", "en", ["Ada"])).toBe("Is this your book?");
+    expect(say("Ana's turn.", "en", ["Ana"])).toBe("your turn.");
     expect(say("Mary Ann, look.", "en", ["Mary Ann"])).toBe("look.");
-    // Case-sensitive, so the word "sky" stays for a learner called Sky.
+    // An all-lowercase word isn't a capitalized name: "sky" stays for a learner called Sky.
     expect(say("The sky is blue.", "en", ["Sky"])).toBe("The sky is blue.");
+  });
+
+  it("finds the name whatever its case, accents or punctuation", () => {
+    expect(say("Nice work, Sofia.", "en", ["sofia"])).toBe("Nice work.");
+    expect(say("Muy bien, Sofía.", "es", ["Sofia"])).toBe("Muy bien.");
+    expect(say("Bien, sofia.", "es", ["Sofía"])).toBe("Bien, sofia."); // lowercase while the name is capitalized: a word, not the name
+    expect(say("Good job, ADA.", "en", ["Ada"])).toBe("Good job.");
+    expect(say("Nice work, Ada—now try this one.", "en", ["Ada"])).toBe("Nice work, now try this one.");
+    expect(say("Ada/Ben, look.", "en", ["Ada"])).toBe("Ben, look.");
+    expect(say("¿Lista, Ana?", "es", ["Ana"])).toBe("¿Lista?");
+  });
+
+  it("keeps a name that is an everyday word unless it addresses the learner", () => {
+    expect(say("Will you try the next one?", "en", ["Will"])).toBe("Will you try the next one?");
+    expect(say("Nice work, Will.", "en", ["Will"])).toBe("Nice work.");
+    expect(say("Will, try the next one.", "en", ["Will"])).toBe("try the next one.");
+    expect(say("Hi Will!", "en", ["Will"])).toBe("Hi!");
+    expect(say("Your test is in June.", "en", ["June"])).toBe("Your test is in June.");
+    expect(say("Vamos al mar.", "es", ["Mar"])).toBe("Vamos al mar.");
+    expect(say("May I help?", "en", ["May"])).toBe("May I help?");
+  });
+
+  it("knows when text mentions a name at all", () => {
+    expect(hasName("Ada Lovelace", ["ada"])).toBe(true);
+    expect(hasName("numerator", ["Ada"])).toBe(false);
+    expect(hasName("Sofía", ["Sofia"])).toBe(true);
+  });
+
+  it("reads a date as a date, not a fraction", () => {
+    expect(say("Your test is on 10/12.")).toBe("Your test is on 10/12.");
+    expect(say("The project is due 3/4.")).toBe("The project is due 3/4.");
+    expect(say("See you Monday 3/4.")).toBe("See you Monday 3/4.");
+    expect(say("El examen es el 3/4.", "es")).toBe("El examen es el 3/4.");
+    // Without a calendar word, "on 2/3" is still a fraction.
+    expect(say("Work on 2/3 first.")).toBe("Work on 2 thirds first.");
   });
 
   it("maps every spoken word back to the written word it came from", () => {

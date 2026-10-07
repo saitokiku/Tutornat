@@ -30,6 +30,11 @@ const CASES: [string, string[]][] = [
   ["Look at the picture (the red one). Count the parts.", ["Look at the picture (the red one).", "Count the parts."]],
   ["Line one\nLine two\n\nLine three", ["Line one", "Line two", "Line three"]],
   ["What is 7 × 8?Think about 7 × 4 first.", ["What is 7 × 8?Think about 7 × 4 first."]],
+  ["Your test is on Oct. 12. Study the first page tonight.", ["Your test is on Oct. 12.", "Study the first page tonight."]],
+  ["La prueba es el 3 dic. 2026. Repasa hoy.", ["La prueba es el 3 dic. 2026.", "Repasa hoy."]],
+  ["Mira el ej. 3 en la pág. 12. Luego sigue.", ["Mira el ej. 3 en la pág. 12.", "Luego sigue."]],
+  ["Vamos al mar. Luego comemos.", ["Vamos al mar.", "Luego comemos."]],
+  ["Bring pens, paper, etc. We start at nine.", ["Bring pens, paper, etc. We start at nine."]],
 ];
 
 describe("sentence chunker", () => {
