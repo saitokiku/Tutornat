@@ -9,7 +9,7 @@ Rule: a box is ticked only after its check actually ran. Note blockers under the
 - [x] 1. Workspace, scaffold, tokens
 - [x] 2. Types, store, i18n
 - [ ] 3. Domain functions + K–9 catalogue
-- [ ] 4. UI primitives, icons, brand
+- [x] 4. UI primitives, icons, brand
 - [ ] 5. Landing, auth, profiles, guards
 - [ ] 6. Student shell, Home, magic box
 - [ ] 7. Generation flow
@@ -20,7 +20,7 @@ Rule: a box is ticked only after its check actually ran. Note blockers under the
 
 ## Parallel
 
-- [ ] modules/ and docs/history/ assembled (background agent)
+- [x] modules/ and docs/history/ assembled (background agent)
 
 ## Blocked on owner
 
