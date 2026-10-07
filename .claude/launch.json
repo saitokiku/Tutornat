@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "kaizenedu-web",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd apps/web && exec npx next dev"],
+      "port": 3217,
+      "autoPort": true
+    }
+  ]
+}

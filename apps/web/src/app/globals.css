@@ -61,7 +61,12 @@
   --container-narrow: 34rem;
   --container-wide: 72rem;
 
-  --animate-fade-up: fade-up 0.35s ease-out both;
+  --animate-fade-up: fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-split: split 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  @keyframes split {
+    from { opacity: 0.35; transform: scaleY(0.8); }
+    to { opacity: 1; transform: scaleY(1); }
+  }
   @keyframes fade-up {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }

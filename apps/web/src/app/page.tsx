@@ -1,3 +1,5 @@
-export default function Landing() {
-  return <main className="p-8 font-brand text-t1">KaizenEDU</main>;
+import { Landing } from "@/components/landing/Landing";
+
+export default function Page() {
+  return <Landing />;
 }
