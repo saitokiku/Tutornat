@@ -56,6 +56,8 @@ const es: Record<Key, string> = {
   "nav.newShort": "Nuevo",
   "nav.me": "Yo",
   "nav.switch": "Cambiar de estudiante",
+  "nav.switchShort": "Cambiar",
+  "brand.tagline": "pasos pequeños, todos los días",
   "nav.signOut": "Cerrar sesión",
   "nav.main": "Principal",
 
@@ -194,6 +196,7 @@ const es: Record<Key, string> = {
   "course.request": "Lo que pediste",
   "course.readyMade": "Curso listo",
   "course.outlineOnly": "Solo el plan",
+  "course.unfinishedOutline": "Plan sin terminar",
   "course.scenes": "{n} escenas",
 
   "stage.scenes": "Escenas",

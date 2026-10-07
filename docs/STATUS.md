@@ -11,7 +11,7 @@ Rule: a box is ticked only after its check actually ran. Note blockers under the
 - [ ] 3. Domain functions + K–9 catalogue
 - [x] 4. UI primitives, icons, brand
 - [x] 5. Landing, auth, profiles, guards
-- [ ] 6. Student shell, Home, magic box
+- [x] 6. Student shell, Home, magic box
 - [ ] 7. Generation flow
 - [ ] 8. Courses + course page
 - [ ] 9. Lesson stage

@@ -54,6 +54,8 @@ const en = {
   "nav.newShort": "New",
   "nav.me": "Me",
   "nav.switch": "Switch learner",
+  "nav.switchShort": "Switch",
+  "brand.tagline": "small steps, every day",
   "nav.signOut": "Sign out",
   "nav.main": "Main",
 
@@ -192,6 +194,7 @@ const en = {
   "course.request": "Your request",
   "course.readyMade": "Ready-made",
   "course.outlineOnly": "Outline only",
+  "course.unfinishedOutline": "Outline not finished",
   "course.scenes": "{n} scenes",
 
   "stage.scenes": "Scenes",

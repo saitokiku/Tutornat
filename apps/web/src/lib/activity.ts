@@ -70,3 +70,14 @@ export function findLesson(courses: Course[], courseId: string, lessonId?: strin
   const course = courses.find((c) => c.id === courseId);
   return { course, lesson: course?.lessons.find((l) => l.id === lessonId) };
 }
+
+/** Where to pick up: the course touched most recently that still has a lesson to do. */
+export function continueTarget(courses: Course[], events: ActivityEvent[]) {
+  const ready = courses.filter((c) => c.status === "ready");
+  const lastTouch = (c: Course) => Math.max(c.updatedAt, ...events.filter((e) => e.courseId === c.id).map((e) => e.at));
+  for (const course of [...ready].sort((a, b) => lastTouch(b) - lastTouch(a))) {
+    const p = courseProgress(course, events);
+    if (p.next) return { course, lesson: p.next, progress: p };
+  }
+  return null;
+}
