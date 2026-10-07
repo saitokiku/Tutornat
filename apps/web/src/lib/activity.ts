@@ -49,7 +49,7 @@ export function summarizeWeek(events: ActivityEvent[], weekStart: number) {
     own: quiz.filter((e) => e.correct && !e.assisted).length,
     help: quiz.filter((e) => e.correct && e.assisted).length,
     missed: quiz.filter((e) => !e.correct).length,
-    minutes: Math.round(week.reduce((n, e) => n + (e.type === "lesson_completed" ? (e.seconds ?? 0) : 0), 0) / 60),
+    minutes: Math.ceil(week.reduce((n, e) => n + (e.type === "lesson_completed" ? (e.seconds ?? 0) : 0), 0) / 60),
     days,
   };
 }

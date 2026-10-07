@@ -63,3 +63,22 @@ export function removeLearner(id: string) {
 export function selectLearner(id: string | "parent" | null) {
   update((s) => void (s.session.profileId = id));
 }
+
+export function addNote(profileId: string, text: string) {
+  const clean = text.trim().slice(0, 1000);
+  if (!clean) return;
+  update((s) => void s.notes.push({ id: newId(), profileId, at: Date.now(), text: clean }));
+}
+
+export function removeNote(id: string) {
+  update((s) => void (s.notes = s.notes.filter((n) => n.id !== id)));
+}
+
+export function renameAccount(displayName: string) {
+  const name = displayName.trim().slice(0, 80);
+  if (!name) return;
+  update((s) => {
+    const a = s.accounts.find((x) => x.id === s.session.accountId);
+    if (a) a.displayName = name;
+  });
+}

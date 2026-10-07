@@ -303,6 +303,7 @@ const es: Record<Key, string> = {
 
   "family.title": "Familia",
   "family.body": "Lo que hizo cada estudiante esta semana, dónde necesitó ayuda y tus notas.",
+  "family.week": "Esta semana: {finished} lecciones terminadas · {own} preguntas bien sin ayuda · {help} con pista · {missed} todavía no",
   "family.neededHelp": "Necesitó ayuda con",
   "family.noHelp": "Ninguna pregunta fallada ni con pista esta semana.",
   "family.notes": "Tus notas",

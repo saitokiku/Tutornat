@@ -301,6 +301,7 @@ const en = {
 
   "family.title": "Family",
   "family.body": "What each learner did this week, where they needed help, and your notes.",
+  "family.week": "This week: {finished} lessons finished · {own} checks right on their own · {help} with a hint · {missed} not yet",
   "family.neededHelp": "Needed help with",
   "family.noHelp": "No missed or hinted checks this week.",
   "family.notes": "Your notes",

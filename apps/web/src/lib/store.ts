@@ -84,6 +84,15 @@ export function subscribe(fn: () => void) {
 
 export const storeHealth = () => health;
 
+/** Deletes everything KaizenEDU saved in this browser. */
+export function clearAll() {
+  try {
+    localStorage.removeItem(STORE_KEY);
+  } catch {}
+  state = emptyState();
+  listeners.forEach((fn) => fn());
+}
+
 /** Test hook: forget the cached document so the next read reloads from storage. */
 export function resetMemory() {
   state = null;
