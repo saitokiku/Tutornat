@@ -168,6 +168,39 @@ test("offline with nothing on the device says offline, and the template is still
   await expect(page.getByText("Template outline")).toBeVisible();
 });
 
+test("“Change my request” comes back to the box with the request in it, and the box builds again", async ({ page }) => {
+  const errors = collectErrors(page);
+  await mockKnowledge(page);
+  await asLearner(page, "change");
+  // Opened with a goal, as Today's box opens it for something to learn.
+  await page.goto("/courses/new?goal=volcanoes");
+  const goal = page.getByLabel("What do you want to learn?");
+  await expect(goal).toHaveValue("volcanoes");
+  await page.getByRole("button", { name: /Build my course/ }).click();
+  await expect(page.getByRole("button", { name: /Create course/ })).toBeVisible({ timeout: 15_000 });
+  const first = page.url();
+
+  await page.getByRole("button", { name: "Change my request" }).click();
+  await expect(page).toHaveURL(/\/courses\/new\?goal=volcanoes$/);
+  await expect(goal).toHaveValue("volcanoes");
+  await goal.fill("volcanoes and earthquakes");
+  await page.getByRole("button", { name: /Build my course/ }).click();
+  await expect(page).toHaveURL(/\/courses\/new\/[^/?]+\?fresh=1$/);
+  expect(page.url()).not.toBe(first);
+  const request = page.locator("header", { has: page.getByRole("heading", { level: 1, name: "Building your course" }) });
+  await expect(request.getByText("volcanoes and earthquakes", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Create course/ })).toBeVisible({ timeout: 15_000 });
+
+  // Today's box hands the builder a new goal even though the builder's box is kept from before.
+  await page.getByRole("main").getByRole("link", { name: "Today", exact: true }).click();
+  await page.getByLabel("What's going on?").fill("Why is the sky blue?");
+  await expect(page.getByRole("radio", { name: "Learn" })).toBeChecked();
+  await page.getByRole("button", { name: /Build a course/ }).click();
+  await expect(page).toHaveURL(/\/courses\/new\?goal=/);
+  await expect(goal).toHaveValue("Why is the sky blue?");
+  expect(errors, errors.join("\n")).toEqual([]);
+});
+
 test("a request the safety screen stops is never looked up", async ({ page }) => {
   const asked = await mockKnowledge(page);
   await asLearner(page, "safety");
