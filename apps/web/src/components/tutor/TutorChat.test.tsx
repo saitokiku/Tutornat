@@ -1,7 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { read } from "@/lib/store";
+import { read, resetMemory } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { makeItem } from "@/practice/skills";
 import { TutorChat } from "./TutorChat";
@@ -18,6 +18,7 @@ const FALLACY = { title: "Fallacy", extract: "A fallacy is the use of invalid or
 const requests: string[] = [];
 
 beforeEach(() => {
+  resetMemory(); // each test starts from an empty store, not the last test's cached copy
   push.mockReset();
   requests.length = 0;
   vi.stubGlobal("fetch", async (url: string) => {
@@ -212,7 +213,7 @@ describe("the drawer beside a problem", () => {
     render(<TutorChat setup={{ learner: learner({ grade: "4" }), surface: "practice", item, tries: 0, title: "Fractions" }} />);
     expect(await screen.findByText(new RegExp(item.hints[0].slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))).toBeInTheDocument();
     // Opening the tutor on a problem is help on that skill: one teaching act, before anything is typed.
-    expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ profileId: "p1", intent: "next-try-right", skillId: "m.frac.addlike" })]);
+    await waitFor(() => expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ profileId: "p1", intent: "next-try-right", skillId: "m.frac.addlike" })]));
     await tabTo(user, screen.getByRole("button", { name: "Give me a hint" }));
     await user.keyboard("{Enter}");
     expect(await screen.findByText(item.hints[1])).toBeInTheDocument();

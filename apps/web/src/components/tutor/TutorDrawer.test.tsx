@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useTutorDock } from "@/components/practice/tutor-dock";
-import { read } from "@/lib/store";
+import { read, resetMemory } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { makeItem } from "@/practice/skills";
 import { TutorDrawer } from "./TutorDrawer";
@@ -25,6 +25,7 @@ function Problem() {
 }
 
 beforeEach(() => {
+  resetMemory();
   vi.stubGlobal("fetch", async (url: string) => (String(url).startsWith("/api/ai/status") ? new Response(JSON.stringify({ mode: "demo" }), { status: 200 }) : new Response("{}", { status: 404 })));
 });
 

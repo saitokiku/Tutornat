@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { read } from "@/lib/store";
+import { read, resetMemory } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { TutorChat } from "./TutorChat";
 
@@ -33,6 +33,7 @@ function reply() {
 }
 
 beforeEach(() => {
+  resetMemory();
   bodies.length = 0;
   vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
     if (String(url).startsWith("/api/ai/status")) return new Response(JSON.stringify({ mode: "anthropic" }), { status: 200 });

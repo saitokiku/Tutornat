@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { read } from "@/lib/store";
+import { read, resetMemory } from "@/lib/store";
 import type { BoardCard } from "@/lib/tutor";
 import type { Profile } from "@/lib/types";
 import { makeItem } from "@/practice/skills";
@@ -21,7 +21,10 @@ const newTab = (link: HTMLElement) => {
   expect(link).toHaveTextContent("(opens in a new tab)");
 };
 
-beforeEach(() => push.mockReset());
+beforeEach(() => {
+  push.mockReset();
+  resetMemory();
+});
 
 describe("knowledge cards carry their source", () => {
   it("a Wikipedia extract: quoted as written, licensed, linked, marked with its own language", () => {
