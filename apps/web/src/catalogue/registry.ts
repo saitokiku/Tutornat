@@ -58,6 +58,7 @@ import weatherClimate from "./science-weather-climate";
 import ecosystems from "./science-ecosystems";
 import atoms from "./science-atoms";
 import heredity from "./science-heredity";
+import cellsEs from "./science-cells-es";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -119,4 +120,5 @@ export const REGISTRY: CatalogueEntry[] = [
   ecosystems,
   atoms,
   heredity,
+  cellsEs,
 ];
