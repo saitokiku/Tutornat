@@ -7,6 +7,7 @@ import { daylight, habitatSurvey, weatherChart } from "./k5-more/computed-early"
 import { BANKS_1 } from "./k5-more/grade-1";
 import { BANKS_2 } from "./k5-more/grade-2";
 import { BANKS_3 } from "./k5-more/grade-3";
+import { BANKS_4 } from "./k5-more/grade-4";
 import { BANKS_K } from "./k5-more/grade-k";
 
 // K–5 science, second strand: the NGSS performance expectations the first strand (early.ts) does not
@@ -17,7 +18,7 @@ import { BANKS_K } from "./k5-more/grade-k";
 
 export type { BankLevel, Entry, Option, Pair } from "./k5-more/bank";
 
-export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1, ...BANKS_2, ...BANKS_3 };
+export const BANKS: Record<string, readonly BankLevel[]> = { ...BANKS_K, ...BANKS_1, ...BANKS_2, ...BANKS_3, ...BANKS_4 };
 
 const fromBanks = (id: string) => (r: Rng, level: number, locale: Locale) => fromBank(r, BANKS[id][level - 1], locale);
 
@@ -57,4 +58,9 @@ export const SCIENCE_K_5_MORE: Skill[] = [
   computed({ id: "s.motion.patterns", grade: "3", en: "Forces and patterns of motion", es: "Fuerzas y patrones de movimiento", standard: "3-PS2-2", prereqs: ["s.forces"], levels: 3 }, motionPatterns),
   // ── Grade 4 ──
   computed({ id: "s.wave.shape", grade: "4", en: "Wave amplitude and wavelength", es: "Amplitud y longitud de onda", standard: "4-PS4-1", prereqs: ["s.sound.vibrate"], levels: 3 }, waveShape),
+  draft({ id: "s.eyes.senses", grade: "4", en: "Seeing, senses and the brain", es: "La vista, los sentidos y el cerebro", standard: "4-PS4-2", prereqs: ["s.light.see"], levels: 2 }),
+  draft({ id: "s.structures.functions", grade: "4", en: "Structures and their functions", es: "Estructuras y sus funciones", standard: "4-LS1-1", prereqs: ["s.parts.jobs"], levels: 2 }),
+  draft({ id: "s.speed.collisions", grade: "4", en: "Speed, energy and collisions", es: "Velocidad, energía y choques", standard: "4-PS3-1", prereqs: ["s.energy.forms"], levels: 2 }),
+  draft({ id: "s.renewable", grade: "4", en: "Renewable and nonrenewable energy", es: "Energía renovable y no renovable", standard: "4-ESS3-1", prereqs: ["s.energy.forms"], levels: 2 }),
+  draft({ id: "s.quakes.volcanoes", grade: "4", en: "Earthquakes, volcanoes and maps", es: "Terremotos, volcanes y mapas", standard: "4-ESS3-2", prereqs: ["s.rocks"], levels: 2 }),
 ];

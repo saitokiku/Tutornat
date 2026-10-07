@@ -37,6 +37,11 @@ const PLAN = [
   ["s.magnets.static", "3", "3-PS2-3", ["s.forces"], 2, "draft"],
   ["s.motion.patterns", "3", "3-PS2-2", ["s.forces"], 3, "computed"],
   ["s.wave.shape", "4", "4-PS4-1", ["s.sound.vibrate"], 3, "computed"],
+  ["s.eyes.senses", "4", "4-PS4-2", ["s.light.see"], 2, "draft"],
+  ["s.structures.functions", "4", "4-LS1-1", ["s.parts.jobs"], 2, "draft"],
+  ["s.speed.collisions", "4", "4-PS3-1", ["s.energy.forms"], 2, "draft"],
+  ["s.renewable", "4", "4-ESS3-1", ["s.energy.forms"], 2, "draft"],
+  ["s.quakes.volcanoes", "4", "4-ESS3-2", ["s.rocks"], 2, "draft"],
 ] as const;
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => i * 104729 + 7);
