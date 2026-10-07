@@ -10,6 +10,7 @@ import { MATH_8_9 } from "./math/g8to9";
 import { SCIENCE_K_5 } from "./science/early";
 import { SCIENCE_6_9 } from "./science/upper";
 import { MATH_K_2_MORE } from "./math/k2-more";
+import { MATH_3_5_MORE } from "./math/g3to5-more";
 
 export const STRANDS: Skill[][] = [
   ENGLISH_K_4,
@@ -21,4 +22,5 @@ export const STRANDS: Skill[][] = [
   SCIENCE_K_5,
   SCIENCE_6_9,
   MATH_K_2_MORE,
+  MATH_3_5_MORE,
 ];
