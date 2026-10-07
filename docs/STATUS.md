@@ -6,7 +6,7 @@ Rule: a box is ticked only after its check actually ran. Note blockers under the
 
 ## Foundation (frontend only)
 
-- [ ] 1. Workspace, scaffold, tokens
+- [x] 1. Workspace, scaffold, tokens
 - [ ] 2. Types, store, i18n
 - [ ] 3. Domain functions + K–9 catalogue
 - [ ] 4. UI primitives, icons, brand
