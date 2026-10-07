@@ -209,6 +209,12 @@ export function captureLocal(prev: StoreState, next: StoreState) {
 type Sent = Map<string, number>;
 const sentKey = (list: SyncList | "account", id = "") => `${list}\u0000${id}`;
 
+/**
+ * Answers go last, after the sets they belong to: the server checks each answer against its set, and
+ * a check set still waiting for the next request would make a real check answer look forged.
+ */
+const PUSH_ORDER: readonly SyncList[] = [...SYNC_LISTS.filter((l) => l !== "attempts"), "attempts"];
+
 /** The next request's worth of the outbox: learners first, so their records find them on the server. */
 export function buildPush(state: StoreState, m: AccountMeta, accountId: string): { body: SyncRequest; sent: Sent; rest: boolean } {
   const push: SyncRequest["push"] = {};
@@ -229,7 +235,7 @@ export function buildPush(state: StoreState, m: AccountMeta, accountId: string):
   for (const p of state.profiles)
     if (needs.has(p.id) && p.accountId === accountId && !m.outbox.profiles?.[p.id]) add("profiles", { id: p.id, at: p.createdAt, data: p });
 
-  outer: for (const list of SYNC_LISTS) {
+  outer: for (const list of PUSH_ORDER) {
     const entries = m.outbox[list];
     if (!entries) continue;
     const byId = new Map((state[list] as unknown as Rec[]).map((r) => [idOf(list, r), r]));

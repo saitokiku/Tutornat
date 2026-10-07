@@ -1883,6 +1883,7 @@ const es: Record<Key, string> = {
   "acct.method.parent": "Lo confirmo como titular de la cuenta",
   "acct.method.parentBody": "Para estudiantes de 13 años o más.",
   "acct.method.verified": "Verificado por un proveedor de consentimiento",
+  "acct.settings.dataServer": "El trabajo de tu familia se guarda en tu cuenta. Borrar aquí quita la copia de este dispositivo y cierra la sesión en él; tu cuenta conserva todo.",
 };
 
 export default es;

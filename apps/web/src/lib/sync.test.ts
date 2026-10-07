@@ -13,7 +13,8 @@ import { recordAnswer, startSet } from "./practice";
 import { addNote, createLearner, removeLearner, updateLearner } from "./profiles";
 import { testDb } from "./server/db/testing";
 import { emptyState, read, resetMemory, STORE_KEY, type StoreState } from "./store";
-import { diff, resetSyncForTests, resume, setServerStatusForTests, syncNow, useSyncState } from "./sync";
+import { SYNC_LIMITS } from "./server/db/wire";
+import { buildPush, diff, resetSyncForTests, resume, setServerStatusForTests, syncNow, useSyncState } from "./sync";
 import type { Profile } from "./types";
 import { renderHook } from "@testing-library/react";
 
@@ -356,6 +357,22 @@ describe("what a local write changed", () => {
     next.acts = [];
     next.attempts = [];
     expect(diff(prev, next, "A").changes).toEqual([]);
+  });
+});
+
+describe("what goes up first", () => {
+  it("sends a learner the server lacks, then sets, then their answers, one request's worth at a time", () => {
+    const s = emptyState();
+    s.accounts = [{ id: "A", email: "a@x.co", displayName: "Maria", salt: "", passwordHash: "", createdAt: 1 }];
+    s.profiles = [{ id: "p1", accountId: "A", nickname: "Leo", grade: "3", locale: "en", color: "#000", createdAt: 1 }];
+    s.sets = [{ id: "set1", profileId: "p1", createdAt: 1, kind: "check", subject: "math", skillId: "m.add.10", slots: [] }];
+    s.attempts = Array.from({ length: 600 }, (_, i) => ({ id: `t${i}`, profileId: "p1", at: i, skillId: "m.add.10", level: 1, seed: i, setId: "set1", mode: "check" as const, correct: true, assisted: false, seconds: 3 }));
+    const outbox = { attempts: Object.fromEntries(s.attempts.map((a) => [a.id, { at: 5 }])), sets: { set1: { at: 5 } } };
+    const { body, rest } = buildPush(s, { cursor: 0, outbox, consent: [], known: [] }, "A");
+    expect(body.push.profiles?.map((r) => r.id)).toEqual(["p1"]);
+    expect(body.push.sets?.map((r) => r.id)).toEqual(["set1"]);
+    expect(body.push.attempts).toHaveLength(SYNC_LIMITS.pushRecords - 2);
+    expect(rest).toBe(true);
   });
 });
 

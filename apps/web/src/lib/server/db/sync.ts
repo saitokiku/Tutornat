@@ -286,7 +286,7 @@ async function pull(tx: Tx, accountId: string, since: number): Promise<Pick<Sync
   }
   for (const a of await tx.select().from(attempts).where(and(eq(attempts.accountId, accountId), gt(attempts.seq, since))).orderBy(asc(attempts.seq)).limit(limit + 1))
     items.push({ seq: a.seq, list: "attempts", record: attemptRecord(a), size: 300 });
-  for (const c of await tx.select({ seq: consentReceipts.seq }).from(consentReceipts).where(and(eq(consentReceipts.accountId, accountId), gt(consentReceipts.seq, since))).limit(limit + 1))
+  for (const c of await tx.select({ seq: consentReceipts.seq }).from(consentReceipts).where(and(eq(consentReceipts.accountId, accountId), gt(consentReceipts.seq, since))).orderBy(asc(consentReceipts.seq)).limit(limit + 1))
     items.push({ seq: c.seq, list: "consent", size: 300 });
   const [acct] = await tx.select().from(accounts).where(and(eq(accounts.id, accountId), gt(accounts.seq, since)));
   if (acct) items.push({ seq: acct.seq, list: "account", size: 200 });

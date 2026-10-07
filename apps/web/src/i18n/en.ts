@@ -1881,6 +1881,7 @@ const en = {
   "acct.method.parent": "I confirm as the account holder",
   "acct.method.parentBody": "For learners 13 or older.",
   "acct.method.verified": "Verified by a consent provider",
+  "acct.settings.dataServer": "Your family's work is saved to your account. Deleting here removes this device's copy and signs this device out; your account keeps everything.",
 } as const;
 
 export default en;
