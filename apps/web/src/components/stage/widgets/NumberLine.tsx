@@ -19,33 +19,42 @@ export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }
   const [result, setResult] = useState<boolean | null>(null);
   const set = (i: number) => (setIndex(Math.max(0, Math.min(count - 1, i))), setResult(null));
   const label = (v: number) => fractionLabel(v, denominator);
-  const every = count <= 13 ? 1 : count <= 25 ? 2 : 5;
+  // Label round values only (at most 6 labels) so the numbers stay readable on a phone.
+  const offset = Math.round(min / step);
+  const every = [1, 2, 5, 10, 20, 50].find((k) => Math.floor((count - 1) / k) + 1 <= 6) ?? 100;
+  const labelled = (i: number) => (((offset + i) % every) + every) % every === 0;
 
-  const W = 640, pad = 28, y = 46;
+  const W = 640, pad = 28;
   const x = (i: number) => pad + (i / (count - 1)) * (W - pad * 2);
   const value = valueAt(index);
 
   return (
     <div className="space-y-5">
-      <div className="relative rounded-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent">
-        <svg viewBox={`0 0 ${W} 96`} className="w-full" aria-hidden="true">
-          <line x1={pad - 14} x2={W - pad + 14} y1={y} y2={y} stroke="var(--color-ink)" strokeWidth={2.5} strokeLinecap="round" />
+      <div className="relative rounded-sm pb-8 pt-7 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent">
+        {/* Line and ticks scale with the width; labels and the marker are HTML so they stay readable on phones. */}
+        <svg viewBox={`0 0 ${W} 40`} preserveAspectRatio="none" className="h-10 w-full" aria-hidden="true">
+          <line x1={pad - 14} x2={W - pad + 14} y1={20} y2={20} stroke="var(--color-ink)" strokeWidth={2.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           {Array.from({ length: count }, (_, i) => (
-            <g key={i} onClick={() => set(i)} className="cursor-pointer">
-              <rect x={x(i) - 12} y={y - 26} width={24} height={64} fill="transparent" />
-              <line x1={x(i)} x2={x(i)} y1={y - (i % every === 0 ? 10 : 6)} y2={y + (i % every === 0 ? 10 : 6)} stroke="var(--color-ink)" strokeWidth={1.5} />
-              {i % every === 0 && (
-                <text x={x(i)} y={y + 32} textAnchor="middle" fontSize="15" fill="var(--color-muted)" fontFamily="var(--font-opmono)">
-                  {label(valueAt(i))}
-                </text>
-              )}
-            </g>
+            <line key={i} x1={x(i)} x2={x(i)} y1={labelled(i) ? 8 : 13} y2={labelled(i) ? 32 : 27} stroke="var(--color-ink)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
           ))}
-          <g style={{ transform: `translateX(${x(index)}px)`, transition: "transform 220ms cubic-bezier(0.16,1,0.3,1)" }}>
-            <circle cx={0} cy={y} r={13} fill={tint} stroke="var(--color-panel)" strokeWidth={4} />
-            <path d={`M -7 ${y - 24} L 7 ${y - 24} L 0 ${y - 15} Z`} fill={tint} />
-          </g>
         </svg>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-7">
+          {Array.from({ length: count }, (_, i) =>
+            labelled(i) ? (
+              <span key={i} className="absolute -translate-x-1/2 font-opmono text-xs tabular-nums text-muted sm:text-sm" style={{ left: `${(x(i) / W) * 100}%` }}>
+                {label(valueAt(i))}
+              </span>
+            ) : null,
+          )}
+        </div>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute top-[2.375rem] size-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-panel shadow-soft transition-[left] duration-200 ease-out"
+          style={{ left: `${(x(index) / W) * 100}%`, background: tint }}
+        />
+        <span aria-hidden="true" className="pointer-events-none absolute top-1 -translate-x-1/2 font-opmono text-xs font-semibold tabular-nums text-ink transition-[left] duration-200 ease-out" style={{ left: `${(x(index) / W) * 100}%` }}>
+          {label(value)}
+        </span>
         <input
           type="range"
           min={0}
