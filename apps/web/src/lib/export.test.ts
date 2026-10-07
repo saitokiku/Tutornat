@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { signUp } from "./auth";
-import { dataCounts, deleteFamily, deleteLearnerData, EXPORT_FORMAT, exportFamily, exportFileName, wipeBrowserStorage } from "./export";
+import { dataCounts, deleteFamily, deleteLearnerData, EXPORT_FORMAT, exportFamily, exportFileName, wipeBrowserStorage, withFiles } from "./export";
 import { createLearner } from "./profiles";
 import { emptyState, read, resetMemory, STORE_KEY, update, type StoreState } from "./store";
 import type { Profile } from "./types";
@@ -87,6 +87,31 @@ describe("exportFamily", () => {
     const out = exportFamily(read(), read().session.accountId!)!;
     expect(out.learners).toEqual([]);
     expect(Object.values(out.data).every((rows) => rows.length === 0)).toBe(true);
+  });
+
+  it("withFiles puts this family's attachments inside, once each, and names any this browser lost", async () => {
+    const { accountId, ada, other } = await twoFamilies();
+    update((s) => {
+      const e1 = s.events.find((e) => e.id === "e1")!;
+      e1.attachment = { blobId: "b1", name: "quiz.jpg", mediaType: "image/jpeg" };
+      s.events.push({ id: "e2", profileId: ada.id, title: "Same photo again", kind: "homework", date: "2026-10-10", skillIds: [], source: "typed", createdAt: T, attachment: { blobId: "b1" } });
+      s.events.push({ id: "e3", profileId: ada.id, title: "Lost file", kind: "test", date: "2026-10-11", skillIds: [], source: "typed", createdAt: T, attachment: { blobId: "gone" } });
+      s.events.push({ id: "e4", profileId: other.id, title: "Theirs", kind: "test", date: "2026-10-11", skillIds: [], source: "typed", createdAt: T, attachment: { blobId: "b-other" } });
+    });
+    const asked: string[] = [];
+    const out = await withFiles(exportFamily(read(), accountId, { at: T })!, async (id) => {
+      asked.push(id);
+      if (id === "gone") return null;
+      return { name: "quiz.jpg", type: "image/jpeg", size: 3, dataUrl: "data:image/jpeg;base64,AAAA" };
+    });
+    expect(asked).toEqual(["b1", "gone"]);
+    expect(out.files).toEqual([{ id: "b1", name: "quiz.jpg", type: "image/jpeg", size: 3, dataUrl: "data:image/jpeg;base64,AAAA" }]);
+    expect(out.missingFiles).toEqual(["gone"]);
+    expect(JSON.stringify(out)).not.toContain("b-other");
+    // A read that fails counts as missing rather than breaking the download.
+    const failing = await withFiles(exportFamily(read(), accountId)!, () => Promise.reject(new Error("blocked")));
+    expect(failing.files).toEqual([]);
+    expect(failing.missingFiles).toEqual(["b1", "gone"]);
   });
 
   it("names the file by date, without names", () => {

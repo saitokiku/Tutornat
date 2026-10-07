@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { log, logRequestError, scrub, scrubPath, scrubText } from "./log";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 describe("scrubText", () => {
   it("masks emails but keeps the domain for debugging", () => {
@@ -96,6 +99,7 @@ describe("scrubPath", () => {
 describe("log and logRequestError", () => {
   it("writes one parseable JSON line with no personal data", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
     const line = logRequestError(
       new Error("Cannot read properties of undefined (reading 'nickname') for maria@example.com"),
       { path: "/api/email/weekly?to=maria@example.com", method: "POST", headers: { cookie: "session=1", "x-vercel-id": "iad1::abc", "user-agent": "x" } },
@@ -103,7 +107,7 @@ describe("log and logRequestError", () => {
     );
     expect(spy).toHaveBeenCalledOnce();
     const parsed = JSON.parse(line);
-    expect(parsed).toMatchObject({ level: "error", event: "request_error", method: "POST", path: "/api/email/weekly?to=[redacted]", route: "/api/email/weekly", routeType: "route", requestId: "iad1::abc" });
+    expect(parsed).toMatchObject({ level: "error", event: "request_error", method: "POST", path: "/api/email/weekly?to=[redacted]", route: "/api/email/weekly", routeType: "route", runtime: "nodejs", requestId: "iad1::abc" });
     expect(parsed.error.message).toContain("[email example.com]");
     expect(line).not.toMatch(/maria@|session=1|user-agent/);
   });

@@ -98,6 +98,7 @@ export function logRequestError(err: unknown, request: RequestInfo, context: Req
     route: context.routePath,
     routeType: context.routeType,
     renderSource: context.renderSource,
+    runtime: process.env.NEXT_RUNTIME,
     requestId: Array.isArray(id) ? id[0] : id,
     error: err instanceof Error ? err : { thrown: typeof err === "string" ? err : typeof err },
   });

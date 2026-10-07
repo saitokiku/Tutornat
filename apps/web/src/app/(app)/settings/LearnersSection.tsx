@@ -83,6 +83,7 @@ function ConfirmDelete({ learner, onCancel, onDelete }: { learner: Profile; onCa
       </p>
       <p className="text-sm text-ink">{t("trust.learner.confirmBody", { name: learner.nickname })}</p>
       <Counts label={t("trust.data.counts")} counts={rest} labels={labels} />
+      <p className="max-w-prose text-xs text-muted">{t("trust.learner.later", { name: learner.nickname })}</p>
       <div className="flex flex-wrap justify-end gap-2">
         <button ref={cancel} type="button" onClick={onCancel} className="k-btn-ghost">
           {t("common.cancel")}

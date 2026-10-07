@@ -9,7 +9,7 @@ import { Badge, Button, Field, Notice, SubjectDot } from "@/components/ui";
 import { gradeLabel, useLocale, useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
 import { shortDate } from "@/lib/format";
-import { NOTE_MAX, previewSkill, reviewHistory, reviewSkill, reviewState, reviewedLines, type ReviewState } from "@/lib/review";
+import { gradeSpan, NOTE_MAX, previewSkill, reviewHistory, reviewSkill, reviewState, reviewedLines, strands, type ReviewState } from "@/lib/review";
 import { useStore } from "@/lib/store";
 import type { Subject } from "@/lib/types";
 import { getSkill, SKILLS } from "@/practice/skills";
@@ -30,6 +30,7 @@ const STATE_LABEL: Record<ReviewState, Key> = {
 const STATE_TONE: Record<ReviewState, "muted" | "accent" | "good" | "warn"> = { draft: "accent", approved: "good", "in-code": "good", flagged: "warn", computed: "muted" };
 
 const matches = (f: Filter, st: ReviewState) => f === "all" || (f === "approved" ? st === "approved" || st === "in-code" : st === f);
+const STRANDS = strands();
 
 export function ReviewTool() {
   const t = useT();
@@ -45,13 +46,17 @@ function SkillList() {
   const states = useStore((s) => new Map(SKILLS.map((k) => [k.id, reviewState(s, k)])));
   const lines = useStore(reviewedLines);
   const [subject, setSubject] = useState<Subject | "all">("all");
+  const [strand, setStrand] = useState("all");
   const [filter, setFilter] = useState<Filter>("draft");
   const [query, setQuery] = useState("");
   const [copied, setCopied] = useState(false);
   const q = query.trim().toLowerCase();
+  const strandOptions = STRANDS.filter((st) => subject === "all" || st.subject === subject);
+  const inStrand = new Set(strandOptions.find((st) => st.key === strand)?.ids ?? []);
   const shown = SKILLS.filter(
     (k) =>
       (subject === "all" || k.subject === subject) &&
+      (!inStrand.size || inStrand.has(k.id)) &&
       matches(filter, states.get(k.id)!) &&
       (!q || k.title.en.toLowerCase().includes(q) || k.title.es.toLowerCase().includes(q) || k.id.includes(q)),
   );
@@ -81,14 +86,26 @@ function SkillList() {
           <legend className="mb-2 text-xs font-semibold text-muted">{t("trust.review.subject")}</legend>
           <div className="flex flex-wrap gap-2">
             {(["all", ...SUBJECTS] as const).map((x) => (
-              <button key={x} type="button" aria-pressed={subject === x} onClick={() => setSubject(x)} className="k-chip min-h-11 px-4 text-sm">
+              <button key={x} type="button" aria-pressed={subject === x} onClick={() => (setSubject(x), setStrand("all"))} className="k-chip min-h-11 px-4 text-sm">
                 {x !== "all" && <SubjectDot subject={x} />}
                 {x === "all" ? t("trust.review.all") : t(`subject.${x}`)}
               </button>
             ))}
           </div>
         </fieldset>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label={t("trust.review.strand")}>
+            {(a) => (
+              <select {...a} className="k-input" value={strand} onChange={(e) => setStrand(e.target.value)}>
+                <option value="all">{t("trust.review.allStrands")}</option>
+                {strandOptions.map((st) => (
+                  <option key={st.key} value={st.key}>
+                    {t(st.from === st.to ? "trust.review.strandGrade" : "trust.review.strandName", { subject: t(`subject.${st.subject}`), grades: gradeSpan(st), n: st.ids.length })}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
           <Field label={t("trust.review.status")}>
             {(a) => (
               <select {...a} className="k-input" value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>

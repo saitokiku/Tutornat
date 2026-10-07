@@ -1,3 +1,4 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startOfWeek, summarizeWeek } from "../activity";
 import { signUp } from "../auth";
@@ -5,8 +6,8 @@ import { weekFacts } from "../family";
 import { createLearner } from "../profiles";
 import { read, resetMemory, update } from "../store";
 import type { Profile } from "../types";
-import { renderWeekly, WeeklyInput } from "./render";
-import { askConfirmation, confirmWeekly, previewWeekly, resetEmailMode, sendDueWeekly, setWeeklyOn, weeklyInput, weeklyOf, withoutNames } from "./weekly";
+import { renderWeekly, WeeklyInput, withoutNames } from "./render";
+import { askConfirmation, confirmWeekly, previewWeekly, resetEmailMode, sendDueWeekly, setWeeklyOn, useWeeklyEmail, weeklyInput, weeklyOf } from "./weekly";
 
 const H = 3600_000;
 const NOW = new Date(2026, 9, 8, 10, 0).getTime(); // Thursday, Oct 8 2026
@@ -278,6 +279,39 @@ describe("opt-in and sending", () => {
     expect(calls.filter((c) => c.body)).toEqual([]);
     setWeeklyOn(false);
     expect(weeklyOf(read(), accountId)).toEqual({ on: false });
+  });
+
+  it("two screens asking at once send one email", async () => {
+    const { kids } = await family();
+    adaWeek(kids[0]);
+    setWeeklyOn(true);
+    const calls = fakeServer("send");
+    await confirmWeekly(TOKEN, MON - 3 * 24 * H);
+    const monday = MON + 7 * 24 * H + H;
+    const [a, b] = await Promise.all([sendDueWeekly(monday), sendDueWeekly(monday)]);
+    expect([a, b]).toEqual(["sent", "sent"]);
+    expect(calls.filter((c) => c.body?.action === "send")).toHaveLength(1);
+    expect(await sendDueWeekly(monday)).toBe("not-due");
+  });
+
+  it("useWeeklyEmail sends when the Parent view opens with a confirmed email, and not for a learner", async () => {
+    const { kids } = await family();
+    adaWeek(kids[0]);
+    setWeeklyOn(true);
+    let calls = fakeServer("send");
+    await confirmWeekly(TOKEN, MON - 3 * 24 * H);
+    vi.spyOn(Date, "now").mockReturnValue(MON + 7 * 24 * H + H);
+    calls.length = 0;
+    update((s) => void (s.session.profileId = kids[0].id));
+    const { unmount } = renderHook(() => useWeeklyEmail());
+    await act(async () => {});
+    expect(calls).toEqual([]);
+    unmount();
+    vi.unstubAllGlobals();
+    calls = fakeServer("send");
+    act(() => update((s) => void (s.session.profileId = "parent")));
+    renderHook(() => useWeeklyEmail());
+    await waitFor(() => expect(calls.filter((c) => c.body?.action === "send")).toHaveLength(1));
   });
 
   it("only acts for a grown-up in the Parent view", async () => {

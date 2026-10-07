@@ -75,6 +75,20 @@ export function learnerLabel(locale: Locale, l: Pick<LearnerWeek, "grade" | "n">
   return l.n ? tr(locale, "trust.email.learnerN", { grade: g, n: l.n }) : g;
 }
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Removes family names from free text: "Ada's spelling test" → "your child's spelling test". Whole
+ * words only, any case, with English possessives. For anything typed by a family that leaves the
+ * device (email, model calls); the names come from the device and are never sent themselves.
+ */
+export function withoutNames(text: string, names: string[], bare: string, possessive: string) {
+  const list = names.map((n) => n.trim()).filter((n) => n.length >= 2);
+  if (!list.length) return text;
+  const re = new RegExp(`(?<![\\p{L}\\p{N}])(?:${list.map(escapeRe).join("|")})('s|’s)?(?![\\p{L}\\p{N}])`, "giu");
+  return text.replace(re, (_m, s?: string) => (s ? possessive : bare)).replace(/\s+/g, " ").trim();
+}
+
 export const isQuiet = (l: LearnerWeek) => l.minutes + l.lessons + l.sets + l.own + l.helped + l.missed === 0;
 
 type Section = { title: string; facts: string[]; look: string[]; quiet: boolean };

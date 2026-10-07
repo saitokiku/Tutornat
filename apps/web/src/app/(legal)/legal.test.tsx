@@ -36,7 +36,8 @@ describe("policy pages", () => {
   it("says plainly what goes where, and claims no certification", () => {
     page(<PrivacyPage />);
     const text = document.body.textContent!;
-    expect(text).toContain("Learner names never go to an AI model or to any other company.");
+    expect(text).toContain("We never send learners' names to an AI model or to any other company.");
+    expect(text).toContain("a name typed into a message or a school item goes with it");
     expect(text).toContain("only the words being looked up");
     expect(text).toContain("verifiable parental consent under COPPA");
     expect(text).toMatch(/Apple or Google/);

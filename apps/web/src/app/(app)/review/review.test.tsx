@@ -2,10 +2,11 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { signUp } from "@/lib/auth";
-import { isReviewed, previewLevel, previewSkill, reviewOf, reviewSkill, reviewState, reviewedLines } from "@/lib/review";
+import { gradeSpan, isReviewed, previewLevel, previewSkill, reviewOf, reviewSkill, reviewState, reviewedLines, strands } from "@/lib/review";
 import { read, resetMemory, update } from "@/lib/store";
-import { ENGLISH_K_4_BANKS } from "@/practice/english/early";
-import { getSkill, SKILLS } from "@/practice/skills";
+import { ENGLISH_K_4, ENGLISH_K_4_BANKS } from "@/practice/english/early";
+import { STRANDS } from "@/practice/registry";
+import { getSkill, gradeIndex, SKILLS } from "@/practice/skills";
 import { ReviewTool } from "./ReviewTool";
 
 const params = { skill: null as string | null };
@@ -65,6 +66,24 @@ describe("reviewSkill and review state", () => {
     expect(reviewSkill("e.rhyme", "approved")).toBeNull();
     expect(read().reviews).toEqual([]);
     expect(reviewState(read(), computed)).toBe("computed");
+  });
+});
+
+describe("strands", () => {
+  it("names every registry strand by subject and grade span, covering every skill once", () => {
+    const list = strands();
+    expect(list).toHaveLength(STRANDS.filter((x) => x.length).length);
+    expect(list.flatMap((st) => st.ids).sort()).toEqual(SKILLS.map((k) => k.id).sort());
+    // Skill-map order: math, then English, then science; inside a subject, by starting grade.
+    const order = list.map((st) => ["math", "english", "science", "other"].indexOf(st.subject) * 100 + gradeIndex(st.from));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    const english = list.find((st) => st.ids.includes("e.rhyme"))!;
+    expect(english).toMatchObject({ key: ENGLISH_K_4[0].id, subject: "english", from: "K" });
+    // By hand: the grade span is the lowest and highest grade in the strand.
+    const grades = ENGLISH_K_4.map((k) => gradeIndex(k.grade));
+    expect([gradeIndex(english.from), gradeIndex(english.to)]).toEqual([Math.min(...grades), Math.max(...grades)]);
+    expect(gradeSpan({ from: "K", to: "4" })).toBe("K–4");
+    expect(gradeSpan({ from: "6", to: "6" })).toBe("6");
   });
 });
 
@@ -138,6 +157,27 @@ describe("ReviewTool", () => {
     expect(screen.getByText(/no longer shows for this skill/)).toBeInTheDocument();
     expect(reviewOf(read(), "e.rhyme")).toMatchObject({ status: "approved", note: "Checked levels 1 and 2" });
     expect(screen.getByText(/Approved .* by Ms\. Ruiz/)).toBeInTheDocument();
+  });
+
+  it("narrows the list to one strand", async () => {
+    await grownUp();
+    const user = userEvent.setup();
+    render(<ReviewTool />);
+    await user.click(screen.getByRole("button", { name: "English" }));
+    const picker = screen.getByLabelText("Strand");
+    const english = strands().filter((st) => st.subject === "english");
+    // Only English strands are offered once English is picked.
+    expect(within(picker).getAllByRole("option")).toHaveLength(english.length + 1);
+    const early = english.find((st) => st.ids.includes("e.rhyme"))!;
+    picker.focus();
+    await user.selectOptions(picker, early.key);
+    await user.selectOptions(screen.getByLabelText("Show"), "all");
+    const list = screen.getByRole("list", { name: /Skills/ });
+    expect(within(list).getAllByRole("link")).toHaveLength(early.ids.length);
+    expect(within(picker).getByRole("option", { selected: true })).toHaveTextContent(new RegExp(`^English, grades ${gradeSpan(early)} \\(${early.ids.length} skills\\)$`));
+    // Picking another subject resets the strand.
+    await user.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByLabelText("Strand")).toHaveValue("all");
   });
 
   it("shows computed skills as checked by code, with no approve button", async () => {

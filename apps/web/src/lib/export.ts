@@ -1,4 +1,5 @@
 import { localDate } from "@/planner/dates";
+import type { SchoolEvent } from "@/planner/types";
 import { clearAll, read, STORE_KEY, update, type StoreState } from "./store";
 import type { Account, Profile } from "./types";
 
@@ -22,7 +23,14 @@ export type FamilyExport = {
   prefs: StoreState["prefs"];
   /** Every other list, filtered to this family: courses, attempts, sets, events, threads, acts, reviews… */
   data: Record<string, unknown[]>;
+  /** Photos and files attached to school items, when the export was made with withFiles(). */
+  files?: ExportedFile[];
+  /** Attachments named by a school item that this browser no longer has. */
+  missingFiles?: string[];
 };
+
+/** One attached photo or PDF inside the export, as a data: URL so the JSON file holds it. */
+export type ExportedFile = { id: string; name: string; type: string; size: number; dataUrl: string };
 
 /** Lists that never leave the device in an export: reset tokens are credentials. */
 const NEVER_EXPORTED = new Set(["accounts", "profiles", "resets"]);
@@ -64,6 +72,24 @@ export function exportFamily(s: StoreState, accountId: string, opts: { at?: numb
     prefs: s.prefs,
     data,
   };
+}
+
+/**
+ * The export with the files attached to its school items put inside it, read one at a time by `get`
+ * (the browser's file store: lib/blobs.ts getBlob, then dataUrl). A file `get` can't find, or fails
+ * to read, is named in `missingFiles` instead, so the download says what it lacks.
+ */
+export async function withFiles(exp: FamilyExport, get: (id: string) => Promise<Omit<ExportedFile, "id"> | null>): Promise<FamilyExport> {
+  const events = (exp.data.events ?? []) as SchoolEvent[];
+  const ids = new Set(events.flatMap((e) => (e.attachment?.blobId ? [e.attachment.blobId] : [])));
+  const files: ExportedFile[] = [];
+  const missing: string[] = [];
+  for (const id of ids) {
+    const file = await get(id).catch(() => null);
+    if (file) files.push({ id, ...file });
+    else missing.push(id);
+  }
+  return { ...exp, files, ...(missing.length ? { missingFiles: missing } : {}) };
 }
 
 export const exportFileName = (at: number) => `kaizenedu-family-${localDate(at)}.json`;

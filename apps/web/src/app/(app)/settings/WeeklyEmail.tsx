@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Notice } from "@/components/ui";
 import { useLocale, useT } from "@/i18n";
-import { askConfirmation, confirmWeekly, emailMode, previewWeekly, sendDueWeekly, setWeeklyOn, weeklyOf, type AskResult, type EmailMode } from "@/lib/email/weekly";
+import { askConfirmation, confirmWeekly, emailMode, previewWeekly, setWeeklyOn, useWeeklyEmail, weeklyOf, type AskResult, type EmailMode } from "@/lib/email/weekly";
 import { shortDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { Account } from "@/lib/types";
@@ -27,11 +27,11 @@ export function WeeklyEmail({ account }: { account: Account }) {
   const [asking, setAsking] = useState(false);
   const [link, setLink] = useState<"ok" | "bad" | null>(null);
 
+  // Last week's email, if it is due (see lib/email/weekly.ts for why the browser sends it).
+  useWeeklyEmail();
   useEffect(() => {
     let live = true;
     emailMode().then((m) => live && setMode(m));
-    // Last week's email, if it is due (see lib/email/weekly.ts for why the browser sends it).
-    void sendDueWeekly();
     return () => {
       live = false;
     };

@@ -1,15 +1,17 @@
+import { useEffect } from "react";
 import { addDays, localDate } from "@/planner/dates";
 import { startOfWeek, summarizeWeek } from "../activity";
 import { weekFacts } from "../family";
-import { read, update, type StoreState } from "../store";
+import { read, update, useStore, type StoreState } from "../store";
 import type { Account, Profile } from "../types";
-import { isQuiet, renderWeekly, tr, type Email, type LearnerWeek, type WeeklyInput } from "./render";
+import { isQuiet, renderWeekly, tr, withoutNames, type Email, type LearnerWeek, type WeeklyInput } from "./render";
 
 // The weekly family email (opt-in): composed from the same numbers as the Family page, nothing for a
 // week with no activity, only ever to the account's own address (never to a child, who has none).
 // Until accounts live on our server, the browser that holds the record asks /api/email/weekly to send
-// last week's email the next time a grown-up opens KaizenEDU; the server only sends to an address
-// that confirmed by clicking a link. With the backend, a scheduled job calls the same composer.
+// last week's email the next time a grown-up opens the Parent view (useWeeklyEmail); the server only
+// sends to an address that confirmed by clicking a link. With the backend, a scheduled job calls the
+// same composer.
 
 const WEEK = 7 * 864e5;
 
@@ -39,16 +41,6 @@ function patch(change: (w: WeeklyOptIn) => WeeklyOptIn) {
 }
 
 // ----- composing -----
-
-const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/** Removes family names from free text: "Ada's spelling test" → "your child's spelling test". */
-export function withoutNames(text: string, names: string[], bare: string, possessive: string) {
-  const list = names.map((n) => n.trim()).filter((n) => n.length >= 2);
-  if (!list.length) return text;
-  const re = new RegExp(`(?<![\\p{L}\\p{N}])(?:${list.map(escapeRe).join("|")})('s|’s)?(?![\\p{L}\\p{N}])`, "giu");
-  return text.replace(re, (_m, s?: string) => (s ? possessive : bare)).replace(/\s+/g, " ").trim();
-}
 
 /** The last moment a learner did anything: an answer, a lesson event, a reading entry. */
 function lastActive(s: StoreState, profileId: string) {
@@ -180,11 +172,19 @@ export async function confirmWeekly(token: string, now = Date.now()): Promise<bo
 
 export type SendResult = "sent" | "empty" | "not-due" | "off" | "preview" | "unconfirmed" | "failed";
 
+let sending: Promise<SendResult> | null = null;
+
 /**
  * Sends last week's email once, when it is on and confirmed and that week ended after the
- * confirmation. An empty week is marked handled without sending anything.
+ * confirmation. An empty week is marked handled without sending anything. Two calls at once (two
+ * screens opening together) share one attempt.
  */
-export async function sendDueWeekly(now = Date.now()): Promise<SendResult> {
+export function sendDueWeekly(now = Date.now()): Promise<SendResult> {
+  sending ??= sendDue(now).finally(() => (sending = null));
+  return sending;
+}
+
+async function sendDue(now: number): Promise<SendResult> {
   const me = signedIn();
   const w = me && weeklyOf(me.s, me.account.id);
   if (!me || !w?.on) return "off";
@@ -207,4 +207,15 @@ export async function sendDueWeekly(now = Date.now()): Promise<SendResult> {
   if (!r.json.ok) return "failed";
   patch((x) => ({ ...x, lastWeek: key, lastSentAt: now }));
   return "sent";
+}
+
+/**
+ * For the signed-in app shell and Settings: whenever the Parent view opens with the email on, last
+ * week's email goes out if it is due. Does nothing for a learner, or when the email is off.
+ */
+export function useWeeklyEmail() {
+  const due = useStore((s) => s.session.profileId === "parent" && Boolean(weeklyOf(s, s.session.accountId)?.confirmed));
+  useEffect(() => {
+    if (due) void sendDueWeekly();
+  }, [due]);
 }

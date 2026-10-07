@@ -1,9 +1,11 @@
 import type { SkillReview } from "@/learning/types";
 import { answerText } from "@/practice/answer";
+import { STRANDS } from "@/practice/registry";
 import { REVIEWED } from "@/practice/reviewed";
-import { makeItem, SKILLS } from "@/practice/skills";
+import { gradeIndex, makeItem, SKILLS } from "@/practice/skills";
 import type { Item, Skill } from "@/practice/types";
 import { newId, update, type StoreState } from "./store";
+import type { Grade, Subject } from "./types";
 
 /** The newest review decision on a skill made on this device (the /review tool). */
 export const reviewOf = (s: StoreState, skillId: string) =>
@@ -47,6 +49,27 @@ export function reviewSkill(skillId: string, status: SkillReview["status"], note
   });
   return made;
 }
+
+/**
+ * A strand of practice/registry.ts (one bank file: "English K–4", "Math 6–7"), named by its subject
+ * and grade span. `key` is its first skill's id, so it stays stable as strands are added.
+ */
+export type Strand = { key: string; subject: Subject; from: Grade; to: Grade; ids: string[] };
+
+const SUBJECT_ORDER: Subject[] = ["math", "english", "science", "other"];
+
+/** Every strand, in skill-map order: by subject, then by the grade it starts at. */
+export function strands(): Strand[] {
+  return STRANDS.filter((list) => list.length > 0)
+    .map((list) => {
+      const grades = list.map((k) => k.grade).sort((a, b) => gradeIndex(a) - gradeIndex(b));
+      return { key: list[0].id, subject: list[0].subject, from: grades[0], to: grades[grades.length - 1], ids: list.map((k) => k.id) };
+    })
+    .sort((a, b) => SUBJECT_ORDER.indexOf(a.subject) - SUBJECT_ORDER.indexOf(b.subject) || gradeIndex(a.from) - gradeIndex(b.from));
+}
+
+/** "K–4", "6–7", or one grade: the span in the strand's name. */
+export const gradeSpan = (st: Pick<Strand, "from" | "to">) => (st.from === st.to ? st.from : `${st.from}–${st.to}`);
 
 /** Every decision on a skill, newest first. */
 export const reviewHistory = (s: StoreState, skillId: string) => s.reviews.filter((r) => r.skillId === skillId).sort((a, b) => b.at - a.at);
