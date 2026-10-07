@@ -13,6 +13,14 @@ import changes from "./science-changes";
 import matter from "./science-matter";
 import moon from "./science-moon";
 import motion from "./science-motion";
+import numbersTo10 from "./math-numbers-to-10";
+import numbersTo10Es from "./math-numbers-to-10-es";
+import hundredsTensOnes from "./math-hundreds-tens-ones";
+import hundredsTensOnesEs from "./math-hundreds-tens-ones-es";
+import multiplication from "./math-multiplication";
+import multiplicationEs from "./math-multiplication-es";
+import multiplyBigger from "./math-multiply-bigger";
+import decimals from "./math-decimals";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -29,4 +37,12 @@ export const REGISTRY: CatalogueEntry[] = [
   matter,
   moon,
   motion,
+  numbersTo10,
+  numbersTo10Es,
+  hundredsTensOnes,
+  hundredsTensOnesEs,
+  multiplication,
+  multiplicationEs,
+  multiplyBigger,
+  decimals,
 ];
