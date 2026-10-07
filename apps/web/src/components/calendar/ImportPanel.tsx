@@ -4,6 +4,7 @@ import { useState } from "react";
 import { IconPaperclip } from "@/components/icons";
 import { Button, Notice } from "@/components/ui";
 import { useT } from "@/i18n";
+import { useAiMode } from "@/lib/ai/client";
 import { draftsFromIcs, importDrafts, suggestSkills, updateClass, type Draft } from "@/lib/school";
 import { read } from "@/lib/store";
 import type { Locale } from "@/lib/types";
@@ -13,14 +14,16 @@ import type { SchoolClass } from "@/planner/types";
 import { getSkill } from "@/practice/skills";
 import { KINDS } from "./EventForm";
 
-type Tab = "paste" | "file" | "link";
+type Tab = "paste" | "file" | "link" | "photo";
 
 /**
  * Bring school dates in three ways — paste text, a calendar file, or a calendar link — and review
  * every item before it is saved. Dates are never invented; lines without one are listed separately.
  */
-export function ImportPanel({ profileId, classes, locale, onDone }: { profileId: string; classes: SchoolClass[]; locale: Locale; onDone: (msg: string) => void }) {
+export function ImportPanel({ profileId, classes, locale, grade, onDone }: { profileId: string; classes: SchoolClass[]; locale: Locale; grade: string; onDone: (msg: string) => void }) {
   const t = useT();
+  const ai = useAiMode();
+  const [aiNotes, setAiNotes] = useState<string[]>([]);
   const [tab, setTab] = useState<Tab>("paste");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
@@ -75,6 +78,42 @@ export function ImportPanel({ profileId, classes, locale, onDone }: { profileId:
     }
   };
 
+  // AI reading: the same review step as everything else; every guess the model made is listed.
+  const readWithAi = async (body: { text?: string; file?: string }) => {
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/ai/extract", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "syllabus", today, locale, grade, ...body }) });
+      if (!res.ok) return setError(t("import.aiFailed"));
+      const out = (await res.json()) as { events: { title: string; date: string; kind: Draft["kind"]; notes?: string }[]; skillIds: string[]; notes: string[] };
+      setDrafts(
+        out.events.map((e, i) => ({
+          key: `ai${i}`,
+          title: e.title,
+          date: e.date,
+          kind: e.kind,
+          classId: classId || undefined,
+          skillIds: suggestSkills(read(), e.title, classId || undefined).concat(out.skillIds).filter((x, j, a) => a.indexOf(x) === j).slice(0, 3),
+          include: true,
+        })),
+      );
+      setAiNotes(out.notes);
+      setUndated([]);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const fromPhoto = async (file: File) => {
+    if (file.size > 6_000_000) return setError(t("import.photoTooBig"));
+    const data = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    await readWithAi({ file: data });
+  };
+
   const save = () => {
     if (!drafts) return;
     const { added, updated } = importDrafts(profileId, drafts, source);
@@ -92,7 +131,7 @@ export function ImportPanel({ profileId, classes, locale, onDone }: { profileId:
         <p className="mt-1 text-sm text-muted">{t("import.body")}</p>
       </div>
       <div role="tablist" aria-label={t("import.how")} className="inline-flex rounded-full border border-border bg-panel2 p-1">
-        {(["paste", "file", "link"] as Tab[]).map((x) => (
+        {(["paste", "file", "link", ...(ai && ai !== "demo" ? (["photo"] as Tab[]) : [])] as Tab[]).map((x) => (
           <button key={x} role="tab" aria-selected={tab === x} onClick={() => (setTab(x), setDrafts(null), setError(null))} className="min-h-10 rounded-full px-4 text-sm font-medium text-muted aria-selected:bg-panel aria-selected:text-ink aria-selected:shadow-soft">
             {t(`import.tab.${x}`)}
           </button>
@@ -119,9 +158,16 @@ export function ImportPanel({ profileId, classes, locale, onDone }: { profileId:
             {t("import.pasteLabel")}
           </label>
           <textarea id="paste" rows={7} value={text} onChange={(e) => setText(e.target.value.slice(0, 20000))} placeholder={t("import.pastePlaceholder")} className="k-input min-h-40 py-3 font-opmono text-sm" />
-          <Button onClick={fromPaste} disabled={!text.trim()}>
-            {t("import.findDates")}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={fromPaste} disabled={!text.trim()}>
+              {t("import.findDates")}
+            </Button>
+            {ai && ai !== "demo" && (
+              <Button variant="secondary" loading={busy} onClick={() => readWithAi({ text })} disabled={!text.trim()}>
+                {t("import.readAi")}
+              </Button>
+            )}
+          </div>
         </div>
       )}
       {!drafts && tab === "file" && (
@@ -149,6 +195,12 @@ export function ImportPanel({ profileId, classes, locale, onDone }: { profileId:
             {t("import.getEvents")}
           </Button>
         </div>
+      )}
+      {!drafts && tab === "photo" && (
+        <label className="flex min-h-24 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border bg-panel2/60 px-4 text-center text-sm text-ink hover:border-ink/30">
+          <IconPaperclip size={18} /> {busy ? t("import.reading") : t("import.choosePhoto")}
+          <input type="file" accept="image/*,application/pdf" capture="environment" className="sr-only" disabled={busy} onChange={(e) => e.target.files?.[0] && fromPhoto(e.target.files[0])} />
+        </label>
       )}
       {error && <Notice tone="warn">{error}</Notice>}
 
@@ -179,6 +231,16 @@ export function ImportPanel({ profileId, classes, locale, onDone }: { profileId:
             </>
           ) : (
             <p className="text-sm text-muted">{t("import.nothingFound")}</p>
+          )}
+          {aiNotes.length > 0 && (
+            <div className="rounded-md border border-border bg-panel2/60 px-4 py-3">
+              <p className="text-sm font-medium text-ink">{t("import.aiGuesses")}</p>
+              <ul className="mt-1 list-disc pl-5 text-sm text-muted">
+                {aiNotes.map((u, i) => (
+                  <li key={i}>{u}</li>
+                ))}
+              </ul>
+            </div>
           )}
           {undated.length > 0 && (
             <div className="rounded-md border border-border bg-panel2/60 px-4 py-3">

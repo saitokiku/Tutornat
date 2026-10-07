@@ -104,6 +104,7 @@ function Calendar() {
             profileId={profile.id}
             classes={classes}
             locale={profile.locale}
+            grade={profile.grade}
             onDone={(msg) => {
               setPanel(null);
               setMessage(msg);

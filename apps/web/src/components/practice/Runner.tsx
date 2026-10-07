@@ -51,7 +51,8 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   const subjectTint = SUBJECT_TINT[set.subject];
   const silent = set.kind === "check" || set.kind === "placement";
   const skill = getSkill(set.skillId);
-  useTitle(skill ? `${t(KIND_LABEL[set.kind])} · ${skill.title[learner.locale]}` : t("practice.title"));
+  const heading = skill?.title[learner.locale] ?? set.topic ?? "";
+  useTitle(heading ? `${t(KIND_LABEL[set.kind])} · ${heading}` : t("practice.title"));
 
   const answers = useStore((s) => answersIn(s, set.id));
   const liveSet = useStore((s) => s.sets.find((x) => x.id === set.id)) ?? set;
@@ -91,10 +92,11 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   const slotSkill = slot ? getSkill(slot.skillId) : undefined;
   const mainAnswers = answers.filter((a) => a.skillId === set.skillId && a.mode !== "review");
   const level = slot ? slot.level ?? levelInSet(startLevel, slotSkill?.levels ?? 1, mainAnswers) : 1;
-  const item: Item | undefined = useMemo(
-    () => (slot && slotSkill ? makeItem(slot.skillId, level, slot.seed, learner.locale) : undefined),
-    [slot, slotSkill, level, learner.locale],
-  );
+  const aiQ = index !== undefined ? liveSet.ai?.[index] : undefined;
+  const item: Item | undefined = useMemo(() => {
+    if (slot && aiQ) return fromAi(aiQ, slot.skillId, slot.seed);
+    return slot && slotSkill ? makeItem(slot.skillId, level, slot.seed, learner.locale) : undefined;
+  }, [slot, slotSkill, aiQ, level, learner.locale]);
 
   useEffect(() => {
     shownAt.current = Date.now();
@@ -173,8 +175,11 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
               <IconX size={20} />
             </Link>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-ink">{skill?.title[learner.locale]}</p>
-              <p className="text-xs text-muted">{t(KIND_LABEL[set.kind])}{fixing ? ` · ${t("practice.fixThese")}` : ""}</p>
+              <p className="truncate text-sm font-semibold text-ink">{heading}</p>
+              <p className="text-xs text-muted">
+                {set.ai ? t("practice.aiQuestions") : t(KIND_LABEL[set.kind])}
+                {fixing ? ` · ${t("practice.fixThese")}` : ""}
+              </p>
             </div>
             <Progress set={liveSet} answers={answers} index={index} />
           </div>
@@ -364,7 +369,7 @@ function Finish({
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
   const seconds = answers.reduce((n, a) => n + a.seconds, 0);
-  const pace = answers.reduce((n, a) => n + makeItem(a.skillId, a.level, a.seed, learner.locale).seconds, 0);
+  const pace = answers.reduce((n, a) => n + (getSkill(a.skillId) ? makeItem(a.skillId, a.level, a.seed, learner.locale).seconds : 30), 0);
   const minutes = (s: number) => Math.max(1, Math.round(s / 60));
   const passed = set.kind === "check" && tally.own >= RULES.checkPass;
 
@@ -414,6 +419,7 @@ function Finish({
         <Link href={exitHref} className={btn("primary")}>
           {exitHref === "/home" ? t("practice.backToday") : t("practice.backPractice")}
         </Link>
+        {set.ai && <p className="w-full text-sm text-muted">{t("practice.aiNote")}</p>}
         {set.kind !== "check" && set.kind !== "placement" && skill && (
           <Link href={`/practice?again=${encodeURIComponent(skill.id)}`} className={btn("secondary")}>
             {t("practice.again")}
@@ -422,6 +428,24 @@ function Finish({
       </div>
     </main>
   );
+}
+
+/** An AI-written question as a practice item: tap a choice, vetted by its own key index. */
+function fromAi(q: { prompt: string; choices: string[]; answer: number; hints: string[]; explain: string }, skillId: string, seed: number): Item {
+  return {
+    id: `${skillId}:${seed}`,
+    skillId,
+    level: 1,
+    seed,
+    prompt: [q.prompt],
+    say: q.prompt,
+    input: "choices",
+    choices: q.choices.map((c) => ({ label: c, say: c })),
+    answer: { kind: "choice", index: q.answer },
+    hints: q.hints,
+    steps: [q.explain],
+    seconds: 30,
+  };
 }
 
 /** A practice set started from anywhere: creates the set and returns its URL. */

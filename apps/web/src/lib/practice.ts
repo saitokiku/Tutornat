@@ -9,7 +9,8 @@ import {
   placementNext,
   type Statuses,
 } from "@/learning/engine";
-import type { Attempt, Mode, PracticeSet, SetKind, Slot } from "@/learning/types";
+import type { AiQuestion, Attempt, Mode, PracticeSet, SetKind, Slot } from "@/learning/types";
+import { guessSubject } from "./generate";
 import { randomSeed } from "@/practice/rng";
 import { getSkill } from "@/practice/skills";
 import { newId, update, type StoreState } from "./store";
@@ -182,3 +183,30 @@ export function finishSet(setId: string) {
 
 /** Answers given in one set, in order. */
 export const answersIn = (s: StoreState, setId: string) => s.attempts.filter((a) => a.setId === setId).sort((a, b) => a.at - b.at);
+
+/** A set of AI-written questions for a topic the skill map does not cover. */
+export function startAiSet(profile: Profile, topic: string, questions: AiQuestion[], now: number): string | null {
+  if (!questions.length) return null;
+  const slug = topic.toLowerCase().replace(/[^a-z0-9áéíóúñü]+/g, "-").slice(0, 40);
+  const set: PracticeSet = {
+    id: newId(),
+    profileId: profile.id,
+    createdAt: now,
+    kind: "pick",
+    subject: guessSubject(topic),
+    skillId: `ai:${slug}`,
+    slots: questions.map((_, i) => ({ skillId: `ai:${slug}`, seed: i + 1, role: "main" as const, level: 1 })),
+    topic: topic.slice(0, 120),
+    ai: questions,
+  };
+  update((s) => void s.sets.push(set));
+  return set.id;
+}
+
+/** Fetches AI-written questions; null when AI is not connected or the request failed. */
+export async function aiQuestions(topic: string, grade: Grade, locale: Profile["locale"]): Promise<AiQuestion[] | null> {
+  const res = await fetch("/api/ai/practice", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ topic, grade, locale, count: 8 }) }).catch(() => null);
+  if (!res?.ok) return null;
+  const { items } = (await res.json()) as { items: AiQuestion[] };
+  return items;
+}

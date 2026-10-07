@@ -9,7 +9,8 @@ import { checkOpen, STATUS_DOT, statusLine } from "@/components/practice/status"
 import { Badge, Button, SubjectDot } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
 import { gradeIndex, skillsFor } from "@/practice/skills";
-import { nextSkillFor, settingsOf, startOf, startSet, statusesOf } from "@/lib/practice";
+import { useAiMode } from "@/lib/ai/client";
+import { aiQuestions, nextSkillFor, settingsOf, startAiSet, startOf, startSet, statusesOf } from "@/lib/practice";
 import { currentLearner } from "@/lib/profiles";
 import { read, useStore } from "@/lib/store";
 import type { Grade, Profile, Subject } from "@/lib/types";
@@ -42,6 +43,18 @@ function Practice() {
   const statuses = useStore((s) => statusesOf(s, learner.id, now));
   const next = useStore((s) => nextSkillFor(s, learner, subject, now));
   const [query, setQuery] = useState("");
+  const ai = useAiMode();
+  const [making, setMaking] = useState(false);
+  const [aiFailed, setAiFailed] = useState(false);
+  const makeQuestions = async () => {
+    setMaking(true);
+    setAiFailed(false);
+    const qs = await aiQuestions(query.trim(), learner.grade, learner.locale);
+    setMaking(false);
+    const id = qs && startAiSet(learner, query.trim(), qs, now);
+    if (id) router.push(`/practice/${id}`);
+    else setAiFailed(true);
+  };
   const skills = skillsFor(subject);
   const locale = learner.locale;
 
@@ -143,7 +156,18 @@ function Practice() {
         />
         {query.trim().length >= 2 && (
           <ul className="divide-y divide-border rounded-lg border border-border bg-panel" aria-live="polite">
-            {matches.length === 0 && <li className="px-4 py-3.5 text-sm text-muted">{t("practice.noMatch")}</li>}
+            {matches.length === 0 && ai === "demo" && <li className="px-4 py-3.5 text-sm text-muted">{t("practice.noMatch")}</li>}
+            {ai && ai !== "demo" && (
+              <li className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:px-5">
+                <span className="min-w-0 flex-1 text-sm text-ink">
+                  {t("practice.makeQuestions", { topic: query.trim() })}
+                  <span className="block text-xs text-muted">{aiFailed ? t("practice.aiFailed") : t("practice.aiNote")}</span>
+                </span>
+                <Button size="sm" variant="secondary" loading={making} onClick={makeQuestions}>
+                  {t("practice.make")}
+                </Button>
+              </li>
+            )}
             {matches.map((s) => (
               <SkillRow key={s.id} skill={s} status={statusLine(statuses[s.id], now, locale)} dot={STATUS_DOT[statuses[s.id]?.state ?? "new"]} locale={locale} onPractice={() => go("pick", s.id)} />
             ))}

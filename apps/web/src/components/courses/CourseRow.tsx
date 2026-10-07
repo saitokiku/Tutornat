@@ -29,6 +29,8 @@ export function CourseRow({ course, events }: { course: Course; events: Activity
           <Badge>{t("course.readyMade")}</Badge>
         ) : course.template ? (
           <Badge tone="warn">{t("gen.template")}</Badge>
+        ) : course.ai ? (
+          <Badge>{t("gen.aiWritten")}</Badge>
         ) : null}
         <IconChevronRight size={18} className="shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
       </Link>

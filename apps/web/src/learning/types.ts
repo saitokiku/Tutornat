@@ -31,6 +31,9 @@ export type Slot = {
   level?: number;
 };
 
+/** A question written by a model for an open topic. Checked by index; never counts toward proving a skill. */
+export type AiQuestion = { prompt: string; choices: string[]; answer: number; hints: string[]; explain: string };
+
 export type PracticeSet = {
   id: string;
   profileId: string;
@@ -46,4 +49,7 @@ export type PracticeSet = {
   planKey?: string;
   /** School event a prep set is for. */
   eventId?: string;
+  /** Open-topic sets: the topic and its AI-written questions (slot i ↔ question i). */
+  topic?: string;
+  ai?: AiQuestion[];
 };

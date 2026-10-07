@@ -671,6 +671,26 @@ const en = {
   "nav.talk": "Talk",
 
   "practice.form.simplified": "Those are equal. Now simplify it all the way: combine what you can.",
+
+  "gen.useTemplate": "Use a template instead",
+  "gen.errModel": "The lesson writer couldn't finish. Try again, or start from a template you can edit.",
+  "gen.errRate": "Too many courses at once. Wait a minute and try again.",
+  "gen.skipped": "Left out because they didn't pass the quality check: {titles}.",
+  "gen.aiWritten": "Written by AI",
+
+  "practice.aiQuestions": "AI-written questions",
+  "practice.aiNote": "Questions written by AI for this topic. They are practice only and never count as proof.",
+  "practice.makeQuestions": "Make practice questions about “{topic}”",
+  "practice.make": "Make them",
+  "practice.aiFailed": "That didn't work just now. Try again, or try other words.",
+
+  "import.tab.photo": "Photo",
+  "import.readAi": "Read it with AI",
+  "import.choosePhoto": "Take or choose a photo of the syllabus, calendar or graded work",
+  "import.reading": "Reading…",
+  "import.photoTooBig": "That photo is too big (over 6 MB). Try a smaller one.",
+  "import.aiFailed": "The AI couldn't read that. Try again, or paste the text instead.",
+  "import.aiGuesses": "What the AI had to guess — check these:",
 } as const;
 
 export default en;

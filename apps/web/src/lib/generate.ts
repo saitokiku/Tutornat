@@ -81,7 +81,63 @@ function sleep(ms: number, signal: AbortSignal) {
   });
 }
 
-export async function* generateOutline(req: GenerationRequest, signal: AbortSignal, pace = 550): AsyncGenerator<GenerationEvent> {
+/** Gives every scene, question and sorter item an id, as the lesson stage expects. */
+export function withIds(raw: Omit<Lesson, "id" | "scenes"> & { id?: string; scenes: unknown[] }): Lesson {
+  const scenes = (raw.scenes as Record<string, unknown>[]).map((sc) => {
+    const scene = { ...sc, id: newId() } as Record<string, unknown>;
+    if (scene.kind === "quiz") scene.questions = (scene.questions as Record<string, unknown>[]).map((q) => ({ ...q, id: newId() }));
+    if (scene.kind === "interactive" && (scene.widget as { kind: string }).kind === "sorter") {
+      const w = scene.widget as { items: Record<string, unknown>[] };
+      scene.widget = { ...w, items: w.items.map((i) => ({ ...i, id: newId() })) };
+    }
+    return scene;
+  });
+  return { ...raw, id: raw.id ?? newId(), scenes } as Lesson;
+}
+
+/** Reads the AI course stream (one JSON event per line) from /api/ai/course. */
+async function* aiOutline(req: GenerationRequest, signal: AbortSignal): AsyncGenerator<GenerationEvent> {
+  let res: Response;
+  try {
+    res = await fetch("/api/ai/course", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...req, sources: req.sources.map((s) => ({ name: s.name, kind: s.kind })) }),
+      signal,
+    });
+  } catch {
+    if (!signal.aborted) yield { type: "error", error: "network" };
+    return;
+  }
+  if (!res.ok || !res.body) return yield { type: "error", error: res.status === 429 ? "rate" : "model" };
+  yield { type: "mode", ai: true };
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read().catch(() => ({ done: true, value: undefined }));
+    if (done) break;
+    buf += value;
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line) continue;
+      const e = JSON.parse(line) as { type: string; step?: "planning" | "writing"; lesson?: Parameters<typeof withIds>[0]; title?: string; error?: string };
+      if (e.type === "step") yield { type: "step", step: e.step! };
+      else if (e.type === "lesson") yield { type: "lesson", lesson: withIds(e.lesson!) };
+      else if (e.type === "skipped") yield { type: "skipped", title: e.title! };
+      else if (e.type === "error") yield { type: "error", error: e.error ?? "model" };
+      else if (e.type === "done") yield { type: "done" };
+    }
+  }
+}
+
+export async function* generateOutline(req: GenerationRequest, signal: AbortSignal, pace = 550, ai = false): AsyncGenerator<GenerationEvent> {
+  if (ai) {
+    yield { type: "step", step: "reading" };
+    yield* aiOutline(req, signal);
+    return;
+  }
   const steps: GenerationEvent[] = [{ type: "step", step: "reading" }, { type: "step", step: "planning" }, { type: "step", step: "writing" }];
   const events: GenerationEvent[] = [...steps, ...templateLessons(req).map((lesson) => ({ type: "lesson" as const, lesson })), { type: "done" }];
   for (const event of events) {

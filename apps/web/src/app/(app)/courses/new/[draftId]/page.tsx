@@ -14,10 +14,12 @@ import { Badge, Button, Notice, Spinner, SubjectDot } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
 import { addFromCatalogue, getCourse, removeCourse, saveCourse } from "@/lib/courses";
+import { aiStatus } from "@/lib/ai/client";
 import { generateOutline } from "@/lib/generate";
+import { recentSkills } from "@/lib/practice";
 import { KIND_TAG } from "@/lib/files";
 import { currentLearner } from "@/lib/profiles";
-import { useStore } from "@/lib/store";
+import { read, useStore } from "@/lib/store";
 import type { Course, Lesson, Profile } from "@/lib/types";
 
 export default function DraftPage() {
@@ -45,31 +47,47 @@ function Draft() {
   const [started, setStarted] = useState(() => Date.now());
   const [now, setNow] = useState(started);
   const ctrl = useRef<AbortController | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [skipped, setSkipped] = useState<string[]>([]);
 
   // Reads the outline stream; state only changes from its events, so it can run inside an effect.
-  const stream = async (course: Course, c: AbortController) => {
+  const stream = async (course: Course, c: AbortController, forceTemplate = false) => {
     const got: Lesson[] = [];
-    const req = { goal: course.goal, grade: course.grade, subject: course.subject, length: course.length, locale: course.locale, sources: course.sources };
-    for await (const e of generateOutline(req, c.signal)) {
+    const ai = !forceTemplate && (await aiStatus()) !== "demo";
+    const req = {
+      goal: course.goal,
+      grade: course.grade,
+      subject: course.subject,
+      length: course.length,
+      locale: course.locale,
+      sources: course.sources,
+      interests: learner.interests,
+      working: recentSkills(read(), learner.id, Date.now()).slice(0, 6),
+    };
+    setFailed(null);
+    setSkipped([]);
+    for await (const e of generateOutline(req, c.signal, 550, ai)) {
       if (e.type === "step") setSteps((s) => [...s, { key: `gen.step.${e.step}`, at: Date.now() }]);
       if (e.type === "lesson") {
         got.push(e.lesson);
         setLessons([...got]);
         setSteps((s) => [...s, { key: "gen.lessonArrived", vars: { n: got.length }, at: Date.now() }]);
       }
-      if (e.type === "done") saveCourse({ ...course, lessons: got });
+      if (e.type === "skipped") setSkipped((s) => [...s, e.title]);
+      if (e.type === "error") setFailed(e.error);
+      if (e.type === "done") saveCourse({ ...course, lessons: got, template: !ai, ai: ai || undefined });
     }
     if (!c.signal.aborted) setRunning(false);
   };
 
-  const restart = (course: Course) => {
+  const restart = (course: Course, forceTemplate = false) => {
     ctrl.current?.abort();
     ctrl.current = new AbortController();
     setLessons([]);
     setSteps([]);
     setRunning(true);
     setStarted(Date.now());
-    void stream(course, ctrl.current);
+    void stream(course, ctrl.current, forceTemplate);
   };
 
   // Start automatically when arriving from the magic box; abort if the page goes away.
@@ -217,6 +235,25 @@ function Draft() {
         </section>
       )}
 
+      {failed && !running && (
+        <Notice
+          tone="warn"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => restart(draft)}>
+                {t("common.retry")}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => restart(draft, true)}>
+                {t("gen.useTemplate")}
+              </Button>
+            </div>
+          }
+        >
+          {t(failed === "rate" ? "gen.errRate" : "gen.errModel")}
+        </Notice>
+      )}
+      {skipped.length > 0 && !running && <p className="text-sm text-muted">{t("gen.skipped", { titles: skipped.join(", ") })}</p>}
+
       {lessons.length > 0 && (
         <section aria-labelledby="outline" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -224,6 +261,7 @@ function Draft() {
               {t("gen.lessons")}
             </h2>
             {draft.template && <Badge tone="warn">{t("gen.template")}</Badge>}
+            {draft.ai && <Badge>{t("gen.aiWritten")}</Badge>}
           </div>
           {!running && (
             <div className="space-y-1.5">

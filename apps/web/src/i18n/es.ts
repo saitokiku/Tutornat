@@ -673,6 +673,26 @@ const es: Record<Key, string> = {
   "nav.talk": "Hablar",
 
   "practice.form.simplified": "Son iguales. Ahora simplifícalo por completo: combina lo que puedas.",
+
+  "gen.useTemplate": "Usar una plantilla",
+  "gen.errModel": "El escritor de lecciones no pudo terminar. Inténtalo de nuevo o empieza con una plantilla que puedes editar.",
+  "gen.errRate": "Demasiados cursos a la vez. Espera un minuto e inténtalo de nuevo.",
+  "gen.skipped": "Se dejaron fuera porque no pasaron la revisión de calidad: {titles}.",
+  "gen.aiWritten": "Escrito por IA",
+
+  "practice.aiQuestions": "Preguntas escritas por IA",
+  "practice.aiNote": "Preguntas escritas por IA para este tema. Son solo práctica y nunca cuentan como prueba.",
+  "practice.makeQuestions": "Crear preguntas de práctica sobre “{topic}”",
+  "practice.make": "Crearlas",
+  "practice.aiFailed": "No funcionó ahora. Inténtalo de nuevo o con otras palabras.",
+
+  "import.tab.photo": "Foto",
+  "import.readAi": "Leerlo con IA",
+  "import.choosePhoto": "Toma o elige una foto del plan de estudios, el calendario o un trabajo calificado",
+  "import.reading": "Leyendo…",
+  "import.photoTooBig": "Esa foto es demasiado grande (más de 6 MB). Prueba con una más pequeña.",
+  "import.aiFailed": "La IA no pudo leerlo. Inténtalo de nuevo o pega el texto.",
+  "import.aiGuesses": "Lo que la IA tuvo que adivinar; revísalo:",
 };
 
 export default es;

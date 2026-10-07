@@ -121,6 +121,8 @@ export type Course = {
   assigned?: boolean;
   /** True when the outline came from the demo template generator rather than a model. */
   template: boolean;
+  /** Written by a model (and passed the quality gates). Shown as "Written by AI" everywhere. */
+  ai?: boolean;
   createdAt: number;
   updatedAt: number;
 };
@@ -148,9 +150,14 @@ export type GenerationRequest = {
   length: CourseLength;
   locale: Locale;
   sources: SourceItem[];
+  interests?: string[];
+  working?: string[];
 };
 
 export type GenerationEvent =
   | { type: "step"; step: "reading" | "planning" | "writing" }
+  | { type: "mode"; ai: boolean }
   | { type: "lesson"; lesson: Lesson }
+  | { type: "skipped"; title: string }
+  | { type: "error"; error: string }
   | { type: "done" };

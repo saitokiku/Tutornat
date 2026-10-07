@@ -71,6 +71,7 @@ function CourseView() {
           {t(`subject.${course.subject}` as const)} · {gradeLabel(learner.locale, course.grade)}
           {course.origin === "catalogue" && <Badge>{t("course.readyMade")}</Badge>}
           {course.template && <Badge tone="warn">{t("gen.template")}</Badge>}
+          {course.ai && <Badge>{t("gen.aiWritten")}</Badge>}
           <LangTag course={course.locale} learner={learner.locale} />
         </p>
         <h1 lang={course.locale} className="font-brand text-t1 font-semibold text-balance text-ink sm:text-d3">
