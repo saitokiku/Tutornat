@@ -76,6 +76,32 @@ test("over the daily cap the tutor says so kindly, in its own voice, and practic
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
+// The forced cap against the real server, opt-in because it spends one real model turn: start the
+// server with a provider and KAIZEN_AI_ADDRESS_DAILY_TURNS=1, then run with E2E_AI_CAP=1. (The
+// address ceiling is the cap every request meets today; the learner's own cap needs TutorChat to
+// send through aiFetch.)
+test("a forced cap on the real server: one reply from the model, then the tutor's cap line", async ({ page }) => {
+  test.skip(!process.env.E2E_AI_CAP, "set E2E_AI_CAP=1 with the server started as described above");
+  const { mode } = await (await page.request.get("/api/ai/status")).json();
+  test.skip(mode === "demo", "this server has no AI provider");
+  await family(page, "aiforced", [["Ada", "3"]]);
+  await page.getByRole("button", { name: /Ada/ }).click();
+  await page.goto("/talk");
+  const log = page.getByRole("log");
+  const box = page.getByRole("textbox");
+  const first = page.waitForResponse("**/api/tutor");
+  await box.fill("what is a fraction?");
+  await page.keyboard.press("Enter");
+  await (await first).finished();
+  await expect(log.getByText(en["ai.budget.tutor.day"])).toHaveCount(0);
+  await box.fill("can you show me one?");
+  await page.keyboard.press("Enter");
+  await expect(log.getByText(en["ai.budget.tutor.day"])).toBeVisible({ timeout: 30_000 });
+  await box.fill("i want to die");
+  await page.keyboard.press("Enter");
+  await expect(log.getByText("988", { exact: false })).toBeVisible();
+});
+
 test("without a provider no AI route goes near a model, whatever the caps", async ({ request }) => {
   const { mode } = await (await request.get("/api/ai/status")).json();
   test.skip(mode !== "demo", "this server has an AI provider configured");
