@@ -478,4 +478,6 @@ const ecuacionesEs: CatalogueEntry = {
   ],
 };
 
+export { practice } from "./math-equations";
+
 export default ecuacionesEs;

@@ -101,11 +101,11 @@ const linearFunctions: CatalogueEntry = {
             },
             {
               id: "q3",
-              prompt: "A snack machine has buttons. Which machine is not a function from button to snack?",
+              prompt: "A snack machine is a function from button to snack when each button gives exactly one snack. Which of these breaks that rule?",
               choices: ["Button A always gives crackers.", "Buttons C and D both give pretzels.", "Button B sometimes gives crackers and sometimes pretzels."],
               answer: 2,
               hint: "The input is the button and the output is the snack.",
-              explain: "Button B gives two different outputs for the same input, so that machine isn't a function. Two buttons giving the same snack is fine.",
+              explain: "Button B gives two different outputs for the same input, so a machine with that button isn't a function. Two buttons giving the same snack is fine.",
             },
           ],
         },
@@ -464,6 +464,14 @@ const linearFunctions: CatalogueEntry = {
       ],
     },
   ],
+};
+
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+export const practice: Record<string, string[]> = {
+  functions: ["m.func.eval"],
+  "rate-initial": ["m.linear.table", "m.slope"],
+  "linear-nonlinear": ["m.linear.table"],
+  "reading-graphs": ["m.slope"],
 };
 
 export default linearFunctions;

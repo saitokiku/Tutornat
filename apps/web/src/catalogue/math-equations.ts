@@ -238,7 +238,7 @@ const equations: CatalogueEntry = {
     },
     {
       id: "simplify-first",
-      title: "Brackets and like terms",
+      title: "Parentheses and like terms",
       summary: "Combine like terms and use the distributive property, so the equation becomes one you can solve in two steps.",
       minutes: 14,
       scenes: [
@@ -258,7 +258,7 @@ const equations: CatalogueEntry = {
         {
           id: "s2",
           kind: "slide",
-          title: "Brackets",
+          title: "Parentheses",
           blocks: [
             { type: "text", text: "2(x + 3) = 16 means 2 groups of x + 3 make 16." },
             {
@@ -327,7 +327,7 @@ const equations: CatalogueEntry = {
               prompt: "Kai wrote 2(x + 5) = 2x + 5. What went wrong?",
               choices: ["Nothing. It's right.", "The 2 must multiply both x and 5: 2x + 10.", "The 2 should be added: x + 7."],
               answer: 1,
-              hint: "Distributing means multiplying every term inside the brackets.",
+              hint: "Distributing means multiplying every term inside the parentheses.",
               explain: "2(x + 5) = 2 × x + 2 × 5 = 2x + 10.",
             },
           ],
@@ -476,6 +476,14 @@ const equations: CatalogueEntry = {
       ],
     },
   ],
+};
+
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+export const practice: Record<string, string[]> = {
+  "one-step": ["m.eq.onestep"],
+  "two-step": ["m.eq.twostep"],
+  "simplify-first": ["m.expr.simplify", "m.eq.multistep"],
+  "both-sides": ["m.eq.multistep"],
 };
 
 export default equations;

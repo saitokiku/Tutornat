@@ -457,4 +457,12 @@ const ratios: CatalogueEntry = {
   ],
 };
 
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+export const practice: Record<string, string[]> = {
+  "what-ratio": ["m.ratio.equiv"],
+  "ratio-tables": ["m.ratio.equiv"],
+  "unit-rates": ["m.ratio.unit"],
+  "rate-problems": ["m.ratio.unit"],
+};
+
 export default ratios;

@@ -463,4 +463,12 @@ const pythagorean: CatalogueEntry = {
   ],
 };
 
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+export const practice: Record<string, string[]> = {
+  "square-roots": ["m.sqrt"],
+  theorem: ["m.pythag"],
+  converse: ["m.pythag"],
+  distances: ["m.pythag"],
+};
+
 export default pythagorean;

@@ -448,4 +448,12 @@ const proportional: CatalogueEntry = {
   ],
 };
 
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+export const practice: Record<string, string[]> = {
+  "proportional-or-not": ["m.proportion"],
+  constant: ["m.proportion", "m.ratio.unit"],
+  "solving-proportions": ["m.proportion"],
+  "scale-drawings": ["m.proportion"],
+};
+
 export default proportional;

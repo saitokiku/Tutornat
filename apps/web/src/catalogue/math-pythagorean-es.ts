@@ -467,4 +467,6 @@ const pitagorasEs: CatalogueEntry = {
   ],
 };
 
+export { practice } from "./math-pythagorean";
+
 export default pitagorasEs;
