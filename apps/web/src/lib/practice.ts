@@ -140,7 +140,7 @@ export function startSet(state: StoreState, opts: StartOpts): string | null {
   return set.id;
 }
 
-export type AnswerRecord = { slot: number; level: number; correct: boolean; assisted: boolean; seconds: number; response?: string };
+export type AnswerRecord = { slot: number; level: number; correct: boolean; assisted: boolean; seconds: number; response?: string; why?: string };
 
 export function recordAnswer(setId: string, a: AnswerRecord) {
   update((s) => {
@@ -164,6 +164,7 @@ export function recordAnswer(setId: string, a: AnswerRecord) {
       assisted: set.kind === "check" ? false : a.assisted,
       seconds: Math.min(Math.max(0, Math.round(a.seconds)), 3600),
       response: a.response?.slice(0, 80),
+      why: a.correct ? undefined : a.why?.slice(0, 40),
     });
   });
 }
