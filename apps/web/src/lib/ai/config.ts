@@ -76,21 +76,24 @@ function fromProvider(u: Usage | undefined, sentChars: number, seenChars: number
   return { input: u!.inputTokens.noCache ?? Math.max(0, total - cacheRead - cacheWrite), output: u!.outputTokens.total ?? tokensIn(seenChars), cacheRead, cacheWrite };
 }
 
-/** Wraps a model so each call is reported to the meter: the turn when it starts, the tokens when it ends. */
+/**
+ * Wraps a model so each call is reported to the meter: the turn once the provider has taken the call
+ * (a provider outage costs a learner nothing), the tokens when it ends.
+ */
 export function metered(m: Wrappable, meter: Meter) {
   return wrapLanguageModel({
     model: m,
     middleware: {
       wrapGenerate: async ({ doGenerate, params, model: inner }) => {
-        meter.start();
         const r = await doGenerate();
+        meter.start();
         meter.usage(inner.modelId, fromProvider(r.usage, JSON.stringify(params.prompt).length, 0));
         return r;
       },
       wrapStream: async ({ doStream, params, model: inner }) => {
-        meter.start();
         const sent = JSON.stringify(params.prompt).length;
         const r = await doStream();
+        meter.start();
         const reader = r.stream.getReader();
         let seen = 0;
         let reported = false;

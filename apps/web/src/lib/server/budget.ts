@@ -92,13 +92,23 @@ function keysOf(req: Request, now: number) {
   return { day: `day:${who.learner}:${dayOf(req, now)}`, month: `month:${who.account}:${monthOf(now)}` };
 }
 
+let pruneAt = 20_000;
+
+/** Drops days other than yesterday, today and tomorrow, and months other than this one. */
+function prune(now: number) {
+  const month = monthOf(now);
+  const days = new Set([-1, 0, 1].map((d) => utcDay(now + d * 86_400_000)));
+  for (const k of spending.keys()) {
+    const period = k.slice(k.lastIndexOf(":") + 1);
+    if (k.startsWith("day:") ? !days.has(period) : period !== month) spending.delete(k);
+  }
+  pruneAt = Math.max(20_000, spending.size * 2);
+}
+
 function add(key: string, d: Partial<Spend>, now: number) {
   const s = spending.get(key) ?? ZERO;
   spending.set(key, { turns: s.turns + (d.turns ?? 0), usd: s.usd + (d.usd ?? 0), tokens: s.tokens + (d.tokens ?? 0) });
-  if (spending.size > 20_000) {
-    const month = monthOf(now);
-    for (const k of spending.keys()) if (!k.includes(`:${month}`)) spending.delete(k);
-  }
+  if (spending.size > pruneAt) prune(now);
 }
 
 /** What this learner spent today and their account this month. */

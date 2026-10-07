@@ -57,9 +57,16 @@ function learnerLine(req: CourseRequest) {
 
 /* ------------------------------------------------------------------ voice rules, checked in code */
 
-/** Praise and hype the voice rules forbid. Maths terms ("perfect square") and names ("Great Lakes") are not praise. */
-export const PRAISE =
-  /\b(great job|good job|good work|nice (job|work|try)|well done|awesome|amazing|fantastic|excellent|wonderful|brilliant|terrific|outstanding|superb|great(?! (deal|lakes|wall|plains|britain|barrier|depression|lake|grand))|perfect(?! (square|cube|number|fifth))|buen trabajo|bien hecho|muy bien|genial|excelente|incre[ií]ble|fant[aá]stico|maravillos[oa]|estupend[oa]|magn[ií]fic[oa]|perfecto)\b/i;
+/**
+ * Praise and hype the voice rules forbid: canned praise anywhere, and words like "great" or "perfect"
+ * when they stand alone as an exclamation ("Great.", "¡Perfecto!"). Describing words stay allowed:
+ * "a perfect square", "the Great Lakes", "copper is an excellent conductor".
+ */
+const PRAISE =
+  /\b(great job|good job|great work|good work|nice (job|work|try)|well done|good thinking|great thinking|great question|good question|you'?re so smart|that'?s (great|awesome|perfect|excellent|amazing|wonderful)|awesome|amazing|fantastic|terrific|superb|buen trabajo|bien hecho|muy bien|genial|incre[ií]ble|fant[aá]stico|estupend[oa])\b|(?:^|[.!?¡]\s*)(great|excellent|perfect|wonderful|brilliant|nice|excelente|perfecto|maravilloso|magn[ií]fico)\b(?=\s*[.!,])/im;
+
+/** The praise in `text`, if any, as written. */
+export const praiseIn = (text: string) => text.match(PRAISE)?.[0].replace(/^[.!?¡\s]+/, "");
 const FILLER = /let'?s dive in|fun fact|in this lesson,? we will|dato curioso|en esta lecci[oó]n vamos a|vamos a sumergirnos/i;
 const EMOJI = /\p{Extended_Pictographic}/u;
 const LINK = /https?:\/\/|www\.|\b[\w-]+\.(com|org|net|edu|gov)\b/i;
@@ -131,7 +138,7 @@ export function gateWritten(l: LessonOut, req: Pick<CourseRequest, "grade" | "lo
   const all = texts.join("\n");
   if (/[!¡]/.test(all)) problems.push("exclamation mark");
   if (EMOJI.test(all)) problems.push("emoji");
-  const praise = all.match(PRAISE)?.[0];
+  const praise = praiseIn(all);
   if (praise) problems.push(`praise word "${praise}"`);
   const filler = all.match(FILLER)?.[0];
   if (filler) problems.push(`filler "${filler}"`);

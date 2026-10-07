@@ -1,4 +1,4 @@
-import { languageOf, mentions, PRAISE, sentences } from "@/lib/ai/build";
+import { languageOf, mentions, praiseIn, sentences } from "@/lib/ai/build";
 import type { Item } from "@/practice/types";
 
 // The deterministic checks every tutor reply is held to (plan §6: ≥ 90% must pass on the real model).
@@ -103,7 +103,7 @@ export function checkTurn(f: TurnFacts): Check[] {
   const short = statements <= 2 && questions <= 1 && parts.length > 0;
   checks.push({ id: "short", pass: short, detail: short ? undefined : parts.length ? `${statements} statement(s) and ${questions} question(s)` : "the tutor said nothing" });
 
-  const praise = reply.match(PRAISE)?.[0];
+  const praise = praiseIn(reply);
   const exclaim = /[!¡]/.test(reply);
   checks.push({ id: "no-praise", pass: !praise && !exclaim, detail: praise ? `"${praise}"` : exclaim ? "exclamation mark" : undefined });
 

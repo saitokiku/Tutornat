@@ -66,7 +66,10 @@ describe("writer gates beyond the shared ones", () => {
   it("hold the voice rules: no exclamation marks, praise, filler, emojis or links", () => {
     const loud = { ...good, summary: "Great job! Let's dive in 🍕 at www.example.com." };
     expect(gateWritten(loud, req)).toEqual(expect.arrayContaining(["exclamation mark", 'praise word "Great job"', "filler \"Let's dive in\"", "emoji", "names a website"]));
-    expect(gateWritten({ ...good, summary: "Is 9 a perfect square? The Great Lakes are big." }, req)).toEqual([]);
+    expect(gateWritten({ ...good, summary: "Is 9 a perfect square? The Great Lakes are big. Copper is an excellent conductor." }, req)).toEqual([]);
+    expect(gateWritten({ ...good, summary: "Excellent. Now shade one more part." }, req)).toContain('praise word "Excellent"');
+    expect(gateWritten({ ...good, summary: "You shaded half, that's great." }, req)).toContain(`praise word "that's great"`);
+    expect(gateWritten({ ...good, summary: "Perfecto. Ahora sombrea otra parte." }, { grade: "3", locale: "es" })).toContain('praise word "Perfecto"');
   });
 
   it("keep the order: show it first, a quiz to check it, a project only at the end", () => {
