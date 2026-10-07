@@ -77,20 +77,22 @@ function ConfirmDelete({ learner, onCancel, onDelete }: { learner: Profile; onCa
   const cancel = useRef<HTMLButtonElement>(null);
   useEffect(() => cancel.current?.focus(), []);
   return (
-    <li role="group" aria-labelledby={`del-${learner.id}`} className="space-y-3 bg-bad/5 px-4 py-4">
-      <p id={`del-${learner.id}`} className="text-sm font-semibold text-ink">
-        {t("trust.learner.confirmTitle", { name: learner.nickname })}
-      </p>
-      <p className="text-sm text-ink">{t("trust.learner.confirmBody", { name: learner.nickname })}</p>
-      <Counts label={t("trust.data.counts")} counts={rest} labels={labels} />
-      <p className="max-w-prose text-xs text-muted">{t("trust.learner.later", { name: learner.nickname })}</p>
-      <div className="flex flex-wrap justify-end gap-2">
-        <button ref={cancel} type="button" onClick={onCancel} className="k-btn-ghost">
-          {t("common.cancel")}
-        </button>
-        <button type="button" onClick={onDelete} className="k-btn bg-bad text-paper hover:bg-bad/90">
-          {t("trust.learner.confirm", { name: learner.nickname })}
-        </button>
+    <li className="bg-bad/5 px-4 py-4">
+      <div role="group" aria-labelledby={`del-${learner.id}`} className="space-y-3">
+        <p id={`del-${learner.id}`} className="text-sm font-semibold text-ink">
+          {t("trust.learner.confirmTitle", { name: learner.nickname })}
+        </p>
+        <p className="text-sm text-ink">{t("trust.learner.confirmBody", { name: learner.nickname })}</p>
+        <Counts label={t("trust.data.counts")} counts={rest} labels={labels} />
+        <p className="max-w-prose text-xs text-muted">{t("trust.learner.later", { name: learner.nickname })}</p>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button ref={cancel} type="button" onClick={onCancel} className="k-btn-ghost">
+            {t("common.cancel")}
+          </button>
+          <button type="button" onClick={onDelete} className="k-btn bg-bad text-paper hover:bg-bad/90">
+            {t("trust.learner.confirm", { name: learner.nickname })}
+          </button>
+        </div>
       </div>
     </li>
   );

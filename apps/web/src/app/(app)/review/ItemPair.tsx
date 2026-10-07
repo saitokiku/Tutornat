@@ -33,7 +33,7 @@ function Side({ item, others, locale, subject }: { item: Item; others: Choice[];
   const id = useId();
   const key = item.answer.kind === "choice" ? item.answer.index : -1;
   return (
-    <section aria-labelledby={`${id}-${locale}`} className="min-w-0 space-y-3 px-4 py-4 text-sm">
+    <div role="group" aria-labelledby={`${id}-${locale}`} className="min-w-0 space-y-3 px-4 py-4 text-sm">
       <h4 id={`${id}-${locale}`} className="text-xs font-semibold text-muted">
         {t(locale === "en" ? "trust.review.english" : "trust.review.spanish")}
       </h4>
@@ -135,7 +135,7 @@ function Side({ item, others, locale, subject }: { item: Item; others: Choice[];
       <Numbered label={t("trust.review.hints")} items={item.hints} lang={locale} />
       <Numbered label={t("trust.review.steps")} items={item.steps} lang={locale} />
       <p className="font-opmono text-xs text-muted">{t("trust.review.pace", { n: item.seconds })}</p>
-    </section>
+    </div>
   );
 }
 

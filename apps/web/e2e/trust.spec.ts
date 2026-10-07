@@ -79,7 +79,7 @@ test("review: approving a skill in /review persists and it reads as reviewed", a
   await expect(page).toHaveURL(/\/review\?skill=e\.rhyme$/);
   await expect(page.getByRole("heading", { level: 1, name: "Rhyming words" })).toBeVisible();
   await expect(page.getByText(/questions: every one this level asks/).first()).toBeVisible();
-  await expect(page.getByRole("region", { name: "Spanish" }).first()).toBeVisible();
+  await expect(page.getByRole("group", { name: "Spanish" }).first()).toBeVisible();
   await noOverflow(page);
   await audit(page, "review-skill");
 

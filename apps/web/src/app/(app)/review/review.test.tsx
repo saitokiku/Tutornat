@@ -155,8 +155,8 @@ describe("ReviewTool", () => {
     expect(heading).toHaveFocus();
     expect(screen.getByText("Nobody has reviewed this skill yet.")).toBeInTheDocument();
     expect(screen.getAllByText(/every one this level asks/)).toHaveLength(rhyme.levels);
-    expect(screen.getAllByRole("region", { name: "English" }).length).toBeGreaterThan(5);
-    expect(screen.getAllByRole("region", { name: "Spanish" }).length).toBeGreaterThan(5);
+    expect(screen.getAllByRole("group", { name: "English" }).length).toBeGreaterThan(5);
+    expect(screen.getAllByRole("group", { name: "Spanish" }).length).toBeGreaterThan(5);
     expect(screen.getAllByText("Key").length).toBeGreaterThan(5);
 
     // Flag without a note: refused with an explanation. Then approve, by keyboard.
