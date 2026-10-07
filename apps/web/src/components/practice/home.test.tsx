@@ -110,7 +110,11 @@ describe("SkillMap", () => {
       "Needs a refresh",
     ]);
     expect(screen.getAllByText("Draft questions")).toHaveLength(1);
-    update((s) => void s.reviews.push({ id: newId(), skillId: draft.id, status: "approved", by: "teacher", at: Date.now() }));
+    // Review decisions are the signed-in family's own (lib/review.ts), so the approval is made by this account.
+    update((s) => {
+      s.session.accountId ??= "acct-review";
+      s.reviews.push({ id: newId(), skillId: draft.id, status: "approved", by: s.session.accountId, at: Date.now() });
+    });
     expect(await screen.findByRole("button", { name: `Practice: ${draft.title.en}` })).toBeInTheDocument();
     expect(screen.queryByText("Draft questions")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: `Practice: ${draft.title.en}` }));
