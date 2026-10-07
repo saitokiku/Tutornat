@@ -90,7 +90,7 @@ const EN_ABS: Abs[] = [
   ["curiosity", "curious", "adj", "a kitten", "a telescope"], ["pride", "proud", "adj", "a trophy", "a medal"],
   ["childhood", "grow", "verb", "a toy", "a swing"], ["loyalty", "loyal", "adj", "a dog", "a collar"],
   ["sadness", "sad", "adj", "a tissue", "a raincoat"], ["choice", "choose", "verb", "a menu", "an apple"],
-  ["hope", "hopeful", "adj", "a seed", "a rainbow"], ["peace", "peaceful", "adj", "a pillow", "a river"],
+  ["hope", "hopeful", "adj", "a seed", "a flowerpot"], ["peace", "peaceful", "adj", "a pillow", "a river"],
 ];
 const ES_ABS: Abs[] = [
   ["valentía", "valiente", "adj", "un casco", "una escalera"], ["amistad", "amistoso", "adj", "un sándwich", "una bicicleta"],
@@ -100,18 +100,21 @@ const ES_ABS: Abs[] = [
   ["curiosidad", "curioso", "adj", "un gatito", "un telescopio"], ["orgullo", "orgulloso", "adj", "un trofeo", "una medalla"],
   ["infancia", "crecer", "verb", "un juguete", "un columpio"], ["lealtad", "leal", "adj", "un perro", "un collar"],
   ["tristeza", "triste", "adj", "un pañuelo", "un impermeable"], ["paciencia", "esperar", "verb", "un reloj", "una silla"],
-  ["esperanza", "esperanzado", "adj", "una semilla", "un arcoíris"], ["justicia", "justo", "adj", "una balanza", "una mesa"],
+  ["esperanza", "esperanzado", "adj", "una semilla", "una maceta"], ["justicia", "justo", "adj", "una balanza", "una mesa"],
 ];
 const bare = (s: string) => s.replace(/^(an?|un|una) /, "");
 
 function absQ(locale: Locale, [key, rel, kind, c1, c2]: Abs): G {
   const relTag = kind === "adj" ? "adjective-not-noun" : "verb-not-noun";
-  const relSays = kind === "adj" ? tr(locale, `"${rel}" describes`, `"${rel}" describe`) : tr(locale, `"${rel}" is an action`, `"${rel}" es una acción`);
   return [
     "",
     key,
     [[rel, relTag], [bare(c1), "concrete-noun"], [bare(c2), "concrete-noun"]],
-    tr(locale, `You can touch ${c1} or ${c2}. ${cap(relSays)}, so it is not a noun.`, `Puedes tocar ${c1} o ${c2}. ${cap(relSays)}, así que no es un sustantivo.`),
+    tr(
+      locale,
+      `Start with "${bare(c1)}": can you see or touch ${c1}? Now ask the same of the other words, and check that each one is a noun.`,
+      `Empieza con "${bare(c1)}": ¿se puede ver o tocar ${c1}? Haz la misma pregunta con las demás palabras y revisa que cada una sea un sustantivo.`,
+    ),
     tr(locale, `"${key}" names something you cannot see, hear, touch, taste, or smell.`, `"${key}" nombra algo que no se puede ver, oír, tocar, probar ni oler.`),
   ];
 }
@@ -128,7 +131,7 @@ const EN_ABS_IN: AbsIn[] = [
   ["We cheered with pride for our soccer team.", "pride", ["team"], [["cheered", "verb"]]],
   ["The dark hallway filled Sam with fear.", "fear", ["hallway"], [["dark", "adj"], ["filled", "verb"]]],
   ["Their friendship began on the school bus.", "friendship", ["bus"], [["began", "verb"]]],
-  ["The museum guide shared her knowledge of dinosaurs.", "knowledge", ["guide", "dinosaurs"], [["shared", "verb"]]],
+  ["The museum guide shared her knowledge of fossils.", "knowledge", ["guide", "fossils"], [["shared", "verb"]]],
   ["Jada waited for the train with patience.", "patience", ["train", "Jada"], [["waited", "verb"]]],
   ["The hikers felt relief at the top of the hill.", "relief", ["hikers", "hill"], [["felt", "verb"]]],
   ["Kai showed great skill on the piano.", "skill", ["piano"], [["showed", "verb"], ["great", "adj"]]],
@@ -145,7 +148,7 @@ const ES_ABS_IN: AbsIn[] = [
   ["Aplaudimos con orgullo a nuestro equipo de fútbol.", "orgullo", ["equipo"], [["Aplaudimos", "verb"]]],
   ["El pasillo oscuro le dio miedo a Sam.", "miedo", ["pasillo"], [["oscuro", "adj"], ["dio", "verb"]]],
   ["Su amistad empezó en el autobús escolar.", "amistad", ["autobús"], [["empezó", "verb"]]],
-  ["La guía del museo compartió su conocimiento de los dinosaurios.", "conocimiento", ["guía", "dinosaurios"], [["compartió", "verb"]]],
+  ["La guía del museo compartió su conocimiento de los fósiles.", "conocimiento", ["guía", "fósiles"], [["compartió", "verb"]]],
   ["Jada esperó el tren con paciencia.", "paciencia", ["tren", "Jada"], [["esperó", "verb"]]],
   ["Los excursionistas sintieron alivio en la cima del cerro.", "alivio", ["excursionistas", "cerro"], [["sintieron", "verb"]]],
   ["Kai tiene mucha habilidad con el piano.", "habilidad", ["piano"], [["tiene", "verb"]]],
@@ -155,17 +158,16 @@ const ES_ABS_IN: AbsIn[] = [
 
 function absInQ(locale: Locale, [s, key, things, others]: AbsIn): G {
   const wrong: Wrong[] = [...things.map((t): Wrong => [t, "concrete-noun"]), ...others.map(([w, k]): Wrong => [w, k === "adj" ? "adjective-not-noun" : "verb-not-noun"])].slice(0, 3);
-  const shown = wrong.map(([w]) => w);
-  const touch = things.filter((t) => shown.includes(t));
-  const not = others.filter(([w]) => shown.includes(w)).map(([w]) => `"${w}"`);
+  // Hint 3 models the test on one word only, so it never rules out every wrong choice.
+  const [t] = things;
   return [
     `“${s}”`,
     key,
     wrong,
     tr(
       locale,
-      `${touch.map((t) => `"${t}"`).join(" and ")} ${touch.length > 1 ? "name things" : "names something"} you can see or touch. ${not.join(" and ")} ${not.length > 1 ? "are" : "is"} not ${not.length > 1 ? "nouns" : "a noun"}.`,
-      `${touch.map((t) => `"${t}"`).join(" y ")} ${touch.length > 1 ? "nombran cosas que se pueden" : "nombra algo que se puede"} ver o tocar. ${not.join(" y ")} no ${not.length > 1 ? "son sustantivos" : "es un sustantivo"}.`,
+      `Start with "${t}": can you see or touch what it names? Now ask the same of the other words, and check that each one is a noun.`,
+      `Empieza con "${t}": ¿se puede ver o tocar lo que nombra? Haz la misma pregunta con las demás palabras y revisa que cada una sea un sustantivo.`,
     ),
     tr(locale, `"${key}" names something you cannot see, hear, touch, taste, or smell.`, `"${key}" nombra algo que no se puede ver, oír, tocar, probar ni oler.`),
   ];
@@ -207,15 +209,15 @@ const EN_PL1: Pl[] = [
   ["The dentist cleaned all my ___.", "tooth", "teeth", [["tooths", "added-s-to-irregular"], ["teeths", "doubled-plural"], ["tooth", "singular-for-plural"]], "Tooth changes its vowel sound for more than one, like foot."],
   ["Two ___ swam across the pond.", "goose", "geese", [["gooses", "added-s-to-irregular"], ["geeses", "doubled-plural"], ["goose", "singular-for-plural"]], "Goose changes its vowel sound, like tooth."],
   ["My ___ are cold after playing in the snow.", "foot", "feet", [["foots", "added-s-to-irregular"], ["feets", "doubled-plural"]], "Foot changes its vowel sound. It does not add -s."],
-  ["The farmer hitched two ___ to the cart.", "ox", "oxen", [["oxes", "added-s-to-irregular"], ["oxens", "doubled-plural"]], "Ox is an old word. Like child, its plural ends in -en."],
-  ["All the ___ on the team wore green.", "child", "children", [["childs", "added-s-to-irregular"], ["childrens", "doubled-plural"], ["child", "singular-for-plural"]], "Child does not add -s. Its plural ends in -ren."],
+  ["The farmer hitched two ___ to the cart.", "ox", "oxen", [["oxes", "added-s-to-irregular"], ["oxens", "doubled-plural"]], "Ox is a very old word. Think of how child makes its plural."],
+  ["All the ___ on the team wore green.", "child", "children", [["childs", "added-s-to-irregular"], ["childrens", "doubled-plural"], ["child", "singular-for-plural"]], "Child does not add -s. Say \"one child, many\" and finish it out loud."],
   ["Five ___ grazed on the hill.", "sheep", "sheep", [["sheeps", "added-s-to-unchanging"], ["sheepes", "added-s-to-unchanging"]], "Think of one sheep, then a whole field of them. Does the word change?"],
-  ["We saw three ___ at the edge of the forest.", "deer", "deer", [["deers", "added-s-to-unchanging"], ["deeres", "added-s-to-unchanging"]], "Deer is like sheep: one word for one or many."],
+  ["We saw three ___ at the edge of the forest.", "deer", "deer", [["deers", "added-s-to-unchanging"], ["deeres", "added-s-to-unchanging"]], "Think of one deer, then a whole herd. Does the word change for more than one?"],
   ["Two ___ helped carry the piano.", "man", "men", [["mans", "added-s-to-irregular"], ["mens", "doubled-plural"], ["man", "singular-for-plural"]], "Man changes its vowel for more than one."],
   ["The ___ in my family love to cook.", "woman", "women", [["womans", "added-s-to-irregular"], ["womens", "doubled-plural"]], "Woman changes like man: only the vowel in the last part changes."],
-  ["We spotted two ___ near the lake.", "moose", "moose", [["mooses", "added-s-to-unchanging"], ["meese", "vowel-change-by-analogy"]], "Moose does not follow goose. It stays the same, like deer."],
+  ["We spotted two ___ near the lake.", "moose", "moose", [["mooses", "added-s-to-unchanging"], ["meese", "vowel-change-by-analogy"]], "Moose came into English from a Native American language, not from the old word family of goose. Does moose change for more than one?"],
   ["Roll both ___ and add the numbers.", "die", "dice", [["dies", "added-s-to-irregular"], ["dices", "doubled-plural"]], "A die is the little cube with dots. Its plural is a different word, the one used in board games."],
-  ["The ___ lined up for lunch.", "child", "children", [["childs", "added-s-to-irregular"], ["childrens", "doubled-plural"]], "Child does not add -s. Its plural ends in -ren."],
+  ["The ___ lined up for lunch.", "child", "children", [["childs", "added-s-to-irregular"], ["childrens", "doubled-plural"]], "Child does not add -s. Say \"one child, many\" and finish it out loud."],
   ["Those two ___ are best friends.", "woman", "women", [["womans", "added-s-to-irregular"], ["womens", "doubled-plural"], ["woman", "singular-for-plural"]], "Woman changes like man: only the vowel in the last part changes."],
 ];
 const ES_PL1: [...Pl, string][] = [
@@ -306,21 +308,23 @@ const ownQ = ([s, owner, wrong, clue]: Own): G => {
       : `Add an apostrophe and s to ${owner} to show that one owner has it.`;
   return [s, key, wrong, clue, why, owner];
 };
+// Each sentence fixes the number of owners itself (each, one, a, she, its…), so the plural possessive is
+// really wrong and not just less likely.
 const EN_OWN1: Own[] = [
-  ["My ___ backpack is blue.", "sister", [["sisters", "missing-apostrophe"], ["sisters'", "plural-for-singular"]], "The backpack belongs to one sister."],
-  ["The ___ nest was high in the oak tree.", "bird", [["birds", "missing-apostrophe"], ["birds'", "plural-for-singular"]], "The nest belongs to one bird."],
+  ["Each ___ backpack has a name tag.", "student", [["students", "missing-apostrophe"], ["students'", "plural-for-singular"]], "Each backpack belongs to one student."],
+  ["A robin built a nest. The ___ nest was high in the oak tree.", "robin", [["robins", "missing-apostrophe"], ["robins'", "plural-for-singular"]], "The nest belongs to one robin."],
   ["We played catch in ___ yard.", "Maya", [["Mayas", "missing-apostrophe"], ["Mayas'", "plural-for-singular"]], "The yard belongs to Maya."],
-  ["The ___ whistle was very loud.", "coach", [["coaches", "missing-apostrophe"], ["coaches'", "plural-for-singular"]], "The whistle belongs to one coach."],
-  ["Our ___ voice is calm and kind.", "teacher", [["teachers", "missing-apostrophe"], ["teachers'", "plural-for-singular"]], "The voice belongs to one teacher."],
-  ["The ___ shell is hard.", "turtle", [["turtles", "missing-apostrophe"], ["turtles'", "plural-for-singular"]], "The shell belongs to one turtle."],
+  ["The ___ whistle was very loud when she blew it.", "coach", [["coaches", "missing-apostrophe"], ["coaches'", "plural-for-singular"]], "The whistle belongs to one coach."],
+  ["Our ___ voice is calm when she reads to us.", "teacher", [["teachers", "missing-apostrophe"], ["teachers'", "plural-for-singular"]], "The voice belongs to one teacher."],
+  ["My turtle hides in its shell. The ___ shell is hard.", "turtle", [["turtles", "missing-apostrophe"], ["turtles'", "plural-for-singular"]], "The shell belongs to one turtle."],
   ["I borrowed ___ bike for the race.", "Omar", [["Omars", "missing-apostrophe"], ["Omars'", "plural-for-singular"]], "The bike belongs to Omar."],
-  ["The ___ leaves turned orange.", "tree", [["trees", "missing-apostrophe"], ["trees'", "plural-for-singular"]], "The leaves belong to one tree."],
-  ["That is my ___ guitar.", "uncle", [["uncles", "missing-apostrophe"], ["uncles'", "plural-for-singular"]], "The guitar belongs to one uncle."],
-  ["The ___ roar echoed across the zoo.", "lion", [["lions", "missing-apostrophe"], ["lions'", "plural-for-singular"]], "The roar belongs to one lion."],
-  ["The ___ crib is next to the window.", "baby", [["babies", "missing-apostrophe"], ["babies'", "plural-for-singular"]], "The crib belongs to one baby."],
-  ["The ___ engine was loud.", "truck", [["trucks", "missing-apostrophe"], ["trucks'", "plural-for-singular"]], "The engine belongs to one truck."],
+  ["One ___ leaves turned orange before all the others.", "tree", [["trees", "missing-apostrophe"], ["trees'", "plural-for-singular"]], "The leaves belong to one tree."],
+  ["My ___ guitar is old, but he still plays it every day.", "uncle", [["uncles", "missing-apostrophe"], ["uncles'", "plural-for-singular"]], "The guitar belongs to one uncle."],
+  ["Our zoo has one lion. The ___ roar echoed across the zoo.", "lion", [["lions", "missing-apostrophe"], ["lions'", "plural-for-singular"]], "The roar belongs to one lion."],
+  ["The ___ crib is next to the window, and she naps there every day.", "baby", [["babies", "missing-apostrophe"], ["babies'", "plural-for-singular"]], "The crib belongs to one baby."],
+  ["A truck rumbled past. The ___ engine was loud.", "truck", [["trucks", "missing-apostrophe"], ["trucks'", "plural-for-singular"]], "The engine belongs to one truck."],
   ["We read ___ poem in class.", "Kenji", [["Kenjis", "missing-apostrophe"], ["Kenjis'", "plural-for-singular"]], "The poem belongs to Kenji."],
-  ["The ___ front door is red.", "house", [["houses", "missing-apostrophe"], ["houses'", "plural-for-singular"]], "The front door belongs to one house."],
+  ["The ___ front door is red, and its windows are white.", "house", [["houses", "missing-apostrophe"], ["houses'", "plural-for-singular"]], "The front door belongs to one house."],
 ];
 const EN_OWN2: Own[] = [
   ["The two ___ bowls are empty.", "dogs", [["dog's", "singular-for-plural"], ["dogs's", "added-s-after-plural-s"]], "More than one dog owns the bowls. The plural is dogs."],
@@ -334,7 +338,7 @@ const EN_OWN2: Own[] = [
   ["Both ___ trunks were long.", "elephants", [["elephant's", "singular-for-plural"], ["elephants's", "added-s-after-plural-s"]], "The trunks belong to both elephants. The plural is elephants."],
   ["The ___ feathers were gray and white.", "geese", [["geeses'", "apostrophe-after-irregular-plural"], ["geeses", "missing-apostrophe"]], "The feathers belong to the geese. Geese does not end in s."],
   ["The two ___ fans cheered loudly.", "teams", [["team's", "singular-for-plural"], ["teams's", "added-s-after-plural-s"]], "The fans belong to two teams. The plural is teams."],
-  ["The ___ room has two beds.", "twins", [["twin's", "singular-for-plural"], ["twins's", "added-s-after-plural-s"]], "The room belongs to the twins, two people."],
+  ["The two ___ room has bunk beds.", "twins", [["twin's", "singular-for-plural"], ["twins's", "added-s-after-plural-s"]], "The room belongs to two twins. The plural is twins."],
   ["All three ___ hats blew away.", "girls", [["girl's", "singular-for-plural"], ["girls's", "added-s-after-plural-s"]], "The hats belong to three girls. The plural is girls."],
   ["The two ___ tracks were in the snow.", "wolves", [["wolf's", "singular-for-plural"], ["wolfs'", "plural-spelling-slip"]], "The tracks belong to two wolves. The plural of wolf is wolves."],
 ];
@@ -427,7 +431,7 @@ const EN_TENSE: Tensed[] = [
 const ES_TENSE: Tensed[] = [
   ["Maya pintó un dibujo del mar.", 0, "pintó"], ["Nuestra clase visitará el museo de ciencias.", 2, "visitará"],
   ["El bebé duerme en la tarde.", 1, "duerme"], ["Papá horneó pan el domingo.", 0, "horneó"],
-  ["Yo alimentaré a los peces después de la escuela.", 2, "alimentaré"], ["El autobús se detiene en la esquina.", 1, "detiene"],
+  ["Yo alimentaré a los peces después de la escuela.", 2, "alimentaré"], ["El autobús se detiene en la esquina.", 1, "se detiene"],
   ["Leo escribió una carta a su abuela.", 0, "escribió"], ["Mi hermano juega fútbol todos los sábados.", 1, "juega"],
   ["Los tomates crecerán con el sol.", 2, "crecerán"], ["Ana nadó en el lago el verano pasado.", 0, "nadó"],
   ["Mi gato persigue la pelota roja.", 1, "persigue"], ["Mañana lloverá todo el día.", 2, "lloverá"],
@@ -437,53 +441,60 @@ const ES_TENSE: Tensed[] = [
 
 /** [sentence, time words, base verb (Spanish: infinitive|person), key, past, present, future] */
 type TimeFill = [string, string, string, number, string, string, string];
+// With a future time word the present can be right too ("Tomorrow the train leaves at six"; Spanish "Mañana
+// salgo para Lima" is the RAE's presente prospectivo), so a future item never offers the present. It offers a
+// misbuilt future instead: will + the past form, or the Spanish future without its tilde (cruzaran is another
+// tense). A present item names a second present verb in the same sentence, so a past or a future form there
+// would break the tense of the sentence ("Every morning Kai eats breakfast and walked his dog").
 const timeQ = (locale: Locale) => ([s, cue, base, t, ...forms]: TimeFill): G => [
   s,
   forms[t],
-  forms.flatMap((f, i): Wrong[] => (i === t ? [] : [[f, `${TENSES[i]}-for-${TENSES[t]}`]])),
+  forms.flatMap((f, i): Wrong[] =>
+    i === t ? [] : i === 1 && t === 2 ? [locale === "en" ? [`will ${forms[0]}`, "will-with-past-form"] : [forms[2].replace(/á(n?)$/, "a$1"), "dropped-future-tilde"]] : [[f, `${TENSES[i]}-for-${TENSES[t]}`]],
+  ),
   tr(locale, `"${cue}" is the time clue.`, `"${cue}" es la pista de tiempo.`),
   tr(
     locale,
-    `"${cue}" ${["means it already happened, so use the past tense", "means it happens now or again and again, so use the present tense", "means it has not happened yet, so use the future tense"][t]}.`,
-    `"${cue}" ${["dice que ya pasó, así que va en pasado", "dice que pasa ahora o seguido, así que va en presente", "dice que todavía no pasa, así que va en futuro"][t]}.`,
+    `"${cue}" ${["means it already happened, so use the past tense", "means it happens again and again, so use the present tense, like the other verb", "means it has not happened yet, so use the future tense: will + the base verb"][t]}.`,
+    `"${cue}" ${["dice que ya pasó, así que va en pasado", "dice que pasa seguido, así que va en presente, como el otro verbo", "dice que todavía no pasa, así que va en futuro, con tilde al final"][t]}.`,
   ),
   base,
 ];
 const EN_TIME: TimeFill[] = [
   ["Yesterday Ana ___ to the library.", "Yesterday", "walk", 0, "walked", "walks", "will walk"],
   ["Tomorrow my cousins ___ the old bridge.", "Tomorrow", "cross", 2, "crossed", "cross", "will cross"],
-  ["Every morning Kai ___ his dog.", "Every morning", "walk", 1, "walked", "walks", "will walk"],
+  ["Every morning Kai eats breakfast and ___ his dog.", "Every morning", "walk", 1, "walked", "walks", "will walk"],
   ["Last night our dog ___ at the moon.", "Last night", "bark", 0, "barked", "barks", "will bark"],
   ["Next summer my family ___ to the beach.", "Next summer", "drive", 2, "drove", "drives", "will drive"],
-  ["My grandma ___ tea every afternoon.", "every afternoon", "drink", 1, "drank", "drinks", "will drink"],
+  ["My grandma reads a book and ___ tea every afternoon.", "every afternoon", "drink", 1, "drank", "drinks", "will drink"],
   ["Last week Omar ___ a model rocket.", "Last week", "build", 0, "built", "builds", "will build"],
   ["Later today Mia ___ her room.", "Later today", "clean", 2, "cleaned", "cleans", "will clean"],
   ["Two days ago it ___ all night.", "Two days ago", "snow", 0, "snowed", "snows", "will snow"],
-  ["Each spring the tulips ___ in our yard.", "Each spring", "bloom", 1, "bloomed", "bloom", "will bloom"],
+  ["Each spring the tulips grow tall and ___ in our yard.", "Each spring", "bloom", 1, "bloomed", "bloom", "will bloom"],
   ["In two weeks our class ___ a play.", "In two weeks", "perform", 2, "performed", "performs", "will perform"],
   ["Yesterday Grandpa ___ a fish.", "Yesterday", "catch", 0, "caught", "catches", "will catch"],
   ["Tomorrow Mom ___ pancakes.", "Tomorrow", "make", 2, "made", "makes", "will make"],
-  ["On Saturdays Leila ___ the piano.", "On Saturdays", "practice", 1, "practiced", "practices", "will practice"],
+  ["On Saturdays Leila ___ the piano and then plays outside.", "On Saturdays", "practice", 1, "practiced", "practices", "will practice"],
   ["Last month the twins ___ eight.", "Last month", "turn", 0, "turned", "turn", "will turn"],
-  ["Every night my brother ___ me a story.", "Every night", "tell", 1, "told", "tells", "will tell"],
+  ["Every night my brother sits on my bed and ___ me a story.", "Every night", "tell", 1, "told", "tells", "will tell"],
 ];
 const ES_TIME: TimeFill[] = [
   ["Ayer Ana ___ a la biblioteca.", "Ayer", "caminar|él", 0, "caminó", "camina", "caminará"],
   ["Mañana mis primos ___ el puente viejo.", "Mañana", "cruzar|ellos", 2, "cruzaron", "cruzan", "cruzarán"],
-  ["Todas las mañanas Kai ___ a su perro.", "Todas las mañanas", "pasear|él", 1, "paseó", "pasea", "paseará"],
+  ["Todas las mañanas Kai desayuna y ___ a su perro.", "Todas las mañanas", "pasear|él", 1, "paseó", "pasea", "paseará"],
   ["Anoche nuestro perro le ___ a la luna.", "Anoche", "ladrar|él", 0, "ladró", "ladra", "ladrará"],
   ["El próximo verano mi familia ___ a la playa.", "El próximo verano", "viajar|él", 2, "viajó", "viaja", "viajará"],
-  ["Mi abuela ___ té todas las tardes.", "todas las tardes", "tomar|él", 1, "tomó", "toma", "tomará"],
+  ["Mi abuela lee un libro y ___ té todas las tardes.", "todas las tardes", "tomar|él", 1, "tomó", "toma", "tomará"],
   ["La semana pasada Omar ___ un cohete de juguete.", "La semana pasada", "construir|él", 0, "construyó", "construye", "construirá"],
   ["Más tarde Mía ___ su cuarto.", "Más tarde", "limpiar|él", 2, "limpió", "limpia", "limpiará"],
   ["Hace dos días ___ toda la noche.", "Hace dos días", "nevar|él", 0, "nevó", "nieva", "nevará"],
-  ["Cada primavera los tulipanes ___ en el jardín.", "Cada primavera", "florecer|ellos", 1, "florecieron", "florecen", "florecerán"],
+  ["Cada primavera los tulipanes crecen y ___ en el jardín.", "Cada primavera", "florecer|ellos", 1, "florecieron", "florecen", "florecerán"],
   ["En dos semanas nuestra clase ___ una obra de teatro.", "En dos semanas", "presentar|él", 2, "presentó", "presenta", "presentará"],
   ["Ayer el abuelo ___ un pez.", "Ayer", "pescar|él", 0, "pescó", "pesca", "pescará"],
   ["Mañana mamá ___ panqueques.", "Mañana", "preparar|él", 2, "preparó", "prepara", "preparará"],
-  ["Los sábados Leila ___ el piano.", "Los sábados", "practicar|él", 1, "practicó", "practica", "practicará"],
+  ["Los sábados Leila ___ el piano y luego sale a jugar.", "Los sábados", "practicar|él", 1, "practicó", "practica", "practicará"],
   ["El mes pasado los gemelos ___ ocho años.", "El mes pasado", "cumplir|ellos", 0, "cumplieron", "cumplen", "cumplirán"],
-  ["Todas las noches mi hermano me ___ un cuento.", "Todas las noches", "contar|él", 1, "contó", "cuenta", "contará"],
+  ["Todas las noches mi hermano se sienta en mi cama y me ___ un cuento.", "Todas las noches", "contar|él", 1, "contó", "cuenta", "contará"],
 ];
 
 const VERB_TENSES: Level[] = [
@@ -501,8 +512,8 @@ const VERB_TENSES: Level[] = [
   {
     ask: bi("Choose the verb that fits the time.", "Elige el verbo que va con el tiempo."),
     hints: bi(
-      ["Find the words that tell when.", "Already happened: past. Happens now or again and again: present. Has not happened yet: will + verb."],
-      ["Busca las palabras que dicen cuándo.", "Ya pasó: pasado. Pasa ahora o seguido: presente. Todavía no pasa: futuro."],
+      ["Find the words that tell when.", "Already happened: past. Happens again and again: present. Has not happened yet: will + the base verb (will jump, not will jumped)."],
+      ["Busca las palabras que dicen cuándo.", "Ya pasó: pasado. Pasa seguido: presente. Todavía no pasa: futuro, que lleva tilde al final (saltará, saltarán)."],
     ),
     seconds: 15,
     bank: pair(EN_TIME.map(timeQ("en")), ES_TIME.map(timeQ("es"))),
@@ -597,8 +608,8 @@ const ES_CMP2: Cmp[] = [
   ["Tengo más fiebre que el lunes. Hoy me siento ___ que el lunes.", "mal", "peor", [["mejor", "reversed-comparison"], ["más peor", "doubled-comparison"]], "Hoy hay más fiebre que el lunes, y la palabra es mal."],
   ["Este es el ___ libro que he leído.", "bueno", "mejor", [["más bueno", "mas-bueno-for-mejor"], ["más mejor", "doubled-comparison"]], "Este libro se compara con todos los que he leído, y la palabra es bueno."],
   ["La segunda canción fue ___ que la primera.", "buena", "mejor", [["más mejor", "doubled-comparison"], ["más buena", "mas-bueno-for-mejor"]], "Se comparan dos canciones, y la palabra es buena."],
-  ["Mis abuelos son las personas ___ de la familia.", "grandes|edad|plural", "mayores", [["más mayores", "doubled-comparison"], ["mayor", "number-agreement-slip"]], "Se compara la edad de los abuelos con la de toda la familia. Personas es plural."],
-  ["Sofía tiene cinco años. Es la ___ de las tres hermanas.", "pequeña|edad", "menor", [["más menor", "doubled-comparison"], ["mayor", "reversed-comparison"]], "Sofía es la que tiene menos años de las tres."],
+  ["En mi familia, nadie tiene más años que mi abuelo. Es el ___ de la familia.", "grande|edad", "mayor", [["más mayor", "doubled-comparison"], ["menor", "reversed-comparison"]], "Se compara la edad del abuelo con la de todos los demás de la familia."],
+  ["Sofía tiene cinco años, y sus hermanas tienen ocho y diez. Es la ___ de las tres.", "pequeña|edad", "menor", [["más menor", "doubled-comparison"], ["mayor", "reversed-comparison"]], "Compara cinco años con ocho y con diez."],
   ["Las fresas de este mercado son ___ que las del otro.", "buenas|plural", "mejores", [["mejor", "number-agreement-slip"], ["más mejores", "doubled-comparison"]], "Se comparan dos mercados. Fresas es plural."],
   ["Este pastel me salió ___ que el de la semana pasada.", "bien", "mejor", [["más bien", "mas-bien-for-mejor"], ["más mejor", "doubled-comparison"]], "Se comparan dos pasteles, y la palabra es bien."],
 ];
@@ -616,8 +627,8 @@ const COMPARATIVES: Level[] = [
   {
     ask: bi("Choose the word that completes the sentence.", "Elige la palabra que completa la oración."),
     hints: bi(
-      ["Some comparing words have their own forms. Words ending in -ly use more and most.", "good or well → better, best. bad → worse, worst. Never add -er to a word that ends in -ly."],
-      ["Algunos adjetivos tienen su propia forma para comparar.", "bueno o bien → mejor. malo o mal → peor. Para la edad: mayor y menor. Nunca se dice más mejor."],
+      ["Is the sentence comparing two, or one with all the others? Then look at the word that changes.", "Good, well, and bad have their own comparing words: they never take -er, -est, more, or most. Adverbs made from a describing word + -ly (gently, brightly) use more and most."],
+      ["¿La oración compara dos cosas, o una con todas las demás? Luego mira la palabra que cambia.", "Bueno, bien, malo y mal tienen su propia palabra para comparar, y la edad también. Esas palabras ya comparan solas: nunca llevan más antes."],
     ),
     seconds: 15,
     bank: pair(
@@ -643,12 +654,12 @@ const LINK_SAYS: Bi<Record<string, string>> = {
   en: {
     addition: "adds one more idea of the same kind", contrast: "shows that the second idea is different from what you expect", choice: "gives a choice",
     result: "tells what happened because of the first idea", cause: "gives the reason", concession: "shows that something happened even with the other idea against it",
-    condition: "tells what has to be true first", time: "tells when", until: "tells how long, up to a certain moment", "negative-condition": "means if not", before: "tells what comes first in time",
+    condition: "tells what has to be true first", time: "tells the moment something happens", until: "tells how long, up to a certain moment", "negative-condition": "means if not", before: "tells what comes first in time",
   },
   es: {
     addition: "suma una idea del mismo tipo", contrast: "muestra que la segunda idea es distinta de lo que se espera", choice: "da a elegir",
-    result: "dice lo que pasó a causa de la primera idea", cause: "da la razón", concession: "muestra que algo pasó aunque la otra idea iba en contra",
-    condition: "dice lo que tiene que pasar primero", time: "dice cuándo", until: "dice hasta qué momento",
+    result: "dice lo que pasó a causa de la primera idea", cause: "da la razón", concession: "muestra que algo pasó a pesar de la otra idea",
+    condition: "dice lo que tiene que pasar primero", time: "dice en qué momento pasa algo", until: "dice en qué momento algo deja de pasar",
   },
 };
 const linkTag = (wrong: string, key: string) => `${LINK[wrong.toLowerCase()]}-word-for-${LINK[key.toLowerCase()]}`;
@@ -755,7 +766,7 @@ const CONJUNCTIONS: Level[] = [
   {
     ask: bi("Which conjunction completes the sentence?", "¿Qué conjunción completa la oración?"),
     hints: bi(
-      ["How does one part of the sentence depend on the other?", "because gives a reason, although shows a surprise, if and unless set a condition, when tells the time, until tells how long."],
+      ["How does one part of the sentence depend on the other?", "because gives a reason, although shows a surprise, if and unless set a condition, when tells the time, until tells how long, and before tells what comes first."],
       ["¿Cómo depende una parte de la oración de la otra?", "porque da la razón, aunque muestra una sorpresa, si pone una condición, cuando dice el momento, hasta que dice hasta cuándo."],
     ),
     seconds: 18,
@@ -874,7 +885,7 @@ const SUFFIXES: Level[] = [
     ask: bi("Which word completes the sentence?", "¿Qué palabra completa la oración?"),
     hints: bi(
       ["Does the blank describe a thing, or tell how something is done?", "Describing a thing: -ful or -less. Telling how: -ly. Then check that the meaning fits."],
-      ["¿La palabra describe algo, o dice cómo se hace algo?", "Para decir cómo se hace algo: forma femenina + -mente, y se conserva la tilde (rápida, rápidamente). Para describir: -oso, -ero o -ito."],
+      ["¿La palabra describe algo, o dice cómo se hace algo?", "Para decir cómo se hace algo: forma femenina + -mente, y se conserva la tilde (tímida, tímidamente). Para describir: -oso, -ero o -ito."],
     ),
     seconds: 15,
     bank: pair(EN_SUF2.map(sufInQ("en")), ES_SUF2.map(sufInQ("es"))),
@@ -1231,7 +1242,7 @@ const RELATIVE_WORDS: Level[] = [
     ask: bi("Which word completes the sentence?", "¿Qué palabra completa la oración?"),
     hints: bi(
       ["What does the missing word point back to: a person, a thing, or an owner?", "who is for people, which is for things, and whose shows that something belongs to someone."],
-      ["¿A qué se refiere la palabra que falta: a una persona, a una cosa, o a un dueño?", "que sirve para personas y cosas. quien y quienes van después de una coma o de una preposición. cuyo, cuya, cuyos y cuyas concuerdan con lo que se tiene."],
+      ["¿A qué se refiere la palabra que falta: a una persona, a una cosa, o a un dueño?", "que sirve para personas y cosas. quien y quienes, solo para personas, van después de una coma o de una preposición. cuyo, cuya, cuyos y cuyas concuerdan con lo que se tiene."],
     ),
     seconds: 18,
     bank: pair(EN_REL1.map(relQ("en", REL_SAYS.en)), ES_REL1.map(relQ("es", REL_SAYS.es))),
@@ -1292,7 +1303,7 @@ const ES_PROG: Prog[] = [
   ["Mira, los niños ___ en la alberca.", "están nadando", [["está nadando", "aux-disagrees-with-subject"], ["estaban nadando", "past-for-present"]], "Pasa ahora, y los niños son varios.", "nadar|present|ellos"],
   ["Anoche a las ocho, yo ___ un libro.", "estaba leyendo", [["estaba leiendo", "regular-gerund-for-irregular"], ["estoy leyendo", "present-for-past"]], "\"Anoche\" dice cuándo. Leer tiene un gerundio especial.", "leer|past|yo"],
   ["Mañana a esta hora, nosotros ___ hacia el lago.", "estaremos manejando", [["estábamos manejando", "past-for-future"], ["estaremos manejiendo", "wrong-gerund-ending"]], "\"Mañana a esta hora\" todavía no pasa.", "manejar|future|nosotros"],
-  ["Silencio, el abuelo ___ una siesta.", "está tomando", [["están tomando", "aux-disagrees-with-subject"], ["está tomiendo", "wrong-gerund-ending"]], "Pasa ahora, y el abuelo es una sola persona.", "tomar|present|él"],
+  ["Silencio, el abuelo ___ en el sillón.", "está descansando", [["están descansando", "aux-disagrees-with-subject"], ["está descansiendo", "wrong-gerund-ending"]], "Pasa ahora, y el abuelo es una sola persona.", "descansar|present|él"],
   ["Cuando sonó el teléfono, mamá ___ la cena.", "estaba preparando", [["estaban preparando", "aux-disagrees-with-subject"], ["está preparando", "present-for-past"]], "El teléfono sonó en el pasado, y mamá es una sola persona.", "preparar|past|ella"],
   ["Ahora mismo mis primos ___ un castillo de arena.", "están construyendo", [["están construiendo", "regular-gerund-for-irregular"], ["está construyendo", "aux-disagrees-with-subject"]], "\"Ahora mismo\" dice cuándo. Construir lleva y en el gerundio.", "construir|present|ellos"],
   ["Mañana a mediodía, Kai ___ en la obra de la escuela.", "estará actuando", [["estaba actuando", "past-for-future"], ["estarán actuando", "aux-disagrees-with-subject"]], "\"Mañana\" dice cuándo, y Kai es una sola persona.", "actuar|future|él"],
@@ -1311,7 +1322,7 @@ const PROGRESSIVE: Level[] = [
     ask: bi("Choose the verb that completes the sentence.", "Elige el verbo que completa la oración."),
     hints: bi(
       ["The action is in the middle of happening. When: now, in the past, or later?", "Now: am, is, or are + -ing. Past: was or were + -ing. Later: will be + -ing. Match is and was with one, are and were with more than one."],
-      ["La acción está en curso. ¿Cuándo: ahora, en el pasado, o después?", "Ahora: estoy, está, están + gerundio. Pasado: estaba, estaban + gerundio. Después: estaré, estará, estarán + gerundio. El gerundio termina en -ando o -iendo."],
+      ["La acción está en curso. ¿Cuándo: ahora, en el pasado, o después?", "Ahora: estoy, está, estamos, están + gerundio. Pasado: estaba, estábamos, estaban + gerundio. Después: estaré, estará, estaremos, estarán + gerundio. El gerundio termina en -ando o -iendo, y en -yendo cuando la raíz del verbo termina en vocal (oír, oyendo)."],
     ),
     seconds: 15,
     bank: pair(EN_PROG.map(progQ("en")), ES_PROG.map(progQ("es"))),
@@ -1328,7 +1339,7 @@ const MODAL_TAGS = ["ability", "permission", "necessity", "possibility"];
 /** [sentence, meaning index, the helping verb] */
 type Modal = [string, number, string];
 const modalQ = (locale: Locale) => ([s, m, verb]: Modal): L => [
-  `“${s}”`,
+  `“${s}”\n\n${tr(locale, "Helping verb", "Palabra clave")}: ${verb}`,
   m,
   tr(locale, `The helping verb is "${verb}". Read the rest of the sentence: what does it tell you?`, `La palabra clave es "${verb}". Lee el resto de la oración: ¿qué te dice?`),
   tr(
@@ -1357,10 +1368,10 @@ const ES_MODAL: Modal[] = [
 
 const MODALS: Level[] = [
   {
-    ask: bi("What does the helping verb tell?", "¿Qué indica esa forma del verbo?"),
+    ask: bi("What does the helping verb tell?", "¿Qué indica la palabra clave?"),
     hints: bi(
-      ["Find the helping verb. Then read the rest of the sentence for clues.", "can and could can mean able to or allowed to. may can mean allowed to or might happen. must and have to mean has to. might means it might happen."],
-      ["Busca la forma que acompaña al otro verbo. Luego lee el resto de la oración.", "poder puede indicar habilidad, permiso o posibilidad. saber + verbo indica habilidad. tener que, deber y hay que indican obligación. puede que y podría indican posibilidad."],
+      ["Find the helping verb. Then read the rest of the sentence for clues.", "can means able to or allowed to. could can mean was able to, or that something might happen. may can mean allowed to or might happen. must and have to mean has to. might means it might happen."],
+      ["Mira la palabra clave y el verbo que la acompaña. Luego lee el resto de la oración.", "poder puede indicar habilidad, permiso o posibilidad. saber + verbo indica habilidad. tener que, deber y hay que indican obligación. puede que y podría indican posibilidad."],
     ),
     seconds: 15,
     labels: MODAL_LABELS,
@@ -1418,10 +1429,10 @@ const ES_ORDER: Order[] = [
 
 const ADJECTIVE_ORDER: Level[] = [
   {
-    ask: bi("Choose the words that complete the sentence.", "Elige la palabra que completa la oración."),
+    ask: bi("Choose the words that complete the sentence.", "Elige lo que completa la oración."),
     hints: bi(
       ["What does each describing word tell: an opinion, size, age, color, where it is from, or what it is made of?", "English puts them in this order: opinion, size, age, color, where it is from, what it is made of. Then the noun."],
-      ["¿La palabra va antes o después del sustantivo? ¿Es masculino o femenino, singular o plural?", "Antes de un sustantivo masculino singular: buen, mal, primer, tercer, algún, ningún. Gran va antes de cualquier sustantivo singular. Los colores y las nacionalidades van después y con minúscula."],
+      ["¿La palabra va antes o después del sustantivo? ¿Es masculino o femenino, singular o plural?", "Algunos adjetivos pierden la -o final justo antes de un sustantivo masculino singular, como uno, que pasa a un. Grande se acorta antes de cualquier sustantivo singular. Si no va justo antes del sustantivo, lleva la forma completa. Los colores y las nacionalidades van después del sustantivo y con minúscula."],
     ),
     seconds: 15,
     bank: pair(EN_ORDER.map(orderQ("en")), ES_ORDER.map(orderQ("es"))),
@@ -1440,40 +1451,41 @@ const prepQ = (locale: Locale, phrase: boolean) => ([s, key, wrong, clue]: Prep)
   wrong,
   clue,
   phrase
-    ? tr(locale, `"${key}" starts with a preposition and ends with the noun it connects.`, `"${key}" empieza con una preposición y termina con el sustantivo que une.`)
+    ? tr(locale, `"${key}" starts with a preposition and ends with the noun it connects.`, `"${key}" empieza con una preposición y llega hasta el sustantivo que une, con las palabras que lo describen.`)
     : tr(locale, `"${key}" connects a noun to the rest of the sentence.`, `"${key}" une un sustantivo con el resto de la oración.`),
 ];
+// Level 1 clues ask what the sentence tells (where, when, how) without pointing at a spot in it.
 const EN_PREP1: Prep[] = [
   ["The cat slept under the table.", "under", [["cat", "noun-not-preposition"], ["slept", "verb-not-preposition"]], "Where did the cat sleep? Look for the word that tells the position."],
-  ["We walked across the bridge.", "across", [["walked", "verb-not-preposition"], ["bridge", "noun-not-preposition"]], "Where did we walk? Look for the word before the bridge."],
+  ["We walked across the bridge.", "across", [["walked", "verb-not-preposition"], ["bridge", "noun-not-preposition"]], "Where did we walk? Look for the word that tells the path."],
   ["Mia put her shoes beside the door.", "beside", [["shoes", "noun-not-preposition"], ["put", "verb-not-preposition"]], "Where did Mia put her shoes? Look for the word that tells the position."],
-  ["The bird flew over the house.", "over", [["bird", "noun-not-preposition"], ["flew", "verb-not-preposition"]], "Where did the bird fly? Look for the word before the house."],
+  ["The bird flew over the house.", "over", [["bird", "noun-not-preposition"], ["flew", "verb-not-preposition"]], "Where did the bird fly? Look for the word that tells the path."],
   ["Leo hid behind the big tree.", "behind", [["hid", "verb-not-preposition"], ["big", "adjective-not-preposition"]], "Where did Leo hide? Look for the word that tells the position."],
-  ["The ball rolled into the street.", "into", [["rolled", "verb-not-preposition"], ["ball", "noun-not-preposition"]], "Where did the ball roll? Look for the word before the street."],
-  ["My grandma lives near the beach.", "near", [["lives", "verb-not-preposition"], ["beach", "noun-not-preposition"]], "Where does Grandma live? Look for the word before the beach."],
-  ["We ate lunch after the game.", "after", [["ate", "verb-not-preposition"], ["lunch", "noun-not-preposition"]], "When did we eat? Look for the word before the game."],
-  ["The keys are inside the drawer.", "inside", [["keys", "noun-not-preposition"], ["are", "verb-not-preposition"]], "Where are the keys? Look for the word before the drawer."],
-  ["Ana sat between her two friends.", "between", [["sat", "verb-not-preposition"], ["friends", "noun-not-preposition"]], "Where did Ana sit? Look for the word before her two friends."],
-  ["The frog jumped onto the rock.", "onto", [["jumped", "verb-not-preposition"], ["frog", "noun-not-preposition"]], "Where did the frog jump? Look for the word before the rock."],
-  ["The plane flew above the clouds.", "above", [["plane", "noun-not-preposition"], ["flew", "verb-not-preposition"]], "Where did the plane fly? Look for the word before the clouds."],
-  ["Kai found his sock beneath the bed.", "beneath", [["found", "verb-not-preposition"], ["sock", "noun-not-preposition"]], "Where did Kai find his sock? Look for the word before the bed."],
-  ["The children ran around the park.", "around", [["ran", "verb-not-preposition"], ["children", "noun-not-preposition"]], "Where did the children run? Look for the word before the park."],
+  ["The ball rolled into the street.", "into", [["rolled", "verb-not-preposition"], ["ball", "noun-not-preposition"]], "Where did the ball roll? Look for the word that tells the direction."],
+  ["My grandma lives near the beach.", "near", [["lives", "verb-not-preposition"], ["beach", "noun-not-preposition"]], "Where does Grandma live? Look for the word that tells the position."],
+  ["We ate lunch after the game.", "after", [["ate", "verb-not-preposition"], ["lunch", "noun-not-preposition"]], "When did we eat? Look for the word that tells the time."],
+  ["The keys are inside the drawer.", "inside", [["keys", "noun-not-preposition"], ["are", "verb-not-preposition"]], "Where are the keys? Look for the word that tells the position."],
+  ["Ana sat between her two friends.", "between", [["sat", "verb-not-preposition"], ["friends", "noun-not-preposition"]], "Where did Ana sit? Look for the word that tells the position."],
+  ["The frog jumped onto the rock.", "onto", [["jumped", "verb-not-preposition"], ["frog", "noun-not-preposition"]], "Where did the frog jump? Look for the word that tells the direction."],
+  ["The plane flew above the clouds.", "above", [["plane", "noun-not-preposition"], ["flew", "verb-not-preposition"]], "Where did the plane fly? Look for the word that tells the position."],
+  ["Kai found his sock beneath the bed.", "beneath", [["found", "verb-not-preposition"], ["sock", "noun-not-preposition"]], "Where did Kai find his sock? Look for the word that tells the position."],
+  ["The children ran around the park.", "around", [["ran", "verb-not-preposition"], ["children", "noun-not-preposition"]], "Where did the children run? Look for the word that tells the path."],
 ];
 const ES_PREP1: Prep[] = [
-  ["El gato durmió bajo la mesa.", "bajo", [["gato", "noun-not-preposition"], ["durmió", "verb-not-preposition"]], "¿Dónde durmió el gato? Busca la palabra antes de la mesa."],
-  ["Caminamos hacia el puente.", "hacia", [["Caminamos", "verb-not-preposition"], ["puente", "noun-not-preposition"]], "¿A dónde caminamos? Busca la palabra antes del puente."],
-  ["Mía guardó los zapatos en el clóset.", "en", [["guardó", "verb-not-preposition"], ["zapatos", "noun-not-preposition"]], "¿Dónde guardó Mía los zapatos? Busca la palabra antes del clóset."],
-  ["El pájaro voló sobre la casa.", "sobre", [["pájaro", "noun-not-preposition"], ["voló", "verb-not-preposition"]], "¿Por dónde voló el pájaro? Busca la palabra antes de la casa."],
-  ["Leo vino con su perro.", "con", [["vino", "verb-not-preposition"], ["perro", "noun-not-preposition"]], "¿Quién acompañó a Leo? Busca la palabra antes de su perro."],
-  ["La pelota rodó hasta la calle.", "hasta", [["rodó", "verb-not-preposition"], ["pelota", "noun-not-preposition"]], "¿Dónde terminó la pelota? Busca la palabra antes de la calle."],
-  ["Mi abuela viene desde Puebla.", "desde", [["viene", "verb-not-preposition"], ["abuela", "noun-not-preposition"]], "¿De dónde viene la abuela? Busca la palabra antes de Puebla."],
-  ["Jugamos durante el recreo.", "durante", [["Jugamos", "verb-not-preposition"], ["recreo", "noun-not-preposition"]], "¿Cuándo jugamos? Busca la palabra antes del recreo."],
-  ["Salí sin mi paraguas.", "sin", [["Salí", "verb-not-preposition"], ["paraguas", "noun-not-preposition"]], "¿Cómo salí? Busca la palabra antes de mi paraguas."],
-  ["Ana se sentó entre sus dos amigas.", "entre", [["sentó", "verb-not-preposition"], ["amigas", "noun-not-preposition"]], "¿Dónde se sentó Ana? Busca la palabra antes de sus dos amigas."],
-  ["Le di un regalo a mi hermana.", "a", [["regalo", "noun-not-preposition"], ["di", "verb-not-preposition"]], "¿Quién recibió el regalo? Busca la palabra antes de mi hermana."],
-  ["El avión pasó por la ciudad.", "por", [["avión", "noun-not-preposition"], ["pasó", "verb-not-preposition"]], "¿Qué lugar cruzó el avión? Busca la palabra antes de la ciudad."],
-  ["Este regalo es para mi mamá.", "para", [["regalo", "noun-not-preposition"], ["es", "verb-not-preposition"]], "¿Quién recibe el regalo? Busca la palabra antes de mi mamá."],
-  ["El tren salió de la estación.", "de", [["tren", "noun-not-preposition"], ["salió", "verb-not-preposition"]], "¿Qué lugar dejó el tren? Busca la palabra que va entre salió y la estación."],
+  ["El gato durmió bajo la mesa.", "bajo", [["gato", "noun-not-preposition"], ["durmió", "verb-not-preposition"]], "¿Dónde durmió el gato? Busca la palabra que dice la posición."],
+  ["Caminamos hacia el puente.", "hacia", [["Caminamos", "verb-not-preposition"], ["puente", "noun-not-preposition"]], "¿Adónde caminamos? Busca la palabra que dice la dirección."],
+  ["Mía guardó los zapatos en el clóset.", "en", [["guardó", "verb-not-preposition"], ["zapatos", "noun-not-preposition"]], "¿Dónde guardó Mía los zapatos? Busca la palabra que dice el lugar."],
+  ["El pájaro voló sobre la casa.", "sobre", [["pájaro", "noun-not-preposition"], ["voló", "verb-not-preposition"]], "¿Por dónde voló el pájaro? Busca la palabra que dice la posición."],
+  ["Leo vino con su perro.", "con", [["vino", "verb-not-preposition"], ["perro", "noun-not-preposition"]], "¿Vino Leo solo? Busca la palabra que dice quién lo acompañó."],
+  ["La pelota rodó hasta la calle.", "hasta", [["rodó", "verb-not-preposition"], ["pelota", "noun-not-preposition"]], "¿Dónde terminó la pelota? Busca la palabra que dice el final del camino."],
+  ["Mi abuela viene desde Puebla.", "desde", [["viene", "verb-not-preposition"], ["abuela", "noun-not-preposition"]], "¿De dónde viene la abuela? Busca la palabra que dice el punto de partida."],
+  ["Jugamos durante el recreo.", "durante", [["Jugamos", "verb-not-preposition"], ["recreo", "noun-not-preposition"]], "¿Cuándo jugamos? Busca la palabra que dice el momento."],
+  ["Salí sin mi paraguas.", "sin", [["Salí", "verb-not-preposition"], ["paraguas", "noun-not-preposition"]], "¿Cómo salí? Busca la palabra que dice que algo faltaba."],
+  ["Ana se sentó entre sus dos amigas.", "entre", [["sentó", "verb-not-preposition"], ["amigas", "noun-not-preposition"]], "¿Dónde se sentó Ana? Busca la palabra que dice la posición."],
+  ["Le di un regalo a mi hermana.", "a", [["regalo", "noun-not-preposition"], ["di", "verb-not-preposition"]], "¿Quién recibió el regalo? Busca la palabra que dice quién lo recibió."],
+  ["El avión pasó por la ciudad.", "por", [["avión", "noun-not-preposition"], ["pasó", "verb-not-preposition"]], "¿Qué lugar cruzó el avión? Busca la palabra que dice el camino."],
+  ["Este regalo es para mi mamá.", "para", [["regalo", "noun-not-preposition"], ["es", "verb-not-preposition"]], "¿Quién va a recibir el regalo? Busca la palabra que dice a quién está destinado."],
+  ["El tren salió de la estación.", "de", [["tren", "noun-not-preposition"], ["salió", "verb-not-preposition"]], "¿Qué lugar dejó el tren? Busca la palabra que dice el lugar que quedó atrás."],
 ];
 
 const EN_PREP2: Prep[] = [
@@ -1523,7 +1535,7 @@ const PREPOSITIONS: Level[] = [
     ask: bi("Which group of words is the prepositional phrase?", "¿Qué grupo de palabras es la frase con preposición?"),
     hints: bi(
       ["A prepositional phrase starts with a preposition and ends with a noun.", "Find the preposition, then keep going until you reach the noun it points to."],
-      ["Una frase con preposición empieza con una preposición y termina con un sustantivo.", "Busca la preposición y sigue hasta llegar al sustantivo que la completa."],
+      ["Una frase con preposición empieza con una preposición y llega hasta un sustantivo, con las palabras que lo describen.", "Busca la preposición y sigue hasta el sustantivo que la completa. Si después del sustantivo hay una palabra que lo describe, también va en la frase."],
     ),
     seconds: 20,
     bank: pair(EN_PREP2.map(prepQ("en", true)), ES_PREP2.map(prepQ("es", true))),
@@ -1620,8 +1632,8 @@ const ES_RUNONS: RunOn[] = [
   ["Me gusta la pizza", "a mi hermano le gustan los tacos", "pero"], ["Sonó la campana", "fuimos a almorzar", "y"], ["Hacía mucho frío", "me puse el abrigo", "así que"],
   ["Maya juega fútbol", "es la portera del equipo", "."], ["El autobús llegó tarde", "caminamos a la escuela", "así que"], ["Leo encontró una concha", "se la dio a su mamá", "y"],
   ["Terminó la película", "todos aplaudieron muy fuerte", "y"], ["Mi gata es gris", "se llama Humo", "."], ["Queríamos nadar", "la alberca estaba cerrada", "pero"],
-  ["Kai terminó la tarea", "salió a jugar", "así que"], ["Salió el sol", "la nieve empezó a derretirse", "y"], ["Ana ama dibujar", "quiere ser artista", "."],
-  ["La bebé tenía sueño", "tomó una siesta larga", "así que"], ["Llovió todo el día", "jugamos juegos de mesa", "así que"],
+  ["Kai terminó la tarea", "salió a jugar", "así que"], ["Salió el sol", "la nieve empezó a derretirse", "y"], ["A Ana le encanta dibujar", "quiere ser artista", "."],
+  ["La bebé tenía sueño", "durmió una siesta larga", "así que"], ["Llovió todo el día", "jugamos juegos de mesa", "así que"],
 ];
 
 const FRAGMENTS: Level[] = [
@@ -1905,7 +1917,7 @@ const EN_IDIOMS: Saying[] = [
   ["Can you lend me a hand with these boxes?", "Can you help me?", [["Can you give me your hand to keep?", "literal-reading"], ["Can you count the boxes?", "wrong-situation"]], "Boxes are heavy. What would a person want from a friend?"],
   ["Ana and her sister see eye to eye on most things.", "They agree on most things.", [["They stare at each other a lot.", "literal-reading"], ["They argue about everything.", "opposite-meaning"]], "Seeing the same way means thinking the same way."],
   ["Kai bit off more than he could chew with three projects.", "Kai took on more than he could handle.", [["Kai ate too much food.", "literal-reading"], ["Kai finished his projects early.", "opposite-meaning"]], "Three projects at once is a lot of work."],
-  ["Please keep an eye on your little brother.", "Please watch him carefully.", [["Please hold your eye next to him.", "literal-reading"], ["Please teach him a new game.", "wrong-situation"]], "What does a big sister do while a little brother plays?"],
+  ["Please keep an eye on your little brother.", "Please watch him carefully.", [["Please hold your eye next to him.", "literal-reading"], ["Please teach him a new game.", "wrong-situation"]], "What does an older brother or sister do while a little brother plays?"],
   ["We made our offer, so the ball is in your court.", "Now it is your turn to decide.", [["The ball is on the tennis court.", "literal-reading"], ["You lost the game.", "wrong-situation"]], "In a game, when the ball is on your side, it is your move."],
   ["Jada told a joke to break the ice.", "Jada helped everyone relax and start talking.", [["Jada cracked the ice on a pond.", "literal-reading"], ["Jada ended the party.", "opposite-meaning"]], "At the start, the new group felt stiff and quiet, like ice."],
   ["It's late, so it's time to hit the hay.", "It is time to go to bed.", [["It is time to feed the horses.", "literal-reading"], ["It is time to wake up.", "opposite-meaning"]], "Long ago, some beds were stuffed with hay."],
@@ -1918,7 +1930,7 @@ const ES_IDIOMS: Saying[] = [
   ["Mi abuela no tiene pelos en la lengua.", "Dice lo que piensa sin rodeos.", [["No tiene pelos en la boca.", "literal-reading"], ["Casi nunca habla.", "opposite-meaning"]], "Nada le estorba a su lengua para hablar."],
   ["En la clase de arte, Kai está como pez en el agua.", "Kai se siente muy cómodo.", [["Kai está nadando.", "literal-reading"], ["Kai está muy nervioso.", "opposite-meaning"]], "Un pez en el agua está en su lugar favorito."],
   ["Diste en el clavo con tu respuesta.", "Acertaste.", [["Golpeaste un clavo con un martillo.", "literal-reading"], ["Te equivocaste.", "opposite-meaning"]], "Pegarle justo al clavo es hacerlo exacto."],
-  ["Mi hermano habla hasta por los codos.", "Habla muchísimo.", [["Habla moviendo los brazos.", "literal-reading"], ["Casi no habla.", "opposite-meaning"]], "Los codos no hablan. Imagina a alguien que habla con todo el cuerpo."],
+  ["Mi hermano habla hasta por los codos.", "Habla muchísimo.", [["Habla moviendo los brazos.", "literal-reading"], ["Casi no habla.", "opposite-meaning"]], "Los codos no hablan. Si hasta los codos hablaran, ¿cuánto hablaría esa persona?"],
   ["Si quieres ganar, tienes que ponerte las pilas.", "Tienes que esforzarte y estar atento.", [["Tienes que cambiarle las pilas a un juguete.", "literal-reading"], ["Tienes que descansar.", "opposite-meaning"]], "Las pilas dan energía."],
   ["Después de tres intentos, Omar no tiró la toalla.", "Omar no se rindió.", [["Omar no lanzó la toalla al piso.", "literal-reading"], ["Omar dejó de intentarlo.", "opposite-meaning"]], "Omar lo intentó tres veces. ¿Siguió o se detuvo?"],
   ["Para cruzar el río, hay que andar con pies de plomo.", "Hay que ir con mucho cuidado.", [["Hay que usar zapatos pesados.", "literal-reading"], ["Hay que correr rápido.", "opposite-meaning"]], "Con pies muy pesados, cada paso es lento y pensado."],
@@ -1948,7 +1960,7 @@ const ES_PROVERBS: Saying[] = [
   ["No hay mal que por bien no venga.", "De algo malo puede salir algo bueno.", [["Todo lo malo es bueno.", "literal-reading"], ["Las cosas malas solo empeoran.", "opposite-meaning"]], "Piensa en un día lluvioso que terminó con un arcoíris."],
   ["Perro que ladra no muerde.", "Quien amenaza mucho casi nunca hace daño.", [["Los perros que ladran no tienen dientes.", "literal-reading"], ["Hay que tenerle miedo a quien grita.", "opposite-meaning"]], "Piensa en alguien que hace mucho ruido pero no hace nada."],
   ["Más vale pájaro en mano que cien volando.", "Es mejor algo seguro que mucho que no es seguro.", [["Es mejor tener pájaros como mascota.", "literal-reading"], ["Es mejor arriesgar lo que tienes por algo más grande.", "opposite-meaning"]], "El pájaro en la mano ya es tuyo. Los que vuelan, no."],
-  ["Poco a poco se va lejos.", "Avanzando de a poco se llega a la meta.", [["Hay que caminar despacio para no cansarse.", "literal-reading"], ["Solo los más rápidos llegan lejos.", "opposite-meaning"]], "Recuerda la carrera de la tortuga y la liebre."],
+  ["Poco a poco se va lejos.", "Avanzando paso a paso se llega a la meta.", [["Hay que caminar despacio para no cansarse.", "literal-reading"], ["Solo los más rápidos llegan lejos.", "opposite-meaning"]], "Recuerda la carrera de la tortuga y la liebre."],
   ["No por mucho madrugar amanece más temprano.", "Apurarse no hace que las cosas pasen antes.", [["El sol sale cuando uno se levanta.", "literal-reading"], ["Quien se apura siempre consigue todo antes.", "opposite-meaning"]], "Aunque te levantes a las cuatro, el sol sale a su hora."],
   ["La práctica hace al maestro.", "Practicar mucho te hace muy bueno en algo.", [["Los maestros practican en la escuela.", "literal-reading"], ["Practicar no sirve de nada.", "opposite-meaning"]], "Maestro aquí quiere decir alguien que hace algo muy bien."],
   ["Del dicho al hecho hay mucho trecho.", "Decir algo es más fácil que hacerlo.", [["Hay un camino largo entre dos pueblos.", "literal-reading"], ["Lo que se dice siempre se cumple.", "opposite-meaning"]], "Compara prometer que vas a ayudar con ayudar de verdad."],
@@ -2195,7 +2207,7 @@ const EN_STEADY: Steady[] = [
   ["Every morning Kai wakes up early and ___ his dog.", "feeds", [["fed", "past-in-present-story"], ["will feed", "future-in-present-story"]], "Every morning", "present"],
   ["Last summer we visited Grandma, and she ___ us how to fish.", "taught", [["teaches", "present-in-past-story"], ["will teach", "future-in-past-story"]], "Last summer", "past"],
   ["Every year Mia opens her birthday box and ___ a new book inside.", "finds", [["found", "past-in-present-story"], ["will find", "future-in-present-story"]], "Every year", "present"],
-  ["Last night the storm knocked down a tree, so Dad ___ it into logs.", "cut", [["cuts", "present-in-past-story"], ["will cut", "future-in-past-story"]], "Last night", "past"],
+  ["Last night the storm knocked down a tree, and the next morning Dad ___ it into logs.", "cut", [["cuts", "present-in-past-story"], ["will cut", "future-in-past-story"]], "Last night", "past"],
   ["Each spring our class plants seeds and ___ them every day.", "waters", [["watered", "past-in-present-story"], ["will water", "future-in-present-story"]], "Each spring", "present"],
   ["Yesterday, when the bell rang, the students ___ to the gym.", "hurried", [["hurry", "present-in-past-story"], ["will hurry", "future-in-past-story"]], "Yesterday", "past"],
   ["Every night Leo reads a chapter and then ___ off the light.", "turns", [["turned", "past-in-present-story"], ["will turn", "future-in-present-story"]], "Every night", "present"],
@@ -2211,7 +2223,7 @@ const ES_STEADY: Steady[] = [
   ["Todas las mañanas Kai se levanta temprano y ___ a su perro.", "alimenta", [["alimentó", "past-in-present-story"], ["alimentará", "future-in-present-story"]], "Todas las mañanas", "present"],
   ["El verano pasado visitamos a la abuela y ella nos ___ a pescar.", "enseñó", [["enseña", "present-in-past-story"], ["enseñará", "future-in-past-story"]], "El verano pasado", "past"],
   ["Cada año Mía abre su caja de cumpleaños y ___ un libro nuevo adentro.", "encuentra", [["encontró", "past-in-present-story"], ["encontrará", "future-in-present-story"]], "Cada año", "present"],
-  ["Anoche la tormenta tumbó un árbol, así que papá lo ___ en pedazos.", "cortó", [["corta", "present-in-past-story"], ["cortará", "future-in-past-story"]], "Anoche", "past"],
+  ["Anoche la tormenta tumbó un árbol, y a la mañana siguiente papá lo ___ en pedazos.", "cortó", [["corta", "present-in-past-story"], ["cortará", "future-in-past-story"]], "Anoche", "past"],
   ["Cada primavera la maestra siembra semillas y las ___ todos los días.", "riega", [["regó", "past-in-present-story"], ["regará", "future-in-present-story"]], "Cada primavera", "present"],
   ["Ayer, cuando sonó la campana, los estudiantes ___ al gimnasio.", "corrieron", [["corren", "present-in-past-story"], ["correrán", "future-in-past-story"]], "Ayer", "past"],
   ["Todas las noches Leo lee un capítulo y luego ___ la luz.", "apaga", [["apagó", "past-in-present-story"], ["apagará", "future-in-present-story"]], "Todas las noches", "present"],
@@ -2231,7 +2243,11 @@ const shiftQ = (locale: Locale) => ([story, verbs, k, cue, fix]: Shift): G => {
     `“${story}”`,
     verbs[k],
     others.map((v): Wrong => [v, "consistent-verb-chosen"]),
-    tr(locale, `"${cue}" sets the time. "${others[0]}" and "${others[1]}" match it.`, `"${cue}" marca el tiempo. "${others[0]}" y "${others[1]}" van con él.`),
+    tr(
+      locale,
+      `"${cue}" sets the time. Check each verb against it: does it tell about something that happens again and again, or something that already happened?`,
+      `"${cue}" marca el tiempo. Revisa cada verbo con esa pista: ¿cuenta algo que pasa una y otra vez, o algo que ya pasó?`,
+    ),
     tr(locale, `"${verbs[k]}" switches tenses. It should be "${fix}".`, `"${verbs[k]}" cambia de tiempo. Debería ser "${fix}".`),
     fix,
   ];
@@ -2798,9 +2814,9 @@ const ES_HOMOGRAPHS: Homograph[] = [
   ["El perro movía la cola muy contento.", "cola", "La parte de atrás del cuerpo de un animal", "Una fila de personas que esperan", "Un juguete"],
   ["Mi abuela me mandó una carta.", "carta", "Un mensaje escrito", "Una tarjeta de un juego de naipes", "Un mapa"],
   ["La sierra cortó la madera.", "sierra", "Una herramienta para cortar", "Una cadena de montañas", "Un río"],
-  ["Me río cuando veo esa película.", "río", "Del verbo reír", "Una corriente de agua", "Del verbo correr"],
-  ["Mi hermana nada muy rápido.", "nada", "Del verbo nadar", "Ninguna cosa", "Del verbo caminar"],
-  ["Compré una bota para la lluvia.", "bota", "Un zapato alto", "Del verbo botar, como cuando la pelota bota", "Un sombrero"],
+  ["Me río cuando veo esa película.", "río", "Una forma del verbo reír", "Una corriente de agua", "Una forma del verbo correr"],
+  ["Mi hermana nada muy rápido.", "nada", "Una forma del verbo nadar", "Ninguna cosa", "Una forma del verbo caminar"],
+  ["Se me mojó una bota en el charco.", "bota", "Un zapato que también cubre parte de la pierna", "Una forma del verbo botar, como cuando la pelota bota", "Un sombrero"],
   ["Sobre la mesa hay una copa de agua.", "copa", "Un vaso con pie", "La parte de arriba de un árbol", "Una cuchara"],
   ["Cierra la llave del agua.", "llave", "La pieza que abre o cierra el paso del agua", "Lo que abre una cerradura", "Un vaso"],
 ];
