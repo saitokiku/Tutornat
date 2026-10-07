@@ -8,13 +8,13 @@ start with k-9 math and English and science … use real sources … work all ni
 permission". Work top to bottom. Tick only after `npm run verify` passed and the work is committed.
 Keep production (kaizenedu.net) untouched; preview deploys only.
 
-In progress: Q3 · check-ins without a commit: 0
+In progress: Q6 · check-ins without a commit: 0
 
 - [x] Q1. Practice core: types, seeded rng, safe algebra parser, answer checker, K–2 math (19 skills), registry + wide generator test.
 - [ ] Q2. Strands from parallel authors merged and reviewed: math 3–5, 6–7, 8–9; English K–4, 5–9; science K–5, 6–9 (each with independent-verification tests).
-- [ ] Q3. Visuals for practice (dots, ten-frame, base-ten, clock, array, column, rect, triangle, circle, right-triangle, prism, coord) + MathText renderer.
-- [ ] Q4. Learning engine (`learning/`): evidence type + store lists, skill status (practicing/ready/checked/proved/refresh), level stepping, review due, set builder, placement; unit tests.
-- [ ] Q5. Practice UI: `/practice` hub (subjects, skill map with status, "practice anything" search), `/practice/[setId]` runner (keypad, fraction pad, choices, text; hint ladder; steps; read-aloud; corrections; finish summary), check mode; e2e.
+- [x] Q3. Visuals for practice (dots, ten-frame, base-ten, clock, array, column, rect, triangle, circle, right-triangle, prism, coord) + MathText renderer.
+- [x] Q4. Learning engine (`learning/`): evidence type + store lists, skill status (practicing/ready/checked/proved/refresh), level stepping, review due, set builder, placement; unit tests.
+- [x] Q5. Practice UI: `/practice` hub (subjects, skill map with status, "practice anything" search), `/practice/[setId]` runner (keypad, fraction pad, choices, text; hint ladder; steps; read-aloud; corrections; finish summary), check mode; e2e (journey test lands with Q15).
 - [ ] Q6. Planner: `planFor` (checks, school prep, due work, daily sets, lesson, more), Today page rewrite, done markers; unit tests.
 - [ ] Q7. School + calendar: classes, events, feedback, results; `/calendar` week/day views; add/edit; ICS parse + export + `/api/ics` feed fetch (SSRF-guarded); paste intake parser with review step; feedback → feedback set.
 - [ ] Q8. AI layer: provider resolution, `/api/ai/status`, safety screen, prompts by band, tutor route with tools, demo tutor; tests with mock model.

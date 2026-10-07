@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { bandOf, catalogueFor, type CatalogueEntry } from "@/catalogue";
 import { CourseArt } from "@/components/courses/CourseArt";
 import { CourseRow } from "@/components/courses/CourseRow";
@@ -10,14 +11,20 @@ import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { IconArrowRight } from "@/components/icons";
 import { MagicBox } from "@/components/magic-box/MagicBox";
+import { ComingUp } from "@/components/today/ComingUp";
+import { TodayPlan } from "@/components/today/TodayPlan";
 import { Hear, HearContext, useHear } from "@/components/stage/hear";
-import { Button, SubjectDot, btn } from "@/components/ui";
+import { Button, SubjectDot } from "@/components/ui";
 import { useT } from "@/i18n";
-import { continueTarget, courseProgress } from "@/lib/activity";
+import { courseProgress } from "@/lib/activity";
+import { dayLabel } from "@/lib/format";
+import { todayPlan } from "@/lib/plan";
 import { addFromCatalogue, coursesOf } from "@/lib/courses";
 import { currentLearner } from "@/lib/profiles";
 import { useStore } from "@/lib/store";
 import type { ActivityEvent, Course, Profile } from "@/lib/types";
+import { localDate } from "@/planner/dates";
+import { comingUp } from "@/planner/plan";
 
 export default function HomePage() {
   return (
@@ -31,46 +38,30 @@ function Home() {
   const t = useT();
   useTitle(t("nav.home"));
   const learner = useStore(currentLearner) as Profile;
+  const [now] = useState(() => Date.now());
   const courses = useStore((s) => coursesOf(s, learner.id));
   const events = useStore((s) => s.activity.filter((e) => e.profileId === learner.id));
-  const next = continueTarget(courses, events);
+  const plan = useStore((s) => todayPlan(s, learner, now));
+  const school = useStore((s) => comingUp(s.events.filter((e) => e.profileId === learner.id), localDate(now)));
+  const classes = useStore((s) => s.classes.filter((c) => c.profileId === learner.id));
   const young = bandOf(learner.grade) === "k2";
   const picks = catalogueFor(learner.grade, learner.locale).filter((c) => bandOf(c.grade) === bandOf(learner.grade));
   const ready = courses.filter((c) => c.status === "ready");
+  const hasLesson = [...plan.lead, ...plan.more].some((i) => i.kind === "lesson");
 
-  const continueCard = next && (
-    <section aria-labelledby="continue" className="rounded-lg border border-border bg-panel p-4 shadow-lift sm:p-5">
-      <div className="flex flex-wrap items-center gap-4 sm:flex-nowrap">
-        <div className="w-28 shrink-0 sm:w-36">
-          <CourseArt lessons={next.course.lessons} subject={next.course.subject} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2 id="continue" className="text-sm font-medium text-muted">
-            {t("home.continue")}
-          </h2>
-          <p className="mt-1 truncate text-sm text-muted" lang={next.course.locale}>
-            {next.course.title}
-          </p>
-          <p className="font-brand text-t2 font-semibold text-ink" lang={next.course.locale}>
-            {next.lesson.title}
-          </p>
-          <p className="mt-1 font-opmono text-xs tabular-nums text-muted">
-            {t("courses.progress", { done: next.progress.done, total: next.progress.total })} · {t("common.minutes", { n: next.lesson.minutes })}
-          </p>
-        </div>
-        <Link href={`/learn/${next.course.id}/${next.lesson.id}`} className={btn("primary", "md", "w-full sm:w-auto")}>
-          {t("home.continueCta")} <IconArrowRight size={16} />
-        </Link>
-      </div>
-    </section>
+  const greeting = (
+    <header>
+      <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("home.hello", { name: learner.nickname })}</h1>
+      <p className="mt-1 text-sm text-muted">{dayLabel(now, learner.locale)}</p>
+    </header>
   );
 
   if (young)
     return (
       <HearContext.Provider value={{ hear: true, young: true, locale: learner.locale }}>
         <div className="space-y-10">
-          <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("home.hello", { name: learner.nickname })}</h1>
-          {continueCard}
+          {greeting}
+          <TodayPlan plan={plan} learner={learner} now={now} young />
           <section aria-labelledby="pick" className="space-y-4">
             <div className="flex items-center gap-3">
               <h2 id="pick" className="font-brand text-t2 font-semibold text-ink">
@@ -84,6 +75,7 @@ function Home() {
               ))}
             </ul>
           </section>
+          {school.length > 0 && <ComingUp events={school} classes={classes} locale={learner.locale} now={now} />}
           <section className="space-y-3">
             <p className="text-sm font-medium text-muted">{t("home.askGrownUp")}</p>
             <MagicBox learner={learner} />
@@ -92,28 +84,19 @@ function Home() {
       </HearContext.Provider>
     );
 
-  const pick = next ? null : picks[0] ?? catalogueFor(learner.grade, learner.locale)[0];
+  const pick = hasLesson ? null : picks[0] ?? catalogueFor(learner.grade, learner.locale)[0];
   return (
     <div className="space-y-10">
-      <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{t("home.hello", { name: learner.nickname })}</h1>
-      <MagicBox learner={learner} />
-      {continueCard}
+      {greeting}
+      <TodayPlan plan={plan} learner={learner} now={now} young={false} />
+      <ComingUp events={school} classes={classes} locale={learner.locale} now={now} />
+      <section aria-labelledby="learn-new" className="space-y-3">
+        <h2 id="learn-new" className="font-brand text-t2 font-semibold text-ink">
+          {t("today.learnNew")}
+        </h2>
+        <MagicBox learner={learner} />
+      </section>
       {pick && <SuggestCard entry={pick} learner={learner} />}
-      {!next && picks.length > 1 && (
-        <section aria-labelledby="more" className="space-y-3">
-          <h2 id="more" className="font-brand text-t2 font-semibold text-ink">
-            {t("courses.catalogue")}
-          </h2>
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-            {picks
-              .filter((e) => e.id !== pick?.id)
-              .slice(0, 3)
-              .map((entry) => (
-                <PickTile key={entry.id} entry={entry} learner={learner} courses={courses} events={events} />
-              ))}
-          </ul>
-        </section>
-      )}
       {ready.length > 0 && (
         <section aria-labelledby="mine">
           <div className="mb-3 flex items-baseline justify-between">
