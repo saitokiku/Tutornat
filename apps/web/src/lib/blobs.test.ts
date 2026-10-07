@@ -72,6 +72,10 @@ describe("files before they're kept", () => {
     expect(await prepareFile(new File([new Uint8Array(BLOB_MAX_BYTES + 1)], "big.pdf", { type: "application/pdf" }))).toEqual({ error: "size" });
   });
 
+  it("explains a photo this browser can't open instead of keeping it", async () => {
+    expect(await prepareFile(new File([new Uint8Array([1, 2, 3])], "photo.heic", { type: "image/heic" }))).toEqual({ error: "read" });
+  });
+
   it("turns a file into a data URL for the AI reader", async () => {
     expect(await dataUrl(pdf("%PDF"))).toBe("data:application/pdf;base64,JVBERg==");
   });

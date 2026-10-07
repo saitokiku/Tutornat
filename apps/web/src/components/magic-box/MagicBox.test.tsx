@@ -202,7 +202,8 @@ describe("MagicBox as the universal intake", () => {
     render(<MagicBox learner={learner} />);
     await user.type(box(), "Ada's sheet");
     await user.upload(screen.getByLabelText("Add photo or PDF", { selector: "input" }), new File(["%PDF-1.4"], "sheet.pdf", { type: "application/pdf" }));
-    expect(await screen.findByText("Our guess: Test, read by the AI tutor. Check it before you go on.")).toBeInTheDocument();
+    expect(await screen.findByText("Our guess: Test, read by the AI tutor. Check it before you go on.", { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText("Our guess: Test, read by the AI tutor. Check it before you go on.", { selector: "[role=status] span" })).toBeInTheDocument();
     expect(radio("Test")).toBeChecked();
     expect(screen.getByLabelText("Name")).toHaveValue("Ada's fractions test");
     expect(screen.getByText("The day isn't on the page.")).toBeInTheDocument();

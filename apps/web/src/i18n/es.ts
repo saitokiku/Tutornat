@@ -1269,6 +1269,7 @@ const es: Record<Key, string> = {
   "intake.item.parentNote": "La preparación, la práctica y la ayuda se abren en el perfil de {name}.",
   "intake.item.switch": "Cambiar de alumno",
   "intake.item.backToCalendar": "Volver al calendario",
+  "intake.backToItem": "Volver al trabajo escolar",
 };
 
 export default es;

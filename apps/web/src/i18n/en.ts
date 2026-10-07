@@ -1267,6 +1267,7 @@ const en = {
   "intake.item.parentNote": "Prep, practice and help open in {name}'s profile.",
   "intake.item.switch": "Switch learner",
   "intake.item.backToCalendar": "Back to the calendar",
+  "intake.backToItem": "Back to the school item",
 } as const;
 
 export default en;

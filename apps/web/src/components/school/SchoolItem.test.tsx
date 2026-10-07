@@ -132,6 +132,15 @@ describe("school item page", () => {
     expect(read().events).toHaveLength(1);
   });
 
+  it("a day off is shown, not worked on", () => {
+    family("p1", false, [item({ id: "e11", kind: "no-school", title: "Teacher work day" })]);
+    render(<SchoolItem eventId="e11" />);
+    expect(screen.getByText("No school")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Get help/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mark done/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "What it covers" })).not.toBeInTheDocument();
+  });
+
   it("is not found for a wrong id or another learner's item", () => {
     family("p1", false, [item({ id: "e8", profileId: "p2", title: "Bo's quiz" })]);
     render(<SchoolItem eventId="e8" />);

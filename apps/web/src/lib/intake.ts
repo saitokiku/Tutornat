@@ -93,33 +93,12 @@ const WEEKDAY = new RegExp(
   "iu",
 );
 
-const NUMBER_WORDS: Record<string, number> = {
-  a: 1,
-  an: 1,
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-  un: 1,
-  una: 1,
-  uno: 1,
-  dos: 2,
-  tres: 3,
-  cuatro: 4,
-  cinco: 5,
-  seis: 6,
-  siete: 7,
-  ocho: 8,
-  nueve: 9,
-  diez: 10,
-};
-const N = "\\d{1,3}|a|an|one|two|three|four|five|six|seven|eight|nine|ten|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez";
+// "in two days", "en tres días": number words up to ten, and "a"/"un" for one.
+const NUMBER_WORDS: Record<string, number> = Object.fromEntries([
+  ...["one two three four five six seven eight nine ten", "uno dos tres cuatro cinco seis siete ocho nueve diez"].flatMap((list) => list.split(" ").map((w, i) => [w, i + 1])),
+  ...["a", "an", "un", "una"].map((w) => [w, 1]),
+]);
+const N = `\\d{1,3}|${Object.keys(NUMBER_WORDS).join("|")}`;
 
 const RELATIVE: [RegExp, (m: RegExpExecArray) => number | null][] = [
   [new RegExp(`${B}(?:(?:the\\s+)?day after tomorrow|pasado\\s+ma[ñn]ana)${E}`, "iu"), () => 2],
@@ -295,26 +274,29 @@ function skillsFor(text: string, topic: string, subject?: Subject): string[] {
  * generic homework words, so "science project due Friday" is a project.
  */
 export function classifyIntake(text: string, ctx: IntakeContext): IntakeGuess {
-  const line = pickLine(text);
+  // A pasted page: the line with a day carries the item, a line with a school word names it, and the
+  // whole page says what kind it is and what it covers.
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const named = lines.find((l) => SCHOOL_CUES.some((r) => cue(l, r)));
+  const line = (lines.length > 1 && lines.find((l) => readDate(l, ctx.today))) || named || lines[0] || "";
+  const scope = lines.length > 1 ? text : line;
   const found = readDate(line, ctx.today);
   const rest = withoutDate(line, found);
 
-  const test = cue(line, "test");
-  const quiz = cue(line, "quiz");
-  const exam =
-    test && quiz
-      ? test.index <= quiz.index
-        ? { kind: "test" as const, ...test }
-        : { kind: "quiz" as const, ...quiz }
-      : test
-        ? { kind: "test" as const, ...test }
-        : quiz
-          ? { kind: "quiz" as const, ...quiz }
-          : null;
-  const project = cue(line, "project");
-  const homework = cue(line, "homework");
-  const practice = cue(line, "practice");
-  const learn = cue(line, "learn");
+  // Test or quiz, whichever the words say first.
+  const exam = (["test", "quiz"] as const)
+    .flatMap((k) => {
+      const c = cue(scope, k);
+      return c ? [{ kind: k, ...c }] : [];
+    })
+    .sort((a, b) => a.index - b.index)[0];
+  const project = cue(scope, "project");
+  const homework = cue(scope, "homework");
+  const practice = cue(scope, "practice");
+  const learn = cue(scope, "learn");
 
   let kind: IntakeKind;
   let reason: IntakeReason;
@@ -327,26 +309,18 @@ export function classifyIntake(text: string, ctx: IntakeContext): IntakeGuess {
   else [kind, reason] = ["learn", { rule: "default" }];
 
   // A question keeps its date words ("Why is Friday the 13th unlucky?"); everything else loses them.
-  const title = titleFor(kind === "learn" ? line : rest, kind);
-  // On a pasted page the other lines still say what it covers ("Please review fractions.").
-  const about = line === text.trim() ? rest : `${rest} ${text.replace(line, " ")}`;
-  const named = classFor(about, ctx.classes);
-  const skillIds = skillsFor(about, title, named?.subject);
+  let title = titleFor(kind === "learn" ? line : rest, kind);
+  if (!title && named && named !== line) title = titleFor(withoutDate(named, readDate(named, ctx.today)), kind);
+  const about = lines.length > 1 ? `${rest} ${text.replace(line, " ")}` : rest;
+  const inClass = classFor(about, ctx.classes);
+  const skillIds = skillsFor(about, title, inClass?.subject);
   const guessed = guessSubject(title);
-  const subject = named?.subject ?? getSkill(skillIds[0] ?? "")?.subject ?? (guessed === "other" ? undefined : guessed);
-  const cls = named ?? classFor(about, ctx.classes, subject);
+  const subject = inClass?.subject ?? getSkill(skillIds[0] ?? "")?.subject ?? (guessed === "other" ? undefined : guessed);
+  const cls = inClass ?? classFor(about, ctx.classes, subject);
   return { kind, title, date: found?.date, subject, skillIds, classId: cls?.id, reason };
 }
 
-/** For a pasted page, the line that carries the item: the first with a date, else a school word, else the first. */
-function pickLine(text: string) {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length <= 1) return lines[0] ?? "";
-  return lines.find((l) => readDate(l, "2000-01-01")) ?? lines.find((l) => cue(l, "test") || cue(l, "quiz") || cue(l, "project") || cue(l, "homework")) ?? lines[0];
-}
+const SCHOOL_CUES = ["test", "quiz", "project", "homework"] as const;
 
 // --- AI reading (when connected) ------------------------------------------------------------------
 

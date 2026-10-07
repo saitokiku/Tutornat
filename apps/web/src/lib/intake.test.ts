@@ -99,6 +99,10 @@ describe("classifyIntake: 40 ways families say it, in English and Spanish", () =
     expect(g.skillIds).toContain("m.frac.unit");
   });
 
+  it("finds the kind on one line and the day on another", () => {
+    expect(guess("Math test\nFriday Oct 16")).toMatchObject({ kind: "test", date: "2026-10-16", title: "Math test" });
+  });
+
   it("names the class from the learner's classes, or the only class in the subject", () => {
     const classes = [
       { id: "c1", name: "Math 4B", subject: "math" as const },

@@ -140,14 +140,19 @@ export async function prepareFile(file: File): Promise<{ blob: Blob; name: strin
 }
 
 async function decode(file: Blob): Promise<{ source: CanvasImageSource; width: number; height: number; done: () => void }> {
-  if (typeof createImageBitmap === "function") {
+  try {
     const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
     return { source: bmp, width: bmp.width, height: bmp.height, done: () => bmp.close() };
+  } catch {
+    // Older browsers lack createImageBitmap (or its options); an <img> decodes the same photo, upright.
   }
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.src = url;
-  await img.decode();
+  await img.decode().catch((e) => {
+    URL.revokeObjectURL(url);
+    throw e;
+  });
   return { source: img, width: img.naturalWidth, height: img.naturalHeight, done: () => URL.revokeObjectURL(url) };
 }
 

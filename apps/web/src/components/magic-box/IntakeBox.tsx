@@ -333,7 +333,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
               <button
                 type="button"
                 lang={locale}
-                className="k-chip min-h-11 px-3.5 text-sm"
+                className="k-chip min-h-11 px-3.5 py-1.5 text-left text-sm"
                 onClick={() => {
                   resetChoices();
                   setText(ex);
@@ -388,15 +388,21 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
             onEnter={submit}
             describedBy={`${id}-reason`}
           />
-          <div aria-live="polite" className="space-y-1">
+          <div className="space-y-1">
+            {/* Read with the choice row (aria-describedby), not announced on every keystroke. */}
             <p id={`${id}-reason`} className="text-xs text-muted">
               {reason}
             </p>
-            {reading && (
-              <p className="flex items-center gap-2 text-xs text-muted">
-                <Spinner /> {t("intake.reading")}
-              </p>
-            )}
+            {/* Announced: the AI tutor reading, and its guess when it arrives. */}
+            <p role="status" className="flex items-center gap-2 text-xs text-muted empty:hidden">
+              {reading ? (
+                <>
+                  <Spinner /> {t("intake.reading")}
+                </>
+              ) : aiNow ? (
+                <span className="sr-only">{reason}</span>
+              ) : null}
+            </p>
           </div>
           {aiNow && aiNow.notes.length > 0 && (
             <details className="text-xs text-muted">
