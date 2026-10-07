@@ -21,6 +21,14 @@ import multiplication from "./math-multiplication";
 import multiplicationEs from "./math-multiplication-es";
 import multiplyBigger from "./math-multiply-bigger";
 import decimals from "./math-decimals";
+import ratios from "./math-ratios";
+import ratiosEs from "./math-ratios-es";
+import proportional from "./math-proportional";
+import equations from "./math-equations";
+import equationsEs from "./math-equations-es";
+import linearFunctions from "./math-linear-functions";
+import pythagorean from "./math-pythagorean";
+import pythagoreanEs from "./math-pythagorean-es";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -45,4 +53,12 @@ export const REGISTRY: CatalogueEntry[] = [
   multiplicationEs,
   multiplyBigger,
   decimals,
+  ratios,
+  ratiosEs,
+  proportional,
+  equations,
+  equationsEs,
+  linearFunctions,
+  pythagorean,
+  pythagoreanEs,
 ];
