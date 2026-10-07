@@ -67,7 +67,10 @@ export function SentenceBuilder({ widget, onCheck, onSay, lang }: Props) {
     setPicked(rest);
     setResult(null);
   };
-  const chip = `k-chip border-border bg-panel px-4 font-semibold text-ink hover:border-ink/40 ${young ? "min-h-14 text-t3" : "min-h-11 text-body"}`;
+  // One set of colours per chip: two competing bg-/text- utilities resolve by stylesheet order, not class order.
+  const size = `k-chip px-4 font-semibold ${young ? "min-h-14 text-t3" : "min-h-11 text-body"}`;
+  const chip = `${size} border-border bg-panel text-ink hover:border-ink/40`;
+  const placed = `${size} border-ink bg-ink text-paper hover:bg-ink/90`;
 
   return (
     <div className="space-y-5">
@@ -81,7 +84,7 @@ export function SentenceBuilder({ widget, onCheck, onSay, lang }: Props) {
                 type="button"
                 onClick={() => remove(pos)}
                 aria-label={t("stg.sb.remove", { word: widget.words[i] })}
-                className={`${chip} border-ink bg-ink text-paper hover:bg-ink/90`}
+                className={placed}
               >
                 {widget.words[i]}
               </button>

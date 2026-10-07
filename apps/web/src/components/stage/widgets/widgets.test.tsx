@@ -395,6 +395,15 @@ describe("SentenceBuilder", () => {
     expect(screen.getByRole("button", { name: "Add “her”" })).toBeInTheDocument();
     readout("Your sentence: Nia flies kite.");
   });
+
+  it("a placed word is ink on paper, never two competing colours", async () => {
+    render(<SentenceBuilder widget={{ kind: "sentence-builder", words: ["Hi", "Sam."], answers: [["Hi", "Sam."]] }} />);
+    await userEvent.click(screen.getByRole("button", { name: "Add “Hi”" }));
+    const placed = screen.getByRole("button", { name: "Take out “Hi”" }).className.split(/\s+/);
+    expect(placed).toEqual(expect.arrayContaining(["bg-ink", "text-paper"]));
+    expect(placed).not.toEqual(expect.arrayContaining(["bg-panel"]));
+    expect(placed).not.toEqual(expect.arrayContaining(["text-ink"]));
+  });
 });
 
 describe("Sorter as a word sort", () => {

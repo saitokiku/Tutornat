@@ -98,7 +98,8 @@ export function Finish({ course, lesson, learner, tally, seconds, next }: { cour
         </div>
 
         {next ? (
-          <section aria-label={t("stg.finish.next")} className="flex flex-wrap items-center gap-4 rounded-md border border-border bg-panel px-5 py-4">
+          // A column on phones so the title is never squeezed by the button beside it.
+          <section aria-label={t("stg.finish.next")} className="flex flex-col gap-4 rounded-md border border-border bg-panel px-5 py-4 sm:flex-row sm:items-center">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className="min-w-0 flex-1">
                 <p className={`font-semibold text-ink ${young ? "text-t3" : ""}`} lang={course.locale}>

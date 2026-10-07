@@ -239,16 +239,17 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
                   {scene.kind === "quiz" && <QuizView scene={scene} onAnswer={onAnswer} onSay={onSay} onHelp={onHelp} helped={showTutor} />}
                   {scene.kind === "project" && <ProjectView scene={scene} />}
                 </div>
-                <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-8">
-                  <Button variant="ghost" onClick={() => go(index - 1)} disabled={index === 0} className={bigButton(young)}>
-                    <IconArrowLeft size={16} /> {t("common.previous")}
+                {/* Labels never break inside a button; on a narrow phone the primary moves to its own line. K–2 phones show Previous as its arrow. */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-4 sm:px-8">
+                  <Button variant="ghost" onClick={() => go(index - 1)} disabled={index === 0} className={`whitespace-nowrap ${bigButton(young)}`}>
+                    <IconArrowLeft size={16} /> <span className={young ? "max-sm:sr-only" : ""}>{t("common.previous")}</span>
                   </Button>
                   {last ? (
-                    <Button onClick={finish} className={bigButton(young)}>
+                    <Button onClick={finish} className={`ml-auto whitespace-nowrap ${bigButton(young)}`}>
                       {t("stage.finish")} <IconCheck size={16} />
                     </Button>
                   ) : (
-                    <Button onClick={() => go(index + 1)} className={bigButton(young)}>
+                    <Button onClick={() => go(index + 1)} className={`ml-auto whitespace-nowrap ${bigButton(young)}`}>
                       {t("common.next")} <IconArrowRight size={16} />
                     </Button>
                   )}
