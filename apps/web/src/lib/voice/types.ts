@@ -54,6 +54,7 @@ export interface SpeechOut {
   onBoundary(fn: (wordIndex: number) => void): Unsubscribe;
   onStart(fn: () => void): Unsubscribe;
   onEnd(fn: (e: { cancelled: boolean }) => void): Unsubscribe;
+  /** Reading aloud failed and nothing took over (always code "speak"; the message says why). A vendor failure the browser voice covers is not an error. */
   onError(fn: (e: VoiceError) => void): Unsubscribe;
 }
 
