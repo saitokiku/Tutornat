@@ -8,7 +8,7 @@ start with k-9 math and English and science … use real sources … work all ni
 permission". Work top to bottom. Tick only after `npm run verify` passed and the work is committed.
 Keep production (kaizenedu.net) untouched; preview deploys only.
 
-In progress: Q14 · check-ins without a commit: 0
+In progress: (none) — queue 2 finished · check-ins without a commit: 0
 
 - [x] Q1. Practice core: types, seeded rng, safe algebra parser, answer checker, K–2 math (19 skills), registry + wide generator test.
 - [x] Q2. Strands from parallel authors merged and reviewed: math 3–5, 6–7, 8–9; English K–4, 5–9; science K–5, 6–9 — 134 skills (76 math, 30 English, 28 science), each strand with independent-verification tests (724 tests total).
@@ -23,8 +23,62 @@ In progress: Q14 · check-ins without a commit: 0
 - [x] Q11. Resources: curated real free sources per skill family/topic (URLs checked), shown on skill pages, lesson ends, tutor tool, parent view; reading log with real free libraries.
 - [x] Q12. Setup goals (homework help / daily practice / homeschool / stay organized) → defaults; "Get help now" entry everywhere; homeschool records (dated log, CSV, print).
 - [x] Q13. Family dashboard per child + per-child settings (minutes, subjects, timer, voice), weekly numbers, checks waiting, stuck notes, transcripts.
-- [ ] Q14. Landing for the four jobs; nav update (Today, Practice, Talk, Learn, Calendar, Growth).
-- [ ] Q15. ES pass, e2e journeys (help-now, daily practice, homeschool, school import), axe audit, screenshots, README/STATUS/ROADMAP, preview deploy, morning report.
+- [x] Q14. Landing for the four jobs; nav update (Today, Practice, Talk, Learn, Calendar, Growth).
+- [x] Q15. ES pass, e2e journeys (help-now, daily practice, homeschool, school import), axe audit, screenshots, README/STATUS/ROADMAP, preview deploy, morning report.
+
+### Morning report (2026-10-07, learning fabric)
+
+**Try it:** preview https://kaizenedu-63zb5wywj-saitokikus-projects.vercel.app (Vercel login needed).
+kaizenedu.net is untouched. Branch `foundation` is pushed (not merged into `main`).
+
+Make a family, add a kindergartner and an older learner, answer "What should KaizenEDU help with?",
+then open each learner's Today.
+
+**What's new tonight**
+- **Practice (at-home Kumon):** 134 skills K–9 (76 math computed, 30 English and 28 science — draft
+  banks, plus computed science like speed, density, atoms, Punnett squares, pH), each with a hint
+  ladder, worked steps, read-aloud and EN/ES. Sets of 6 (K–2) or 10, level stepping, corrections at
+  the end, pace, an honest finish. Placement ("Find my level"). Every answer checked by code.
+- **The mastery law:** practicing → check ready → passed 1 of 2 checks → proved (two no-help checks on
+  fresh problems, different days ≥ 6 days apart, ≥ 48 h after the last help) → reviews at 7/21/60/120
+  days → "needs a refresh". Stuck and overdue-check flags for parents.
+- **Today:** a plan computed fresh each day — open checks, test prep in the 3 days before a test,
+  work due, teacher-note practice, a set per subject, reviews, the lesson in progress — sized to the
+  learner's daily minutes. "Get help now" and "I have a test coming" for older learners.
+- **Calendar & school:** week view with prep days; add/edit; import by pasting a syllabus (never
+  invents a date), an .ics file, or a class calendar link (Google Classroom, Canvas, Schoology —
+  fetched safely on the server); classes, teacher notes that become practice, scores from school kept
+  apart from proof; export .ics.
+- **Tutor:** one unnamed tutor beside every problem, on the lesson stage, and full screen in Talk.
+  With AI: short Socratic turns, tools for hints, checking, worked examples, pictures, practice and
+  calendar cards; no answer key in its prompt. Without AI: the demo tutor (vetted hints, a similar
+  problem worked out, practice and sources that fit). Read-aloud by sentence; push-to-talk only when a
+  grown-up allows it. Safety screen before any model: crisis/abuse get fixed referrals (988,
+  Childhelp) and a note for the family. Transcripts are on each child's page. Break reminder at 3 h.
+- **AI lessons and more (live when AI is connected):** the magic box writes real lessons in our scene
+  format, each passing quality gates (a real picture or interactive, a learner action, valid keys) or
+  left out and named; AI questions for topics the map doesn't cover (never proof); reading a
+  syllabus/teacher email/photo with every guess listed; a weekly family note from the numbers only.
+- **Real sources:** ~50 free sources (PhET, Khan Academy, OpenStax, NASA, USGS, Project Gutenberg,
+  Unite for Literacy, Storyline Online, Purdue OWL, ReadWorks, CommonLit, Open Library, Libby…),
+  links checked, Spanish versions where they exist, shown where they help.
+- **Parents & homeschool:** each child's page (today, the week in honest numbers, proved/checks
+  waiting/stuck, help needed, skill maps, school, notes, transcripts, reading log, settings), records
+  with CSV and print, setup goals that change emphasis.
+- **Gates:** 727 unit tests, 6 journeys + accessibility audit at 1440 and 390 px (12 runs), build.
+
+**Needs you**
+1. **Rotate the six keys from the old KaizenEdu repo.** The Vercel project `kaizenedu` also still holds
+   ~100 environment variables from the OpenMAIC attempt, including a sensitive `ANTHROPIC_API_KEY`.
+   KaizenEDU ignores it on Vercel on purpose. To try the real AI tutor on the preview: put a **fresh**
+   Anthropic key in `ANTHROPIC_API_KEY` and add `KAIZEN_AI=anthropic` (Preview), then redeploy — and
+   delete the old variables you don't need.
+2. **Decide when kaizenedu.net moves** to this repo (Vercel Root Directory `apps/web`).
+3. **Before any real child uses it:** accounts + database, COPPA consent, retention/delete (ROADMAP "Next").
+4. **Reviews:** a teacher for the draft English/science banks (each marked "Draft questions"), a
+   native speaker for Spanish (the authors flagged choices to check, e.g. "guisante" vs "chícharo").
+
+**Next:** ROADMAP → "Next — make it real for families".
 
 ## Foundation build (done)
 
