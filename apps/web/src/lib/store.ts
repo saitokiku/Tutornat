@@ -3,11 +3,15 @@
 import { useSyncExternalStore } from "react";
 import type { Attempt, PracticeSet, SkillReview, TeachingAct } from "@/learning/types";
 import type { Feedback, PlanDone, ReadingEntry, SchoolClass, SchoolEvent, SchoolResult, TutorThread } from "@/planner/types";
+import { captureLocal, ensureStarted, forgetDevice } from "./sync";
 import type { Account, ActivityEvent, Course, Locale, ParentNote, Profile } from "./types";
 
-// One versioned document in localStorage. Stand-in for the backend: lib/* functions are the only
-// writers, so swapping this for API calls later touches lib/, not screens.
-// ponytail: whole-document writes; fine for a demo-sized store, move to per-entity storage with the backend.
+// One versioned document in localStorage, and the working copy every screen reads. lib/* functions
+// are the only writers. Browser-only (no server): this is the whole record. With a server
+// (lib/sync.ts): every local write is handed to sync, which queues what changed and keeps the copy
+// in step with the family's record on the server; the server's changes come back in through
+// applyRemote, which is not queued again.
+// ponytail: whole-document writes; fine for a family-sized store.
 
 export const STORE_KEY = "kaizenedu.v1";
 
@@ -113,11 +117,11 @@ if (typeof window !== "undefined")
     listeners.forEach((fn) => fn());
   });
 
-export function update(change: (draft: StoreState) => void): StoreState {
+function write(change: (draft: StoreState) => void, remote: boolean): StoreState {
   // Start from what is saved now, not this tab's cached copy, so two open tabs never undo each other.
-  // ponytail: last write wins within one change; a real backend gives per-record merges.
   if (typeof window !== "undefined" && health !== "memory") state = load();
-  const draft = structuredClone(read());
+  const prev = read();
+  const draft = structuredClone(prev);
   change(draft);
   state = draft;
   try {
@@ -125,19 +129,32 @@ export function update(change: (draft: StoreState) => void): StoreState {
   } catch {
     health = "memory";
   }
+  // Per-record merges with other devices happen in sync; this only says what this write changed.
+  if (!remote) captureLocal(prev, draft);
   listeners.forEach((fn) => fn());
   return draft;
 }
 
+export function update(change: (draft: StoreState) => void): StoreState {
+  return write(change, false);
+}
+
+/** Writes what came from the server (lib/sync.ts). Not queued to go back up. */
+export function applyRemote(change: (draft: StoreState) => void): StoreState {
+  return write(change, true);
+}
+
 export function subscribe(fn: () => void) {
   listeners.add(fn);
+  ensureStarted();
   return () => listeners.delete(fn);
 }
 
 export const storeHealth = () => health;
 
-/** Deletes everything KaizenEDU saved in this browser. */
+/** Deletes everything KaizenEDU saved in this browser (and, with a server, signs this browser out). */
 export function clearAll() {
+  forgetDevice();
   try {
     localStorage.removeItem(STORE_KEY);
   } catch {}

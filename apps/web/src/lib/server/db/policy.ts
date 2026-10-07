@@ -5,8 +5,8 @@ import type { Grade } from "@/lib/types";
 // This is plumbing, not legal text: the notice lives on /privacy, and counsel decides which
 // verification methods satisfy COPPA before any is marked `verified`.
 
-export type ConsentScope = "ai" | "voice";
-export const CONSENT_SCOPES: readonly ConsentScope[] = ["ai", "voice"];
+export const CONSENT_SCOPES = ["ai", "voice"] as const;
+export type ConsentScope = (typeof CONSENT_SCOPES)[number];
 
 /** The notice a consent was given against. Bump it when /privacy changes in a way consent depends on. */
 export const CONSENT_NOTICE_VERSION = "2026-10-07-draft";

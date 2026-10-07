@@ -47,6 +47,9 @@ export type PushRecord = { id: string; at: number; data?: unknown; deleted?: tru
 
 export type AccountFields = { displayName: string; goals?: Goal[] | null };
 
+/** The account as the server shows it to its own browser. Never includes the password hash. */
+export type PublicAccount = { id: string; email: string; displayName: string; goals: Goal[] | null; createdAt: number };
+
 export type SyncRequest = {
   v: 1;
   /** The cursor from the last answer (0 on a device's first sync). */

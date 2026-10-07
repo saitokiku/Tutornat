@@ -1,11 +1,12 @@
 import "server-only";
 import { createHash, randomBytes, randomUUID, scrypt, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
-import type { Goal, Locale } from "@/lib/types";
+import type { Locale } from "@/lib/types";
 import type { Db } from "./client";
 import { resetMail, type Delivery, type Sender } from "./email";
 import { NAME_MAX, normEmail, validate, type FieldErrors } from "./fields";
 import { accounts, authThrottle, passwordResets, sessions } from "./schema";
+import type { PublicAccount } from "./wire";
 
 // Accounts on the server: scrypt passwords, cookie sessions, a sign-in throttle shared by every
 // instance, and one-use reset links. Ported from modules/kaizenedu-tutor (lib/tutor/auth,
@@ -124,7 +125,6 @@ const forgive = (db: Db, key: string) => db.delete(authThrottle).where(eq(authTh
 
 // ---- account flows ----------------------------------------------------------------------------------
 
-export type PublicAccount = { id: string; email: string; displayName: string; goals: Goal[] | null; createdAt: number };
 export type AuthError = "fields" | "adult" | "bad-login" | "rate" | "invalid-link";
 export type AuthOk = { ok: true; account: PublicAccount; token: string; expiresAt: Date };
 export type AuthFail = { ok: false; status: number; error: AuthError; fields?: FieldErrors; retryAfter?: number };

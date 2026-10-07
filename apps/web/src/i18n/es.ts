@@ -1816,10 +1816,17 @@ const es: Record<Key, string> = {
   "ai.budget.coach.month": "Tu familia ya usó el tiempo de IA de este mes. La nota de la semana vuelve el {date}.",
   // -- backend
   "acct.err.passwordLong": "Usa 200 caracteres o menos",
+  "acct.err.offline": "No se puede conectar con KaizenEDU. Revisa tu conexión e inténtalo de nuevo.",
+  "acct.err.rate": "Demasiados intentos. Vuelve a intentarlo en {minutes} min.",
+  "acct.err.adult": "Las cuentas son para madres, padres y tutores de 18 años o más. Marca la casilla para continuar.",
+  "acct.err.server": "Algo falló de nuestro lado. Inténtalo de nuevo en un minuto.",
+  "acct.err.localOnly": "Esa cuenta se guardó solo en este navegador. Crea una cuenta con el mismo correo y contraseña para traer a tus estudiantes.",
   "acct.mail.resetSubject": "Restablece tu contraseña de KaizenEDU",
   "acct.mail.resetBody": "Alguien pidió restablecer la contraseña de esta cuenta de KaizenEDU. Abre el enlace de abajo en la próxima hora para elegir una nueva.",
   "acct.mail.resetButton": "Elegir una contraseña nueva",
   "acct.mail.resetIgnore": "Si no fuiste tú, ignora este correo. Tu contraseña no cambia.",
+  "acct.consent.errMethod": "Esa forma de dar consentimiento no está disponible para este estudiante.",
+  "acct.consent.errLearner": "Este estudiante todavía no está en tu cuenta. Espera un momento a que se guarde y vuelve a intentarlo.",
 };
 
 export default es;

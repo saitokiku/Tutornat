@@ -1814,10 +1814,17 @@ const en = {
   "ai.budget.coach.month": "Your family has used this month's AI time. The weekly note is back on {date}.",
   // -- backend
   "acct.err.passwordLong": "Use 200 characters or fewer",
+  "acct.err.offline": "Can't reach KaizenEDU. Check your connection and try again.",
+  "acct.err.rate": "Too many tries. Try again in {minutes} min.",
+  "acct.err.adult": "Accounts are for parents and guardians 18 or older. Tick the box to continue.",
+  "acct.err.server": "Something went wrong on our side. Try again in a minute.",
+  "acct.err.localOnly": "That account was saved only in this browser. Create an account with the same email and password to bring your learners along.",
   "acct.mail.resetSubject": "Reset your KaizenEDU password",
   "acct.mail.resetBody": "Someone asked to reset the password for this KaizenEDU account. Open the link below within an hour to choose a new one.",
   "acct.mail.resetButton": "Choose a new password",
   "acct.mail.resetIgnore": "If it wasn't you, ignore this email. Your password stays the same.",
+  "acct.consent.errMethod": "That way of giving consent isn't available for this learner.",
+  "acct.consent.errLearner": "This learner isn't on your account yet. Wait a moment for it to save, then try again.",
 } as const;
 
 export default en;
