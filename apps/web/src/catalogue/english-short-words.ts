@@ -6,7 +6,7 @@ import type { CatalogueEntry } from "./types";
 const shortWords: CatalogueEntry = {
   id: "english-short-words",
   title: "Sound it out",
-  summary: "Phonics: blend letter sounds into cat, sun and pig. Then try short stories.",
+  summary: "Phonics: blend letter sounds into cat, sun and pig. Then listen for short vowels.",
   subject: "english",
   grade: "1",
   locale: "en",
@@ -190,7 +190,7 @@ const shortWords: CatalogueEntry = {
           brief: "Make new words by changing the middle letter.",
           steps: [
             "Write bag on a strip of paper.",
-            "Write the five vowels on small slips.",
+            "Look at apple, egg, igloo, octopus and up. Write each first letter on a small slip. These five letters are the vowels.",
             "Put a slip over the middle letter. Read the new word.",
             "Try every vowel. You can make beg, big, bog and bug.",
             "A bog is a wet, muddy place. Did you know that word?",

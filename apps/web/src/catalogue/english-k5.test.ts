@@ -44,6 +44,14 @@ describe("English K–5 ready-made courses", () => {
     }
   });
 
+  it("vary the key order from lesson to lesson, so no order can be learned", () => {
+    // QuizView keeps the authored order, so "second, third, first" in every lesson would teach itself.
+    for (const c of COURSES) {
+      const orders = c.lessons.flatMap((l) => l.scenes.flatMap((s) => (s.kind === "quiz" && s.questions.length >= 3 ? [s.questions.slice(0, 3).map((q) => q.answer).join(",")] : [])));
+      expect(new Set(orders).size, `${c.id}: ${orders.join(" | ")}`).toBe(orders.length);
+    }
+  });
+
   it("keep K–2 sentences to ten words", () => {
     for (const c of YOUNG)
       for (const text of strings(c))

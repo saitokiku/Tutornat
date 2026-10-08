@@ -268,8 +268,8 @@ const rimasSilabasEs: CatalogueEntry = {
             {
               id: "q2",
               prompt: "¿Qué palabra tiene una sola sílaba?",
-              choices: ["perro", "pescado", "pez"],
-              answer: 2,
+              choices: ["pez", "perro", "pescado"],
+              answer: 0,
               hint: "Aplaude cada palabra. ¿Cuál termina más rápido?",
               explain: "Pez tiene 1 sílaba. Pe-rro tiene 2. Pes-ca-do tiene 3.",
             },
