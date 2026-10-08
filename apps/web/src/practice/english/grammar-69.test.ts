@@ -286,6 +286,14 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
       each(id, level, ([shown, , , , , target]) => expect(words(shown).filter((w) => w === lc(target!)).length, `${shown} / ${target}`).toBe(1));
   });
 
+  it("connotation, level 1: every word set is neutral, positive and negative, so one wrong choice is neutral and one is the opposite feeling", () => {
+    each("e.connotation", 1, (e) => {
+      expect(e[2].length, e[0]).toBe(2);
+      expect(tagged(e, "neutral-connotation").length, `${e[0]}: one neutral choice`).toBe(1);
+      expect(tagged(e, "opposite-connotation").length, `${e[0]}: one opposite choice`).toBe(1);
+    });
+  });
+
   it("phrases, clauses and verbals: targets begin and end the way their category says", () => {
     const SUB_EN = /^(because|when|if|although|until|that|who|whom|whose|which|where|whoever|what|whether)\b/i;
     const SUB_ES = /^(porque|cuando|si|aunque|hasta que|que|quien|quienes|cuyo|cuya|donde|lo que)\b/i;

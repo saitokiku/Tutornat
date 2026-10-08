@@ -198,11 +198,11 @@ const CONNOTATION_FIT: Bi<Entry>[] = [
   },
   {
     en: ["Tired of her neighbor's questions about her private life, Sara called him ___.", "nosy", [["interested", "neutral-connotation"], ["inquisitive", "opposite-connotation"]], "Sara is annoyed, so the word should sound negative.", "“Nosy” means prying into things that are not your business."],
-    es: ["La maestra, molesta, le pidió al grupo que dejara de portarse de manera tan ___.", "infantil", [["juvenil", "opposite-connotation"], ["inocente", "opposite-connotation"]], "La maestra está molesta, así que la palabra debe sonar negativa.", "“Infantil”, dicho de alguien que ya no es niño, es una crítica."],
+    es: ["La maestra, molesta, dijo que los alumnos de octavo se veían muy ___ peleando por un lápiz.", "infantiles", [["jóvenes", "neutral-connotation"], ["juveniles", "opposite-connotation"]], "La maestra está molesta, así que la palabra debe sonar negativa.", "“Infantil”, dicho de alguien que ya no es niño, es una crítica; “joven” es neutral, y “juvenil” suena a elogio."],
   },
   {
     en: ["The poet describes the old woman's ___ laugh, full of life.", "youthful", [["young", "neutral-connotation"], ["childish", "opposite-connotation"]], "The poet admires her laugh.", "“Youthful” means having the good qualities of youth; “childish” would be an insult."],
-    es: ["El poeta describe la risa ___ de la anciana, llena de vida.", "juvenil", [["infantil", "opposite-connotation"], ["inmadura", "opposite-connotation"]], "El poeta admira su risa.", "“Juvenil” da la idea de energía y alegría."],
+    es: ["El poeta describe la risa ___ de la anciana, llena de vida.", "juvenil", [["joven", "neutral-connotation"], ["inmadura", "opposite-connotation"]], "El poeta admira su risa.", "“Juvenil” da la idea de energía y alegría; “joven” es neutral, e “inmadura” sería una crítica."],
   },
   {
     en: ["Frustrated, the teacher told the class to stop acting so ___.", "childish", [["young", "neutral-connotation"], ["youthful", "opposite-connotation"]], "The teacher is frustrated, so the word should sound negative.", "“Childish” is a criticism: acting younger than you should."],
