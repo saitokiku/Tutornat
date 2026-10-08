@@ -211,6 +211,9 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
     // Cancelled: fade out. Finished: everything has played; let go of the run's gain node.
     r.player?.cancel(cancelled ? fadeMs : 0);
     closeSocket(r);
+    // A run that was waiting out an interrupted context takes its "Tap to hear" with it (the next
+    // run asks again if the context is still not running).
+    if (r.suspended) setLocked(false);
     if (run === r) {
       run = null;
       state = "idle";
