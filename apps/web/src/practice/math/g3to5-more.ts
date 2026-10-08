@@ -1,8 +1,8 @@
 import type { Locale } from "@/lib/types";
-import { check } from "../answer";
+import { check, parseNumber } from "../answer";
 import { gcd, type Rng } from "../rng";
 import { sayFrac, tr } from "../text";
-import type { Answer, Choice, ItemBody, MathPart, Skill } from "../types";
+import type { Answer, Choice, ItemBody, MathPart, Pad, Skill } from "../types";
 
 // Grades 3–5, second strand: word problems, measurement, time, data, geometry and place value.
 // Every problem is built backward from a whole-number answer (or whole hundredths, thousandths or
@@ -41,13 +41,19 @@ const trimDec = (s: string) => (s.includes(".") ? s.replace(/0+$/, "").replace(/
 const num = (m: number, p: number) => trimDec(dec(m, p));
 /** "5, 7 and 4" / "5, 7 y 4". */
 const listOf = (items: string[], locale: Locale) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} ${tr(locale, "and", "y")} ${items[items.length - 1]}`);
-/** The read-aloud form of prices and degrees: "$12" → "12 dollars", "35°" → "35 degrees". */
+/** Money the way it is said: "$0.25" → "25 cents", "$1.00" → "1 dollar", "$2.50" → "2 dollars and 50 cents". */
+function sayMoney(dollars: number, cents: number, locale: Locale) {
+  const d = `${dollars} ${tr(locale, pl(dollars, "dollar", "dollars"), pl(dollars, "dólar", "dólares"))}`;
+  const c = `${cents} ${tr(locale, pl(cents, "cent", "cents"), pl(cents, "centavo", "centavos"))}`;
+  return !cents ? d : !dollars ? c : `${d} ${tr(locale, "and", "y")} ${c}`;
+}
+/** The read-aloud form of prices and degrees: "$12" → "12 dollars", "$0.25" → "25 cents", "35°" → "35 degrees". */
 const spoken = (s: string, locale: Locale) =>
   s
-    .replace(/\$(\d+(?:\.\d\d)?)/g, (_, d: string) => `${d} ${tr(locale, d === "1" ? "dollar" : "dollars", d === "1" ? "dólar" : "dólares")}`)
+    .replace(/\$(\d+)(?:\.(\d\d))?/g, (_, d: string, c?: string) => sayMoney(Number(d), Number(c ?? 0), locale))
     .replace(/(\d+)°/g, (_, d: string) => `${d} ${tr(locale, d === "1" ? "degree" : "degrees", d === "1" ? "grado" : "grados")}`);
-/** Capital first letter: "las uvas: 3" → "Las uvas: 3". */
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+/** Capital first letter, after an opening "¿": "las uvas: 3" → "Las uvas: 3", "¿un medio…" → "¿Un medio…". */
+const cap = (s: string) => s.replace(/^(¿?)(.)/u, (_, q: string, c: string) => q + c.toUpperCase());
 /** Spanish "de" before a name with its article: "del fútbol", "de las uvas", "de Marte". */
 const del = (s: string) => (s.startsWith("el ") ? `del ${s.slice(3)}` : `de ${s}`);
 /** "y sobra 1" / "y sobran 4". */
@@ -86,6 +92,17 @@ function misses(answer: Answer, list: Miss[]): { value: string; why: string }[] 
     if (!out.some((o) => o.value === value) && !check(answer, value).correct) out.push({ value, why });
   }
   return out;
+}
+
+/** Only the wrong values a touch pad can show (on the line, on a tick, within the bar's parts): a tag nobody can enter never fires. */
+function onPad(pad: Pad, wrong: { value: string; why: string }[]) {
+  return wrong.filter(({ value }) => {
+    const v = parseNumber(value)?.value;
+    if (v === undefined) return true;
+    const steps = pad.kind === "number-line" ? (v - pad.min) / pad.step : pad.kind === "fraction-bar" && pad.parts ? v * pad.parts : 0;
+    const top = pad.kind === "number-line" ? (pad.max - pad.min) / pad.step : pad.kind === "fraction-bar" && pad.parts ? pad.parts : 0;
+    return Math.abs(steps - Math.round(steps)) < 1e-6 && steps > -1e-6 && steps < top + 1e-6;
+  });
 }
 
 type Picked = Pick<ItemBody, "choices" | "input" | "answer">;
@@ -428,12 +445,20 @@ function polygonSides(r: Rng, n: number) {
   }
 }
 const COUNT_WORD: Record<number, Pair> = { 2: ["Two", "Dos"], 3: ["Three", "Tres"], 4: ["Four", "Cuatro"], 5: ["Five", "Cinco"] };
-const RECT_PLACES: { en: string; es: string; units: Len[] }[] = [
-  { en: "A rectangular garden", es: "Un jardín rectangular", units: [M, FT] },
-  { en: "A rectangular rug", es: "Un tapete rectangular", units: [FT, M] },
-  { en: "A rectangular poster", es: "Un cartel rectangular", units: [IN, CM] },
-  { en: "A rectangular patio", es: "Un patio rectangular", units: [M, FT] },
+/** A unit with the lengths that fit a setting in that unit, from lo to hi. */
+type Size = [unit: Len, lo: number, hi: number];
+/** Rectangles sized for the setting; the width is at least `thin` of the length, so a poster is never a strip. */
+const RECT_PLACES: { en: string; es: string; sizes: Size[]; thin: number }[] = [
+  { en: "A rectangular garden", es: "Un jardín rectangular", sizes: [[M, 4, 15], [FT, 6, 20]], thin: 1 / 3 },
+  { en: "A rectangular rug", es: "Un tapete rectangular", sizes: [[FT, 5, 12], [M, 3, 4]], thin: 1 / 2 },
+  { en: "A rectangular poster", es: "Un cartel rectangular", sizes: [[IN, 12, 24], [CM, 30, 60]], thin: 2 / 3 },
+  { en: "A rectangular patio", es: "Un patio rectangular", sizes: [[M, 3, 8], [FT, 8, 20]], thin: 1 / 2 },
 ];
+/** [length, width] with lo ≤ length ≤ hi and thin × length ≤ width < length. */
+function rectSize(r: Rng, lo: number, hi: number, thin: number): [number, number] {
+  const L = r.int(lo, hi);
+  return [L, r.int(Math.max(2, Math.ceil(L * thin)), L - 1)];
+}
 
 // ---------- grade 3 time ----------
 
@@ -450,7 +475,7 @@ const EVENTS: Pair[] = [
 const TASKS: Pair[] = [
   ["finished a puzzle", "terminó un rompecabezas"],
   ["finished a painting", "terminó una pintura"],
-  ["finished building a model rocket", "terminó de armar una maqueta de cohete"],
+  ["finished building a model rocket", "terminó de armar un cohete a escala"],
   ["finished a science poster", "terminó un cartel de ciencias"],
   ["finished practicing violin", "terminó de practicar violín"],
 ];
@@ -460,9 +485,9 @@ const TASKS: Pair[] = [
 type Measure = { make: (r: Rng) => [number, number]; en: (a: number, b: number, n: string) => string; es: (a: number, b: number, n: string) => string; op: "+" | "−" | "×" | "÷"; unit: Pair; plan: Pair };
 const MASS_ADD_SUB: Measure[] = [
   {
-    make: (r) => [r.int(6, 15), r.int(1, 4)],
+    make: (r) => [r.int(6, 15), r.int(1, 2)],
     en: (a, b) => `A puppy has a mass of ${a} kg. A kitten has a mass of ${b} kg. How much more mass does the puppy have?`,
-    es: (a, b) => `La masa de un cachorro es de ${a} kg. La masa de un gatito es de ${b} kg. ¿Cuánta más masa tiene el cachorro?`,
+    es: (a, b) => `La masa de un cachorro es de ${a} kg. La masa de un gatito es de ${b} kg. ¿Cuánta masa más tiene el cachorro?`,
     op: "−",
     unit: ["kg", "kg"],
     plan: ["To compare, subtract the smaller mass from the larger one.", "Para comparar, resta la masa menor de la mayor."],
@@ -655,7 +680,7 @@ const TIMES_SMALLER: Times[] = [
   },
   {
     en: (t, k) => `A model rocket is ${t} inches tall. It is ${k} times as tall as a toy astronaut. How tall is the toy astronaut?`,
-    es: (t, k) => `Un modelo de cohete mide ${t} pulgadas de alto. Mide ${k} veces lo que mide un astronauta de juguete. ¿Cuánto mide el astronauta de juguete?`,
+    es: (t, k) => `Un cohete a escala mide ${t} pulgadas de alto. Mide ${k} veces lo que mide un astronauta de juguete. ¿Cuánto mide el astronauta de juguete?`,
     unit: ["inches", "pulgadas"],
   },
   { en: (t, k) => `${t} is ${k} times as many as what number?`, es: (t, k) => `¿${t} es ${k} veces qué número?`, unit: ["", ""] },
@@ -995,43 +1020,50 @@ const CONVERT_STORIES: ConvStory[] = [
   },
 ];
 
-type AreaStory = { kind: "area" | "per"; en: (l: number, w: number, u: string) => string; es: (l: number, w: number, u: string, sq: string, cu: string) => string; units: Len[] };
+/** A rectangle story with sizes that fit it (see RECT_PLACES). */
+type AreaStory = { kind: "area" | "per"; en: (l: number, w: number, u: string) => string; es: (l: number, w: number, u: string, sq: string, cu: string) => string; sizes: Size[]; thin: number };
 const AREA_STORIES: AreaStory[] = [
   {
     kind: "per",
     en: (l, w, u) => `A garden is ${l} ${u} long and ${w} ${u} wide. How many ${u} of fence go all the way around it?`,
     es: (l, w, u, _sq, cu) => `Un jardín mide ${l} ${u} de largo y ${w} ${u} de ancho. ¿${cu} ${u} de cerca se necesitan para rodearlo?`,
-    units: [FT, M],
+    sizes: [[FT, 10, 40], [M, 5, 20]],
+    thin: 1 / 4,
   },
   {
     kind: "area",
     en: (l, w, u) => `A rug is ${l} ${u} long and ${w} ${u} wide. What is its area in square ${u}?`,
     es: (l, w, u, sq) => `Un tapete mide ${l} ${u} de largo y ${w} ${u} de ancho. ¿Cuál es su área en ${sq}?`,
-    units: [FT],
+    sizes: [[FT, 5, 12]],
+    thin: 1 / 2,
   },
   {
     kind: "per",
     en: (l, w, u) => `A dog pen is ${l} ${u} long and ${w} ${u} wide. How many ${u} of fence does it need all the way around?`,
     es: (l, w, u, _sq, cu) => `Un corral para perros mide ${l} ${u} de largo y ${w} ${u} de ancho. ¿${cu} ${u} de cerca necesita para rodearlo?`,
-    units: [FT, M],
+    sizes: [[FT, 8, 30], [M, 3, 12]],
+    thin: 1 / 3,
   },
   {
     kind: "area",
     en: (l, w, u) => `A stage floor is ${l} ${u} long and ${w} ${u} wide. How many square ${u} of floor is that?`,
     es: (l, w, u, sq, cu) => `El piso de un escenario mide ${l} ${u} de largo y ${w} ${u} de ancho. ¿${cu} ${sq} de piso son?`,
-    units: [FT, M],
+    sizes: [[FT, 12, 30], [M, 5, 12]],
+    thin: 1 / 2,
   },
   {
     kind: "per",
     en: (l, w, u) => `A poster is ${l} ${u} long and ${w} ${u} wide. How many ${u} of ribbon go around its edge?`,
     es: (l, w, u, _sq, cu) => `Un cartel mide ${l} ${u} de largo y ${w} ${u} de ancho. ¿${cu} ${u} de listón se necesitan para rodear su borde?`,
-    units: [IN, CM],
+    sizes: [[IN, 12, 36], [CM, 30, 90]],
+    thin: 2 / 3,
   },
   {
     kind: "area",
     en: (l, w, u) => `A game board is ${l} ${u} long and ${w} ${u} wide. What is its area in square ${u}?`,
     es: (l, w, u, sq) => `Un tablero de juego mide ${l} ${u} de largo y ${w} ${u} de ancho. ¿Cuál es su área en ${sq}?`,
-    units: [IN, CM],
+    sizes: [[IN, 10, 20], [CM, 20, 40]],
+    thin: 2 / 3,
   },
 ];
 
@@ -1166,7 +1198,7 @@ export const SYMMETRY_COUNT: SymCount[] = [
     why: { en: "Only the line through the middles of the two parallel sides works.", es: "Solo funciona la línea que pasa por la mitad de los dos lados paralelos." },
   },
   {
-    shape: { en: "a kite that is not a rhombus", es: "un deltoide que no es rombo" },
+    shape: { en: "a kite that is not a rhombus", es: "un deltoide (con forma de cometa) que no es rombo" },
     n: 1,
     wrong: [[2, "counted-both-diagonals"], [0, "missed-the-fold-line"]],
     clue: { en: "Try the line through the two corners where equal sides meet.", es: "Prueba la línea que pasa por las dos esquinas donde se juntan lados iguales." },
@@ -1458,12 +1490,15 @@ const CONVERT_STORIES5: ConvStory5[] = [
   },
 ];
 
-const COMPOSITES: { en: string; es: string; units: Len[] }[] = [
-  { en: "A toy castle is made of two block towers.", es: "Un castillo de juguete está hecho de dos torres de bloques.", units: [CM, IN] },
-  { en: "A planter box is made of two rectangular parts.", es: "Una jardinera está hecha de dos partes rectangulares.", units: [IN, FT] },
-  { en: "A stage is built from two rectangular platforms.", es: "Un escenario está hecho de dos plataformas rectangulares.", units: [FT, M] },
-  { en: "An aquarium has two connected tanks shaped like boxes.", es: "Un acuario tiene dos tanques conectados con forma de caja.", units: [IN, CM] },
-  { en: "A building is made of two rectangular blocks.", es: "Un edificio está formado por dos bloques rectangulares.", units: [M, FT] },
+/** Length, width and height ranges [lo, hi] for one part of a composite figure. */
+type Box = [l: [number, number], w: [number, number], h: [number, number]];
+/** Two-box figures, each with the sizes that fit it: platforms are low, buildings are meters tall, planters are small. */
+const COMPOSITES: { en: string; es: string; sizes: [Len, Box][] }[] = [
+  { en: "A toy castle is made of two block towers.", es: "Un castillo de juguete está hecho de dos torres de bloques.", sizes: [[CM, [[4, 10], [4, 10], [6, 20]]], [IN, [[2, 5], [2, 5], [3, 9]]]] },
+  { en: "A planter box is made of two rectangular parts.", es: "Una jardinera está hecha de dos partes rectangulares.", sizes: [[IN, [[10, 24], [6, 10], [6, 10]]], [FT, [[2, 6], [2, 3], [2, 3]]]] },
+  { en: "A stage is built from two rectangular platforms.", es: "Un escenario está hecho de dos plataformas rectangulares.", sizes: [[FT, [[4, 12], [4, 8], [1, 3]]]] },
+  { en: "An aquarium has two connected tanks shaped like boxes.", es: "Un acuario tiene dos tanques conectados con forma de caja.", sizes: [[IN, [[10, 24], [6, 12], [8, 16]]]] },
+  { en: "A building is made of two rectangular blocks.", es: "Un edificio está formado por dos bloques rectangulares.", sizes: [[M, [[6, 20], [5, 15], [3, 12]]]] },
 ];
 
 const ORDINAL: Record<number, Pair> = { 4: ["fourth", "cuarto"], 5: ["fifth", "quinto"], 6: ["sixth", "sexto"], 7: ["seventh", "séptimo"], 8: ["eighth", "octavo"] };
@@ -1716,9 +1751,10 @@ export const MATH_3_5_MORE: Skill[] = [
           answer,
           wrong: misses(answer, [[b + c, "added-instead-of-multiplied"], [a * b, "grouped-the-wrong-pair"], [a * b * c, "wrote-the-product"]]),
           hints: [
-            t("You may group the factors any way you like.", "Puedes agrupar los factores como quieras."),
+            t("You may group the factors any way you like: the product stays the same.", "Puedes agrupar los factores como quieras: el producto no cambia."),
             t(`Group the last two factors: ${a} × (${b} × ${c}).`, `Agrupa los dos últimos factores: ${a} × (${b} × ${c}).`),
-            t("Grouping the factors a different way does not change the product.", "Agrupar los factores de otra manera no cambia el producto."),
+            // The regrouping done, matched to the box; the learner still works out the product.
+            t(`${a} × ${b} × ${c} = ${a} × (${b} × ${c}), so the missing number is what ${b} × ${c} makes.`, `${a} × ${b} × ${c} = ${a} × (${b} × ${c}), así que el número que falta es lo que da ${b} × ${c}.`),
           ],
           steps: [`${a} × (${b} × ${c}) = ${a} × ${b * c}`, `${a} × ${b * c} = ${a * b * c}`, missing(b * c)],
           seconds: 20,
@@ -1846,20 +1882,21 @@ export const MATH_3_5_MORE: Skill[] = [
         const n = (s * q) / p;
         const name = denName(q, locale);
         const answer: Answer = { kind: "fraction", n, d: q };
+        const pad: Pad = { kind: "fraction-bar", parts: q, maxParts: 12 };
         return {
           prompt: [t("The bar shows ", "La barra muestra "), fr(s, p), t(`. Shade the bar below in ${name} to show the same amount.`, `. Sombrea la barra de abajo en ${name} para mostrar la misma cantidad.`)],
           say: t(`The bar shows ${sayFrac(s, p, locale)}. Shade the bar below in ${name} to show the same amount.`, `La barra muestra ${sayFrac(s, p, locale)}. Sombrea la barra de abajo en ${name} para mostrar la misma cantidad.`),
           visual: { kind: "fraction", parts: p, shaded: s },
           alt: t(`A bar split into ${p} equal parts with ${s} shaded`, `Una barra dividida en ${p} partes iguales con ${s} ${pl(s, "sombreada", "sombreadas")}`),
           input: "fraction-bar",
-          pad: { kind: "fraction-bar", parts: q, maxParts: 12 },
+          pad,
           answer,
           // Shading as many parts as on top fills the whole bar when it has fewer parts than that.
-          wrong: misses(answer, [
+          wrong: onPad(pad, misses(answer, [
             [ft(Math.min(s, q), q), "shaded-the-same-number-of-parts"],
             [ft(q - n, q), "shaded-the-unshaded-part"],
             up ? [ft(s + q - p, q), "added-instead-of-multiplied"] : s > p - q && [ft(s - p + q, q), "subtracted-instead-of-divided"],
-          ]),
+          ])),
           hints: [
             t("Equal fractions cover the same amount of the bar.", "Las fracciones equivalentes cubren la misma parte de la barra."),
             up
@@ -1963,8 +2000,8 @@ export const MATH_3_5_MORE: Skill[] = [
         return {
           prompt: topBlank ? [fr(a, b), " = ", fr("?", c)] : [fr(a, b), " = ", fr(a * k, "?")],
           say: topBlank
-            ? t(`${sayFrac(a, b, locale)} is equal to how many ${denName(c, locale)}?`, `¿${sayFrac(a, b, locale)} es igual a cuántos ${denName(c, locale)}?`)
-            : t(`${sayFrac(a, b, locale)} is equal to ${a * k} over what number?`, `¿${sayFrac(a, b, locale)} es igual a ${a * k} sobre qué número?`),
+            ? cap(t(`${sayFrac(a, b, locale)} is equal to how many ${denName(c, locale)}?`, `¿${sayFrac(a, b, locale)} es igual a cuántos ${denName(c, locale)}?`))
+            : cap(t(`${sayFrac(a, b, locale)} is equal to ${a * k} over what number?`, `¿${sayFrac(a, b, locale)} es igual a ${a * k} sobre qué número?`)),
           ...(topBlank
             ? {
                 visual: { kind: "number-line" as const, min: 0, max: 1, marks: [0, 1], denominator: c, marker: a / b },
@@ -2125,8 +2162,8 @@ export const MATH_3_5_MORE: Skill[] = [
         };
       }
       if (kind < 0.8) {
-        const place = r.pick(RECT_PLACES), u = r.pick(place.units), ab = say2(locale, u.ab);
-        const L = r.int(4, 15), W = r.int(2, L - 1), P = 2 * (L + W);
+        const place = r.pick(RECT_PLACES), [u, lo, hi] = r.pick(place.sizes), ab = say2(locale, u.ab);
+        const [L, W] = rectSize(r, lo, hi, place.thin), P = 2 * (L + W);
         const text = t(`${place.en} has a perimeter of ${P} ${ab}. It is ${L} ${ab} long. How wide is it?`, `${place.es} tiene un perímetro de ${P} ${ab}. Mide ${L} ${ab} de largo. ¿Cuánto mide de ancho?`);
         const answer: Answer = { kind: "number", value: W };
         return {
@@ -2779,7 +2816,7 @@ export const MATH_3_5_MORE: Skill[] = [
           const answer: Answer = { kind: "number", value: a };
           return {
             prompt: [fr(a, b), " = ", blank, " × ", fr(1, b)],
-            say: t(`${sayFrac(a, b, locale)} equals what number times ${sayFrac(1, b, locale)}?`, `¿${sayFrac(a, b, locale)} es igual a qué número por ${sayFrac(1, b, locale)}?`),
+            say: cap(t(`${sayFrac(a, b, locale)} equals what number times ${sayFrac(1, b, locale)}?`, `¿${sayFrac(a, b, locale)} es igual a qué número por ${sayFrac(1, b, locale)}?`)),
             input: "keypad",
             answer,
             wrong: misses(answer, [[b, "used-the-bottom-number"], [a * b, "multiplied-the-numbers"]]),
@@ -2873,7 +2910,7 @@ export const MATH_3_5_MORE: Skill[] = [
           const answer: Answer = { kind: "number", value: sum };
           return {
             prompt: [...terms, " = ", fr("?", 100)],
-            say: t(`${said} equals how many hundredths?`, `¿${said} es igual a cuántos centésimos?`),
+            say: cap(t(`${said} equals how many hundredths?`, `¿${said} es igual a cuántos centésimos?`)),
             input: "keypad",
             answer,
             wrong: misses(answer, [[a + b, "did-not-rename-tenths"], [10 * b + a, "renamed-the-wrong-fraction"]]),
@@ -2885,7 +2922,7 @@ export const MATH_3_5_MORE: Skill[] = [
         const answer: Answer = { kind: "number", value: Number(dec(sum, 2)) };
         return {
           prompt: [t("Write the sum as a decimal. ", "Escribe la suma como decimal. "), ...terms, " = ", blank],
-          say: t(`${said}. Write the sum as a decimal.`, `${said}. Escribe la suma como decimal.`),
+          say: cap(t(`${said}. Write the sum as a decimal.`, `${said}. Escribe la suma como decimal.`)),
           input: "keypad",
           keys: ["."],
           answer,
@@ -3046,8 +3083,8 @@ export const MATH_3_5_MORE: Skill[] = [
     generate(r, level, locale) {
       const t = (en: string, es: string) => tr(locale, en, es);
       if (level === 1) {
-        const st = r.pick(AREA_STORIES), u = r.pick(st.units), big = u === FT || u === M;
-        const l = big ? r.int(10, 40) : r.int(10, 30), w = big ? r.int(3, 9) : r.int(5, l - 2);
+        const st = r.pick(AREA_STORIES), [u, lo, hi] = r.pick(st.sizes);
+        const [l, w] = rectSize(r, lo, hi, st.thin);
         const word = say2(locale, u.word), sq = say2(locale, u.sq), cu = u.fem ? "Cuántas" : "Cuántos";
         const text = t(st.en(l, w, word), st.es(l, w, word, sq, cu));
         const area = st.kind === "area", value = area ? l * w : 2 * (l + w);
@@ -3067,9 +3104,9 @@ export const MATH_3_5_MORE: Skill[] = [
             area ? t(`Think of ${w} rows with ${l} squares in each row.`, `Piensa en ${w} filas con ${l} cuadrados en cada fila.`) : `${l} + ${w} = ${l + w}.`,
           ],
           steps: area
-            ? [`${l} × ${w} = ${value}`, t(`The area is ${value} ${sq}.`, `El área es de ${value} ${sq}.`)]
+            ? [`${l} × ${w} = ${group(value)}`, t(`The area is ${group(value)} ${sq}.`, `El área es de ${group(value)} ${sq}.`)]
             : [`${l} + ${w} + ${l} + ${w} = ${value}`, t(`The perimeter is ${value} ${word}.`, `El perímetro es de ${value} ${word}.`)],
-          seconds: 45,
+          seconds: area && w > 9 ? 60 : 45,
         };
       }
       const u = r.pick([FT, M]), word = say2(locale, u.word), sq = say2(locale, u.sq);
@@ -3494,13 +3531,14 @@ export const MATH_3_5_MORE: Skill[] = [
         const answer: Answer = { kind: "number", value: Number(xs) };
         const unitName = fine ? t(pl(k, "thousandth", "thousandths"), pl(k, "milésimo", "milésimos")) : t(pl(k, "hundredth", "hundredths"), pl(k, "centésimo", "centésimos"));
         const q = t(`Put ${xs} on the number line.`, `Ubica ${xs} en la recta numérica.`);
+        const pad: Pad = { kind: "number-line", min: Number(loS), max: Number(hiS), step: Number(stepS) };
         return {
           prompt: [q],
           say: q,
           input: "number-line",
-          pad: { kind: "number-line", min: Number(loS), max: Number(hiS), step: Number(stepS) },
+          pad,
           answer,
-          wrong: misses(answer, [[dec(lo + hi - x, p), "counted-from-the-wrong-end"]]),
+          wrong: onPad(pad, misses(answer, [[dec(lo + hi - x, p), "counted-from-the-wrong-end"]])),
           hints: [
             t(`The line goes from ${loS} to ${hiS}. What is each small step worth?`, `La recta va de ${loS} a ${hiS}. ¿Cuánto vale cada paso pequeño?`),
             t(`There are 10 equal steps of ${stepS}. Count steps from ${loS}.`, `Hay 10 pasos iguales de ${stepS}. Cuenta los pasos desde ${loS}.`),
@@ -3662,7 +3700,7 @@ export const MATH_3_5_MORE: Skill[] = [
         const answer: Answer = { kind: "number", value: top ? a : b };
         return {
           prompt: top ? [fr(a, b), " = ", blank, ` ÷ ${b}`] : [fr(a, b), ` = ${a} ÷ `, blank],
-          say: top ? t(`${sayFrac(a, b, locale)} equals what number divided by ${b}?`, `¿${sayFrac(a, b, locale)} es igual a qué número entre ${b}?`) : t(`${sayFrac(a, b, locale)} equals ${a} divided by what number?`, `¿${sayFrac(a, b, locale)} es igual a ${a} entre qué número?`),
+          say: cap(top ? t(`${sayFrac(a, b, locale)} equals what number divided by ${b}?`, `¿${sayFrac(a, b, locale)} es igual a qué número entre ${b}?`) : t(`${sayFrac(a, b, locale)} equals ${a} divided by what number?`, `¿${sayFrac(a, b, locale)} es igual a ${a} entre qué número?`)),
           input: "keypad",
           answer,
           wrong: misses(answer, [[top ? b : a, "flipped-the-fraction"]]),
@@ -3701,13 +3739,15 @@ export const MATH_3_5_MORE: Skill[] = [
       const answer: Answer = { kind: "fraction", n: a, d: b };
       const w = Math.floor(a / b);
       const q = t(`Put ${a} ÷ ${b} on the number line.`, `Ubica ${a} ÷ ${b} en la recta numérica.`);
+      const pad: Pad = { kind: "number-line", min: 0, max: 4, step: 1 / b, denominator: b };
       return {
         prompt: [q],
         say: t(`Put ${a} divided by ${b} on the number line.`, `Ubica ${a} entre ${b} en la recta numérica.`),
         input: "number-line",
-        pad: { kind: "number-line", min: 0, max: 4, step: 1 / b, denominator: b },
+        pad,
         answer,
-        wrong: misses(answer, [[ft(b, a), "flipped-the-fraction"], w > 0 && [String(w), "dropped-the-remainder"]]),
+        // A flipped fraction is often off the line or between ticks, so it is kept only where it can be tapped.
+        wrong: onPad(pad, misses(answer, [[ft(b, a), "flipped-the-fraction"], w > 0 && [String(w), "dropped-the-remainder"], [ft(a - 1, b), "counted-ticks-not-jumps"]])),
         hints: [
           t(`${a} ÷ ${b} is the same as the fraction with ${a} on top and ${b} on the bottom.`, `${a} ÷ ${b} es lo mismo que la fracción con ${a} arriba y ${b} abajo.`),
           t(`Each whole on the line is split into ${b} equal parts. Count ${a} parts from 0.`, `Cada entero de la recta está dividido en ${b} partes iguales. Cuenta ${a} partes desde 0.`),
@@ -4012,10 +4052,11 @@ export const MATH_3_5_MORE: Skill[] = [
     levels: 2,
     generate(r, level, locale) {
       const t = (en: string, es: string) => tr(locale, en, es);
-      const ctx = r.pick(COMPOSITES), u = r.pick(ctx.units), ab = say2(locale, u.ab), cu = say2(locale, u.cu);
-      const dims = Array.from({ length: 6 }, () => r.int(2, 10));
-      const [a, b, c, d, e, f] = dims;
+      const ctx = r.pick(COMPOSITES), [u, box] = r.pick(ctx.sizes), ab = say2(locale, u.ab), cu = say2(locale, u.cu);
+      const part = () => box.map(([lo, hi]) => r.int(lo, hi));
+      const [a, b, c] = part(), [d, e, f] = part();
       const V1 = a * b * c, V2 = d * e * f, V = V1 + V2;
+      const [g1, g2, gV] = [V1, V2, V].map(group);
       if (level === 1) {
         const text = t(
           `${ctx.en} One part is ${a} ${ab} by ${b} ${ab} by ${c} ${ab}. The other part is ${d} ${ab} by ${e} ${ab} by ${f} ${ab}. What is the total volume in ${cu}?`,
@@ -4031,15 +4072,15 @@ export const MATH_3_5_MORE: Skill[] = [
           hints: [
             t("Volume adds up: find the volume of each part, then add.", "El volumen se puede sumar: encuentra el volumen de cada parte y luego súmalos."),
             t("Each part is a box: length × width × height.", "Cada parte es una caja: largo × ancho × alto."),
-            `${a} × ${b} × ${c} = ${V1}.`,
+            `${a} × ${b} × ${c} = ${g1}.`,
           ],
-          steps: [`${a} × ${b} × ${c} = ${V1}`, `${d} × ${e} × ${f} = ${V2}`, `${V1} + ${V2} = ${V}`, `${V} ${cu}`],
-          seconds: 60,
+          steps: [`${a} × ${b} × ${c} = ${g1}`, `${d} × ${e} × ${f} = ${g2}`, `${g1} + ${g2} = ${gV}`, `${gV} ${cu}`],
+          seconds: 75,
         };
       }
       const text = t(
-        `${ctx.en} The total volume is ${V} ${cu}. One part is ${a} ${ab} by ${b} ${ab} by ${c} ${ab}. The other part is ${d} ${ab} long and ${e} ${ab} wide. How tall is the other part?`,
-        `${ctx.es} El volumen total es de ${V} ${cu}. Una parte mide ${a} ${ab} por ${b} ${ab} por ${c} ${ab}. La otra parte mide ${d} ${ab} de largo y ${e} ${ab} de ancho. ¿Cuánto mide de alto la otra parte?`,
+        `${ctx.en} The total volume is ${gV} ${cu}. One part is ${a} ${ab} by ${b} ${ab} by ${c} ${ab}. The other part is ${d} ${ab} long and ${e} ${ab} wide. How tall is the other part?`,
+        `${ctx.es} El volumen total es de ${gV} ${cu}. Una parte mide ${a} ${ab} por ${b} ${ab} por ${c} ${ab}. La otra parte mide ${d} ${ab} de largo y ${e} ${ab} de ancho. ¿Cuánto mide de alto la otra parte?`,
       );
       const answer: Answer = { kind: "number", value: f };
       return {
@@ -4051,10 +4092,10 @@ export const MATH_3_5_MORE: Skill[] = [
         hints: [
           t("Take away the volume of the part you know.", "Quita el volumen de la parte que conoces."),
           t("What is left is the other part's volume. Divide it by that part's length × width.", "Lo que queda es el volumen de la otra parte. Divídelo entre el largo × el ancho de esa parte."),
-          `${a} × ${b} × ${c} = ${V1}.`,
+          `${a} × ${b} × ${c} = ${g1}.`,
         ],
-        steps: [`${a} × ${b} × ${c} = ${V1}`, `${V} − ${V1} = ${V2}`, `${d} × ${e} = ${d * e}`, `${V2} ÷ ${d * e} = ${f}`],
-        seconds: 75,
+        steps: [`${a} × ${b} × ${c} = ${g1}`, `${gV} − ${g1} = ${g2}`, `${d} × ${e} = ${d * e}`, `${g2} ÷ ${d * e} = ${f}`],
+        seconds: 90,
       };
     },
   },
@@ -4069,6 +4110,8 @@ export const MATH_3_5_MORE: Skill[] = [
     levels: 3,
     generate(r, level, locale) {
       const t = (en: string, es: string) => tr(locale, en, es);
+      // Read-aloud lines carry no notation: "(x, y)", "(0, 0)" and "…" are said in words.
+      const writeXY: Pair = ["Write it in parentheses: the x number first, then the y number.", "Escríbelo entre paréntesis: primero el número de x y después el de y."];
       if (level === 1) {
         const x = r.int(0, 5);
         let y = r.int(0, 5);
@@ -4079,7 +4122,10 @@ export const MATH_3_5_MORE: Skill[] = [
           const q = t("What are the coordinates of the point? Write them as (x, y).", "¿Cuáles son las coordenadas del punto? Escríbelas como (x, y).");
           return {
             prompt: [q],
-            say: q,
+            say: t(
+              "What are the coordinates of the point? Write them in parentheses: the x number first, then the y number.",
+              "¿Cuáles son las coordenadas del punto? Escríbelas entre paréntesis: primero el número de x y después el de y.",
+            ),
             visual: { kind: "coord", points: [[x, y]] },
             alt: t(`A coordinate grid with one point, ${x} ${pl(x, "unit", "units")} to the right of the origin and ${y} ${pl(y, "unit", "units")} up`, `Un plano de coordenadas con un punto a ${x} ${pl(x, "unidad", "unidades")} a la derecha del origen y ${y} ${pl(y, "unidad", "unidades")} hacia arriba`),
             input: "text",
@@ -4097,7 +4143,10 @@ export const MATH_3_5_MORE: Skill[] = [
         const q = t(`Start at the origin, (0, 0). Move ${x} ${pl(x, "unit", "units")} right and ${y} ${pl(y, "unit", "units")} up. Write the point as (x, y).`, `Empieza en el origen, (0, 0). Avanza ${x} ${pl(x, "unidad", "unidades")} a la derecha y sube ${y} ${pl(y, "unidad", "unidades")}. Escribe el punto como (x, y).`);
         return {
           prompt: [q],
-          say: q,
+          say: t(
+            `Start at the origin, where x and y are both 0. Move ${x} ${pl(x, "unit", "units")} right and ${y} ${pl(y, "unit", "units")} up. ${writeXY[0]}`,
+            `Empieza en el origen, donde x e y valen 0. Avanza ${x} ${pl(x, "unidad", "unidades")} a la derecha y sube ${y} ${pl(y, "unidad", "unidades")}. ${writeXY[1]}`,
+          ),
           input: "text",
           answer,
           wrong,
@@ -4115,6 +4164,7 @@ export const MATH_3_5_MORE: Skill[] = [
         `Pattern A starts at 0 and adds ${a} each time: 0, ${a}, ${2 * a}, … Pattern B starts at 0 and adds ${b} each time: 0, ${b}, ${2 * b}, …`,
         `El patrón A empieza en 0 y suma ${a} cada vez: 0, ${a}, ${2 * a}, … El patrón B empieza en 0 y suma ${b} cada vez: 0, ${b}, ${2 * b}, …`,
       );
+      const rulesSay = rules.replace(/, …/g, t(", and so on.", ", y así sucesivamente."));
       if (level === 2) {
         const kind = r.int(0, 2);
         if (kind === 0) {
@@ -4123,7 +4173,7 @@ export const MATH_3_5_MORE: Skill[] = [
           const answer: Answer = { kind: "number", value };
           return {
             prompt: [`${rules} ${q}`],
-            say: `${rules} ${q}`,
+            say: `${rulesSay} ${q}`,
             input: "keypad",
             answer,
             wrong: misses(answer, [[j * step, "off-by-one-term"], [(j - 2) * step, "off-by-one-term"]]),
@@ -4141,7 +4191,7 @@ export const MATH_3_5_MORE: Skill[] = [
           const answer: Answer = { kind: "number", value: k };
           return {
             prompt: [`${rules} ${q}`],
-            say: `${rules} ${q}`,
+            say: `${rulesSay} ${q.replace(/[()]/g, "")}`,
             input: "keypad",
             answer,
             wrong: misses(answer, [[b - a, "compared-by-subtracting"], [b, "gave-a-rule-not-the-relation"]]),
@@ -4159,7 +4209,7 @@ export const MATH_3_5_MORE: Skill[] = [
         const answer: Answer = { kind: "number", value };
         return {
           prompt: [`${rules} ${q}`],
-          say: `${rules} ${q}`,
+          say: `${rulesSay} ${q}`,
           input: "keypad",
           answer,
           wrong: misses(answer, [[va + b - a, "added-instead-of-multiplied"], [(m + 1) * b, "off-by-one-term"]]),
@@ -4177,10 +4227,14 @@ export const MATH_3_5_MORE: Skill[] = [
         `Pair the numbers that match to make points (A, B): (0, 0), (${a}, ${b}), (${2 * a}, ${2 * b}), … What is the ${ORDINAL[j][0]} point? Write it as (x, y).`,
         `Junta los números correspondientes para formar puntos (A, B): (0, 0), (${a}, ${b}), (${2 * a}, ${2 * b}), … ¿Cuál es el ${ORDINAL[j][1]} punto? Escríbelo como (x, y).`,
       );
+      const qSay = t(
+        `Pair the numbers that match to make points, with the Pattern A number first: 0 and 0, ${a} and ${b}, ${2 * a} and ${2 * b}, and so on. What is the ${ORDINAL[j][0]} point? ${writeXY[0]}`,
+        `Junta los números correspondientes para formar puntos, con el número del patrón A primero: 0 y 0, ${a} y ${b}, ${2 * a} y ${2 * b}, y así sucesivamente. ¿Cuál es el ${ORDINAL[j][1]} punto? ${writeXY[1]}`,
+      );
       const answer: Answer = { kind: "pair", x: X, y: Y };
       return {
         prompt: [`${rules} ${q}`],
-        say: `${rules} ${q}`,
+        say: `${rulesSay} ${qSay}`,
         visual: { kind: "coord", points: [[0, 0], [a, b], [2 * a, 2 * b]] },
         alt: t(`A coordinate grid with the points (0, 0), (${a}, ${b}) and (${2 * a}, ${2 * b})`, `Un plano de coordenadas con los puntos (0, 0), (${a}, ${b}) y (${2 * a}, ${2 * b})`),
         input: "text",
