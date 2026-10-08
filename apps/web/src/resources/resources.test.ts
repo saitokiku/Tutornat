@@ -10,6 +10,8 @@ describe("resources", () => {
       expect(r.url, r.id).toMatch(/^https:\/\//);
       if (r.urlEs) expect(r.urlEs, r.id).toMatch(/^https:\/\//);
       expect(r.about.en && r.about.es, r.id).toBeTruthy();
+      // A note may be in one language only (about a page only that language links to), never empty.
+      if (r.note) expect(Object.values(r.note).length > 0 && Object.values(r.note).every(Boolean), r.id).toBe(true);
       for (const f of r.fits) {
         // A subject's ids are checked as soon as that subject has skills on the map.
         const live = SKILLS.some((s) => s.id[0] === f[0]);
@@ -71,5 +73,41 @@ describe("resources", () => {
     expect(es).toContain("loc-aesop-for-children");
     for (const skillId of ["e.main.idea", "e.figurative", "e.context.clues"])
       expect(resourcesFor({ skillId, locale: "en" }).every((r) => r.languages.includes("en")), skillId).toBe(true);
+  });
+
+  it("never pad a skill or topic search with sources that only share the learner's language", () => {
+    // Every skill, every subject: each source listed fits the skill by id, prefix or grade.
+    for (const s of SKILLS)
+      for (const locale of ["en", "es"] as const)
+        for (const r of resourcesFor({ skillId: s.id, locale })) {
+          const fits = r.fits.some((f) => f === s.id || (f.endsWith(".") && s.id.startsWith(f)) || f === `grade:${s.grade}`);
+          expect(fits, `${r.id} listed for ${s.id} (${locale})`).toBe(true);
+        }
+    // TutorChat (the demo's sources card and the AI find_resources tool) passes no subject.
+    for (const topic of ["fables", "poems", "prose poems", "morals", "commas", "subject verb agreement", "nursery rhymes"])
+      for (const grade of ["K", "2", "4", "6", "8"])
+        for (const locale of ["en", "es"] as const)
+          expect(resourcesFor({ topic, grade, locale }).every((r) => r.subject === "english"), `${topic} grade ${grade} ${locale}`).toBe(true);
+    expect(resourcesFor({ topic: "fables", grade: "4", locale: "en" }).map((r) => r.id)).toEqual(["loc-aesop-for-children", "librivox-quiroga-jungle-tales"]);
+    // A skill with one fitting source in reach shows that one alone.
+    expect(resourcesFor({ skillId: "e.commas", grade: "7", locale: "en" }).map((r) => r.id)).toEqual(["owl-commas"]);
+    // A plain browse still lists every source in the band.
+    expect(resourcesFor({ subject: "science", grade: "5", locale: "en" }).length).toBeGreaterThan(10);
+  });
+
+  it("keep topic words where a skill fit is out of reach, and a source for each topic's youngest learners", () => {
+    for (const locale of ["en", "es"] as const) {
+      expect(resourcesFor({ topic: "commas", grade: "8", locale }).map((r) => r.id)).toEqual(["owl-grammar", "owl-commas", "gutenberg-elements-of-style"]);
+      for (const grade of ["6", "8"])
+        expect(resourcesFor({ topic: "subject verb agreement", grade, locale }).map((r) => r.id)).toEqual(["owl-subject-verb", "owl-grammar"]);
+      expect(resourcesFor({ topic: "nursery rhymes", grade: "K", locale }).map((r) => r.id)).toEqual(["gutenberg-real-mother-goose"]);
+      // Speed, distance and time: two sources that fit it on its two practice-page slots.
+      const speed = resourcesFor({ skillId: "s.speed", locale }).slice(0, 2);
+      expect(speed.map((r) => r.id)).toEqual(["phet-forces-and-motion-basics", "phet-forces-and-motion"]);
+    }
+    // The USGS note corrects the Spanish page only, so English learners, sent to the English page, never see it.
+    const usgs = RESOURCES.find((r) => r.id === "usgs-water-cycle-kids")!;
+    expect(usgs.note?.en).toBeUndefined();
+    expect(usgs.note?.es).toContain("miles de millones");
   });
 });

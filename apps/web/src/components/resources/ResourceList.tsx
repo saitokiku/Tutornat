@@ -20,7 +20,7 @@ export function ResourceList({ list, locale, title, max = 3 }: { list: Resource[
               <span className="text-sm font-medium text-ink underline-offset-4 hover:underline">{r.title}</span>
               <span className="text-xs text-muted">
                 {r.source} · {t(KIND_KEY[r.kind])}
-                {r.note ? ` · ${r.note[locale]}` : ""}
+                {r.note?.[locale] ? ` · ${r.note[locale]}` : ""}
               </span>
               <span className="text-xs text-muted">{r.about[locale]}</span>
             </a>

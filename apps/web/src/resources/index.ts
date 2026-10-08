@@ -23,8 +23,8 @@ export type Resource = {
   fits: string[];
   /** One plain line on what it is. */
   about: Record<Locale, string>;
-  /** Free to use as linked; note anything a family should know (account, ads). */
-  note?: Record<Locale, string>;
+  /** Free to use as linked; note anything a family should know (account, ads). A note in one language is shown only in it. */
+  note?: Partial<Record<Locale, string>>;
 };
 
 const ORDER: Grade[] = ["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "adult"];
@@ -35,6 +35,8 @@ export function resourcesFor(q: { skillId?: string; topic?: string; subject?: Su
   const subject = q.subject ?? skill?.subject;
   const grade = (q.grade ?? skill?.grade) as Grade | undefined;
   const words = (q.topic ?? "").toLowerCase().split(/\W+/).filter((w) => w.length > 3);
+  // Asked about a skill or a topic, a source must fit it; only a plain browse lists everything in the band.
+  const asked = !!skill || words.length > 0;
   const scored = RESOURCES.map((r) => {
     let score = 0;
     if (subject && r.subject !== subject) return [r, -1] as const;
@@ -47,8 +49,10 @@ export function resourcesFor(q: { skillId?: string; topic?: string; subject?: Su
         else if (f === `grade:${skill.grade}`) score += 3;
       }
     for (const w of words) if (r.fits.some((f) => f.includes(w)) || r.title.toLowerCase().includes(w)) score += 2;
+    // The learner's language orders what fits; it never makes an unrelated source fit.
+    if (asked && !score) return [r, -1] as const;
     if (q.locale && (r.languages.includes(q.locale) || (q.locale === "es" && r.urlEs))) score += 1;
-    if (!skill && !words.length) score += 1;
+    if (!asked) score += 1;
     return [r, score] as const;
   });
   return scored.filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).map(([r]) => r);

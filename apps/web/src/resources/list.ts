@@ -274,7 +274,7 @@ export const RESOURCES: Resource[] = [
     subject: "english",
     grades: ["6", "adult"],
     languages: ["en"],
-    fits: ["e.pronouns", "e.active.passive", "e.sentence.types", "e.concision", "grammar"],
+    fits: ["e.pronouns", "e.active.passive", "e.sentence.types", "e.concision", "grammar", "commas", "agreement"],
     about: { en: "Clear explanations of grammar, punctuation and sentence style.", es: "Explicaciones claras de gramática y puntuación (en inglés)." },
   },
   {
@@ -1045,6 +1045,19 @@ export const RESOURCES: Resource[] = [
     fits: ["e.rhyme", "e.syllables", "e.figurative", "poems", "poetry"],
     about: { en: "Robert Louis Stevenson's short rhyming poems about childhood, free to read online.", es: "Poemas cortos con rima de Robert Louis Stevenson sobre la infancia, gratis para leer en línea (en inglés)." },
   },
+  {
+    id: "gutenberg-real-mother-goose",
+    title: "The Real Mother Goose",
+    source: "Project Gutenberg",
+    url: "https://www.gutenberg.org/ebooks/10607",
+    kind: "book",
+    subject: "english",
+    grades: ["K", "2"],
+    languages: ["en"],
+    fits: ["e.rhyme", "nursery rhymes", "rhymes"],
+    about: { en: "Blanche Fisher Wright's illustrated 1916 collection of hundreds of nursery rhymes, free to read online.", es: "La colección ilustrada de cientos de rimas infantiles de Blanche Fisher Wright, de 1916, gratis para leer en línea (en inglés)." },
+    note: { en: "Old rhymes; a few show the attitudes of their time. Read them together.", es: "Rimas antiguas; algunas muestran ideas de su época. Léanlas juntos." },
+  },
   // Phonics, grammar and writing help
   {
     id: "rwt-construct-a-word",
@@ -1118,8 +1131,8 @@ export const RESOURCES: Resource[] = [
     subject: "english",
     grades: ["8", "adult"],
     languages: ["en"],
-    fits: ["e.concision", "e.active.passive", "writing", "style"],
-    about: { en: "William Strunk's short guide to clear writing, with rules like 'omit needless words' and 'use the active voice'.", es: "La guía breve de William Strunk para escribir con claridad, con reglas como omitir palabras innecesarias (en inglés)." },
+    fits: ["e.concision", "e.active.passive", "writing", "style", "commas"],
+    about: { en: "William Strunk's short guide to clear writing, with rules for commas and rules like 'omit needless words' and 'use the active voice'.", es: "La guía breve de William Strunk para escribir con claridad, con reglas para usar la coma y reglas como omitir palabras innecesarias (en inglés)." },
   },
   // Classic books, grades 3–9 (public domain)
   {
@@ -1280,9 +1293,10 @@ export const RESOURCES: Resource[] = [
   phet("reactants-products-and-leftovers", "Reactants, Products and Leftovers", ["s.chem.phys", "s.formula.atoms", "chemical reactions"], ["7", "adult"], "science", "Make sandwiches and molecules to see what a reaction uses up, makes and leaves over.", "Arma sándwiches y moléculas para ver qué gasta, qué produce y qué sobra en una reacción."),
   phet("magnets-and-electromagnets", "Magnets and Electromagnets", ["s.forces", "magnets"], ["3", "9"], "science", "Move a magnet near a compass, then build an electromagnet and change its strength.", "Acerca un imán a una brújula y luego construye un electroimán y cambia su fuerza."),
   // The older Java sim: its graphs over time and free-body diagram are what Forces and Motion: Basics lacks,
-  // so it fits those topics, not the skills Basics already covers.
+  // so it fits those topics, not the force skills Basics already covers. It does fit s.speed: its position
+  // and velocity graphs are speed, distance and time, and Basics is the only other source for that skill.
   {
-    ...phet("forces-and-motion", "Forces and Motion", ["free-body diagrams", "motion graphs", "friction"], ["5", "9"], "science", "Push a filing cabinet against friction and watch graphs of force, position, velocity and acceleration over time, with a free-body diagram.", "Empuja un archivero contra la fricción y mira las gráficas de fuerza, posición, velocidad y aceleración en el tiempo, con un diagrama de cuerpo libre."),
+    ...phet("forces-and-motion", "Forces and Motion", ["s.speed", "free-body diagrams", "motion graphs", "friction"], ["5", "9"], "science", "Push a filing cabinet against friction and watch graphs of force, position, velocity and acceleration over time, with a free-body diagram.", "Empuja un archivero contra la fricción y mira las gráficas de fuerza, posición, velocidad y aceleración en función del tiempo, con un diagrama de cuerpo libre."),
     note: { en: "An older sim that runs Java in the browser; slow to start and may not work on every tablet.", es: "Una simulación antigua que usa Java en el navegador; tarda en abrir y puede no funcionar en todas las tabletas." },
   },
   // Space, Earth and weather
@@ -1324,7 +1338,8 @@ export const RESOURCES: Resource[] = [
     languages: ["en", "es"],
     fits: ["s.water.cycle", "water", "evaporation", "condensation", "rain"],
     about: { en: "A labeled picture of the water cycle made for kids, free to download in English, Spanish and over 30 other languages.", es: "Una lámina con rótulos del ciclo del agua hecha para niños, gratis para descargar en español, en inglés y en más de 30 idiomas." },
-    note: { en: "The Spanish version says \"billones\" (trillions) of years; it means billions.", es: "La versión en español dice «billones de años»; lo correcto es «miles de millones de años»." },
+    // Only the Spanish page has the number wrong, so only Spanish learners get the note.
+    note: { es: "La versión en español dice «billones de años»; lo correcto es «miles de millones de años»." },
   },
   {
     id: "usgs-this-dynamic-earth",
