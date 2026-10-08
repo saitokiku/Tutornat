@@ -12,8 +12,11 @@ import { PAIRS, PASSAGES, type Passage, type Question, type SkillKey, type Two }
 
 const lang = (locale: Locale, t: Two) => (locale === "es" ? t[1] : t[0]);
 
-/** Quotes text inside learner copy; a quote that already opens with “ is left as it is. */
-const q = (s: string) => (s.startsWith("“") ? s : `“${s}”`);
+/**
+ * Quotes text inside learner copy; a quote that already opens with “ is left as it is. Quotation marks
+ * inside the quoted text become single ones, so “In the ‘Try it’ steps” never nests “ inside “.
+ */
+const q = (s: string) => (s.startsWith("“") ? s : `“${s.replace(/“/g, "‘").replace(/”/g, "’")}”`);
 /** Quotes a choice in the middle of a sentence, without its final period. */
 const qs = (s: string) => q(s.replace(/[.]$/, ""));
 
@@ -158,14 +161,15 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
     : show(p, locale);
   const options: Choice[] = [
     { label: lang(locale, question.right) },
-    ...question.wrong.map(([en, es, why]) => ({ label: locale === "es" ? es : en, why })),
+    ...question.wrong.map(([en, es, why, esWhy]) => ({ label: locale === "es" ? es : en, why: locale === "es" ? (esWhy ?? why) : why })),
   ];
   const choices = r.shuffle(options);
   const right = options[0].label;
   const ev = lang(locale, question.ev);
   const ev2 = question.ev2 ? lang(locale, question.ev2) : "";
   const where = question.skill === "features" || question.skill === "compare" ? "" : locate(p, locale, ev);
-  const [tempting, why] = [question.wrong[0], question.wrong[0][2]];
+  const tempting = question.wrong[0];
+  const why = locale === "es" ? (tempting[3] ?? tempting[2]) : tempting[2];
   const evidence = b
     ? [tr(locale, `Text 1 says: ${q(ev)}`, `El texto 1 dice: ${q(ev)}`), tr(locale, `Text 2 says: ${q(ev2)}`, `El texto 2 dice: ${q(ev2)}`)]
     : [tr(locale, `The text says: ${q(ev)}`, `El texto dice: ${q(ev)}`)];

@@ -16,8 +16,12 @@ export type Two = [en: string, es: string];
 
 export type SkillKey = "details" | "sequence" | "character" | "features" | "mainidea" | "theme" | "pov" | "words" | "compare";
 
-/** A wrong choice: the English and Spanish label and the misconception it shows (kebab-case). */
-export type Wrong = [en: string, es: string, why: string];
+/**
+ * A wrong choice: the English and Spanish label and the misconception it shows (kebab-case). When the
+ * Spanish choice is wrong for a different reason (a word with no second meaning in Spanish), `esWhy`
+ * names the Spanish mistake.
+ */
+export type Wrong = [en: string, es: string, why: string, esWhy?: string];
 
 export type Question = {
   skill: SkillKey;

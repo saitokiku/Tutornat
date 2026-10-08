@@ -13,7 +13,7 @@ export const BAND1_POEMS: Passage[] = [
       "The gutters sing a gurgling song.\nThe buses splash and hiss.\nA pigeon tucks its head away\nand waits for the storm to pass.",
       "My mother says the city's dirty,\nbut I don't think that's true.\nThe rain is giving it a bath,\nand every roof looks new.",
       "When the clouds roll off at last,\nthe sidewalks shine like glass.\nI press my nose against the window\nand watch the puddles flash.",
-      "Tomorrow I will jump in every puddle\nin my yellow boots,\nbut tonight I fall asleep\nto the soft hum of the rain.",
+      "Tomorrow I will jump in every puddle\nin my yellow boots,\nbut tonight I fall asleep\nto the last drips from the roof.",
     ],
     es: [
       "Desde mi ventana, en el piso nueve,\nveo llegar la lluvia.\nToca el vidrio con deditos\ny pide permiso para entrar.",
@@ -21,7 +21,7 @@ export const BAND1_POEMS: Passage[] = [
       "Las alcantarillas cantan gorgoteando.\nLos autobuses salpican y silban.\nUna paloma esconde la cabeza\ny espera a que pase la tormenta.",
       "Mi mamá dice que la ciudad está sucia,\npero yo no lo creo.\nLa lluvia le está dando un baño\ny cada techo parece nuevo.",
       "Cuando por fin se van las nubes,\nlas aceras brillan como vidrio.\nPego la nariz a la ventana\ny veo destellar los charcos.",
-      "Mañana saltaré en cada charco\ncon mis botas amarillas,\npero esta noche me duermo\ncon el suave murmullo de la lluvia.",
+      "Mañana saltaré en cada charco\ncon mis botas amarillas,\npero esta noche me duermo\ncon las últimas gotas del techo.",
     ],
     qs: [
       Q("pov", ["Who is the speaker of this poem?", "¿Quién habla en este poema?"], ["A child watching the rain from a high window", "Un niño o una niña que mira la lluvia desde un piso alto"], [["The rain falling on the city", "La lluvia que cae sobre la ciudad", "wrong-character"], ["The speaker's mother", "La mamá de quien habla", "wrong-character"], ["A bus driver on the street", "Un chofer de autobús en la calle", "not-in-text"]], ["Look at the first two lines. Where is the speaker?", "Mira los dos primeros versos. ¿Dónde está quien habla?"], ["From my window on the ninth floor", "Desde mi ventana, en el piso nueve"]),
