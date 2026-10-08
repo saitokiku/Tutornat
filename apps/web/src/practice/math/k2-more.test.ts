@@ -265,9 +265,12 @@ describe("m.count.100", () => {
             v += step;
           }
           expect(Math.max(...seq)).toBeLessThanOrEqual(100);
-          expect(Math.min(...seq)).toBeGreaterThanOrEqual(1);
-          if (level === 1) expect([step, after.length]).toEqual([10, 0]);
+          expect(Math.min(...seq)).toBeGreaterThanOrEqual(step === 10 ? 0 : 1);
+          if (level === 1) expect(step).toBe(10);
           if (level === 2) expect([step, Number(keyLabel(it)) % 10]).toEqual([1, 0]);
+          // A number already on screen is never filler "off-by-one"/"miscounted": picking it is copying, not miscounting.
+          for (const w of wrongLabels(it))
+            if ([...before, ...after].includes(Number(w))) expect(["off-by-one", "miscounted"]).not.toContain(it.choices!.find((c) => c.label === w)?.why);
         }
   });
 });
@@ -278,13 +281,23 @@ describe("m.write.20", () => {
       for (const [en, es] of both("m.write.20", level)) {
         if (level < 3) {
           const v = en.visual!;
-          if (v.kind !== "ten-frame") throw new Error("expected a ten-frame");
-          const boxes = (v.frames ?? 1) * 10;
-          let filled = 0;
-          for (let k = 0; k < boxes; k++) if (k < v.filled) filled++;
-          expect(num(en.answer)).toBe(filled);
-          if (level === 1) expect(boxes === 10 && filled <= 10).toBe(true);
-          else expect(boxes === 20 && filled >= 11 && filled <= 20).toBe(true);
+          let counted = 0;
+          if (v.kind === "ten-frame") {
+            const boxes = (v.frames ?? 1) * 10;
+            for (let k = 0; k < boxes; k++) if (k < v.filled) counted++;
+            expect(boxes).toBe(level === 1 ? 10 : 20);
+            // "Counted the empty boxes" (on from a full first frame) is offered only when a box is empty.
+            const empty = boxes - counted;
+            for (const w of en.wrong ?? []) if (w.why === "counted-empty-boxes") expect([empty > 0, Number(w.value)]).toEqual([true, boxes === 10 ? empty : 10 + empty]);
+          } else if (v.kind === "dots") {
+            expect(v.groups.length).toBe(1);
+            for (let k = 0; k < v.groups[0]; k++) counted++;
+            expect((en.wrong ?? []).some((w) => w.why === "counted-empty-boxes")).toBe(false);
+          } else throw new Error("expected a ten-frame or dots");
+          expect(num(en.answer)).toBe(counted);
+          if (level === 1) expect(counted <= 10).toBe(true);
+          else expect(counted >= 11 && counted <= 20).toBe(true);
+          expect(/dots|puntos/.test(text(es))).toBe(v.kind === "dots");
         } else
           for (const it of [en, es]) {
             const w = /(?:number|número) (.+)\.$/.exec(text(it))![1];
@@ -329,16 +342,22 @@ describe("m.teen.numbers", () => {
             expect(level).toBe(3);
           } else {
             const v = it.visual!;
-            if (v.kind !== "ten-frame") throw new Error("expected a ten-frame");
+            // The picture's counters, counted one by one: two ten-frames, or a group of 10 dots and the ones.
+            let pictured = 0;
+            if (v.kind === "ten-frame") for (let k = 0; k < (v.frames ?? 1) * 10; k++) pictured += k < v.filled ? 1 : 0;
+            else if (v.kind === "dots") {
+              expect(v.groups[0]).toBe(10);
+              for (const g of v.groups) for (let k = 0; k < g; k++) pictured++;
+            } else throw new Error("expected a ten-frame or dots");
             const nums = ints(t);
             if (/how many more|cuántos más/.test(t)) {
               const n = nums.find((x) => x > 10)!;
               expect(10 + key).toBe(n);
-              expect(v.filled).toBe(n);
+              expect(pictured).toBe(n);
             } else {
               const k = nums.find((x) => x < 10)!;
               expect(key - 10).toBe(k);
-              expect(v.filled).toBe(key);
+              expect(pictured).toBe(key);
             }
           }
           expect(key >= 1 && key <= 19).toBe(true);
@@ -731,7 +750,7 @@ describe("m.story.100", () => {
   // Plain-language cues each kind must carry, so a story's wording matches its arithmetic.
   const CUE: Record<string, RegExp> = {
     "add-to": /more/, "put-together": /in all/, "take-from": /left|still out/, "change-add": /some/, "change-take": /Some/, "start-add": /at first/,
-    compare: /How many more/, fewer: /fewer/, more: /more/, "add-take": /now/, "take-add": /now/, "take-take": /left|still in/, goal: /goal/,
+    compare: /How many (more|\w+ longer)/, fewer: /fewer/, more: /more/, "add-take": /now/, "take-add": /now/, "take-take": /left|still in/, goal: /goal/,
   };
   it("putting the answer back into the story makes it true, at every level", () => {
     for (const level of levelsOf("m.story.100")) {
