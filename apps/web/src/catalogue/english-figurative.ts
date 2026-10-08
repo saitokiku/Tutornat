@@ -427,7 +427,7 @@ const figurative: CatalogueEntry = {
   ],
 };
 
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). Not linked from the lesson screen yet. */
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). The course page offers them. */
 export const practice: Record<string, string[]> = {
   "literal-figurative": ["e.figurative"],
   "similes-metaphors": ["e.figurative"],
@@ -435,4 +435,4 @@ export const practice: Record<string, string[]> = {
   "personification-hyperbole": ["e.figurative"],
 };
 
-export default figurative;
+export default { ...figurative, practice } satisfies CatalogueEntry;

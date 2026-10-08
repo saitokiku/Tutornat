@@ -102,6 +102,20 @@ describe("CoursePractice", () => {
     );
   });
 
+  it("offers the practice a ready-made course names for its lessons, each skill once, in lesson order", () => {
+    const ready: Course = { ...course, title: "Rhymes and syllables", goal: "Rhymes and syllables", subject: "english", grade: "K", origin: "catalogue", catalogueId: "english-rhymes-syllables", citations: undefined };
+    render(<CoursePractice course={ready} learner={{ ...learner, grade: "K" }} />);
+    const rows = screen.getAllByRole("listitem");
+    expect(rows.map((li) => li.querySelector(".font-medium")?.textContent)).toEqual(["Rhyming words", "Word families", "Clap the syllables"]);
+    expect(within(rows[0]).getByRole("button", { name: "Practice Rhyming words" })).toBeInTheDocument();
+  });
+
+  it("offers no practice for a ready-made course that names none, rather than guessing from its title", () => {
+    const ready: Course = { ...course, title: "Fractions: parts of a whole", goal: "fractions", subject: "math", grade: "3", origin: "catalogue", catalogueId: "math-fractions", citations: undefined };
+    const { container } = render(<CoursePractice course={ready} learner={learner} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("shows nothing when no skill fits", () => {
     const { container } = render(<CoursePractice course={{ ...course, goal: "knitting", subject: "other", citations: [] }} learner={learner} />);
     expect(container).toBeEmptyDOMElement();

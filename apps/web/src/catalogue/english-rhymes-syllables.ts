@@ -397,7 +397,7 @@ const rhymesSyllables: CatalogueEntry = {
   ],
 };
 
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). Not linked from the lesson screen yet. */
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). The course page offers them. */
 export const practice: Record<string, string[]> = {
   "what-rhymes": ["e.rhyme"],
   "make-rhymes": ["e.rhyme", "e.word.families"],
@@ -405,4 +405,4 @@ export const practice: Record<string, string[]> = {
   "rhyme-and-beat": ["e.rhyme", "e.syllables"],
 };
 
-export default rhymesSyllables;
+export default { ...rhymesSyllables, practice } satisfies CatalogueEntry;

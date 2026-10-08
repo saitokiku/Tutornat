@@ -1,3 +1,4 @@
+import { practice } from "./english-parts-of-speech";
 import type { CatalogueEntry } from "./types";
 
 const partesOracionEs: CatalogueEntry = {
@@ -455,6 +456,5 @@ const partesOracionEs: CatalogueEntry = {
   ],
 };
 
-export { practice } from "./english-parts-of-speech";
-
-export default partesOracionEs;
+// The same lessons as the English course, so the same practice.
+export default { ...partesOracionEs, practice } satisfies CatalogueEntry;

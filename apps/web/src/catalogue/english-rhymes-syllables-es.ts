@@ -1,3 +1,4 @@
+import { practice } from "./english-rhymes-syllables";
 import type { CatalogueEntry } from "./types";
 
 const rimasSilabasEs: CatalogueEntry = {
@@ -397,6 +398,5 @@ const rimasSilabasEs: CatalogueEntry = {
   ],
 };
 
-export { practice } from "./english-rhymes-syllables";
-
-export default rimasSilabasEs;
+// The same lessons as the English course, so the same practice.
+export default { ...rimasSilabasEs, practice } satisfies CatalogueEntry;

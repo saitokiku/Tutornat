@@ -442,6 +442,15 @@ export function practiceSkillsFor(topic: string, articleTitle: string | undefine
     .map(({ skillId, fits }) => ({ skillId, fits }));
 }
 
+/** The skills a ready-made course names for its lessons, in lesson order, each once; `fits` within two grades of the course. */
+export function catalogueSkillsFor(entry: CatalogueEntry): PracticeMatch[] {
+  const ids = [...new Set(entry.lessons.flatMap((l) => entry.practice?.[l.id] ?? []))];
+  return ids.flatMap((skillId) => {
+    const skill = getSkill(skillId);
+    return skill ? [{ skillId, fits: Math.abs(gradeN(skill.grade) - gradeN(entry.grade)) <= 2 }] : [];
+  });
+}
+
 const SUP: Record<string, string> = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻", "−": "⁻" };
 
 /** A practice prompt as one line of text: 3/4 for a stacked fraction, x² for a power, ___ for the blank. */

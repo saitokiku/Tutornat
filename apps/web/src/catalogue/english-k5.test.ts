@@ -5,14 +5,14 @@ import { readyMadeMatch } from "@/lib/source-course";
 import type { Grade, Locale, Scene } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
 import { matchEntry } from ".";
-import factOpinion, { practice as factOpinionPractice } from "./english-fact-opinion";
-import figurative, { practice as figurativePractice } from "./english-figurative";
+import factOpinion from "./english-fact-opinion";
+import figurative from "./english-figurative";
 import figurativeEs from "./english-figurative-es";
-import partsOfSpeech, { practice as partsOfSpeechPractice } from "./english-parts-of-speech";
+import partsOfSpeech from "./english-parts-of-speech";
 import partsOfSpeechEs from "./english-parts-of-speech-es";
-import rhymesSyllables, { practice as rhymesSyllablesPractice } from "./english-rhymes-syllables";
+import rhymesSyllables from "./english-rhymes-syllables";
 import rhymesSyllablesEs from "./english-rhymes-syllables-es";
-import shortWords, { practice as shortWordsPractice } from "./english-short-words";
+import shortWords from "./english-short-words";
 import type { CatalogueEntry } from "./types";
 
 // The English K–5 ready-made courses and their Spanish twins.
@@ -90,27 +90,27 @@ describe("English K–5 ready-made courses", () => {
   });
 
   it("link practice to real skills and to lessons of the course", () => {
-    const maps: [CatalogueEntry, Record<string, string[]>][] = [
-      [shortWords, shortWordsPractice],
-      [rhymesSyllables, rhymesSyllablesPractice],
-      [partsOfSpeech, partsOfSpeechPractice],
-      [figurative, figurativePractice],
-      [factOpinion, factOpinionPractice],
-    ];
-    for (const [c, map] of maps) {
+    for (const c of COURSES) {
+      // Every course names its practice; the course page offers it (CoursePractice).
+      expect(c.practice, c.id).toBeDefined();
       const lessons = c.lessons.map((l) => l.id);
-      for (const [lesson, skills] of Object.entries(map)) {
+      for (const [lesson, skills] of Object.entries(c.practice!)) {
         expect(lessons, `${c.id}: ${lesson}`).toContain(lesson);
         for (const id of skills) expect(getSkill(id), `${c.id}/${lesson}: ${id}`).toBeDefined();
       }
+      // Only a lesson no skill on the map teaches yet goes without (the author's purpose).
+      const without = lessons.filter((l) => !c.practice![l]?.length);
+      expect(without, c.id).toEqual(c.id === "english-fact-opinion" ? ["authors-purpose"] : []);
     }
-    // The Spanish twins re-export the English map, so their lessons must be the same lessons.
+    // The Spanish twins use the English map, so their lessons must be the same lessons.
     for (const [es, en] of [
       [rhymesSyllablesEs, rhymesSyllables],
       [partsOfSpeechEs, partsOfSpeech],
       [figurativeEs, figurative],
-    ])
+    ]) {
       expect(es.lessons.map((l) => l.id)).toEqual(en.lessons.map((l) => l.id));
+      expect(es.practice).toBe(en.practice);
+    }
   });
 
   it("are not offered for a request that only shares a word every reading course uses", () => {

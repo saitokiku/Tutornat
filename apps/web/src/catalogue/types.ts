@@ -9,4 +9,6 @@ export type CatalogueEntry = {
   grade: Grade;
   locale: Locale;
   lessons: Lesson[];
+  /** Skills on the map that fit each lesson (lesson id → skill ids), offered to practice on the course page. */
+  practice?: Record<string, string[]>;
 };

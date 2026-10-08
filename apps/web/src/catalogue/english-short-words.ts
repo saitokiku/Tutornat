@@ -387,7 +387,7 @@ const shortWords: CatalogueEntry = {
   ],
 };
 
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). Not linked from the lesson screen yet. */
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). The course page offers them. */
 export const practice: Record<string, string[]> = {
   "sound-it-out": ["e.blend.onset", "e.segment.sounds", "e.cvc.words"],
   "short-vowels": ["e.short.vowels", "e.middle.vowel"],
@@ -395,4 +395,4 @@ export const practice: Record<string, string[]> = {
   "read-sentences": ["e.cvc.words", "e.sight.words"],
 };
 
-export default shortWords;
+export default { ...shortWords, practice } satisfies CatalogueEntry;

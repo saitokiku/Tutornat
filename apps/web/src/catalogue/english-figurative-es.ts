@@ -1,3 +1,4 @@
+import { practice } from "./english-figurative";
 import type { CatalogueEntry } from "./types";
 
 const figuradoEs: CatalogueEntry = {
@@ -437,6 +438,5 @@ const figuradoEs: CatalogueEntry = {
   ],
 };
 
-export { practice } from "./english-figurative";
-
-export default figuradoEs;
+// The same lessons as the English course, so the same practice.
+export default { ...figuradoEs, practice } satisfies CatalogueEntry;

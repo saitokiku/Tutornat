@@ -457,7 +457,7 @@ const factOpinion: CatalogueEntry = {
 };
 
 /**
- * Practice on the skill map that fits each lesson (lesson id → skill ids). Not linked from the lesson screen yet.
+ * Practice on the skill map that fits each lesson (lesson id → skill ids). The course page offers them.
  * The author's purpose has no practice skill yet.
  */
 export const practice: Record<string, string[]> = {
@@ -466,4 +466,4 @@ export const practice: Record<string, string[]> = {
   "main-idea-purpose": ["e.main.idea", "e.fact.opinion", "e.compare.texts"],
 };
 
-export default factOpinion;
+export default { ...factOpinion, practice } satisfies CatalogueEntry;

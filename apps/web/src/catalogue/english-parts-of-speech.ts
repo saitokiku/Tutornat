@@ -440,7 +440,7 @@ const partsOfSpeech: CatalogueEntry = {
 };
 
 /**
- * Practice on the skill map that fits each lesson (lesson id → skill ids). Not linked from the lesson screen yet.
+ * Practice on the skill map that fits each lesson (lesson id → skill ids). The course page offers them.
  * e.adjectives sits at grade 3 on the map (L.3.1a), but its items are this lesson's kind: find the word that describes.
  */
 export const practice: Record<string, string[]> = {
@@ -450,4 +450,4 @@ export const practice: Record<string, string[]> = {
   "sentence-parts": ["e.nouns.verbs", "e.adjectives"],
 };
 
-export default partsOfSpeech;
+export default { ...partsOfSpeech, practice } satisfies CatalogueEntry;

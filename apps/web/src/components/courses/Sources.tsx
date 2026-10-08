@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { catalogueEntry } from "@/catalogue";
 import { STATUS_DOT, statusLine } from "@/components/practice/status";
 import { Badge, Button } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
 import { startSet, statusesOf } from "@/lib/practice";
 import { isReviewed } from "@/lib/review";
-import { citationGroups, isWebLink, practiceSkillsFor, topicOf } from "@/lib/source-course";
+import { catalogueSkillsFor, citationGroups, isWebLink, practiceSkillsFor, topicOf } from "@/lib/source-course";
 import { read, useStore } from "@/lib/store";
 import type { Course, Profile } from "@/lib/types";
 import { getSkill, gradeIndex } from "@/practice/skills";
@@ -106,7 +107,8 @@ export function CourseSources({ course }: { course: Course }) {
 
 /**
  * The skills on the map that fit a course, with where each stands and a way to practice it: the ones its
- * lessons name (a ready-made course), else the ones that match a source-built course's topic.
+ * lessons name, else the ones a ready-made course names for its lessons, else the ones that match a
+ * source-built course's topic.
  */
 export function CoursePractice({ course, learner }: { course: Course; learner: Profile }) {
   const t = useT();
@@ -117,7 +119,12 @@ export function CoursePractice({ course, learner }: { course: Course; learner: P
   const article = course.citations ? citationGroups(course.citations).article?.title : undefined;
   const named = [...new Set(course.lessons.flatMap((l) => l.practice ?? []))];
   const near = (id: string) => Math.abs(gradeIndex(getSkill(id)?.grade ?? course.grade) - gradeIndex(course.grade)) <= 2;
-  const matches = named.length ? named.map((skillId) => ({ skillId, fits: near(skillId) })) : practiceSkillsFor(topicOf(course.goal), article, course.subject, course.grade);
+  const entry = !named.length && course.origin === "catalogue" && course.catalogueId ? catalogueEntry(course.catalogueId) : null;
+  const matches = named.length
+    ? named.map((skillId) => ({ skillId, fits: near(skillId) }))
+    : entry
+      ? catalogueSkillsFor(entry)
+      : practiceSkillsFor(topicOf(course.goal), article, course.subject, course.grade);
   const skills = matches.flatMap((m) => {
     const skill = getSkill(m.skillId);
     return skill ? [{ skill, fits: m.fits }] : [];
