@@ -12,7 +12,7 @@ import { Act, roundButton } from "./Stepper";
 import { scramble } from "./order";
 
 type SequenceWidget = Extract<Widget, { kind: "sequence" }>;
-type Props = { widget: SequenceWidget; onCheck?: (correct: boolean) => void; onSay?: (segments: Segment[]) => void; lang?: string };
+type Props = { widget: SequenceWidget; onCheck?: (correct: boolean) => boolean | void; onSay?: (segments: Segment[]) => void; lang?: string };
 
 /** The order a sequence opens in: scrambled the same way every time, never already right. */
 export const startOrder = (w: SequenceWidget) => scramble(w.items.map((i) => i.id)).map((i) => w.items[i].id);
@@ -127,9 +127,9 @@ export function Sequence({ widget, onCheck, onSay, lang }: Props) {
         result={result}
         onCheck={() => {
           const ok = order.every((id, i) => widget.items[i].id === id);
+          if (onCheck?.(ok) === false) return;
           setResult(ok);
           setChecked(true);
-          onCheck?.(ok);
         }}
       />
     </div>

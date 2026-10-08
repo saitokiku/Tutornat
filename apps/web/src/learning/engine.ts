@@ -1,7 +1,7 @@
 import type { Grade, Subject } from "@/lib/types";
 import { getSkill, gradeIndex, skillsFor } from "@/practice/skills";
 import type { Skill } from "@/practice/types";
-import type { Attempt, PracticeSet, Slot } from "./types";
+import type { Attempt, HelpExposure, PracticeSet, ResponseEvent, Slot } from "./types";
 
 // The learning engine. Every function here is pure: evidence in, decisions out, `now` passed in.
 // The rules are the owner-approved mastery law from the earlier repos (Kaizen-AI engine, trellis):
@@ -97,7 +97,7 @@ function checksOf(attempts: Attempt[]) {
 
 const dayKey = (t: number) => new Date(t).toDateString();
 
-export function skillStatus(skillId: string, all: Attempt[], now: number): SkillStatus {
+export function skillStatus(skillId: string, all: Attempt[], now: number, evidence: { help?: readonly HelpExposure[]; responses?: readonly ResponseEvent[] } = {}): SkillStatus {
   const skill = getSkill(skillId);
   const mine = all.filter((a) => a.skillId === skillId).sort((a, b) => a.at - b.at);
   // Tutor help rows mark help (they restart the check clock) but are not answers.
@@ -108,11 +108,16 @@ export function skillStatus(skillId: string, all: Attempt[], now: number): Skill
     missed: answers.filter((a) => !a.correct).length,
   };
   const base = { skillId, overdue: false, stuck: false, totals };
-  if (!skill || !mine.length) return { ...base, state: "new", level: 1 };
+  const helpTimes = [
+    ...mine.filter((a) => a.assisted).map((a) => a.at),
+    ...(evidence.help ?? []).filter((h) => h.skillId === skillId).map((h) => h.receivedAt ?? h.capturedAt),
+    ...(evidence.responses ?? []).filter((r) => r.skillId === skillId && !r.correct).map((r) => r.receivedAt ?? r.capturedAt),
+  ];
+  const lastHelpAt = helpTimes.length ? Math.max(...helpTimes) : undefined;
+  if (!skill || !mine.length) return { ...base, state: "new", level: 1, ...(lastHelpAt === undefined ? {} : { lastHelpAt }) };
 
   const practice = mine.filter((a) => PRACTICE_MODES.has(a.mode));
   const lastPracticeAt = practice.at(-1)?.at;
-  const lastHelpAt = mine.filter((a) => a.assisted).at(-1)?.at;
   const level = levelFrom(mine, skill);
   const checks = checksOf(mine);
   const out: Pick<SkillStatus, "level" | "lastPracticeAt" | "lastHelpAt"> = { level, lastPracticeAt, lastHelpAt };
@@ -136,16 +141,22 @@ export function skillStatus(skillId: string, all: Attempt[], now: number): Skill
 
   if (provedAt) {
     const reviews = mine.filter((a) => a.mode === "review" && a.at > provedAt!);
-    // Refresh: misses in a row on reviews; a later passed check restores the skill.
+    // Replay restorations among reviews. A pass resets that episode, not every later refresh.
     let streak = 0, refreshAt: number | undefined;
-    for (const r of reviews) {
-      streak = r.correct && !r.assisted ? 0 : streak + 1;
-      if (streak >= RULES.refreshMisses) refreshAt ??= r.at;
+    const timeline = [
+      ...reviews.map((r) => ({ at: r.at, kind: "review" as const, good: r.correct && !r.assisted })),
+      ...checks.filter((c) => c.passed && c.at > provedAt!).map((c) => ({ at: c.at, kind: "restore" as const, good: true })),
+    ].sort((a, b) => a.at - b.at || (a.kind === "restore" ? -1 : 1));
+    for (const event of timeline) {
+      if (event.kind === "restore" && refreshAt !== undefined && event.at > refreshAt) {
+        refreshAt = undefined;
+        streak = 0;
+      } else if (event.kind === "review") {
+        streak = event.good ? 0 : streak + 1;
+        if (streak >= RULES.refreshMisses) refreshAt ??= event.at;
+      }
     }
-    if (refreshAt !== undefined) {
-      const restored = checks.some((c) => c.passed && c.at > refreshAt!);
-      if (!restored) return { ...base, ...out, stuck, state: "refresh", provedAt, checkOpensAt: opens(refreshAt) };
-    }
+    if (refreshAt !== undefined) return { ...base, ...out, stuck, state: "refresh", provedAt, checkOpensAt: opens(refreshAt) };
     const goodDays = new Set(reviews.filter((r) => r.correct && !r.assisted).map((r) => dayKey(r.at))).size;
     const step = RULES.reviewDays[Math.min(goodDays, RULES.reviewDays.length - 1)];
     const lastGood = reviews.filter((r) => r.correct && !r.assisted).at(-1)?.at ?? provedAt;
@@ -172,10 +183,10 @@ export const isSecure = (s: SkillStatus) => s.state === "ready" || s.state === "
 
 export type Statuses = Record<string, SkillStatus>;
 
-export function allStatuses(attempts: Attempt[], now: number, subject?: Subject): Statuses {
-  const ids = new Set(attempts.map((a) => a.skillId));
+export function allStatuses(attempts: Attempt[], now: number, subject?: Subject, evidence: { help?: readonly HelpExposure[]; responses?: readonly ResponseEvent[] } = {}): Statuses {
+  const ids = new Set([...attempts.map((a) => a.skillId), ...(evidence.help ?? []).map((h) => h.skillId), ...(evidence.responses ?? []).map((r) => r.skillId)]);
   const out: Statuses = {};
-  for (const id of ids) if (!subject || getSkill(id)?.subject === subject) out[id] = skillStatus(id, attempts, now);
+  for (const id of ids) if (!subject || getSkill(id)?.subject === subject) out[id] = skillStatus(id, attempts, now, evidence);
   return out;
 }
 

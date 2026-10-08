@@ -7,31 +7,39 @@ import { TutorDock, type DockContext } from "@/components/practice/tutor-dock";
 import { HearContext } from "@/components/stage/hear";
 import { useT } from "@/i18n";
 import { recordTutorHelp } from "@/lib/practice";
+import { recordHelpExposure } from "@/lib/evidence";
 import type { Profile } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
 import { TutorChat } from "./TutorChat";
 
 /**
  * The tutor's seat beside a problem: a side panel on wide screens, a bottom sheet on phones. Opening it
- * on a problem marks that problem as helped and restarts that skill's check clock — honestly.
+ * is neutral; instructional content commits assistance before its text, cards or audio are released.
  */
 export function TutorDrawer({ learner, surface, children }: { learner: Profile; surface: "practice" | "lesson"; children: ReactNode }) {
   const [ctx, setCtx] = useState<DockContext | null>(null);
   const [usedOn, setUsedOn] = useState<string>();
   const open = (c: DockContext) => {
     setCtx(c);
-    setUsedOn(c.item.id);
-    recordTutorHelp(learner.id, c.item.skillId, c.item.seed, c.item.level);
+  };
+  const beforeHelp = (id: string) => {
+    if (!ctx) return false;
+    try {
+      if (ctx.attemptId) recordHelpExposure({ attemptId: ctx.attemptId, id, kind: "tutor", delivery: "latched" });
+      else recordTutorHelp(learner.id, ctx.item.skillId, ctx.item.seed, ctx.item.level);
+      setUsedOn(ctx.item.id);
+      return true;
+    } catch { return false; }
   };
   return (
     <TutorDock.Provider value={{ open, usedOn }}>
       <div className={`transition-[padding] duration-200 ${ctx ? "lg:pr-[400px]" : ""}`}>{children}</div>
-      {ctx && <Panel key={ctx.item.id} ctx={ctx} learner={learner} surface={surface} onClose={() => setCtx(null)} />}
+      {ctx && <Panel key={ctx.item.id} ctx={ctx} learner={learner} surface={surface} beforeHelp={beforeHelp} onClose={() => setCtx(null)} />}
     </TutorDock.Provider>
   );
 }
 
-function Panel({ ctx, learner, surface, onClose }: { ctx: DockContext; learner: Profile; surface: "practice" | "lesson"; onClose: () => void }) {
+function Panel({ ctx, learner, surface, onClose, beforeHelp }: { ctx: DockContext; learner: Profile; surface: "practice" | "lesson"; onClose: () => void; beforeHelp: (id: string) => boolean }) {
   const t = useT();
   const panel = useRef<HTMLElement>(null);
   const young = ["K", "1", "2"].includes(learner.grade);
@@ -72,11 +80,11 @@ function Panel({ ctx, learner, surface, onClose }: { ctx: DockContext; learner: 
             surface,
             item: ctx.item,
             setId: ctx.setId,
-            // The Runner's open hints, once it passes them (DockContext.hints); until then the ladder starts at one.
-            hintsSeen: (ctx as DockContext & { hints?: number }).hints,
+            hintsSeen: ctx.hints,
             tries: ctx.tries,
             lastAnswer: ctx.lastAnswer,
             title: getSkill(ctx.item.skillId)?.title[learner.locale] ?? "",
+            beforeHelp,
           }}
         />
       </aside>

@@ -47,7 +47,10 @@ describe("TutorDrawer", () => {
     expect(await screen.findByRole("button", { name: "Photo of the problem" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Give me a hint" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close" }).className).toContain("size-11");
-    // Opening it is help: the problem is marked, and the tutor's act is on the record.
+    expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([]);
+    expect(read().attempts).toEqual([]);
+    // Only the requested hint supplies help and records the tutor's act.
+    await user.click(screen.getByRole("button", { name: "Give me a hint" }));
     await waitFor(() => expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ skillId: "m.frac.addlike", setId: "set-1", intent: "next-try-right" })]));
 
     await user.keyboard("{Escape}");

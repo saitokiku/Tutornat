@@ -13,7 +13,7 @@ function sceneText(scene: Scene) {
 }
 
 /** The tutor's seat on the lesson stage, aware of the scene on screen. */
-export function TutorPanel({ learner, lessonTitle, scene }: { learner: Profile; lessonTitle: string; scene: Scene }) {
+export function TutorPanel({ learner, lessonTitle, scene, beforeHelp }: { learner: Profile; lessonTitle: string; scene: Scene; beforeHelp?: (id: string) => boolean }) {
   const t = useT();
   return (
     <aside aria-labelledby="tutor-title" className="flex h-full max-h-[70dvh] min-h-96 flex-col rounded-lg border border-border bg-panel">
@@ -23,7 +23,7 @@ export function TutorPanel({ learner, lessonTitle, scene }: { learner: Profile; 
           {t("tutor.title")}
         </h2>
       </div>
-      <TutorChat key={scene.id} setup={{ learner, surface: "lesson", lesson: { title: lessonTitle, scene: sceneText(scene).slice(0, 1600) }, title: lessonTitle }} />
+      <TutorChat key={scene.id} setup={{ learner, surface: "lesson", lesson: { title: lessonTitle, scene: sceneText(scene).slice(0, 1600) }, title: lessonTitle, beforeHelp }} />
     </aside>
   );
 }

@@ -10,7 +10,7 @@ import { Act, roundButton } from "./Stepper";
 
 type Props = {
   widget: Extract<Widget, { kind: "fraction-bar" }>;
-  onCheck?: (correct: boolean) => void;
+  onCheck?: (correct: boolean) => boolean | void;
   tint?: string;
 };
 
@@ -122,8 +122,8 @@ export function FractionBar({ widget, onCheck, tint = "var(--color-math)" }: Pro
           result={result}
           onCheck={() => {
             const ok = parts === target.parts && shaded === target.shaded;
+            if (onCheck?.(ok) === false) return;
             setResult(ok);
-            onCheck?.(ok);
           }}
         />
       )}

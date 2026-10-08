@@ -236,6 +236,8 @@ describe("sync between devices", () => {
     await syncNow();
     const mine = read().attempts.filter((a) => a.setId === setId);
     expect(mine.map((a) => a.correct)).toEqual([true, false]);
+    resetMemory();
+    expect(read().attempts.filter((a) => a.setId === setId).map((a) => a.correct)).toEqual([true, false]);
     on("phone");
     await signIn(email, PASS);
     expect(read().attempts.map((a) => a.correct)).toEqual([true, false]);

@@ -11,7 +11,7 @@ import { Act } from "./Stepper";
 import { scramble } from "./order";
 
 type SentenceWidget = Extract<Widget, { kind: "sentence-builder" }>;
-type Props = { widget: SentenceWidget; onCheck?: (correct: boolean) => void; onSay?: (segments: Segment[]) => void; lang?: string };
+type Props = { widget: SentenceWidget; onCheck?: (correct: boolean) => boolean | void; onSay?: (segments: Segment[]) => void; lang?: string };
 
 /** An answer as positions in `words` (repeated words take the next unused copy). */
 function asIndices(words: string[], answer: string[]) {
@@ -125,8 +125,8 @@ export function SentenceBuilder({ widget, onCheck, onSay, lang }: Props) {
         result={result}
         onCheck={() => {
           const ok = matchesAnswer(built, widget.answers);
+          if (onCheck?.(ok) === false) return;
           setResult(ok);
-          onCheck?.(ok);
         }}
       />
     </div>

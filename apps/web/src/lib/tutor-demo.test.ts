@@ -401,17 +401,19 @@ describe("the demo tutor beside a problem", () => {
   const item = makeItem("m.frac.addlike", 1, 7, "en");
   const c = ctx({ item, grade: "4" });
 
-  it("opens with the demo line once and the first vetted hint", () => {
+  it("opens with the demo line once without instructional help", () => {
     const o = demoOpening(c);
     expect(o.text.split("\n")[0]).toBe("I'm the demo tutor: I answer from real sources and our practice, without AI.");
-    expect(o.text).toContain(item.hints[0]);
-    expect(o.state).toMatchObject({ hintsGiven: 1, skillId: "m.frac.addlike" });
+    expect(o.text).not.toContain(item.hints[0]);
+    expect(o.state).toMatchObject({ hintsGiven: 0, skillId: "m.frac.addlike" });
     expect(demoOpening(ctx({ grade: "K" })).text.split("\n")[0]).toBe("I'm the demo tutor.");
   });
 
-  it("continues the ladder past hints already opened on the problem", () => {
-    expect(demoOpening({ ...c, hintsSeen: 2 }).text).toContain(item.hints[2]);
-    expect(demoOpening({ ...c, hintsSeen: 2 }).state.hintsGiven).toBe(3);
+  it("continues the requested ladder past hints already opened on the problem", async () => {
+    const opened = demoOpening({ ...c, hintsSeen: 2 });
+    expect(opened.text).not.toContain(item.hints[2]);
+    expect(opened.state.hintsGiven).toBe(2);
+    expect((await demoAnswer("Give me a hint", c, opened.state, fakes())).text).toBe(item.hints[2]);
     const all = demoOpening({ ...c, hintsSeen: item.hints.length });
     expect(all.text.split("\n")[1]).toBe("What have you tried so far?");
     expect(all.state.hintsGiven).toBe(item.hints.length);
@@ -419,7 +421,7 @@ describe("the demo tutor beside a problem", () => {
 
   it("walks the hint ladder, then stops", async () => {
     let s = demoOpening(c).state;
-    for (let i = 1; i < item.hints.length; i++) {
+    for (let i = 0; i < item.hints.length; i++) {
       const r = await demoAnswer("Give me a hint", c, s, fakes());
       expect(r.text).toBe(item.hints[i]);
       s = r.state;
@@ -434,7 +436,7 @@ describe("the demo tutor beside a problem", () => {
     const withVisual = makeItem("m.frac.unit", 1, 3, "en");
     expect(withVisual.visual).toBeDefined();
     const cv = ctx({ item: withVisual, grade: "3" });
-    let state = demoOpening(cv).state; // the opening gave hint 1
+    let state = demoOpening(cv).state;
     const said: string[] = [];
     for (let i = 0; i < 4; i++) {
       const r = await demoAnswer("Explain it a different way", cv, state, fakes());
@@ -442,7 +444,7 @@ describe("the demo tutor beside a problem", () => {
       state = r.state;
     }
     const TRY = "Give it one try first, even a guess. Then I'll show you how.";
-    expect(said).toEqual(["worked", ...withVisual.hints.slice(1), TRY, TRY, TRY].slice(0, 4));
+    expect(said).toEqual(["worked", ...withVisual.hints, TRY, TRY, TRY].slice(0, 4));
     expect(said).not.toContain("visual");
 
     // After a real try, the first worked step, then the problem's own "Show me how".
@@ -503,10 +505,10 @@ describe("the demo tutor beside a problem", () => {
   it("never gives a one-step solution as “the first step” before a try", async () => {
     const one = Array.from({ length: 50 }, (_, i) => makeItem("m.add.5", 1, i + 1, "en")).find((x) => x.steps.length === 1)!;
     const k = ctx({ item: one, grade: "K" });
-    const opened = demoOpening(k).state; // the opening gave hint 1
+    const opened = demoOpening(k).state;
     const r = await demoAnswer("Explain the first step", k, opened, fakes());
     expect(r.text).not.toBe(one.steps[0]);
-    expect(r.text).toBe(one.hints[1]);
+    expect(r.text).toBe(one.hints[0]);
     const after = await demoAnswer("Explain the first step", k, { ...opened, tries: 1 }, fakes());
     expect(after.text).toBe(one.steps[0]);
   });

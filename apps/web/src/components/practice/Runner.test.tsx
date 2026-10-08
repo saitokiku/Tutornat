@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PracticeSet, Slot } from "@/learning/types";
@@ -23,6 +23,7 @@ afterEach(() => {
   resetMemory();
   nav.push.mockReset();
   openTutor.mockReset();
+  vi.restoreAllMocks();
 });
 
 async function learner(grade: Grade) {
@@ -70,6 +71,70 @@ describe("reading worked steps aloud", () => {
 });
 
 describe("Runner", () => {
+  it("does not reveal a hint when durable storage refuses it", async () => {
+    const p = await learner("3");
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    await show(set, p);
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    await userEvent.click(screen.getByRole("button", { name: /^Hint/ }));
+    expect(screen.queryByText(makeItem("m.frac.unit", 1, 11, "en").hints[0])).not.toBeInTheDocument();
+    expect(screen.getByText("Your work couldn't be saved. Free some space or enable browser storage, then try again.")).toBeInTheDocument();
+    expect(read().helpExposures).toEqual([]);
+  });
+
+  it("withholds feedback and stays on the question if the final answer cannot be saved", async () => {
+    const p = await learner("3");
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    await show(set, p);
+    const save = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+      if (key.startsWith("kaizenedu.evidence.v1.attempts:")) throw new DOMException("Full", "QuotaExceededError");
+      return save.call(this, key, value);
+    });
+    await userEvent.keyboard("1/4{Enter}");
+    expect(screen.queryByText("Right.", { exact: true })).not.toBeInTheDocument();
+    expect(screen.getByText("Your work couldn't be saved. Free some space or enable browser storage, then try again.")).toBeInTheDocument();
+    expect(read().attempts).toEqual([]);
+    expect(read().responseEvents).toHaveLength(1);
+  });
+
+  it("help_survives_reload_and_abandon", async () => {
+    const p = await learner("3");
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    await show(set, p);
+    await userEvent.click(screen.getByRole("button", { name: /^Hint/ }));
+    cleanup();
+    resetMemory();
+    await show(set, p);
+    await userEvent.keyboard("1/4{Enter}");
+    expect(read().attempts).toEqual([expect.objectContaining({ correct: true, assisted: true, response: "1/4" })]);
+    expect(read().helpExposures).toEqual([expect.objectContaining({ kind: "hint", profileId: p.id, skillId: "m.frac.unit" })]);
+  });
+
+  it("miss_survives_reload", async () => {
+    const p = await learner("3");
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    await show(set, p);
+    await userEvent.keyboard("2/4{Enter}");
+    expect(screen.getByText("Not yet. Try again, or take a hint.")).toBeInTheDocument();
+    cleanup();
+    resetMemory();
+    await show(set, p);
+    await userEvent.keyboard("1/4{Enter}");
+    expect(read().attempts).toEqual([expect.objectContaining({ correct: true, assisted: true, response: "1/4" })]);
+    expect(read().responseEvents).toEqual([expect.objectContaining({ correct: false, response: "2/4", assisted: false })]);
+  });
+
+  it("opening the tutor without released content is neutral", async () => {
+    const p = await learner("3");
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    await show(set, p);
+    await userEvent.click(screen.getByRole("button", { name: /Ask the tutor/ }));
+    await userEvent.keyboard("1/4{Enter}");
+    expect(openTutor).toHaveBeenCalledOnce();
+    expect(read().attempts).toEqual([expect.objectContaining({ correct: true, assisted: false })]);
+  });
+
   it("K counting: mark the dots while counting, tap the number; marking is not help", async () => {
     const p = await learner("K");
     const seed = seedWhere("m.count.10", 1, (it) => it.visual?.kind === "dots" && it.visual.groups[0] >= 3);

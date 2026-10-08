@@ -3,6 +3,42 @@ import type { Subject } from "@/lib/types";
 /** Why an answer was given. Only "check" answers can prove a skill. */
 export type Mode = "practice" | "review" | "check" | "placement" | "prep" | "tutor";
 
+/** Identity is frozen when work is presented, before an answer or help exists. */
+type SourceFacts = {
+  profileId: string;
+  skillId: string;
+  itemFingerprint: string;
+  contentVersion: string;
+  sessionId?: string;
+  grantId?: string;
+};
+export type AttemptSource = SourceFacts & ({ kind: "set-slot"; setId: string; slotId: string } | { kind: "scene-question"; courseId: string; sceneId: string; questionId: string });
+export type EvidenceSource = SourceFacts & ({ sourceKind: "set-slot"; setId: string; slotId: string } | { sourceKind: "scene-question"; courseId: string; sceneId: string; questionId: string });
+
+export type AttemptIdentity = { id: string; profileId: string; source: AttemptSource; openedAt: number };
+export type HelpExposure = EvidenceSource & {
+  id: string;
+  attemptId: string;
+  kind: "hint" | "steps" | "tutor" | "explanation" | "demonstration";
+  detail?: string;
+  capturedAt: number;
+  receivedAt?: number;
+  /** A committed release stays assisted even if delivery is interrupted. */
+  delivery: "latched" | "released";
+};
+export type ResponseEvent = EvidenceSource & {
+  id: string;
+  attemptId: string;
+  capturedAt: number;
+  receivedAt?: number;
+  response: string;
+  correct: boolean;
+  assisted: boolean;
+};
+export type AssistanceState = { assisted: boolean; exposureIds: string[]; lastHelpAt?: number };
+export type AttemptContext = AttemptIdentity & { help: HelpExposure[]; firstResponse?: ResponseEvent; assistance: AssistanceState };
+export type EvidenceProvenance = "legacy-local" | "local-recorded" | "server-practice" | "server-check";
+
 /** One answer to one problem: the evidence ledger. Append-only; nothing rewrites it. */
 export type Attempt = {
   id: string;
@@ -21,6 +57,13 @@ export type Attempt = {
   response?: string;
   /** The misconception the answer shows, when a wrong answer matches a tagged choice or wrong value. */
   why?: string;
+  provenance?: EvidenceProvenance;
+  attemptId?: string;
+  contentVersion?: string;
+  itemFingerprint?: string;
+  receivedAt?: number;
+  grantId?: string;
+  slotId?: string;
 };
 
 export type SetKind = "daily" | "pick" | "review" | "check" | "placement" | "prep" | "feedback";
