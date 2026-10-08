@@ -4,7 +4,7 @@ import type { CatalogueEntry } from "./types";
 const waterCycleEs: CatalogueEntry = {
   id: "science-water-cycle-es",
   title: "El ciclo del agua",
-  summary: "La evaporación, la condensación y la precipitación mueven el agua entre el océano, el aire y la tierra, como hielo, líquido y vapor. El Sol impulsa todo el viaje.",
+  summary: "La evaporación, la condensación y la precipitación mueven el agua entre el océano, el aire y la tierra, en forma de hielo, agua líquida y vapor. El Sol impulsa todo el viaje.",
   subject: "science",
   grade: "5",
   locale: "es",
@@ -207,7 +207,7 @@ const waterCycleEs: CatalogueEntry = {
               choices: ["Las nubes filtran la sal de la lluvia", "Solo se evapora el agua, no la sal", "La lluvia viene solo de lagos y ríos"],
               answer: 1,
               hint: "Piensa en qué sube al aire cuando se evapora el agua del mar.",
-              explain: "Solo las partículas de agua escapan al aire como vapor. La sal se queda en el mar, así que las nubes y la lluvia son de agua dulce. Casi toda la lluvia empieza como agua del mar.",
+              explain: "Solo las partículas de agua escapan al aire como vapor. La sal se queda en el mar, así que las nubes y la lluvia son de agua dulce. La mayor parte de la lluvia empieza como agua del mar.",
             },
             {
               id: "q2",
@@ -220,7 +220,7 @@ const waterCycleEs: CatalogueEntry = {
             {
               id: "q3",
               prompt: "¿Cómo agregan vapor de agua al aire las plantas?",
-              choices: ["Por agujeritos de sus hojas", "Por la corteza de sus tallos y troncos", "No agregan nada de vapor"],
+              choices: ["Por agujeritos de sus hojas", "Solo por sus flores", "No agregan nada de vapor"],
               answer: 0,
               hint: "El agua sube desde las raíces hasta las hojas.",
               explain: "Las plantas suben agua desde la tierra y sueltan vapor por agujeritos de sus hojas. Esto es la transpiración.",

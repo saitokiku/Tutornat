@@ -299,7 +299,7 @@ const living: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Where does a plant get its food?",
-              choices: ["It makes it", "It eats soil", "It drinks rain"],
+              choices: ["It makes food", "It eats soil", "It drinks rain"],
               answer: 0,
               hint: "Does a plant have a mouth?",
               explain: "Leaves use light, air and water to make food. Plants do not eat soil.",

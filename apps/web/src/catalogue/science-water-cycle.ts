@@ -217,7 +217,7 @@ const waterCycle: CatalogueEntry = {
             {
               id: "q3",
               prompt: "How do plants add water vapor to the air?",
-              choices: ["Through tiny holes in their leaves", "Through the bark on their stems and trunks", "They do not add any vapor"],
+              choices: ["Through tiny holes in their leaves", "Only through their flowers", "They do not add any vapor"],
               answer: 0,
               hint: "Water moves up from the roots to the leaves.",
               explain: "Plants pull water up from the soil and release vapor through tiny holes in their leaves. This is transpiration.",

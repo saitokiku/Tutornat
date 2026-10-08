@@ -324,7 +324,7 @@ const lifeCyclesEs: CatalogueEntry = {
                 "El saltamontes nace como ninfa: un saltamontes pequeño sin alas para volar. Cambia de piel varias veces, y después de la última ya tiene alas completas.",
               ],
             },
-            { type: "text", text: "Las personas también somos así. Un bebé tiene las mismas partes del cuerpo que un adulto. No cambia a un cuerpo de otro tipo." },
+            { type: "text", text: "Las personas también somos así. Un bebé tiene las mismas partes del cuerpo que un adulto. Su cuerpo no se transforma en otro distinto." },
           ],
         },
         {
