@@ -48,6 +48,15 @@ function blanked(sentence: string): MathPart[] {
   return [...(before ? [before] : []), { blank: true }, ...(after ? [after] : [])];
 }
 const sayBlank = (locale: Locale, sentence: string) => sentence.replace("___", tr(locale, "blank", "espacio en blanco"));
+/**
+ * The shown text as it is read aloud before the question: a word pair "finger : hand" becomes "finger and
+ * hand" ("e" before an i sound in Spanish: "valiente e intrépido"), and a bare word or pair gets a full
+ * stop so the voice pauses before the question.
+ */
+const spoken = (locale: Locale, shown: string) => {
+  const s = shown.replace(/ : (?=(\p{L}+))/gu, (_, next: string) => (locale === "en" ? " and " : /^h?[ií](?![aeiouáéíóú])/i.test(next) ? " e " : " y "));
+  return /[\p{L}\p{N}]$/u.test(s) ? `${s}.` : s;
+};
 const fill = (sentence: string, word: string) => {
   const out = sentence.replace("___", word);
   return out.charAt(0).toUpperCase() + out.slice(1);
@@ -66,7 +75,7 @@ function build(r: Rng, locale: Locale, level: Level): ItemBody {
   const ask = lang(locale, level.ask).replace("{t}", target ? q(target) : "");
   const blank = shown.includes("___");
   const prompt: MathPart[] = blank ? [`${ask}\n\n`, ...blanked(shown)] : [shown ? para(shown, ask) : ask];
-  const say = blank ? `${ask} ${sayBlank(locale, shown)}` : shown ? `${shown} ${ask}` : ask;
+  const say = blank ? `${ask} ${sayBlank(locale, shown)}` : shown ? `${spoken(locale, shown)} ${ask}` : ask;
   const [nudge, strategy] = lang(locale, level.hints);
   return {
     prompt,

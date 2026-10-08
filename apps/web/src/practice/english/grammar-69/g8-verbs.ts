@@ -1,4 +1,4 @@
-import { cats, skill, CHOOSE, type Bi, type Entry, type GroupJob } from "./shared";
+import { cats, skill, type Bi, type Entry, type GroupJob } from "./shared";
 
 // Grade 8: verbals; verb moods.
 
@@ -104,11 +104,11 @@ const VERBAL_JOB = cats<GroupJob>(
     },
     {
       en: ["Maya has a lot of homework to finish.", "adjective", "Ask: what kind of homework?", "The infinitive describes the homework, so it works as an adjective.", "to finish"],
-      es: ["Me gusta escuchar música.", "noun", "Pregúntate: ¿qué me gusta?", "El infinitivo nombra lo que me gusta (es el sujeto de “gusta”): funciona como sustantivo.", "escuchar música"],
+      es: ["Mi tía compró una máquina de coser.", "adjective", "Pregúntate: ¿qué clase de máquina compró?", "“De coser” dice qué clase de máquina es, como lo haría un adjetivo.", "de coser"],
     },
     {
       en: ["To win the championship was the team's goal.", "noun", "Ask: what was the team's goal?", "The infinitive phrase is the subject, so it works as a noun.", "To win the championship"],
-      es: ["Mi abuela cocina cantando.", "adverb", "Pregúntate: ¿cómo cocina mi abuela?", "El gerundio dice cómo cocina: funciona como adverbio.", "cantando"],
+      es: ["Echa la pasta en el agua hirviendo.", "adjective", "Pregúntate: ¿cómo está el agua?", "Aquí el gerundio describe al agua, como un adjetivo. “Hirviendo” y “ardiendo” son de los pocos gerundios que pueden hacerlo.", "hirviendo"],
     },
     {
       en: ["The frozen lake sparkled in the sun.", "adjective", "Ask: which lake?", "The participle describes the lake, so it works as an adjective.", "frozen"],
@@ -132,7 +132,7 @@ const VERBAL_JOB = cats<GroupJob>(
     },
     {
       en: ["The students were happy to help.", "adverb", "Ask: happy in what way, or why?", "The infinitive adds to the adjective “happy,” so it works as an adverb.", "to help"],
-      es: ["El perro entró a la casa ladrando.", "adverb", "Pregúntate: ¿cómo entró el perro?", "El gerundio dice cómo entró: funciona como adverbio.", "ladrando"],
+      es: ["Salimos temprano para alcanzar el primer autobús.", "adverb", "Pregúntate: ¿para qué salimos temprano?", "El infinitivo con “para” dice para qué salimos, como un complemento circunstancial: funciona como adverbio.", "para alcanzar el primer autobús"],
     },
     {
       en: ["The book to read next is on my desk.", "adjective", "Ask: which book?", "The infinitive tells which book, so it works as an adjective.", "to read next"],
@@ -140,7 +140,7 @@ const VERBAL_JOB = cats<GroupJob>(
     },
     {
       en: ["Hiking in the rain was not much fun.", "noun", "Ask: what was not much fun?", "The gerund phrase is the subject, so it works as a noun.", "Hiking in the rain"],
-      es: ["Leer antes de dormir me relaja.", "noun", "Pregúntate: ¿qué me relaja?", "El infinitivo es el sujeto: funciona como sustantivo.", "Leer antes de dormir"],
+      es: ["Al llegar a casa, me quité los zapatos.", "adverb", "Pregúntate: ¿cuándo me quité los zapatos?", "“Al llegar a casa” dice cuándo pasó, como un adverbio de tiempo.", "Al llegar a casa"],
     },
     {
       en: ["We left early to catch the first bus.", "adverb", "Ask: why did we leave early?", "The infinitive phrase tells why, so it works as an adverb.", "to catch the first bus"],
@@ -174,7 +174,7 @@ const VERBALS = skill(
       ask: { en: "What job does {t} do in this sentence?", es: "¿Qué función cumple {t} en esta oración?" },
       hints: {
         en: ["Ask what question the verbal answers in this sentence.", "Gerunds work as nouns and participles as adjectives. An infinitive can be any of the three: a noun (what?), an adjective (which one?), or an adverb (why? how?)."],
-        es: ["Pregúntate a qué pregunta responde la forma verbal en esta oración.", "En español, el infinitivo funciona como sustantivo (¿qué?), el participio como adjetivo (¿cómo es?) y el gerundio como adverbio (¿cómo?, ¿de qué manera?)."],
+        es: ["Pregúntate a qué pregunta responde la forma verbal en esta oración.", "La terminación sola no basta. Si nombra algo (¿qué?), funciona como sustantivo; si describe a un sustantivo (¿cómo es?, ¿qué clase de?), como adjetivo; si dice cómo, cuándo o para qué pasa algo, como adverbio."],
       },
       seconds: 20,
     },
@@ -195,67 +195,67 @@ const MOOD_NAME = cats<Mood>(
   { en: ["indicative", "imperative", "interrogative", "conditional", "subjunctive"], es: ["indicative", "subjunctive", "imperative"] },
   [
     {
-      en: ["The library opens at nine.", "indicative", "Is it stating a fact?", "It states a fact, so it is indicative."],
+      en: ["The library opens at nine.", "indicative", "Is it stating a fact?", "It states a fact, so it is indicative.", "opens"],
       es: ["La biblioteca abre a las nueve.", "indicative", "¿Presenta algo como un hecho real?", "“Abre” presenta un hecho: está en indicativo.", "abre"],
     },
     {
-      en: ["Close the door, please.", "imperative", "Is someone being told to do something?", "It gives a command, so it is imperative."],
+      en: ["Close the door, please.", "imperative", "Is someone being told to do something?", "It gives a command, so it is imperative.", "Close"],
       es: ["Cierra la puerta, por favor.", "imperative", "¿Le dice a alguien que haga algo?", "“Cierra” da una orden: está en imperativo.", "Cierra"],
     },
     {
-      en: ["Did you finish the science project?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative."],
+      en: ["Did you finish the science project?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "Did you finish"],
       es: ["Ojalá llueva mañana.", "subjunctive", "“Ojalá” expresa un deseo.", "“Llueva” expresa un deseo: está en subjuntivo.", "llueva"],
     },
     {
-      en: ["With more time, I would visit every museum in the city.", "conditional", "Look for “would.” Is this something real, or something that might happen?", "“Would visit” tells what might happen: conditional."],
+      en: ["With more time, I would visit every museum in the city.", "conditional", "Look for “would.” Is this something real, or something that might happen?", "“Would visit” tells what might happen: conditional.", "would visit"],
       es: ["Quiero que vengas a mi fiesta.", "subjunctive", "Lo que se quiere todavía no es un hecho.", "“Vengas” va después de “quiero que”: está en subjuntivo.", "vengas"],
     },
     {
-      en: ["I wish I were taller.", "subjunctive", "Look at “were” after “I.” Is this real, or a wish?", "“I were” expresses a wish, so it is subjunctive."],
+      en: ["I wish I were taller.", "subjunctive", "Look at “were” after “I.” Is this real, or a wish?", "“I were” expresses a wish, so it is subjunctive.", "were"],
       es: ["Mía toca el violonchelo en la orquesta de la escuela.", "indicative", "¿Presenta algo como un hecho real?", "“Toca” presenta un hecho: está en indicativo.", "toca"],
     },
     {
-      en: ["Mia plays the cello in the school orchestra.", "indicative", "Is it stating a fact?", "It states a fact, so it is indicative."],
-      es: ["Apaga la luz al salir.", "imperative", "¿Le dice a alguien que haga algo?", "“Apaga” da una orden: está en imperativo.", "Apaga"],
+      en: ["Mia plays the cello in the school orchestra.", "indicative", "Is it stating a fact?", "It states a fact, so it is indicative.", "plays"],
+      es: ["Leo, apaga la luz al salir.", "imperative", "¿Le dice a alguien que haga algo?", "“Apaga” le da una orden a Leo: está en imperativo.", "apaga"],
     },
     {
-      en: ["Please hand in your permission slips by Friday.", "imperative", "Is someone being told to do something?", "It gives a command, so it is imperative."],
+      en: ["Please hand in your permission slips by Friday.", "imperative", "Is someone being told to do something?", "It gives a command, so it is imperative.", "hand in"],
       es: ["Es importante que llegues temprano.", "subjunctive", "Después de “es importante que”, lo que sigue todavía no es un hecho.", "“Llegues” está en subjuntivo.", "llegues"],
     },
     {
-      en: ["Where did you put the scissors?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative."],
+      en: ["Where did you put the scissors?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "did you put"],
       es: ["Saturno es el sexto planeta desde el Sol.", "indicative", "¿Presenta algo como un hecho real?", "“Es” presenta un hecho: está en indicativo.", "es"],
     },
     {
-      en: ["A bigger tent would keep us drier.", "conditional", "Look for “would.” Do they have the bigger tent?", "“Would keep” tells what might happen: conditional."],
+      en: ["A bigger tent would keep us drier.", "conditional", "Look for “would.” Do they have the bigger tent?", "“Would keep” tells what might happen: conditional.", "would keep"],
       es: ["Siéntate aquí, junto a la ventana.", "imperative", "¿Le dice a alguien que haga algo?", "“Siéntate” da una orden: está en imperativo.", "Siéntate"],
     },
     {
-      en: ["The coach insists that every player be on time.", "subjunctive", "Look at “be” after “every player.” It is not “is.”", "After “insists that,” the base form “be” is subjunctive."],
+      en: ["The coach insists that every player be on time.", "subjunctive", "Look at “be” after “every player.” It is not “is.”", "After “insists that,” the base form “be” is subjunctive.", "be"],
       es: ["Dudo que el partido empiece a tiempo.", "subjunctive", "“Dudo que” expresa una duda.", "“Empiece” está en subjuntivo.", "empiece"],
     },
     {
-      en: ["Saturn is the sixth planet from the sun.", "indicative", "Is it stating a fact?", "It states a fact, so it is indicative."],
+      en: ["Saturn is the sixth planet from the sun.", "indicative", "Is it stating a fact?", "It states a fact, so it is indicative.", "is"],
       es: ["Mi hermano estudia piano todos los días.", "indicative", "¿Presenta algo como un hecho real?", "“Estudia” presenta un hecho: está en indicativo.", "estudia"],
     },
     {
-      en: ["Turn off the lights when you leave.", "imperative", "Is someone being told to do something?", "It gives a command, so it is imperative."],
+      en: ["Turn off the lights when you leave.", "imperative", "Is someone being told to do something?", "It gives a command, so it is imperative.", "Turn off"],
       es: ["Ven a ver el arcoíris.", "imperative", "¿Le dice a alguien que haga algo?", "“Ven” da una orden: está en imperativo.", "Ven"],
     },
     {
-      en: ["Have you ever seen a shooting star?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative."],
+      en: ["Have you ever seen a shooting star?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "Have you ever seen"],
       es: ["La maestra pidió que trajéramos tijeras.", "subjunctive", "Lo que pidió la maestra todavía no es un hecho.", "“Trajéramos” está en pretérito de subjuntivo.", "trajéramos"],
     },
     {
-      en: ["We would need a bigger table for the whole family.", "conditional", "Look for “would.” Is this about something that might be?", "“Would need” tells what might happen: conditional."],
+      en: ["We would need a bigger table for the whole family.", "conditional", "Look for “would.” Is this about something that might be?", "“Would need” tells what might happen: conditional.", "would need"],
       es: ["Ayer vimos una estrella fugaz.", "indicative", "¿Presenta algo como un hecho real?", "“Vimos” presenta un hecho: está en indicativo.", "vimos"],
     },
     {
-      en: ["It is important that she arrive early.", "subjunctive", "Look at “arrive.” Why is it not “arrives”?", "After “it is important that,” the base form “arrive” is subjunctive."],
-      es: ["Escucha con atención las instrucciones.", "imperative", "¿Le dice a alguien que haga algo?", "“Escucha” da una orden: está en imperativo.", "Escucha"],
+      en: ["It is important that she arrive early.", "subjunctive", "Look at “arrive.” Why is it not “arrives”?", "After “it is important that,” the base form “arrive” is subjunctive.", "arrive"],
+      es: ["Escucha con atención las instrucciones, por favor.", "imperative", "¿Le dice a alguien que haga algo?", "“Escucha” da una orden: está en imperativo.", "Escucha"],
     },
     {
-      en: ["The teacher suggested that he study with a partner.", "subjunctive", "Look at “study.” Why is it not “studies”?", "After “suggested that,” the base form “study” is subjunctive."],
+      en: ["The teacher suggested that he study with a partner.", "subjunctive", "Look at “study.” Why is it not “studies”?", "After “suggested that,” the base form “study” is subjunctive.", "study"],
       es: ["Espero que te guste el regalo.", "subjunctive", "Lo que se espera todavía no es un hecho.", "“Guste” está en subjuntivo.", "guste"],
     },
   ],
@@ -267,7 +267,7 @@ const MOOD_FORMS: Bi<Entry>[] = [
     es: ["Si yo ___ tú, estudiaría para el examen.", "fuera", [["sería", "conditional-in-si-clause"], ["soy", "present-for-contrary-to-fact"]], "La oración imagina algo que no es real: no eres la otra persona.", "Después de “si”, para algo irreal va el pretérito de subjuntivo: “si yo fuera”."],
   },
   {
-    en: ["The doctor recommends that Ana ___ more water.", "drink", [["drinks", "indicative-for-subjunctive"], ["drank", "wrong-tense"]], "After “recommends that,” the verb stays in its base form.", "The subjunctive uses the base form: “that Ana drink.”"],
+    en: ["The doctor recommends that Ana ___ more water.", "drink", [["will drink", "indicative-for-subjunctive"], ["drank", "wrong-tense"]], "After “recommends that,” the verb stays in its base form.", "The subjunctive uses the base form: “that Ana drink.”"],
     es: ["Quiero que ___ a mi fiesta.", "vengas", [["vienes", "indicative-for-subjunctive"], ["vendrás", "indicative-for-subjunctive"]], "Lo que se quiere todavía no es un hecho.", "Después de “quiero que” va el subjuntivo."],
   },
   {
@@ -279,7 +279,7 @@ const MOOD_FORMS: Bi<Entry>[] = [
     es: ["Si tuviéramos un carro más grande, ___ llevar a todo el equipo.", "podríamos", [["podemos", "indicative-for-conditional"], ["podremos", "indicative-for-conditional"]], "La oración imagina un carro que no tienen.", "El resultado de una condición imaginada va en condicional."],
   },
   {
-    en: ["It is essential that every student ___ a helmet on the trip.", "wear", [["wears", "indicative-for-subjunctive"], ["wore", "wrong-tense"]], "After “it is essential that,” the verb stays in its base form.", "The subjunctive uses the base form: “that every student wear.”"],
+    en: ["It is essential that every student ___ a helmet on the trip.", "wear", [["will wear", "indicative-for-subjunctive"], ["wore", "wrong-tense"]], "After “it is essential that,” the verb stays in its base form.", "The subjunctive uses the base form: “that every student wear.”"],
     es: ["Es importante que todos ___ casco en la excursión.", "usen", [["usan", "indicative-for-subjunctive"], ["usarán", "indicative-for-subjunctive"]], "Después de “es importante que”, lo que sigue todavía no es un hecho.", "Después de “es importante que” va el subjuntivo."],
   },
   {
@@ -291,7 +291,7 @@ const MOOD_FORMS: Bi<Entry>[] = [
     es: ["Con un mapa, ___ encontrado el sendero más rápido.", "habríamos", [["hemos", "indicative-for-conditional"], ["habremos", "indicative-for-conditional"]], "No tenían mapa; la oración imagina un pasado distinto.", "Un resultado imaginado en el pasado va en condicional compuesto."],
   },
   {
-    en: ["The rules require that each team ___ five players.", "have", [["has", "indicative-for-subjunctive"], ["had", "wrong-tense"]], "After “require that,” the verb stays in its base form.", "The subjunctive uses the base form: “that each team have.”"],
+    en: ["The rules require that each team ___ five players.", "have", [["will have", "indicative-for-subjunctive"], ["had", "wrong-tense"]], "After “require that,” the verb stays in its base form.", "The subjunctive uses the base form: “that each team have.”"],
     es: ["Cuando ___ a casa, llámame.", "llegues", [["llegas", "indicative-for-subjunctive"], ["llegarás", "indicative-for-subjunctive"]], "La llegada todavía no pasa: es futura.", "Con “cuando” y una acción futura va el subjuntivo."],
   },
   {
@@ -299,7 +299,7 @@ const MOOD_FORMS: Bi<Entry>[] = [
     es: ["Compraría un telescopio si ___ suficiente dinero.", "tuviera", [["tendría", "conditional-in-si-clause"], ["tengo", "present-for-contrary-to-fact"]], "Quien habla no tiene el dinero; la oración lo imagina.", "Después de “si” va el pretérito de subjuntivo; el condicional va solo en el resultado."],
   },
   {
-    en: ["She asked that the meeting ___ moved to Tuesday.", "be", [["is", "indicative-for-subjunctive"], ["was", "wrong-tense"]], "After “asked that,” the verb stays in its base form.", "The subjunctive uses the base form: “that the meeting be moved.”"],
+    en: ["She asked that the meeting ___ moved to Tuesday.", "be", [["will be", "indicative-for-subjunctive"], ["was", "wrong-tense"]], "After “asked that,” the verb stays in its base form.", "The subjunctive uses the base form: “that the meeting be moved.”"],
     es: ["La maestra pidió que ___ la tarea a tiempo.", "entregáramos", [["entregamos", "indicative-for-subjunctive"], ["entregaríamos", "conditional-for-subjunctive"]], "“Pidió” está en pasado, y lo que se pide todavía no es un hecho.", "Después de “pidió que” va el pretérito de subjuntivo."],
   },
   {
@@ -311,12 +311,12 @@ const MOOD_FORMS: Bi<Entry>[] = [
     es: ["Iríamos a la playa si ___ más calor.", "hiciera", [["haría", "conditional-in-si-clause"], ["hace", "present-for-contrary-to-fact"]], "No hace calor; la oración lo imagina.", "Después de “si”, para algo irreal va el pretérito de subjuntivo."],
   },
   {
-    en: ["I suggest that he ___ early tomorrow.", "leave", [["leaves", "indicative-for-subjunctive"], ["left", "wrong-tense"]], "After “suggest that,” the verb stays in its base form.", "The subjunctive uses the base form: “that he leave.”"],
+    en: ["I suggest that he ___ early tomorrow.", "leave", [["will leave", "indicative-for-subjunctive"], ["left", "wrong-tense"]], "After “suggest that,” the verb stays in its base form.", "The subjunctive uses the base form: “that he leave.”"],
     es: ["Te sugiero que ___ temprano mañana.", "salgas", [["sales", "indicative-for-subjunctive"], ["saldrías", "conditional-for-subjunctive"]], "Lo que se sugiere todavía no es un hecho.", "Después de “sugiero que” va el subjuntivo."],
   },
   {
-    en: ["Kai talks as if he ___ the boss.", "were", [["is", "indicative-for-subjunctive"], ["will be", "wrong-tense"]], "Kai is not the boss; “as if” imagines it.", "After “as if” for something untrue, formal English uses “were.”"],
-    es: ["Kai habla como si ___ el jefe.", "fuera", [["es", "indicative-for-subjunctive"], ["sería", "conditional-for-subjunctive"]], "Kai no es el jefe; “como si” lo imagina.", "Después de “como si” va el pretérito de subjuntivo."],
+    en: ["Kai is not the boss, but he talks as if he ___ the boss.", "were", [["would be", "conditional-for-subjunctive"], ["will be", "wrong-tense"]], "“As if” imagines something that is not true.", "After “as if” for something untrue, formal English uses “were.”"],
+    es: ["Kai no es el jefe, pero habla como si ___ el jefe.", "fuera", [["es", "indicative-for-subjunctive"], ["sería", "conditional-for-subjunctive"]], "Kai no es el jefe; “como si” lo imagina.", "Después de “como si” va el pretérito de subjuntivo."],
   },
   {
     en: ["If I ___ known about the party, I would have come.", "had", [["would have", "double-conditional"], ["have", "wrong-tense"]], "The speaker did not know; the sentence imagines a different past.", "The “if” part uses “had,” and “would have” goes only in the result."],
@@ -329,19 +329,19 @@ const VERB_MOODS = skill(
   [
     {
       ...MOOD_NAME,
-      ask: { en: "What mood is this sentence in?", es: "¿En qué modo está el verbo {t}?" },
+      ask: { en: "What mood is the verb {t} in?", es: "¿En qué modo está el verbo {t}?" },
       hints: {
-        en: ["What is the sentence doing: stating a fact, giving a command, asking, imagining a result, or wishing?", "Indicative states facts. Imperative gives commands. Interrogative asks. Conditional uses “would” or “could” for what might happen. Subjunctive expresses wishes, demands, or things contrary to fact, like “If I were…” or “I suggest that he be…”"],
-        es: ["¿El verbo presenta algo como real, como un deseo o una duda, o como una orden?", "El indicativo presenta hechos. El subjuntivo expresa deseos, dudas o posibilidades (ojalá llueva, quiero que vengas). El imperativo da órdenes (ven, siéntate)."],
+        en: ["What is the sentence doing: stating a fact, giving a command, asking, imagining a result, or wishing?", "Indicative states facts. Imperative gives commands. Interrogative asks. Conditional uses “would” or “could” for what might happen. Subjunctive expresses wishes, demands, or things contrary to fact, often after “I wish” or “that” (We ask that she sign the form)."],
+        es: ["¿El verbo presenta algo como real, como un deseo o una duda, o como una orden?", "El indicativo presenta hechos. El subjuntivo expresa deseos, dudas o posibilidades (ojalá nieve, temo que se pierda). El imperativo da órdenes (dime, ponte el abrigo)."],
       },
       seconds: 15,
     },
     {
       bank: MOOD_FORMS,
-      ask: CHOOSE,
+      ask: { en: "Choose the verb that completes the sentence in formal English.", es: "Elige la forma verbal que completa la oración." },
       hints: {
-        en: ["Is the sentence about something real, or about a wish, a demand, or an imagined situation?", "For wishes and situations contrary to fact, use “were” or the past form after “if.” After “suggest that” or “require that,” use the base form. For an imagined result, use “would” or “could.”"],
-        es: ["¿La oración habla de algo real, o de un deseo, una petición o una situación imaginada?", "Para deseos, peticiones y dudas va el subjuntivo (quiero que vengas). Después de “si” en una situación irreal va el pretérito de subjuntivo (si fuera), nunca el condicional (si sería). El resultado imaginado va en condicional (estudiaría)."],
+        en: ["Is the sentence about something real, or about a wish, a demand, or an imagined situation?", "A wish or an imagined “if” situation takes a past form, and “was” changes to its plural past form, even after “I.” After “suggest that,” “require that,” or “it is essential that,” use the plain base form. An imagined result takes a helping verb for what might happen, not for what is certain."],
+        es: ["¿La oración habla de algo real, o de un deseo, una petición o una situación imaginada?", "Para deseos, peticiones y dudas va el subjuntivo (ojalá que nieve). Después de “si” en una situación irreal va el pretérito de subjuntivo (si supiera nadar), nunca el condicional (si sabría nadar). El resultado imaginado va en condicional (cruzaría el río)."],
       },
       seconds: 15,
     },

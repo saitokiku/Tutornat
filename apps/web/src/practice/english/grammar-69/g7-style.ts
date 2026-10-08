@@ -41,14 +41,14 @@ const REDUNDANT: Bi<Entry>[] = [
   },
   {
     en: ["She shouted loudly across the field.", "loudly", [["shouted", "cut-needed-word"], ["across the field", "cut-needed-word"]], "Can you shout quietly?", "Shouting is already loud, so “loudly” is extra."],
-    es: ["Las hojas volaban por el aire con el viento.", "por el aire", [["volaban", "cut-needed-word"], ["con el viento", "cut-needed-word"]], "¿Por dónde se vuela siempre?", "Volar ya es moverse por el aire, así que “por el aire” sobra."],
+    es: ["Subimos arriba a la azotea para ver las estrellas.", "arriba", [["Subimos", "cut-needed-word"], ["las estrellas", "cut-needed-word"]], "¿Hacia dónde se sube siempre?", "“Subir” ya significa ir hacia arriba, así que “arriba” sobra."],
   },
   {
-    en: ["The end result was a tie game.", "end", [["result", "cut-needed-word"], ["tie", "cut-needed-word"]], "Does a result ever come at the beginning?", "A result already comes at the end, so “end” is extra."],
+    en: ["The end result of the vote was a tie.", "end", [["of the vote", "cut-needed-word"], ["a tie", "cut-needed-word"]], "Does a result ever come at the beginning?", "A result already comes at the end, so “end” is extra."],
     es: ["Tenemos que cooperar juntos en este proyecto.", "juntos", [["cooperar", "cut-needed-word"], ["proyecto", "cut-needed-word"]], "¿Qué significa el “co-” de “cooperar”?", "“Cooperar” ya significa trabajar juntos, así que “juntos” sobra."],
   },
   {
-    en: ["The museum has a collection of ancient fossils from long ago.", "from long ago", [["ancient", "cut-needed-word"], ["fossils", "cut-needed-word"]], "What does “ancient” already mean?", "“Ancient” already means from long ago."],
+    en: ["The museum has a collection of ancient fossils from long ago.", "from long ago", [["collection", "cut-needed-word"], ["fossils", "cut-needed-word"]], "What does “ancient” already mean?", "“Ancient” already means from long ago."],
     es: ["El museo tiene fósiles antiguos de hace muchísimo tiempo.", "de hace muchísimo tiempo", [["fósiles", "cut-needed-word"], ["El museo", "cut-needed-word"]], "¿Qué significa “antiguos”?", "“Antiguos” ya significa de hace mucho tiempo."],
   },
   {
@@ -142,7 +142,7 @@ const WORDINESS = skill(
     },
     {
       bank: WORDY_PHRASES,
-      ask: { en: "Which word or words can replace {t} without changing the meaning?", es: "¿Qué palabra puede reemplazar {t} sin cambiar el significado?" },
+      ask: { en: "What is the shortest, plainest way to say {t} without changing the meaning?", es: "¿Cuál es la forma más breve y sencilla de decir {t} sin cambiar el significado?" },
       hints: {
         en: ["What does the long phrase really mean?", "Say the same idea in one or two plain words. Rule out choices that change the meaning or are just as wordy."],
         es: ["¿Qué significa en realidad la expresión larga?", "Di la misma idea con una o dos palabras sencillas. Descarta las opciones que cambian el sentido o que siguen siendo largas."],
@@ -264,7 +264,7 @@ const ANALOGY: Bi<Entry>[] = [
   },
   {
     en: ["Caterpillar is to butterfly as tadpole is to ___.", "frog", [["pond", "associated-word"], ["fish", "wrong-relationship"]], "A caterpillar grows up to become a butterfly. What does a tadpole become?", "Both pairs are a young animal and the adult it becomes."],
-    es: ["Oruga es a mariposa como renacuajo es a ___.", "rana", [["charco", "associated-word"], ["pez", "wrong-relationship"]], "La oruga se convierte en mariposa. ¿En qué se convierte el renacuajo?", "Los dos pares son un animal joven y el adulto en que se convierte."],
+    es: ["Oruga es a mariposa como renacuajo es a ___.", "rana", [["estanque", "associated-word"], ["pez", "wrong-relationship"]], "La oruga se convierte en mariposa. ¿En qué se convierte el renacuajo?", "Los dos pares son un animal joven y el adulto en que se convierte."],
   },
   {
     en: ["Pen is to write as knife is to ___.", "cut", [["fork", "associated-word"], ["sharp", "wrong-relationship"]], "You use a pen to write. What do you use a knife to do?", "Both pairs are a tool and its use."],
@@ -320,8 +320,8 @@ const ANALOGIES = skill(
       bank: ANALOGY,
       ask: { en: "Choose the word that completes the analogy.", es: "Elige la palabra que completa la analogía." },
       hints: {
-        en: ["Say how the first two words are related in a short sentence.", "Use the same sentence with the third word, then test each choice in it. Keep the words in the same order."],
-        es: ["Di en una oración corta qué relación hay entre las dos primeras palabras.", "Usa la misma oración con la tercera palabra y prueba cada opción. Mantén el mismo orden."],
+        en: ["Make a sentence that says how the first two words are related.", "Use the same sentence with the third word, then test each choice in it. Keep the words in the same order."],
+        es: ["Haz una oración que diga qué relación hay entre las dos primeras palabras.", "Usa la misma oración con la tercera palabra y prueba cada opción. Mantén el mismo orden."],
       },
       seconds: 20,
     },
