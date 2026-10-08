@@ -4,7 +4,7 @@ import type { CatalogueEntry } from "./types";
 const energy: CatalogueEntry = {
   id: "science-energy",
   title: "Energy all around",
-  summary: "Energy moves a ball, lights a lamp, heats a pan and carries sound. Follow energy and electricity as they travel and change form, and compare the sources that power our homes.",
+  summary: "Energy makes things move, light up, heat up and make sound. See how energy changes form, and where the electricity in our homes comes from.",
   subject: "science",
   grade: "4",
   locale: "en",

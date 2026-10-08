@@ -5,7 +5,7 @@ import type { CatalogueEntry } from "./types";
 const lightSound: CatalogueEntry = {
   id: "science-light-sound",
   title: "Light and sound",
-  summary: "Sounds start with vibrations. We see when light bounces into our eyes, and a shadow forms where light is blocked.",
+  summary: "Sounds start with vibrations. Light sources like the Sun make their own light. We see when light reaches our eyes. Shadows form where light is stopped.",
   subject: "science",
   grade: "1",
   locale: "en",

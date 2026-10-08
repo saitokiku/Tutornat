@@ -28,13 +28,6 @@ describe("catalogue", () => {
     }
   });
 
-  it("finds a science course by a word it teaches", () => {
-    expect(matchEntry("how electricity works", "4", "en")?.id).toBe("science-energy");
-    expect(matchEntry("evaporation", "5", "en")?.id).toBe("science-water-cycle");
-    expect(matchEntry("evaporación", "5", "es")?.id).toBe("science-water-cycle-es");
-    expect(matchEntry("shadows", "1", "en")?.id).toBe("science-light-sound");
-  });
-
   it("every check is answerable and every widget target reachable", () => {
     for (const c of CATALOGUE)
       for (const l of c.lessons)

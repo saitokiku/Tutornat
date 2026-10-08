@@ -539,6 +539,25 @@ describe("pieces", () => {
     expect(id("Moon", "science", "5", "en", ["Moon"])).toBeNull();
   });
 
+  it("offers a science course by a word it teaches, and never for one shared word in a longer request", () => {
+    const id = (goal: string, subject: Course["subject"], grade: Course["grade"], locale: Course["locale"] = "en") => readyMadeMatch(goal, subject, grade, locale)?.id ?? null;
+    expect(id("how electricity works", "science", "4")).toBe("science-energy");
+    expect(id("electricity", "science", "4")).toBe("science-energy");
+    expect(id("evaporation", "science", "5")).toBe("science-water-cycle");
+    expect(id("condensation", "science", "5")).toBe("science-water-cycle");
+    expect(id("evaporación", "science", "5", "es")).toBe("science-water-cycle-es");
+    expect(id("shadows", "science", "1")).toBe("science-light-sound");
+    // Light and sound teaches light sources; Energy all around only says things light up.
+    expect(id("sources of light", "science", "1")).toBe("science-light-sound");
+    expect(id("light sources", "science", "1")).toBe("science-light-sound");
+    // One word in common is not the same topic: Life cycles says "animal", Light and sound says "sources".
+    expect(id("ocean animals", "science", "2")).toBeNull();
+    expect(id("using sources for a research report", "other", "4")).toBeNull();
+    expect(id("comparing sources", "other", "5")).toBeNull();
+    expect(id("blocks and shapes", "other", "1")).toBeNull();
+    expect(id("spelling words for this week", "other", "1")).toBeNull();
+  });
+
   it("turns practice prompts into one line of text", () => {
     expect(plainPrompt(["What is ", { frac: [3, 4] }, " of 8? ", { blank: true }])).toBe("What is 3/4 of 8? ___");
     expect(plainPrompt([{ sup: ["x", "2"] }, " + ", { sup: ["y", "n"] }])).toBe("x² + y^n");

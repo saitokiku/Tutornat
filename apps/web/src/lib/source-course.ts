@@ -369,16 +369,19 @@ export function relatedLessons(query: { goal: string; title?: string; extract?: 
 /**
  * A whole ready-made course that already covers the request, for the builder to offer instead: same
  * subject, within three grades, sharing the most words that say what was asked (never "about" or
- * "what", never a name). Null rather than a course about something else.
+ * "what", never a name, never the "work" of "how does it work"). One shared word is enough only for
+ * a one-word request: "ocean animals" is not Life cycles because its summary says "animal".
+ * Null rather than a course about something else.
  */
 export function readyMadeMatch(goal: string, subject: Subject, grade: Grade, locale: Locale, avoid: string[] = []): CatalogueEntry | null {
-  const asked = new Set(words(topicOf(goal, avoid)).filter((w) => !LOGISTICS.has(w)));
+  const asked = new Set(words(topicOf(goal, avoid)).filter((w) => !LOGISTICS.has(w) && w !== "work"));
+  const need = Math.min(2, asked.size);
   let best: CatalogueEntry | null = null;
   let most = 0;
   for (const e of catalogueFor(grade, locale)) {
     if ((subject !== "other" && e.subject !== subject) || Math.abs(gradeN(e.grade) - gradeN(grade)) > 3) continue;
     const shared = words(`${e.title} ${e.summary}`).filter((w) => asked.has(w)).length;
-    if (shared > most) [best, most] = [e, shared];
+    if (shared >= need && shared > most) [best, most] = [e, shared];
   }
   return best;
 }
