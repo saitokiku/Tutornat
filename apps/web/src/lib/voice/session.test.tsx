@@ -25,7 +25,7 @@ const synth = {
   }),
   pause: vi.fn(),
   resume: vi.fn(),
-  getVoices: () => [],
+  getVoices: () => [{ name: "Samantha", lang: "en-US", localService: true, voiceURI: "Samantha", default: true }],
 };
 
 class Rec {
@@ -62,7 +62,7 @@ function mount(over: Partial<SessionOptions> = {}) {
   const onTurn = vi.fn();
   const onBargeIn = vi.fn();
   const hook = renderHook((p: SessionOptions) => useVoiceSession(p), {
-    initialProps: { locale: "en", consent: true, under13: true, names: ["Ada"], onTurn, onBargeIn, ...over },
+    initialProps: { locale: "en", consent: true, under13: true, band: "69", names: ["Ada"], onTurn, onBargeIn, ...over },
   });
   return { ...hook, onTurn, onBargeIn };
 }

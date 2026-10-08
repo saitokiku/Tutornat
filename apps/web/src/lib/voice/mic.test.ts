@@ -134,6 +134,7 @@ describe("mic self-test", () => {
       const timer = setInterval(() => onFrame(new Int16Array(683), 0.7, 0.7), 43);
       return {
         level: () => 0.7,
+        startedAt: () => null,
         stop: () => {
           clearInterval(timer);
           stop();
@@ -163,7 +164,7 @@ describe("mic self-test", () => {
         meter.push(level);
         onFrame(new Int16Array(683), level, frameLevel);
       }, 43);
-      return { level: () => level, stop: () => clearInterval(timer) };
+      return { level: () => level, startedAt: () => null, stop: () => clearInterval(timer) };
     };
     const result = micSelfTest({ durationMs: 3000, capture });
     await vi.advanceTimersByTimeAsync(3000);
@@ -182,7 +183,7 @@ describe("mic self-test", () => {
 
   it("stops early when aborted", async () => {
     const ac = new AbortController();
-    const capture: MicCapture = async () => ({ level: () => 0, stop: vi.fn() });
+    const capture: MicCapture = async () => ({ level: () => 0, startedAt: () => null, stop: vi.fn() });
     const p = micSelfTest({ durationMs: 60_000, capture, signal: ac.signal });
     ac.abort();
     expect((await p).status).toBe("silent");
@@ -209,33 +210,65 @@ describe("micCapture", () => {
       connect = vi.fn();
       disconnect = vi.fn();
     }
-    vi.stubGlobal("AudioWorkletNode", Node);
-    const AC = vi.fn(function () {
-      return ctx;
-    }) as unknown as typeof AudioContext;
+    const nodes: { options?: { processorOptions?: { size?: number } } }[] = [];
+    class TapNode extends Node {
+      constructor(_ctx: unknown, _name: string, public options?: { processorOptions?: { size?: number } }) {
+        super();
+        nodes.push(this);
+      }
+    }
+    vi.stubGlobal("AudioWorkletNode", TapNode);
     vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => "blob:tap"), revokeObjectURL: vi.fn() }));
-    return { port, track, getUserMedia, ctx, AC };
+    return { port, track, getUserMedia, ctx, nodes, audioContext: () => ctx as unknown as AudioContext };
   }
 
-  it("asks for echo-cancelled mono audio and streams 16 kHz frames with a level", async () => {
+  it("asks for echo-cancelled mono audio and streams 80 ms frames of 16 kHz audio with a level, on the shared context", async () => {
     const a = fakeAudio();
     const frames: Int16Array[] = [];
-    const cap = await micCapture({ onFrame: (f) => frames.push(f), mediaDevices: { getUserMedia: a.getUserMedia }, AudioContext: a.AC });
+    let clock = 5000;
+    const cap = await micCapture({ onFrame: (f) => frames.push(f), mediaDevices: { getUserMedia: a.getUserMedia }, audioContext: a.audioContext, now: () => clock });
     expect(a.getUserMedia).toHaveBeenCalledWith({ audio: expect.objectContaining({ echoCancellation: true, noiseSuppression: true, channelCount: 1 }) });
-    a.port.onmessage?.({ data: new Float32Array(2048).fill(0.1) } as MessageEvent<Float32Array>);
-    expect(frames).toHaveLength(1);
-    expect(Math.abs(frames[0].length - 682)).toBeLessThanOrEqual(1);
+    // 80 ms at 48 kHz in, 1280 samples at 16 kHz out.
+    expect(a.nodes[0].options?.processorOptions?.size).toBe(3840);
+    expect(cap.startedAt()).toBeNull();
+    a.port.onmessage?.({ data: new Float32Array(3840).fill(0.1) } as MessageEvent<Float32Array>);
+    expect(cap.startedAt()).toBe(5000 - 80);
+    clock += 80;
+    a.port.onmessage?.({ data: new Float32Array(3840).fill(0.1) } as MessageEvent<Float32Array>);
+    expect(cap.startedAt()).toBe(5000 - 80);
+    expect(frames).toHaveLength(2);
+    expect(Math.abs(frames[0].length - 1280)).toBeLessThanOrEqual(1);
     expect(cap.level()).toBeGreaterThan(0.6);
     cap.stop();
     expect(a.track.stop).toHaveBeenCalled();
-    expect(a.ctx.close).toHaveBeenCalled();
+    // The context is the app's: the microphone never closes it.
+    expect(a.ctx.close).not.toHaveBeenCalled();
     expect(cap.level()).toBe(0);
+    // A second capture on the same context doesn't register the tap again.
+    await micCapture({ onFrame: vi.fn(), mediaDevices: { getUserMedia: a.getUserMedia }, audioContext: a.audioContext });
+    expect(a.ctx.audioWorklet.addModule).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up after 300 ms when the audio can't be resumed outside a tap", async () => {
+    vi.useFakeTimers();
+    try {
+      const a = fakeAudio();
+      a.ctx.state = "suspended";
+      a.ctx.resume = vi.fn(() => new Promise<void>(() => {}));
+      const started = micCapture({ onFrame: vi.fn(), mediaDevices: { getUserMedia: a.getUserMedia }, audioContext: a.audioContext });
+      const caught = started.catch((e) => e);
+      await vi.advanceTimersByTimeAsync(310);
+      expect(await caught).toMatchObject({ code: "unavailable" });
+      expect(a.track.stop).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("turns a refused permission into a VoiceError", async () => {
     const a = fakeAudio();
     a.getUserMedia.mockRejectedValueOnce(Object.assign(new Error("no"), { name: "NotAllowedError" }));
-    await expect(micCapture({ onFrame: vi.fn(), mediaDevices: { getUserMedia: a.getUserMedia }, AudioContext: a.AC })).rejects.toMatchObject({ code: "denied" });
+    await expect(micCapture({ onFrame: vi.fn(), mediaDevices: { getUserMedia: a.getUserMedia }, audioContext: a.audioContext })).rejects.toMatchObject({ code: "denied" });
   });
 
   it("is unsupported without getUserMedia", async () => {

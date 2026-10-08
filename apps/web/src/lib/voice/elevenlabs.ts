@@ -1,21 +1,38 @@
 import type { Locale } from "@/lib/types";
-import { asyncQueue, sentencesFrom } from "./chunk";
+import { resumeWithin, sharedAudio, unlockAudio } from "./audio";
+import { voiceSpeed } from "./bands";
+import { sentencesFrom } from "./chunk";
+import { assertSpoken } from "./numbers";
+import { createPlayer, type Alignment, type Player } from "./player";
 import { speakable } from "./speakable";
 import { requestToken } from "./token";
-import { asVoiceError, countWords, emitter, VoiceError, type OutState, type SpeakSource, type SpeechOut, type Unsubscribe } from "./types";
+import { asVoiceError, countWords, emitter, finishedRun, VoiceError, type Band, type OutState, type OutTiming, type SpeakSource, type SpeechOut, type SpeechRun } from "./types";
 
-// ElevenLabs streaming text-to-speech over their WebSocket (`/v1/text-to-speech/{voice}/stream-input`).
-// The browser connects directly with a single-use token from /api/voice/tts-token, so the API key
-// never leaves our server. One connection per reply: each sentence is sent as soon as it's complete
-// (auto_mode + flush), raw PCM comes back and is scheduled gap-free on an AudioContext, and the
-// character timings that come with it drive word highlighting. If the service fails, whatever wasn't
-// heard yet is read by the fallback (the browser's voice) so a child relying on audio isn't left in
-// silence. Docs: elevenlabs.io/docs/api-reference/text-to-speech/v-1-text-to-speech-voice-id-stream-input
+// ElevenLabs streaming text-to-speech, straight from the browser with a single-use token from
+// /api/voice/tts-token (the key stays on our server). Sentences go out as soon as they are complete;
+// PCM and character timings come back and play through ./player on the app's one AudioContext.
+//
+// Two transports (live tutor spec §2.2):
+//  - "stream-input" (ships today): eleven_flash_v2_5 on /v1/text-to-speech/{voice}/stream-input, one
+//    socket per reply, auto_mode, no flush per sentence, {text:""} at the end.
+//  - "dialogue": eleven_v4_turbo on the Text to Dialogue socket. Used only when the server says so,
+//    after P0 shows the single-use token opens it, first audio ≤ 350 ms and it wins the blind listen.
+//    Its message shapes follow the spec and are unverified until the P0 fixtures exist.
+//
+// Never a second voice in one reply: if the socket fails or stalls, one retry from the first sentence
+// not yet heard, same voice, fresh token. A second failure stops speaking and leaves the words on
+// screen (onError "speak"); the next reply may use another voice, never this one.
 
 export const TTS_SAMPLE_RATE = 24000;
-const WS_BASE = "wss://api.elevenlabs.io/v1/text-to-speech";
+const WS_TTS = "wss://api.elevenlabs.io/v1/text-to-speech";
+const WS_DIALOGUE = "wss://api.elevenlabs.io/v1/text-to-dialogue/stream-input";
 const TOKEN_TTL_MS = 12 * 60_000; // tokens live 15 minutes; refresh before that
 const CONNECT_TIMEOUT_MS = 5000;
+/** No first audio this long after the first sentence went out: retry. */
+export const FIRST_AUDIO_DEADLINE_MS = 2000;
+/** The reply's text stopped coming (and everything sent has played): the run ends after this long. */
+export const FEED_IDLE_MS = 8000;
+const TICK_MS = 25;
 
 export type TtsToken = {
   token: string;
@@ -25,10 +42,11 @@ export type TtsToken = {
   languageCode: string | null;
   outputFormat: string;
   zeroRetention: boolean;
+  /** "dialogue" only when the server has been switched to the v4 Turbo socket. */
+  transport?: "stream-input" | "dialogue";
 };
 
-type Alignment = { chars?: string[]; charStartTimesMs?: number[] };
-type ServerMessage = { audio?: string | null; alignment?: Alignment | null; normalizedAlignment?: Alignment | null; isFinal?: boolean | null; error?: string; message?: string };
+type ServerMessage = { audio?: string | null; alignment?: Alignment | null; isFinal?: boolean | null; error?: string; message?: string };
 
 /** Base64 16-bit little-endian PCM → float samples. `carry` holds an odd trailing byte between chunks. */
 export function pcm16ToFloat32(b64: string, carry: number | null = null): { samples: Float32Array; carry: number | null } {
@@ -45,18 +63,34 @@ export function pcm16ToFloat32(b64: string, carry: number | null = null): { samp
 }
 
 export function ttsSocketUrl(t: TtsToken): string {
-  const q = new URLSearchParams({
-    model_id: t.modelId,
-    output_format: t.outputFormat,
-    single_use_token: t.token,
-    auto_mode: "true",
-    sync_alignment: "true",
-    inactivity_timeout: "60",
-  });
+  const q = new URLSearchParams({ model_id: t.modelId, output_format: t.outputFormat, single_use_token: t.token, sync_alignment: "true" });
+  if (t.transport === "dialogue") {
+    if (t.languageCode) q.set("language_code", t.languageCode);
+    if (t.zeroRetention) q.set("enable_logging", "false");
+    return `${WS_DIALOGUE}?${q}`;
+  }
+  q.set("auto_mode", "true");
+  q.set("inactivity_timeout", "60");
   if (t.languageCode) q.set("language_code", t.languageCode);
   if (t.zeroRetention) q.set("enable_logging", "false");
-  return `${WS_BASE}/${encodeURIComponent(t.voiceId)}/stream-input?${q}`;
+  return `${WS_TTS}/${encodeURIComponent(t.voiceId)}/stream-input?${q}`;
 }
+
+/** The first message on a socket: the voice and its settings. */
+export function openingMessage(t: TtsToken, band: Band) {
+  if (t.transport === "dialogue") return { inputs: [{ text: " ", voice_id: t.voiceId }], voice_settings: { stability: 0.5 } };
+  return { text: " ", voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: voiceSpeed(band, t.modelId) } };
+}
+
+/** One sentence. On the dialogue socket a short first sentence is flushed so it starts at once. */
+export function sentenceMessage(t: TtsToken, text: string, first: boolean) {
+  if (t.transport !== "dialogue") return { text: `${text} ` };
+  const short = text.length < 40 || countWords(text) < 8;
+  return { inputs: [{ text: `${text} `, voice_id: t.voiceId }], ...(first && short ? { flush: true } : {}) };
+}
+
+/** The reply is over. */
+export const closingMessage = (t: TtsToken) => (t.transport === "dialogue" ? { inputs: [{ text: "", voice_id: t.voiceId, new_turn: true }], flush: true } : { text: "" });
 
 export type ElevenLabsOptions = {
   locale: Locale;
@@ -66,61 +100,71 @@ export type ElevenLabsOptions = {
   under13: boolean;
   /** Learner names: removed from the text before it leaves the device. */
   names?: string[];
-  /** 0.7–1.2; 0.95 by default. */
-  rate?: number;
-  /** Reads what the vendor couldn't (usually the browser voice). */
-  fallback?: SpeechOut | null;
+  /** The learner's band: sentence pauses, and the K–2 speed on Flash. */
+  band?: Band;
   fetch?: typeof fetch;
   WebSocket?: typeof WebSocket;
+  /** The app's AudioContext (./audio sharedAudio by default). */
   audioContext?: () => AudioContext;
   tokenUrl?: string;
+  /** performance.now() */
   now?: () => number;
 };
 
-type Sentence = { text: string; base: number; spokenEnd: number };
+type Sent = { written: string; spoken: string; base: number; words: number[]; question: boolean; on: WebSocket | null };
 
 type Run = {
+  id: number;
+  band: Band;
   done: boolean;
-  failed: boolean;
   resolve: () => void;
+  player: Player | null;
   ws: WebSocket | null;
-  sources: AudioBufferSourceNode[];
-  nextStart: number;
-  lastEnd: number;
-  carry: number | null;
-  boundaries: { at: number; index: number }[];
-  /** Written-word index for each spoken word, in order. */
-  spoken: number[];
-  sentences: Sentence[];
+  token: TtsToken | null;
+  sent: Sent[];
   nextBase: number;
-  /** Words whose timing has arrived (≈ words that have audio). */
-  aligned: number;
-  prevSpace: boolean;
-  started: boolean;
   streamDone: boolean;
   closeSent: boolean;
-  finalReceived: boolean;
+  retried: boolean;
+  connecting: Promise<boolean> | null;
+  firstSentAt: number | null;
+  firstChunkAt: number | null;
+  firstAudibleAt: number | null;
+  lastTextAt: number;
   ticker: ReturnType<typeof setInterval> | null;
-  fb: ReturnType<typeof asyncQueue<string>> | null;
-  /** Word index where the fallback's reading starts. */
-  fbBase: number;
-  fbUnsubs: Unsubscribe[];
-  fbActive: boolean;
+  carry: number | null;
+  started: boolean;
+  unsubAbort: (() => void) | null;
 };
 
 export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
   const f = o.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const WS = o.WebSocket ?? WebSocket;
-  const rate = Math.min(1.2, Math.max(0.7, o.rate ?? 0.95));
-  const now = o.now ?? (() => Date.now());
-  const ev = { boundary: emitter<[number]>(), start: emitter<[]>(), end: emitter<[{ cancelled: boolean }]>(), error: emitter<[VoiceError]>() };
+  const now = o.now ?? (() => performance.now());
+  const ctxOf = o.audioContext ?? (() => sharedAudio());
+  const ev = {
+    boundary: emitter<[number, number]>(),
+    scheduled: emitter<[number, number, number]>(),
+    start: emitter<[number]>(),
+    end: emitter<[{ cancelled: boolean }, number]>(),
+    error: emitter<[VoiceError, number]>(),
+    locked: emitter<[boolean]>(),
+    timing: emitter<[OutTiming]>(),
+  };
   let state: OutState = "idle";
-  let ctx: AudioContext | null = null;
   let run: Run | null = null;
+  let last: Run | null = null;
+  let ids = 0;
   let spare: { at: number; token: Promise<TtsToken> } | null = null;
   let disposed = false;
+  let locked = false;
+  let unlockWaiters: (() => void)[] = [];
 
-  const audio = () => (ctx ??= (o.audioContext ?? (() => new AudioContext()))());
+  const setLocked = (v: boolean) => {
+    if (locked === v) return;
+    locked = v;
+    ev.locked.emit(v);
+  };
 
   async function fetchToken(): Promise<TtsToken> {
     const t = await requestToken<TtsToken>(f, o.tokenUrl ?? "/api/voice/tts-token", { consent: o.consent, under13: o.under13, locale: o.locale });
@@ -134,131 +178,120 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
     });
     spare = { at: now(), token };
   };
-  const takeToken = () => {
+  const takeToken = (fresh: boolean) => {
     const s = spare;
     spare = null;
-    return s && now() - s.at < TOKEN_TTL_MS ? s.token : fetchToken();
+    return !fresh && s && now() - s.at < TOKEN_TTL_MS ? s.token : fetchToken();
   };
 
-  function stopTicker(r: Run) {
-    if (r.ticker) clearInterval(r.ticker);
-    r.ticker = null;
+  function timing(r: Run) {
+    ev.timing.emit({ run: r.id, vendor: "elevenlabs", firstSentenceAt: r.firstSentAt, firstChunkAt: r.firstChunkAt, firstAudibleAt: r.firstAudibleAt, underruns: r.player?.underruns ?? 0, retried: r.retried });
   }
 
-  function finish(r: Run, cancelled: boolean) {
+  function finish(r: Run, cancelled: boolean, fadeMs = 120) {
     if (r.done) return;
     r.done = true;
-    stopTicker(r);
-    r.fbUnsubs.forEach((u) => u());
-    r.fb?.end();
-    for (const s of r.sources)
-      try {
-        s.stop();
-      } catch {}
-    r.sources = [];
-    try {
-      r.ws?.close(1000);
-    } catch {}
+    if (r.ticker) clearInterval(r.ticker);
+    r.ticker = null;
+    r.unsubAbort?.();
+    if (cancelled) r.player?.cancel(fadeMs);
+    closeSocket(r);
     if (run === r) {
       run = null;
       state = "idle";
     }
-    ev.end.emit({ cancelled });
+    timing(r);
+    ev.end.emit({ cancelled }, r.id);
     r.resolve();
   }
 
-  function tick(r: Run) {
-    if (r.done || !ctx || r.fbActive) return;
-    const t = ctx.currentTime;
-    while (r.boundaries.length && r.boundaries[0].at <= t) ev.boundary.emit(r.boundaries.shift()!.index);
-    const finished = r.failed ? r.streamDone && !r.fb : r.finalReceived;
-    if (finished && t >= r.lastEnd) finish(r, false);
-  }
-
-  function play(r: Run, b64: string, al: Alignment | null | undefined) {
-    const c = audio();
-    const { samples, carry } = pcm16ToFloat32(b64, r.carry);
-    r.carry = carry;
-    if (!samples.length) return;
-    const buf = c.createBuffer(1, samples.length, TTS_SAMPLE_RATE);
-    buf.getChannelData(0).set(samples);
-    const src = c.createBufferSource();
-    src.buffer = buf;
-    src.connect(c.destination);
-    const at = Math.max(c.currentTime + 0.03, r.nextStart);
-    src.start(at);
-    src.onended = () => {
-      r.sources = r.sources.filter((s) => s !== src);
-    };
-    r.sources.push(src);
-    r.nextStart = r.lastEnd = at + samples.length / TTS_SAMPLE_RATE;
-    // Character timings are relative to this chunk: a word starts at a non-space after a space.
-    const chars = al?.chars ?? [];
-    const times = al?.charStartTimesMs ?? [];
-    chars.forEach((ch, i) => {
-      const space = /\s/.test(ch);
-      if (!space && r.prevSpace) {
-        const k = r.aligned++;
-        const index = r.spoken[Math.min(k, r.spoken.length - 1)];
-        if (index !== undefined) r.boundaries.push({ at: at + (times[i] ?? 0) / 1000, index });
-      }
-      r.prevSpace = space;
-    });
-    if (!r.started) {
-      r.started = true;
-      if (state === "waiting") state = "speaking";
-      ev.start.emit();
-    }
-  }
-
-  function startFallback(r: Run) {
-    const fb = o.fallback;
-    if (r.done || !fb || !r.fb) return;
-    r.fbActive = true;
-    stopTicker(r);
-    const base = r.fbBase;
-    r.fbUnsubs.push(
-      fb.onStart(() => {
-        if (!r.started) {
-          r.started = true;
-          ev.start.emit();
-        }
-        if (state === "waiting") state = "speaking";
-      }),
-      fb.onBoundary((i) => ev.boundary.emit(base + i)),
-      fb.onEnd(({ cancelled }) => finish(r, cancelled)),
-      fb.onError((e) => ev.error.emit(new VoiceError("speak", `fallback: ${e.message}`))),
-    );
-    void fb.speak(r.fb);
-    if (state === "paused") fb.pause();
-  }
-
-  /**
-   * The vendor failed: let the audio we already have play out, then the fallback reads the rest. With a
-   * fallback this is not an error the family needs to see (the reply is still read aloud); without
-   * one it is a read-aloud failure ("speak"), whatever the cause.
-   */
-  function fail(r: Run, e: unknown) {
-    if (r.failed || r.done) return;
-    r.failed = true;
+  function closeSocket(r: Run) {
+    const ws = r.ws;
+    r.ws = null;
+    if (!ws) return;
     try {
-      r.ws?.close(1000);
+      if (r.token?.transport === "dialogue" && ws.readyState === 1) ws.send(JSON.stringify({ close_socket: true }));
+      ws.close(1000);
     } catch {}
-    if (!o.fallback) {
-      ev.error.emit(new VoiceError("speak", `${asVoiceError(e).code}: ${asVoiceError(e).message}`));
-      return; // tick() ends the run once the stream is over and the audio has played
-    }
-    r.fb = asyncQueue<string>();
-    const unheard = r.sentences.filter((s) => s.spokenEnd > r.aligned);
-    r.fbBase = unheard[0]?.base ?? r.nextBase;
-    for (const s of unheard) r.fb.push(s.text);
-    if (r.streamDone) r.fb.end();
-    const wait = ctx ? Math.max(0, r.lastEnd - ctx.currentTime) * 1000 : 0;
-    setTimeout(() => startFallback(r), wait);
   }
 
-  function onMessage(r: Run, data: unknown) {
-    if (r.done || r.failed) return;
+  function newPlayer(r: Run, ctx: AudioContext) {
+    r.player = createPlayer({
+      ctx,
+      sampleRate: TTS_SAMPLE_RATE,
+      band: r.band,
+      now,
+      onWordScheduled: (w, at) => ev.scheduled.emit(w, at, r.id),
+      onBoundary: (w) => ev.boundary.emit(w, r.id),
+      onStart: (at) => {
+        r.firstAudibleAt ??= at;
+        if (r.started) return;
+        r.started = true;
+        if (state === "waiting") state = "speaking";
+        ev.start.emit(r.id);
+        timing(r);
+      },
+      onStall: () => fail(r, new VoiceError("speak", "stalled")),
+    });
+  }
+
+  function tick(r: Run) {
+    if (r.done || !r.player) return;
+    r.player.tick();
+    if (r.done) return;
+    const t = now();
+    if (!r.player.started && r.firstSentAt != null && t - r.firstSentAt > FIRST_AUDIO_DEADLINE_MS && state !== "paused") return fail(r, new VoiceError("speak", "no first audio"));
+    if (r.player.drained()) return finish(r, false);
+    // The caller never ended the feed: once everything sent has played, stop after a while.
+    if (!r.streamDone && r.player.started && r.player.heardUpTo() >= r.nextBase - 1 && t - r.lastTextAt > FEED_IDLE_MS) {
+      r.streamDone = true;
+      sendClose(r);
+      r.player.end();
+    }
+  }
+
+  function sendClose(r: Run) {
+    if (!r.ws || r.closeSent || r.ws.readyState !== 1 || !r.token) return;
+    r.closeSent = true;
+    r.ws.send(JSON.stringify(closingMessage(r.token)));
+  }
+
+  function sendSentence(r: Run, s: Sent, first: boolean) {
+    if (!r.ws || r.ws.readyState !== 1 || !r.token || !r.player || s.on === r.ws) return;
+    s.on = r.ws;
+    r.player.addSentence(s.spoken, s.words, s.question);
+    assertSpoken(s.spoken, "ElevenLabs");
+    r.ws.send(JSON.stringify(sentenceMessage(r.token, s.spoken, first)));
+    r.firstSentAt ??= now();
+  }
+
+  /** The socket failed or stalled: one retry from the first sentence not fully heard, then give up. */
+  function fail(r: Run, e: unknown) {
+    if (r.done) return;
+    closeSocket(r);
+    if (r.retried || !r.player) {
+      const err = asVoiceError(e, "speak");
+      ev.error.emit(new VoiceError("speak", `${err.code}: ${err.message}`), r.id);
+      return finish(r, true);
+    }
+    r.retried = true;
+    const k = r.player.firstIncomplete();
+    r.player.truncateFrom(k);
+    r.closeSent = false;
+    r.firstSentAt = null; // the deadline runs again for the retry
+    r.connecting = connect(r, true).then(
+      (ok) => {
+        if (!ok || r.done) return false;
+        r.sent.slice(k).forEach((s, i) => sendSentence(r, s, i === 0 && k === 0));
+        if (r.streamDone) sendClose(r);
+        return true;
+      },
+      (err) => (fail(r, err), false),
+    );
+  }
+
+  function onMessage(r: Run, ws: WebSocket, data: unknown) {
+    if (r.done || r.ws !== ws || !r.player) return;
     let m: ServerMessage;
     try {
       m = JSON.parse(String(data)) as ServerMessage;
@@ -266,21 +299,31 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
       return;
     }
     if (m.error) return fail(r, new VoiceError("unavailable", m.error));
-    if (m.audio) play(r, m.audio, m.alignment ?? m.normalizedAlignment);
-    if (m.isFinal && r.closeSent) r.finalReceived = true;
+    if (m.audio) {
+      r.firstChunkAt ??= now();
+      const { samples, carry } = pcm16ToFloat32(m.audio, r.carry);
+      r.carry = carry;
+      r.player.push(samples, m.alignment ?? null);
+    }
+    if (m.isFinal && r.closeSent) r.player.end();
   }
 
-  async function connect(r: Run) {
-    const c = audio();
-    const locked = () => c.state === "suspended" && out.state !== "paused";
-    if (locked()) {
-      // Browsers keep audio locked until a tap (see warm()); resume() may then never settle, so don't wait on it.
-      await Promise.race([c.resume().catch(() => {}), new Promise((ok) => setTimeout(ok, 300))]);
-      if (locked()) throw new VoiceError("speak", "audio is locked until the page is tapped");
-    }
-    const t = await takeToken();
-    if (r.done) return;
+  /** Audio must be unlocked before anything plays: wait for the tap (warm) rather than speak in another voice. */
+  async function unlocked(r: Run, ctx: AudioContext): Promise<boolean> {
+    if (await resumeWithin(ctx, 300)) return true;
+    setLocked(true);
+    await new Promise<void>((ok) => unlockWaiters.push(ok));
+    return !r.done;
+  }
+
+  async function connect(r: Run, fresh: boolean): Promise<boolean> {
+    const ctx = ctxOf();
+    if (!(await unlocked(r, ctx))) return false;
+    if (!r.player) newPlayer(r, ctx);
+    const t = await takeToken(fresh);
+    if (r.done) return false;
     prefetch(); // the next reply starts faster
+    r.token = t;
     const ws = new WS(ttsSocketUrl(t));
     r.ws = ws;
     await new Promise<void>((resolve, reject) => {
@@ -294,128 +337,122 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
       ws.onerror = () => (clearTimeout(timer), reject(new VoiceError("network")));
       ws.onclose = () => (clearTimeout(timer), reject(new VoiceError("network")));
     });
-    ws.onmessage = (e) => onMessage(r, e.data);
+    if (r.done || r.ws !== ws) return false;
+    ws.onmessage = (e) => onMessage(r, ws, e.data);
     ws.onerror = null;
     ws.onclose = (e) => {
-      if (r.done || r.failed || r.finalReceived) return;
+      if (r.done || r.ws !== ws) return;
       // After our close message the server sends what's left, then closes: all audio is in.
-      if (r.closeSent && (e.code === 1000 || r.aligned >= r.spoken.length)) r.finalReceived = true;
+      if (r.closeSent && (e.code === 1000 || r.player?.firstIncomplete() === r.sent.length)) r.player?.end();
       else fail(r, new VoiceError("network"));
     };
-    ws.send(JSON.stringify({ text: " ", voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: rate } }));
+    ws.send(JSON.stringify(openingMessage(t, r.band)));
+    return true;
   }
 
   async function drive(r: Run, source: SpeakSource) {
-    const connected = connect(r).then(
-      () => true,
+    r.connecting = connect(r, false).then(
+      (ok) => ok,
       (e) => (fail(r, e), false),
     );
+    let first = true;
     try {
-      let first = true;
       for await (const sentence of sentencesFrom(source)) {
         if (r.done) return;
-        if (first) {
-          // The socket opens while the first sentence is being written; wait for it only now.
-          first = false;
-          await connected;
-          if (r.done) return;
-        }
-        if (r.failed) {
-          r.fb?.push(sentence);
-          r.nextBase += countWords(sentence);
-          continue;
-        }
         const sp = speakable(sentence, o.locale, o.names);
-        const base = r.nextBase;
+        const s: Sent = { written: sentence, spoken: sp.text, base: r.nextBase, words: sp.words.map((w) => r.nextBase + w), question: /[?¿]/.test(sentence), on: null };
         r.nextBase += countWords(sentence);
-        for (const w of sp.words) r.spoken.push(base + w);
-        r.sentences.push({ text: sentence, base, spokenEnd: r.spoken.length });
-        if (sp.text) r.ws?.send(JSON.stringify({ text: `${sp.text} `, flush: true }));
+        r.lastTextAt = now();
+        if (!sp.text) continue;
+        r.sent.push(s);
+        // The socket opens while the first sentence is being written; wait for it only now.
+        if (await r.connecting) sendSentence(r, s, first);
+        first = false;
       }
     } catch {
       // The caller's stream broke off: finish with what we have.
     }
     if (r.done) return;
     r.streamDone = true;
-    if (!r.sentences.length && !r.failed) return finish(r, false); // nothing to say; don't wait for the socket
-    await connected;
-    if (r.done) return;
-    if (r.failed) {
-      r.fb?.end();
-      return;
-    }
-    r.closeSent = true;
-    r.ws?.send(JSON.stringify({ text: "" }));
+    if (!r.sent.length) return finish(r, false); // nothing to say; don't wait for the socket
+    if (!(await r.connecting) || r.done) return;
+    sendClose(r);
   }
 
   const out: SpeechOut = {
     kind: "elevenlabs",
+    tier: "A",
     get state() {
       return state;
     },
-    speak(source) {
+    get locked() {
+      return locked;
+    },
+    speak(source, opts = {}): SpeechRun {
       out.cancel();
-      if (disposed) return Promise.resolve();
+      const id = ++ids;
+      if (disposed || opts.signal?.aborted) return finishedRun(id);
       state = "waiting";
-      return new Promise<void>((resolve) => {
-        const r: Run = {
-          done: false, failed: false, resolve, ws: null, sources: [], nextStart: 0, lastEnd: 0, carry: null, boundaries: [], spoken: [],
-          sentences: [], nextBase: 0, aligned: 0, prevSpace: true, started: false, streamDone: false, closeSent: false, finalReceived: false,
-          ticker: null, fb: null, fbBase: 0, fbUnsubs: [], fbActive: false,
-        };
-        run = r;
-        r.ticker = setInterval(() => tick(r), 25);
-        void drive(r, source);
-      });
+      let resolve!: () => void;
+      const done = new Promise<void>((ok) => (resolve = ok));
+      const r: Run = {
+        id, band: opts.band ?? o.band ?? "69", done: false, resolve, player: null, ws: null, token: null, sent: [], nextBase: 0, streamDone: false,
+        closeSent: false, retried: false, connecting: null, firstSentAt: null, firstChunkAt: null, firstAudibleAt: null, lastTextAt: now(),
+        ticker: null, carry: null, started: false, unsubAbort: null,
+      };
+      run = last = r;
+      r.ticker = setInterval(() => tick(r), TICK_MS);
+      if (opts.signal) {
+        const onAbort = () => finish(r, true);
+        opts.signal.addEventListener("abort", onAbort, { once: true });
+        r.unsubAbort = () => opts.signal?.removeEventListener("abort", onAbort);
+      }
+      void drive(r, source);
+      return Object.assign(done, { id });
     },
     pause() {
       if (!run || state === "paused") return;
-      if (run.fbActive) o.fallback?.pause();
-      else void ctx?.suspend();
+      run.player?.pause();
       state = "paused";
     },
     resume() {
       if (!run || state !== "paused") return;
-      if (run.fbActive) o.fallback?.resume();
-      else void ctx?.resume();
+      run.player?.resume();
       state = run.started ? "speaking" : "waiting";
     },
-    cancel() {
+    cancel(opts) {
       const r = run;
-      if (!r) return;
-      if (r.fbActive) o.fallback?.cancel();
-      if (state === "paused") void ctx?.resume();
-      finish(r, true);
+      if (r) finish(r, true, opts?.fadeMs ?? 120);
     },
     warm() {
       if (disposed) return;
       // Runs inside a tap that also sends a message or starts reading: it must never throw.
       try {
-        const c = audio();
-        if (c.state === "suspended") void c.resume().catch(() => {});
-        // A silent sample started inside the tap unlocks audio on iOS.
-        const b = c.createBuffer(1, 1, TTS_SAMPLE_RATE);
-        const s = c.createBufferSource();
-        s.buffer = b;
-        s.connect(c.destination);
-        s.start();
+        unlockAudio(ctxOf());
       } catch {}
+      const waiters = unlockWaiters;
+      unlockWaiters = [];
+      setLocked(false);
+      waiters.forEach((w) => w());
       if (!spare) prefetch();
-      o.fallback?.warm();
     },
     dispose() {
       out.cancel();
       disposed = true;
       spare = null;
-      o.fallback?.dispose();
-      const c = ctx;
-      ctx = null;
-      if (c && c.state !== "closed") void c.close().catch(() => {});
+      unlockWaiters.forEach((w) => w());
+      unlockWaiters = [];
     },
+    heardUpTo: () => last?.player?.heardUpTo() ?? -1,
+    duck: (gain, ms) => run?.player?.duck(gain, ms),
+    unduck: (ms) => run?.player?.unduck(ms),
     onBoundary: ev.boundary.on,
+    onWordScheduled: ev.scheduled.on,
     onStart: ev.start.on,
     onEnd: ev.end.on,
     onError: ev.error.on,
+    onLocked: ev.locked.on,
+    onTiming: ev.timing.on,
   };
   return out;
 }

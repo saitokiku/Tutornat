@@ -1,15 +1,21 @@
 import type { Key } from "@/i18n/en";
+import { resumeWithin, setAudioSession, sharedAudio } from "./audio";
 import { asVoiceError, VoiceError, type SpeechIn, type VoiceErrorCode } from "./types";
 
 // The microphone, for the vendor recognizer and the self-test: echo cancellation on (so the tutor's
 // voice from the speakers isn't heard as the learner), 16 kHz 16-bit mono frames out, and a level.
+// It runs on the app's one AudioContext (./audio), so the tutor's voice and the microphone share a
+// clock: that is what lets echo be judged by time.
 
-/** Mono 16-bit PCM frames at 16 kHz, about 43 ms each. */
+/** Mono 16-bit PCM at 16 kHz, in 80 ms frames (1280 samples), the size Deepgram Flux asks for. */
 export const MIC_RATE = 16000;
+export const FRAME_MS = 80;
 
 export type Capture = {
   /** Current input level 0..1. */
   level(): number;
+  /** When the stream's first sample was captured (performance.now() ms), or null before any. Word times count from here. */
+  startedAt(): number | null;
   stop(): void;
 };
 
@@ -18,13 +24,19 @@ export type CaptureOptions = {
   onFrame: (pcm: Int16Array, level: number, frameLevel: number) => void;
   targetRate?: number;
   mediaDevices?: Pick<MediaDevices, "getUserMedia">;
-  AudioContext?: typeof AudioContext;
+  /** The app's AudioContext (./audio sharedAudio by default). */
+  audioContext?: () => AudioContext;
+  /** performance.now() */
+  now?: () => number;
 };
 
 export type MicCapture = (o: CaptureOptions) => Promise<Capture>;
 
-// Collects 128-sample render quanta into ~2048-sample frames before posting them to the page.
-const TAP = `class KaizenMicTap extends AudioWorkletProcessor{constructor(){super();this.b=new Float32Array(2048);this.n=0}process(i){const c=i[0]&&i[0][0];if(c){for(let k=0;k<c.length;k++){this.b[this.n++]=c[k];if(this.n===this.b.length){this.port.postMessage(this.b.slice(0));this.n=0}}}return true}}registerProcessor("kaizen-mic-tap",KaizenMicTap);`;
+// Collects 128-sample render quanta into frames of `size` samples before posting them to the page.
+const TAP = `class KaizenMicTap extends AudioWorkletProcessor{constructor(o){super();const n=(o&&o.processorOptions&&o.processorOptions.size)||2048;this.b=new Float32Array(n);this.n=0}process(i){const c=i[0]&&i[0][0];if(c){for(let k=0;k<c.length;k++){this.b[this.n++]=c[k];if(this.n===this.b.length){this.port.postMessage(this.b.slice(0));this.n=0}}}return true}}registerProcessor("kaizen-mic-tap",KaizenMicTap);`;
+
+/** Contexts that already have the tap (registering it twice on one context fails). */
+const tapped = new WeakSet<AudioContext>();
 
 export const micSupported = () =>
   typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && typeof AudioContext !== "undefined" && typeof AudioWorkletNode !== "undefined";
@@ -97,36 +109,44 @@ export function createResampler(from: number, to: number) {
 }
 
 /** Opens the microphone and streams frames until stop(). Rejects with a VoiceError. */
-export const micCapture: MicCapture = async ({ onFrame, targetRate = MIC_RATE, mediaDevices, AudioContext: Ctx }) => {
+export const micCapture: MicCapture = async ({ onFrame, targetRate = MIC_RATE, mediaDevices, audioContext, now = () => performance.now() }) => {
   const md = mediaDevices ?? (typeof navigator !== "undefined" ? navigator.mediaDevices : undefined);
-  const AC = Ctx ?? (typeof AudioContext !== "undefined" ? AudioContext : undefined);
-  if (!md?.getUserMedia || !AC || typeof AudioWorkletNode === "undefined") throw new VoiceError("unsupported");
+  if (!md?.getUserMedia || (!audioContext && typeof AudioContext === "undefined") || typeof AudioWorkletNode === "undefined") throw new VoiceError("unsupported");
   let stream: MediaStream;
   try {
     stream = await md.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
   } catch (e) {
     throw micError(e);
   }
-  const ctx = new AC();
+  const ctx = (audioContext ?? (() => sharedAudio()))();
+  setAudioSession("play-and-record");
   const release = () => {
     stream.getTracks().forEach((t) => t.stop());
-    void ctx.close().catch(() => {});
+    setAudioSession("playback");
   };
   try {
-    if (ctx.state === "suspended") await ctx.resume().catch(() => {});
-    const url = URL.createObjectURL(new Blob([TAP], { type: "application/javascript" }));
-    try {
-      await ctx.audioWorklet.addModule(url);
-    } finally {
-      URL.revokeObjectURL(url);
+    // A resume outside a tap may never settle on iOS: wait at most 300 ms, then say so.
+    if (!(await resumeWithin(ctx, 300))) throw new VoiceError("unavailable", "audio is locked until the page is tapped");
+    if (!tapped.has(ctx)) {
+      const url = URL.createObjectURL(new Blob([TAP], { type: "application/javascript" }));
+      try {
+        await ctx.audioWorklet.addModule(url);
+        tapped.add(ctx);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     }
     const source = ctx.createMediaStreamSource(stream);
-    const node = new AudioWorkletNode(ctx, "kaizen-mic-tap");
+    const size = Math.round((ctx.sampleRate * FRAME_MS) / 1000);
+    const node = new AudioWorkletNode(ctx, "kaizen-mic-tap", { processorOptions: { size } });
     const resample = createResampler(ctx.sampleRate, targetRate);
     let level = 0;
     let stopped = false;
+    let first: number | null = null;
     node.port.onmessage = (e: MessageEvent<Float32Array>) => {
       if (stopped) return;
+      // The frame just finished: its first sample was captured one frame ago.
+      first ??= now() - (e.data.length / ctx.sampleRate) * 1000;
       const frameLevel = levelOf(rms(e.data));
       level = smoothLevel(level, frameLevel);
       onFrame(toInt16(resample(e.data)), level, frameLevel);
@@ -135,6 +155,7 @@ export const micCapture: MicCapture = async ({ onFrame, targetRate = MIC_RATE, m
     node.connect(ctx.destination); // the tap writes silence; connecting keeps it running everywhere
     return {
       level: () => (stopped ? 0 : level),
+      startedAt: () => first,
       stop() {
         if (stopped) return;
         stopped = true;
@@ -200,7 +221,7 @@ export async function micSelfTest({
   }
   await waitFor(durationMs, signal);
   cap.stop();
-  return judgeLevels(levels, frameMs || 43);
+  return judgeLevels(levels, frameMs || FRAME_MS);
 }
 
 export type ListenTest = { status: "words"; text: string } | { status: "nothing" } | { status: VoiceErrorCode };

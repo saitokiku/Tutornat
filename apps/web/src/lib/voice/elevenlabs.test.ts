@@ -1,26 +1,41 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sentenceFeed } from "./chunk";
-import { elevenLabsSpeechOut, pcm16ToFloat32, ttsSocketUrl, type TtsToken } from "./elevenlabs";
-import { alignmentFor, asAudio, asWebSocket, FakeAudio, FakeSocket, fakeOut, pcmBase64 } from "./fakes";
-import { VoiceError } from "./types";
+import { closingMessage, elevenLabsSpeechOut, FEED_IDLE_MS, FIRST_AUDIO_DEADLINE_MS, openingMessage, pcm16ToFloat32, sentenceMessage, ttsSocketUrl, type TtsToken } from "./elevenlabs";
+import { alignmentFor, asAudio, asWebSocket, FakeAudio, FakeSocket, pcmBase64 } from "./fakes";
+import type { Band } from "./types";
+
+// The ElevenLabs transport against a fake socket and an audio clock the test moves (fake timers move
+// Date.now(), which the voice and its player use as performance.now()). Audio is 50 ms per character,
+// like alignmentFor's timings, so word times line up with the audio.
 
 const TOKEN: TtsToken = { token: "sutkn_1", voiceId: "voice1", modelId: "eleven_flash_v2_5", languageCode: "en", outputFormat: "pcm_24000", zeroRetention: false };
 
 const reply = (status: number, body: unknown) => ({ ok: status < 400, status, json: async () => body }) as Response;
 
-function setup({ fetchStatus = 200, fetchBody = null as unknown, fallback = false } = {}) {
+function setup({ band = "69" as Band, token = TOKEN } = {}) {
   const audio = new FakeAudio();
   let n = 0;
-  const fetch = vi.fn<typeof globalThis.fetch>(async () => reply(fetchStatus, fetchBody ?? { ...TOKEN, token: `sutkn_${++n}` }));
-  const fb = fallback ? fakeOut({ auto: false }) : null;
-  const out = elevenLabsSpeechOut({ locale: "en", consent: true, under13: true, names: ["Ada"], fetch, WebSocket: asWebSocket(FakeSocket), audioContext: asAudio(audio), fallback: fb });
-  const seen = { starts: 0, ends: [] as boolean[], words: [] as number[], errors: [] as string[] };
+  const fetch = vi.fn<typeof globalThis.fetch>(async () => reply(200, { ...token, token: `sutkn_${++n}` }));
+  const out = elevenLabsSpeechOut({ locale: "en", consent: true, under13: true, names: ["Ada"], band, fetch, WebSocket: asWebSocket(FakeSocket), audioContext: asAudio(audio), now: () => Date.now() });
+  const seen = { starts: 0, ends: [] as boolean[], words: [] as number[], scheduled: [] as [number, number][], errors: [] as string[], locked: [] as boolean[], timings: [] as unknown[] };
   out.onStart(() => seen.starts++);
   out.onEnd((e) => seen.ends.push(e.cancelled));
   out.onBoundary((i) => seen.words.push(i));
+  out.onWordScheduled((i, at) => seen.scheduled.push([i, at]));
   out.onError((e) => seen.errors.push(e.code));
-  return { audio, fetch, fb, out, seen };
+  out.onLocked((l) => seen.locked.push(l));
+  out.onTiming((t) => seen.timings.push(t));
+  const advance = async (ms: number) => {
+    for (let t = 0; t < ms; t += 5) {
+      audio.advance(5);
+      await vi.advanceTimersByTimeAsync(5);
+    }
+  };
+  return { audio, fetch, out, seen, advance };
 }
+
+/** The server's reply to one sentence: its audio and timings. */
+const say = (ws: FakeSocket, text: string) => ws.receive({ audio: pcmBase64(text.length * 50), alignment: alignmentFor(text) });
 
 const flush = () => vi.advanceTimersByTimeAsync(1);
 
@@ -31,255 +46,277 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("ElevenLabs streaming read-aloud", () => {
-  it("connects with a single-use token and sends each sentence as it completes, without the learner's name", async () => {
+  it("opens with a single-use token and sends each sentence without flushing it, and never the learner's name", async () => {
     const { fetch, out, seen } = setup();
     void out.speak("Your turn, Ada. Count the dots.");
     await flush();
     const ws = FakeSocket.last();
     const url = new URL(ws.url);
     expect(url.origin + url.pathname).toBe("wss://api.elevenlabs.io/v1/text-to-speech/voice1/stream-input");
-    expect(Object.fromEntries(url.searchParams)).toMatchObject({ single_use_token: "sutkn_1", model_id: "eleven_flash_v2_5", output_format: "pcm_24000", auto_mode: "true", language_code: "en" });
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ single_use_token: "sutkn_1", model_id: "eleven_flash_v2_5", output_format: "pcm_24000", auto_mode: "true", sync_alignment: "true", language_code: "en" });
     ws.open();
     await flush();
     expect(ws.json()).toEqual([
-      { text: " ", voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: 0.95 } },
-      { text: "Your turn. ", flush: true },
-      { text: "Count the dots. ", flush: true },
+      { text: " ", voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1 } },
+      { text: "Your turn. " },
+      { text: "Count the dots. " },
       { text: "" },
     ]);
-    // Our route gets only consent, age band and language; never a name.
     expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({ consent: true, under13: true, locale: "en" });
     expect(JSON.stringify(ws.sent)).not.toContain("Ada");
     expect(out.state).toBe("waiting");
     expect(seen.starts).toBe(0);
   });
 
-  it("plays the audio gap-free, highlights each written word on time, and ends after the last sample", async () => {
-    const { audio, out, seen } = setup();
+  it("K–2 on Flash speaks at 0.94, never slower", async () => {
+    const { out } = setup({ band: "k2" });
+    void out.speak("Count the dots.");
+    await flush();
+    FakeSocket.last().open();
+    await flush();
+    expect(FakeSocket.last().json()[0]).toMatchObject({ voice_settings: { speed: 0.94 } });
+  });
+
+  it("plays, highlights each written word when it is heard, schedules it with the output latency, and ends after the last sample", async () => {
+    const { audio, out, seen, advance } = setup();
+    audio.outputLatency = 0.1;
     const done = out.speak("Your turn, Ada. Count the dots.");
     await flush();
     const ws = FakeSocket.last();
     ws.open();
     await flush();
-    ws.receive({ audio: pcmBase64(500), alignment: alignmentFor("Your turn. ") });
-    ws.receive({ audio: pcmBase64(800), alignment: alignmentFor("Count the dots. ") });
+    say(ws, "Your turn. ");
+    say(ws, "Count the dots. ");
     ws.receive({ isFinal: true });
     expect(seen.starts).toBe(1);
     expect(out.state).toBe("speaking");
-    expect(audio.sources.map((s) => +s.at.toFixed(3))).toEqual([0.03, 0.53]);
-    audio.currentTime = 0.3;
-    await vi.advanceTimersByTimeAsync(30);
-    expect(seen.words).toEqual([0, 1]); // "Your", "turn," — "Ada." is never spoken
-    audio.currentTime = 1.0;
-    await vi.advanceTimersByTimeAsync(30);
-    expect(seen.words).toEqual([0, 1, 3, 4]);
-    audio.currentTime = 1.05; // "dots." starts 10 characters (0.5 s) into the second chunk
-    await vi.advanceTimersByTimeAsync(30);
+    // Every spoken word is scheduled at once, with when it will be heard; "Ada." is never spoken.
+    expect(seen.scheduled.map(([w]) => w)).toEqual([0, 1, 3, 4, 5]);
+    const t0 = Date.now();
+    expect(seen.scheduled[0][1]).toBe(t0 + 50 + 100);
+    await advance(400);
+    expect(seen.words).toEqual([0, 1]);
+    expect(out.heardUpTo()).toBe(0);
+    await advance(2000);
     expect(seen.words).toEqual([0, 1, 3, 4, 5]);
-    expect(seen.ends).toEqual([]);
-    audio.currentTime = 1.34;
-    await vi.advanceTimersByTimeAsync(30);
-    expect(seen.ends).toEqual([false]);
     await done;
+    expect(seen.ends).toEqual([false]);
+    expect(out.heardUpTo()).toBe(5);
     expect(out.state).toBe("idle");
+    expect(seen.timings.at(-1)).toMatchObject({ vendor: "elevenlabs", retried: false });
   });
 
   it("starts speaking while the reply is still being written", async () => {
-    const { out } = setup();
+    const { out, seen } = setup();
     const feed = sentenceFeed();
     void out.speak(feed.sentences);
-    feed.write("First, look at the top. The bott");
     await flush();
     const ws = FakeSocket.last();
     ws.open();
+    feed.write("Look at the top number. Now the");
     await flush();
-    expect(ws.json().slice(1)).toEqual([{ text: "First, look at the top. ", flush: true }]);
-    feed.write("om stays the same.");
+    expect(ws.json().slice(1)).toEqual([{ text: "Look at the top number. " }]);
+    say(ws, "Look at the top number. ");
+    expect(seen.starts).toBe(1);
+    feed.write(" bottom one.");
     feed.end();
     await flush();
-    expect(ws.json().slice(1)).toEqual([{ text: "First, look at the top. ", flush: true }, { text: "The bottom stays the same. ", flush: true }, { text: "" }]);
+    expect(ws.json().slice(2)).toEqual([{ text: "Now the bottom one. " }, { text: "" }]);
   });
 
-  it("cancel stops the audio and the socket at once", async () => {
-    const { audio, out, seen } = setup();
-    const done = out.speak("One. Two.");
+  it("when the socket drops, retries once from the first sentence not heard, in the same voice", async () => {
+    const { out, seen, advance } = setup();
+    const done = out.speak("One two. Three four. Five six.");
     await flush();
-    const ws = FakeSocket.last();
-    ws.open();
+    const first = FakeSocket.last();
+    first.open();
     await flush();
-    ws.receive({ audio: pcmBase64(500), alignment: alignmentFor("One. ") });
-    out.cancel();
+    say(first, "One two. ");
+    say(first, "Three"); // the second sentence's audio is cut off
+    first.drop();
+    await flush();
+    const second = FakeSocket.last();
+    expect(second).not.toBe(first);
+    expect(new URL(second.url).pathname).toContain("/voice1/");
+    expect(new URL(second.url).searchParams.get("single_use_token")).not.toBe(new URL(first.url).searchParams.get("single_use_token"));
+    second.open();
+    await flush();
+    expect(second.json().slice(1)).toEqual([{ text: "Three four. " }, { text: "Five six. " }, { text: "" }]);
+    say(second, "Three four. ");
+    say(second, "Five six. ");
+    second.receive({ isFinal: true });
+    await advance(3000);
     await done;
-    expect(audio.sources.every((s) => s.stopped)).toBe(true);
-    expect(ws.readyState).toBe(3);
-    expect(seen.ends).toEqual([true]);
-    expect(out.state).toBe("idle");
-  });
-
-  it("a new speak replaces the one in progress", async () => {
-    const { out, seen } = setup();
-    void out.speak("One.");
-    await flush();
-    void out.speak("Two.");
-    await flush();
-    expect(seen.ends).toEqual([true]);
-    expect(FakeSocket.all).toHaveLength(2);
-  });
-
-  it("pause and resume hold the clock", async () => {
-    const { audio, out } = setup();
-    void out.speak("One.");
-    await flush();
-    FakeSocket.last().open();
-    await flush();
-    FakeSocket.last().receive({ audio: pcmBase64(500), alignment: alignmentFor("One. ") });
-    out.pause();
-    expect(out.state).toBe("paused");
-    expect(audio.state).toBe("suspended");
-    out.resume();
-    expect(out.state).toBe("speaking");
-    expect(audio.state).toBe("running");
-  });
-
-  it("without consent the browser voice reads everything, and that is not an error to show", async () => {
-    const { out, fb, seen } = setup({ fetchStatus: 403, fetchBody: { error: "consent" }, fallback: true });
-    const done = out.speak("Your turn, Ada. Count the dots.");
-    await flush();
-    await flush();
     expect(seen.errors).toEqual([]);
-    expect(FakeSocket.all).toHaveLength(0);
-    expect(fb!.said).toEqual([["Your turn, Ada.", "Count the dots."]]);
-    expect(seen.starts).toBe(1);
-    fb!.finish();
-    await done;
+    expect(seen.scheduled.map(([w]) => w)).toEqual([0, 1, 2, 3, 4, 5]);
     expect(seen.ends).toEqual([false]);
   });
 
-  it("when the connection drops mid-reply, the fallback reads only what wasn't heard", async () => {
-    const { audio, out, fb, seen } = setup({ fallback: true });
-    void out.speak("Your turn, Ada. Count the dots.");
+  it("a second failure stops speaking and leaves the words on screen: no other voice takes over", async () => {
+    const { out, seen } = setup();
+    const done = out.speak("One two. Three four.");
+    await flush();
+    FakeSocket.last().open();
+    await flush();
+    FakeSocket.last().drop();
+    await flush();
+    FakeSocket.last().open();
+    await flush();
+    FakeSocket.last().receive({ error: "quota" });
+    await done;
+    expect(seen.errors).toEqual(["speak"]);
+    expect(seen.ends).toEqual([true]);
+    expect(out.state).toBe("idle");
+    expect(FakeSocket.all).toHaveLength(2);
+  });
+
+  it("retries when no audio arrives within two seconds of the first sentence", async () => {
+    const { out } = setup();
+    void out.speak("One two.");
+    await flush();
+    FakeSocket.last().open();
+    await flush();
+    await vi.advanceTimersByTimeAsync(FIRST_AUDIO_DEADLINE_MS - 50);
+    expect(FakeSocket.all).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(FakeSocket.all).toHaveLength(2);
+  });
+
+  it("retries when the audio clock stops (iOS interrupted the audio)", async () => {
+    const { audio, out, advance } = setup();
+    void out.speak("One two three four five.");
     await flush();
     const ws = FakeSocket.last();
     ws.open();
     await flush();
-    ws.receive({ audio: pcmBase64(500), alignment: alignmentFor("Your turn. ") });
-    ws.drop(1006);
-    expect(seen.errors).toEqual([]); // the reply is still read aloud: nothing to tell the family
-    // The audio we have plays out first.
-    await vi.advanceTimersByTimeAsync(100);
-    expect(fb!.said).toEqual([]);
-    audio.currentTime = 0.6;
-    await vi.advanceTimersByTimeAsync(600);
-    expect(fb!.said).toEqual([["Count the dots."]]);
-    // The fallback's words are numbered after the ones already spoken.
-    fb!.boundary(1);
-    expect(seen.words.at(-1)).toBe(4);
+    say(ws, "One two three four five. ");
+    await advance(100);
+    audio.state = "interrupted";
+    await vi.advanceTimersByTimeAsync(50);
+    expect(FakeSocket.all).toHaveLength(2);
   });
 
-  it("a service error message hands over to the fallback", async () => {
-    const { out, fb, seen } = setup({ fallback: true });
-    void out.speak("One. Two.");
+  it("an aborted signal stops it with a fade", async () => {
+    const { audio, out, seen, advance } = setup();
+    const ctl = new AbortController();
+    const done = out.speak("One two three four.", { signal: ctl.signal });
     await flush();
-    FakeSocket.last().open();
+    const ws = FakeSocket.last();
+    ws.open();
     await flush();
-    FakeSocket.last().receive({ error: "quota_exceeded", message: "quota" });
-    await flush();
-    expect(seen.errors).toEqual([]);
-    expect(fb!.said).toEqual([["One.", "Two."]]);
+    say(ws, "One two three four. ");
+    await advance(100);
+    ctl.abort();
+    await done;
+    expect(seen.ends).toEqual([true]);
+    expect(audio.gains[0].gain.lastRamp()).toMatchObject({ value: 0 });
+    expect(ws.readyState).toBe(3);
   });
 
-  it("when the browser keeps audio locked (no tap yet), the fallback reads instead of hanging", async () => {
-    const { audio, out, fb, seen } = setup({ fallback: true });
+  it("a new speak replaces the one in progress, and its events carry its own run id", async () => {
+    const { out } = setup();
+    const runs: number[] = [];
+    out.onEnd((_, run) => runs.push(run));
+    const a = out.speak("One.");
+    const b = out.speak("Two.");
+    expect(b.id).toBe(a.id + 1);
+    await a;
+    expect(runs).toEqual([a.id]);
+  });
+
+  it("while audio is locked it waits for a tap instead of reading in another voice", async () => {
+    const { audio, out, seen } = setup();
     audio.state = "suspended";
-    audio.resume = () => new Promise(() => {}); // never settles, as in a browser waiting for a gesture
-    void out.speak("One. Two.");
-    await vi.advanceTimersByTimeAsync(350);
-    expect(seen.errors).toEqual([]);
+    audio.resume = async () => {}; // no tap yet: resume never takes
+    void out.speak("Hello there.");
+    await vi.advanceTimersByTimeAsync(400);
+    expect(out.locked).toBe(true);
+    expect(seen.locked).toEqual([true]);
     expect(FakeSocket.all).toHaveLength(0);
-    expect(fb!.said).toEqual([["One.", "Two."]]);
-  });
-
-  it("with nothing to take over, any failure is a read-aloud failure", async () => {
-    for (const [status, body] of [[403, { error: "origin" }], [403, { error: "consent" }], [502, { error: "vendor" }]] as const) {
-      const { out, seen } = setup({ fetchStatus: status, fetchBody: body });
-      const done = out.speak("One.");
-      await vi.advanceTimersByTimeAsync(100);
-      await done;
-      expect(seen.errors, JSON.stringify(body)).toEqual(["speak"]);
-      expect(seen.ends).toEqual([false]);
-    }
-  });
-
-  it("a failure of the browser voice that took over is reported", async () => {
-    const { out, fb, seen } = setup({ fetchStatus: 502, fetchBody: { error: "vendor" }, fallback: true });
-    void out.speak("One.");
-    await flush();
-    await flush();
-    expect(fb!.said).toEqual([["One."]]);
-    expect(seen.errors).toEqual([]);
-    fb!.fail(new VoiceError("speak", "synthesis-failed"));
-    expect(seen.errors).toEqual(["speak"]);
-  });
-
-  it("dispose stops speaking and closes the audio context", async () => {
-    const { audio, out, fetch } = setup();
+    audio.state = "running";
     out.warm();
-    void out.speak("One.");
     await flush();
-    out.dispose();
-    expect(audio.state).toBe("closed");
-    expect(out.state).toBe("idle");
-    const calls = fetch.mock.calls.length;
-    await out.speak("Two.");
-    out.warm();
-    expect(fetch.mock.calls.length).toBe(calls);
+    expect(seen.locked).toEqual([true, false]);
+    expect(FakeSocket.all).toHaveLength(1);
   });
 
-  it("warm() never throws, even where audio can't start", async () => {
-    const out = elevenLabsSpeechOut({
-      locale: "en",
-      consent: true,
-      under13: false,
-      fetch: vi.fn(async () => reply(200, TOKEN)),
-      WebSocket: asWebSocket(FakeSocket),
-      audioContext: () => {
-        throw new Error("AudioContext is not defined");
-      },
-    });
+  it("ends a reply whose text stopped coming once what was sent has played", async () => {
+    const { out, seen, advance } = setup();
+    const feed = sentenceFeed();
+    void out.speak(feed.sentences);
+    await flush();
+    const ws = FakeSocket.last();
+    ws.open();
+    feed.write("One two. ");
+    await flush();
+    say(ws, "One two. ");
+    await advance(1000);
+    expect(seen.ends).toEqual([]);
+    await vi.advanceTimersByTimeAsync(FEED_IDLE_MS);
+    expect(ws.json().at(-1)).toEqual({ text: "" });
+    ws.receive({ isFinal: true });
+    await advance(100);
+    expect(seen.ends).toEqual([false]);
+  });
+
+  it("duck lowers the voice and unduck brings it back", async () => {
+    const { audio, out, advance } = setup();
+    void out.speak("One two three four five six.");
+    await flush();
+    const ws = FakeSocket.last();
+    ws.open();
+    await flush();
+    say(ws, "One two three four five six. ");
+    await advance(100);
+    out.duck(0.3, 80);
+    expect(audio.gains[0].gain.lastRamp()).toMatchObject({ value: 0.3 });
+    out.unduck(250);
+    expect(audio.gains[0].gain.lastRamp()).toMatchObject({ value: 1 });
+  });
+
+  it("warm() never throws and gets the next token ready", async () => {
+    const { audio, fetch, out } = setup();
+    audio.createBuffer = () => {
+      throw new Error("no audio");
+    };
     expect(() => out.warm()).not.toThrow();
-  });
-
-  it("warm() gets the next token ready so speaking starts sooner", async () => {
-    const { fetch, out } = setup();
-    out.warm();
     await flush();
     expect(fetch).toHaveBeenCalledTimes(1);
-    void out.speak("One.");
+    void out.speak("Hi.");
     await flush();
-    expect(new URL(FakeSocket.last().url).searchParams.get("single_use_token")).toBe("sutkn_1");
+    expect(fetch).toHaveBeenCalledTimes(2); // the spare is used, the next one fetched
   });
 
   it("ends cleanly for text with nothing to say", async () => {
     const { out, seen } = setup();
-    await Promise.all([out.speak("   "), vi.advanceTimersByTimeAsync(10)]);
+    await out.speak("**");
     expect(seen.ends).toEqual([false]);
   });
 });
 
-describe("ElevenLabs helpers", () => {
+describe("ElevenLabs messages", () => {
   it("decodes 16-bit little-endian PCM, carrying an odd byte", () => {
-    const b64 = btoa(String.fromCharCode(0x00, 0x80, 0xff, 0x7f, 0x00));
+    const b64 = btoa(String.fromCharCode(0x00, 0x40, 0x00));
     const a = pcm16ToFloat32(b64);
-    expect(Array.from(a.samples)).toEqual([-1, 32767 / 32768]);
+    expect(Array.from(a.samples)).toEqual([0.5]);
     expect(a.carry).toBe(0);
-    const b = pcm16ToFloat32(btoa(String.fromCharCode(0x40)), a.carry);
-    expect(Array.from(b.samples)).toEqual([0x4000 / 32768]);
-    expect(b.carry).toBeNull();
+    const b = pcm16ToFloat32(btoa(String.fromCharCode(0xc0)), a.carry);
+    expect(Array.from(b.samples)).toEqual([-0.5]);
   });
 
-  it("asks for zero retention when configured and leaves out language for other models", () => {
-    const url = new URL(ttsSocketUrl({ ...TOKEN, languageCode: null, zeroRetention: true }));
-    expect(url.searchParams.get("enable_logging")).toBe("false");
-    expect(url.searchParams.has("language_code")).toBe(false);
+  it("asks for zero retention when configured", () => {
+    expect(new URL(ttsSocketUrl({ ...TOKEN, zeroRetention: true })).searchParams.get("enable_logging")).toBe("false");
+    expect(new URL(ttsSocketUrl({ ...TOKEN, languageCode: null })).searchParams.has("language_code")).toBe(false);
+  });
+
+  it("the v4 Turbo dialogue socket: one voice, a short first sentence flushed, a new turn at the end", () => {
+    const t: TtsToken = { ...TOKEN, modelId: "eleven_v4_turbo", transport: "dialogue", zeroRetention: true };
+    const url = new URL(ttsSocketUrl(t));
+    expect(url.origin + url.pathname).toBe("wss://api.elevenlabs.io/v1/text-to-dialogue/stream-input");
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ model_id: "eleven_v4_turbo", sync_alignment: "true", enable_logging: "false" });
+    expect(openingMessage(t, "69")).toEqual({ inputs: [{ text: " ", voice_id: "voice1" }], voice_settings: { stability: 0.5 } });
+    expect(sentenceMessage(t, "Which part is tricky?", true)).toEqual({ inputs: [{ text: "Which part is tricky? ", voice_id: "voice1" }], flush: true });
+    expect(sentenceMessage(t, "Which part is tricky?", false)).toEqual({ inputs: [{ text: "Which part is tricky? ", voice_id: "voice1" }] });
+    expect(closingMessage(t)).toEqual({ inputs: [{ text: "", voice_id: "voice1", new_turn: true }], flush: true });
   });
 });

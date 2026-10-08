@@ -64,7 +64,7 @@ export type SessionOptions = Omit<VoiceSetup, "fetch"> & {
   onMetric?: (m: VoiceMetric) => void;
 };
 
-export function useVoiceSession({ locale, consent, under13, young, names, onTurn, onBargeIn, onMetric }: SessionOptions): VoiceSession {
+export function useVoiceSession({ locale, consent, under13, band, learner, names, onTurn, onBargeIn, onMetric }: SessionOptions): VoiceSession {
   const [v, setV] = useState<Voice | null>(null);
   const [inKind, setInKind] = useState<SpeechIn["kind"] | null>(null);
   const [speaking, setSpeaking] = useState(false);
@@ -87,7 +87,7 @@ export function useVoiceSession({ locale, consent, under13, young, names, onTurn
     let alive = true;
     let cleanup = () => {};
     const nameList = nameKey ? nameKey.split("\u0000") : [];
-    void voice({ locale, consent, under13, young, names: nameList }).then((made) => {
+    void voice({ locale, consent, under13, band, learner, names: nameList }).then((made) => {
       if (!alive) {
         made.out?.dispose();
         made.in?.abort();
@@ -143,7 +143,7 @@ export function useVoiceSession({ locale, consent, under13, young, names, onTurn
       setSpeaking(false);
       setListening(false);
     };
-  }, [locale, consent, under13, young, nameKey]);
+  }, [locale, consent, under13, band, learner, nameKey]);
 
   const say = useCallback((source: SpeakSource) => {
     setOutError(null);
