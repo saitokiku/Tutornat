@@ -60,20 +60,20 @@ export const TAGS: Record<string, Two> = {
 /** Hint 2: the strategy for the skill. */
 const STRATEGY: Record<SkillKey, Two> = {
   details: ["Find the sentence that answers the question. The right choice says the same thing, often in other words.", "Busca la oración que responde la pregunta. La opción correcta dice lo mismo, muchas veces con otras palabras."],
-  sequence: ["Look for time words like first, then, and after, and for cause words like because and so.", "Busca palabras de tiempo como primero, luego y después, y palabras de causa como porque y por eso."],
+  sequence: ["Look for time words like “first,” “then,” and “after,” and for cause words like “because” and “so.”", "Busca palabras de tiempo como “primero”, “luego” y “después”, y palabras de causa como “porque” y “por eso”."],
   character: ["What a character says, does, and thinks shows what they are like and why they act.", "Lo que un personaje dice, hace y piensa muestra cómo es y por qué actúa."],
   features: ["Each part of an article has a job: the title names the topic, headings name the sections, and boxes, lists, and glossaries add or organize facts.", "Cada parte de un artículo tiene una función: el título nombra el tema, los subtítulos nombran las secciones, y los recuadros, las listas y los glosarios agregan u ordenan datos."],
   mainidea: ["The main idea is what the whole text is mostly about. A supporting detail is a fact that explains or proves one point.", "La idea principal es de lo que trata casi todo el texto. Un detalle de apoyo es un dato que explica o prueba una idea."],
   theme: ["A theme is a lesson about life, not a summary of what happens. Ask what the characters or the speaker learn or show.", "El tema es una lección sobre la vida, no un resumen de lo que pasa. Pregúntate qué aprenden o muestran los personajes o quien habla."],
-  pov: ["A first-person narrator is part of the story and says I and my. A third-person narrator is outside the story and says he, she, and they.", "Un narrador en primera persona es parte de la historia y dice yo y mi. Un narrador en tercera persona está fuera de la historia y habla de él, ella y ellos."],
+  pov: ["A first-person narrator is part of the story and says “I” and “my.” A third-person narrator is outside the story and says “he,” “she,” and “they.”", "Un narrador en primera persona es parte de la historia y dice “yo” y “mi”. Un narrador en tercera persona está fuera de la historia y usa “él”, “ella” y “ellos”."],
   words: ["Reread the sentences around the word or phrase. Try each choice in its place and keep the one that makes sense.", "Vuelve a leer las oraciones alrededor de la palabra o frase. Prueba cada opción en su lugar y quédate con la que tenga sentido."],
   compare: ["Check each choice against Text 1, then against Text 2. Keep the one that matches what the question asks.", "Compara cada opción con el texto 1 y luego con el texto 2. Quédate con la que responde a lo que pide la pregunta."],
 };
 
 /** Hint 2 for a point-of-view question about a poem: the speaker, not a story's narrator. */
 const SPEAKER: Two = [
-  "The speaker is the voice of a poem. Look for who says I, my, or we, and for clues about where that voice is and who is around it.",
-  "Quien habla es la voz del poema. Busca quién dice yo, mi o nosotros, y pistas sobre dónde está esa voz y quién la rodea.",
+  "The speaker is the voice of a poem. Look for who says “I,” “my,” or “we,” and for clues about where that voice is and who is around it.",
+  "Quien habla es la voz del poema. Busca quién dice “yo”, “mi” o “nosotros”, y pistas sobre dónde está esa voz y quién la rodea.",
 ];
 
 // ---------------------------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ const NARRATOR: Record<"first" | "third", [label: Two, why: Two]> = {
   ],
   third: [
     ["A narrator outside the story, who tells about others", "Un narrador fuera de la historia, que cuenta lo que hacen otros"],
-    ["The narrator uses names and he or she, and never says “I” outside the quotation marks, so the narrator is outside the story.", "El narrador usa nombres y él o ella, y nunca dice “yo” fuera de las comillas, así que está fuera de la historia."],
+    ["The narrator uses names and “he” or “she,” and never says “I” outside the quotation marks, so the narrator is outside the story.", "El narrador usa nombres y “él” o “ella”, y nunca dice “yo” fuera de las comillas, así que está fuera de la historia."],
   ],
 };
 const TAKING_TURNS: Two = ["Two characters who take turns telling it", "Dos personajes que se turnan para contarla"];
