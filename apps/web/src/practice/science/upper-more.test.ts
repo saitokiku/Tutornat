@@ -140,7 +140,6 @@ describe("question banks", () => {
     expect(one.choices!.find((c) => c.label === "Water (H₂O)")!.say).toBe("Water (H 2 O)");
   });
 
-  const BINARY = new Set(["criterion|constraint", "criterio|restricción"].map((p) => p.split("|").sort().join("|")));
   for (const [id, levels] of Object.entries(SCIENCE_6_9_MORE_BANKS)) {
     it(`${id}: well-formed, tagged entries, at least 12 per level, every one reachable`, () => {
       const s = skill(id);
@@ -164,8 +163,7 @@ describe("question banks", () => {
           for (const lang of ["en", "es"] as const) {
             const labels = [x.a, ...x.wrong.map((w) => w.c)].map((c) => c[lang].toLowerCase());
             expect(new Set(labels).size, `${where} duplicate choices`).toBe(labels.length);
-            const binary = labels.length === 2 && BINARY.has([...labels].sort().join("|"));
-            expect(labels.length >= 3 || binary, `${where} needs 3+ choices`).toBe(true);
+            expect(labels.length, `${where} needs 3+ choices`).toBeGreaterThanOrEqual(3);
             expect(labels.length, where).toBeLessThanOrEqual(4);
             // Hint 3 points the way but never names the answer.
             expect(x.clue[lang].toLowerCase(), `${where} clue gives the answer`).not.toContain(x.a[lang].toLowerCase());
@@ -189,6 +187,54 @@ describe("question banks", () => {
       });
     });
   }
+});
+
+describe("question banks: no shortcuts", () => {
+  // A learner who always picks the longest (or shortest) choice should not do better than chance.
+  it("the key is strictly the longest choice in at most 35% of a level's entries, and strictly the shortest in at most 40%", () => {
+    const out: string[] = [];
+    for (const [id, levels] of Object.entries(SCIENCE_6_9_MORE_BANKS))
+      levels.forEach((bank, i) => {
+        for (const lang of ["en", "es"] as const) {
+          const n = bank.items.length;
+          const longest = bank.items.filter((x) => x.wrong.every((w) => x.a[lang].length > w.c[lang].length)).length;
+          const shortest = bank.items.filter((x) => x.wrong.every((w) => x.a[lang].length < w.c[lang].length)).length;
+          if (longest > 0.35 * n) out.push(`${id} L${i + 1} ${lang}: the key is the longest choice in ${longest} of ${n}`);
+          if (shortest > 0.4 * n) out.push(`${id} L${i + 1} ${lang}: the key is the shortest choice in ${shortest} of ${n}`);
+        }
+      });
+    expect(out).toEqual([]);
+  });
+
+  // Hints 1 and 2 are shared by every entry of a level, so they must not hold any entry's answer:
+  // its one content word, or 75% of its several, not counting words the question already shows.
+  const STOP = new Set([
+    "that", "this", "with", "from", "into", "they", "them", "their", "than", "then", "what", "which", "when", "where", "does", "have", "more", "most",
+    "only", "each", "other", "some", "about", "over", "para", "como", "entre", "sobre", "cada", "pero", "porque", "desde", "hasta", "este", "esta",
+    "estos", "estas", "unos", "unas", "solo", "todo", "toda", "todos", "todas", "otro", "otra", "otros", "otras", "mas", "muy",
+  ]);
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const stem = (w: string) => (w.length > 4 && w.endsWith("s") ? w.slice(0, -1) : w);
+  const words = (s: string) => new Set(norm(s).split(" ").filter((w) => w.length >= 4 && !STOP.has(w)).map(stem));
+  const givesAway = (hint: string, q: string, answer: string) => {
+    const asked = words(q), said = words(hint);
+    const key = [...words(answer)].filter((w) => !asked.has(w));
+    return key.length > 0 && key.filter((w) => said.has(w)).length / key.length >= 0.75;
+  };
+
+  it("hints 1 and 2 never give away an entry's answer", () => {
+    expect(givesAway("Follow a protein: ribosomes build it, the Golgi apparatus packs it.", "Which organelle builds proteins?", "Ribosome")).toBe(true);
+    expect(givesAway("Name the job first, then find the part that does it.", "Which organelle builds proteins?", "Ribosome")).toBe(false);
+    const out: string[] = [];
+    for (const [id, levels] of Object.entries(SCIENCE_6_9_MORE_BANKS))
+      levels.forEach((bank, i) => {
+        for (const x of bank.items)
+          for (const lang of ["en", "es"] as const)
+            for (const [which, h] of [["hint 1", bank.nudge], ["hint 2", bank.strategy]] as const)
+              if (givesAway(h[lang], x.q[lang], x.a[lang])) out.push(`${id} L${i + 1} ${lang} ${which} gives "${x.a[lang]}"`);
+      });
+    expect(out).toEqual([]);
+  });
 });
 
 // ── The Moon ────────────────────────────────────────────────────────────────────────────────────
