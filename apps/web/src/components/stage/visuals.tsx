@@ -1,6 +1,7 @@
 // Static teaching pictures, drawn from the palette. Each is an <svg role="img"> labelled by the
 // scene's alt text, so the picture is never the only channel.
-import type { Visual } from "@/lib/types";
+import type { Locale, Visual } from "@/lib/types";
+import { useHear } from "./hear";
 import {
   ArrayVisual,
   BaseTenVisual,
@@ -83,12 +84,18 @@ export function FractionVisual({ parts, shaded, sizes, alt, tint }: { parts: num
   );
 }
 
-/** A number as a learner reads it: true minus sign, fractions when a denominator is given. */
-export function fractionLabel(value: number, denominator?: number) {
+/** A whole number grouped as lessons write it: 12,000 in English; in Spanish four digits stay together (1000), more get commas (12,000). */
+const grouped = (n: number, locale: Locale) => (Math.abs(n) < (locale === "es" ? 10000 : 1000) ? String(n) : n.toLocaleString("en-US"));
+
+/** A number as a learner reads it: true minus sign, thousands grouped, fractions when a denominator is given. */
+export function fractionLabel(value: number, denominator?: number, locale: Locale = "en") {
   const minus = (s: string) => s.replace("-", "\u2212");
-  if (!denominator) return minus(String(Math.round(value * 100) / 100));
+  if (!denominator) {
+    const v = Math.round(value * 100) / 100;
+    return minus(Number.isInteger(v) ? grouped(v, locale) : String(v));
+  }
   const num = Math.round(value * denominator);
-  if (num % denominator === 0) return minus(String(num / denominator));
+  if (num % denominator === 0) return minus(grouped(num / denominator, locale));
   return minus(`${num}/${denominator}`);
 }
 
@@ -112,6 +119,7 @@ export function NumberLineVisual({
   /** A thing laid along the line (a ribbon on a ruler), drawn as a bar just above it from one value to the other. */
   span?: [number, number];
 }) {
+  const { locale } = useHear();
   const w = 360, pad = 20, y = 34;
   const x = (v: number) => pad + ((v - min) / (max - min)) * (w - pad * 2);
   return (
@@ -126,7 +134,7 @@ export function NumberLineVisual({
         <g key={m}>
           <line x1={x(m)} x2={x(m)} y1={y - 7} y2={y + 7} stroke={INK} strokeWidth={1.5} />
           <text x={x(m)} y={y + 24} textAnchor="middle" fontSize="12" fill={MUTED} fontFamily="var(--font-opmono)">
-            {fractionLabel(m, denominator)}
+            {fractionLabel(m, denominator, locale)}
           </text>
         </g>
       ))}

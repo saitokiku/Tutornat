@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useT } from "@/i18n";
 import type { Widget } from "@/lib/types";
-import { Hear } from "../hear";
+import { Hear, useHear } from "../hear";
 import { fractionLabel } from "../visuals";
 import { CheckRow } from "./CheckRow";
 import { StepButtons } from "./Slider";
@@ -13,6 +13,7 @@ type Props = { widget: Extract<Widget, { kind: "number-line" }>; onCheck?: (corr
 /** Move a marker along a number line by fixed jumps. Positions are integers so decimals never drift. */
 export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }: Props) {
   const t = useT();
+  const { locale } = useHear();
   const { min, max, step, denominator } = widget;
   const count = Math.round((max - min) / step) + 1;
   const valueAt = (i: number) => min + i * step;
@@ -20,7 +21,7 @@ export function NumberLineWidget({ widget, onCheck, tint = "var(--color-math)" }
   const [index, setIndex] = useState(startIndex);
   const [result, setResult] = useState<boolean | null>(null);
   const set = (i: number) => (setIndex(Math.max(0, Math.min(count - 1, i))), setResult(null));
-  const label = (v: number) => fractionLabel(v, denominator);
+  const label = (v: number) => fractionLabel(v, denominator, locale);
   // Label round values only (at most 6 labels) so the numbers stay readable on a phone.
   const offset = Math.round(min / step);
   const every = [1, 2, 5, 10, 20, 50].find((k) => Math.floor((count - 1) / k) + 1 <= 6) ?? 100;
