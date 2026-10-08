@@ -986,7 +986,14 @@ describe("m.numberline.100", () => {
 describe("m.money.count", () => {
   const COIN: Record<string, number> = { penny: 1, pennies: 1, nickel: 5, nickels: 5, dime: 10, dimes: 10, quarter: 25, quarters: 25 };
   const coinsEn = (s: string) => [...s.matchAll(/(\d+) (pennies|penny|nickels?|dimes?|quarters?)\b/g)].reduce((t, m) => t + Number(m[1]) * COIN[m[2]], 0);
-  const coinsEs = (s: string) => [...s.matchAll(/(\d+) (?:monedas? )?de (\d+)¢/g)].reduce((t, m) => t + Number(m[1]) * Number(m[2]), 0);
+  // Coins go by their US names in Spanish too, so the Spanish item also asks what each coin is worth.
+  const coinsEs = (s: string) => {
+    expect(s, "Spanish coin list states a value").not.toMatch(/monedas? de \d|\d+ de \d+¢|\d+ centavos? y/);
+    return coinsEn(s);
+  };
+  /** The same coins, valued by a child who thinks a nickel is 10¢ and a dime 5¢. */
+  const SWAPPED: Record<string, number> = { ...COIN, nickel: 10, nickels: 10, dime: 5, dimes: 5 };
+  const swappedEn = (s: string) => [...s.matchAll(/(\d+) (pennies|penny|nickels?|dimes?|quarters?)\b/g)].reduce((t, m) => t + Number(m[1]) * SWAPPED[m[2]], 0);
   const billsEn = (s: string) => [...s.matchAll(/(one|\d+) \$(\d+) bills?/g)].reduce((t, m) => t + (m[1] === "one" ? 1 : Number(m[1])) * Number(m[2]), 0);
   const billsEs = (s: string) => [...s.matchAll(/(un|\d+) billetes? de \$(\d+)/g)].reduce((t, m) => t + (m[1] === "un" ? 1 : Number(m[1])) * Number(m[2]), 0);
   it("adds the coin and bill values named on screen, in both languages", () => {
@@ -998,6 +1005,11 @@ describe("m.money.count", () => {
           expect(coinsEn(keyLabel(en))).toBe(target);
           expect(coinsEs(keyLabel(es))).toBe(target);
           for (const w of wrongLabels(en)) expect(coinsEn(w), `${w} also makes ${target}¢`).not.toBe(target);
+          // The swap tag sits on exactly the set a nickel-dime swapper would pick, and nowhere else.
+          for (const c of en.choices!) if (c.why) expect(swappedEn(c.label) === target, `${c.label} tagged ${c.why} for ${target}¢`).toBe(c.why === "swapped-nickel-and-dime");
+          const key = keyLabel(en);
+          if (swappedEn(key) !== target) expect(en.choices!.some((c) => c.why === "swapped-nickel-and-dime"), `${key}: no swap set`).toBe(true);
+          expect(en.choices!.length).toBeGreaterThanOrEqual(3);
           expect(level).toBe(3);
         } else if (/dollars/.test(te)) {
           expect([billsEn(te), billsEs(ts)]).toEqual([num(en.answer), num(en.answer)]);
@@ -1006,6 +1018,9 @@ describe("m.money.count", () => {
           expect([coinsEn(te), coinsEs(ts)]).toEqual([num(en.answer), num(en.answer)]);
           expect(/quarter/.test(te)).toBe(level === 2);
           expect(num(en.answer)).toBeLessThan(100);
+          const swapped = en.wrong?.find((w) => w.why === "swapped-nickel-and-dime");
+          if (swappedEn(te) !== coinsEn(te)) expect(Number(swapped?.value)).toBe(swappedEn(te));
+          else expect(swapped).toBeUndefined();
         }
       }
   });
