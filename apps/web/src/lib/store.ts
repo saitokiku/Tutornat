@@ -130,20 +130,22 @@ if (typeof window !== "undefined")
 
 /** What a write logs ahead of the document: evidence rows, under one journal key. */
 type Journal = { key: string; rows: () => EvidenceRow[]; proof?: boolean };
+/** Returned by a change that found nothing to do. */
+const UNCHANGED = Symbol("unchanged");
 
 /**
- * Applies `change` to what is saved now and saves the document. `change` returning false means there
- * was nothing to do: no save, no notice. With a journal, the new evidence rows are written to their
- * own key first; once the document holding them is saved the key is removed, together with every
+ * Applies `change` to what is saved now and saves the document. A change returning UNCHANGED found
+ * nothing to do: no save, no notice. With a journal, the new evidence rows are written to their own
+ * key first; once the document holding them is saved the key is removed, together with every
  * leftover key this load replayed (the document now holds those rows, or dropped them on purpose).
  * If the document can't be saved the key stays, and the next load replays it.
  */
-function write(change: (draft: StoreState) => void | false, remote: boolean, journal?: Journal): StoreState {
+function write(change: (draft: StoreState) => unknown, remote: boolean, journal?: Journal): StoreState {
   // Start from what is saved now, not this tab's cached copy, so two open tabs never undo each other.
   if (typeof window !== "undefined" && health !== "memory") state = load();
   const prev = read();
   const draft = structuredClone(prev);
-  if (change(draft) === false) return prev;
+  if (change(draft) === UNCHANGED) return prev;
   const removed = new Set(prev.profiles.filter((p) => !draft.profiles.some((n) => n.id === p.id)).map((p) => p.id));
   if (removed.size) for (const list of EVIDENCE_LISTS) {
     (draft[list] as EvidenceRecord[]) = (draft[list] as EvidenceRecord[]).filter((r) => !removed.has(r.profileId));
@@ -299,7 +301,7 @@ export function appendEvidence(rows: EvidenceRow[], opts: { proof?: boolean; als
     (draft) => {
       for (const r of fresh) if (!draft.profiles.some((p) => p.id === r.record.profileId && p.accountId === draft.session.accountId)) throw new EvidenceError("stale");
       added = fresh.filter((r) => !holds(draft, r));
-      if (!added.length) return false;
+      if (!added.length) return UNCHANGED;
       for (const { list, record } of added) (draft[list] as EvidenceRecord[]).push(record);
       opts.also?.(draft);
     },

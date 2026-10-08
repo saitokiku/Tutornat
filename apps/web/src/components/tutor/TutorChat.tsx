@@ -293,33 +293,34 @@ function ChatView({
   // Help is saved before it shows: a tutor entry after the opening line (and a safety reply, which is
   // not help) waits until beforeHelp has saved it. Reply buttons belong to their entry, so they wait too.
   const [admitted, setAdmitted] = useState<ReadonlySet<string>>(() => new Set());
-  const [refused, setRefused] = useState<"storage" | "stale" | null>(null);
-  const [admissionRetry, setAdmissionRetry] = useState(0);
+  // Entries whose help couldn't be saved, and why: they wait for Try again, not for the next render.
+  const [held, setHeld] = useState<ReadonlyMap<string, "storage" | "stale">>(() => new Map());
+  const refused = [...held.values()].at(-1) ?? null;
   const beforeHelp = setup.beforeHelp;
   const entries = incoming.filter((e) => e.role === "learner" || e.id === "open" || e.flag || !beforeHelp || admitted.has(e.id));
   useEffect(() => {
     if (!beforeHelp) return;
     let live = true;
     const ready: string[] = [];
-    let failed: "storage" | "stale" | null = null;
+    const failed: [string, "storage" | "stale"][] = [];
     for (const e of incoming) {
-      if (e.role !== "tutor" || e.id === "open" || e.flag || admitted.has(e.id) || (!e.text && !e.cards.length && !e.replies?.length)) continue;
+      if (e.role !== "tutor" || e.id === "open" || e.flag || admitted.has(e.id) || held.has(e.id) || (!e.text && !e.cards.length && !e.replies?.length)) continue;
       const saved = beforeHelp(e.id);
       if (saved === true) ready.push(e.id);
-      else failed = saved;
+      else failed.push([e.id, saved]);
     }
     // Saving is synchronous; the acknowledgement lands on the next microtask, and until then this
     // render still holds the text, cards and audio back.
     queueMicrotask(() => {
       if (!live) return;
       if (ready.length) setAdmitted((ids) => new Set([...ids, ...ready]));
-      setRefused(failed);
+      if (failed.length) setHeld((m) => new Map([...m, ...failed]));
     });
-    if (failed) onStop?.();
+    if (failed.length) onStop?.();
     return () => {
       live = false;
     };
-  }, [incoming, beforeHelp, admitted, admissionRetry, onStop]);
+  }, [incoming, beforeHelp, admitted, held, onStop]);
   const replies = entries.at(-1)?.role === "tutor" ? entries.at(-1)?.replies ?? [] : [];
   // Whether the learner is moving by keyboard (not tapping), so a chip reached by Tab can say its name.
   const byKeyboard = useRef(false);
@@ -475,7 +476,7 @@ function ChatView({
           young={young}
           locale={locale}
           action={
-            <Button variant="ghost" onClick={() => setAdmissionRetry((n) => n + 1)}>
+            <Button variant="ghost" onClick={() => setHeld(new Map())}>
               {t("common.retry")}
             </Button>
           }
