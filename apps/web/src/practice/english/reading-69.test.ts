@@ -10,8 +10,10 @@ import { ENGLISH_READING_6_9, POOLS, STRUCTURE_LABELS, TAG_TEXT } from "./readin
 // found in the passage, in the same paragraph in both languages; every phrase an ask quotes is really
 // in the text (and in the paragraph it names); choices that quote the passage either all do or none
 // do; the overall-structure answer agrees with signal words counted from an independent word list; the
-// right answer is not given away by being the longest or the shortest choice; and every built item's
-// key is re-found from the prompt text alone. Then it builds 240 seeds per level in both languages.
+// right answer is not given away by its length (no length rank holds more than 40% of keys); theme and
+// comparison items do not all share one distractor template; hint 3 neither restates the key nor names
+// the structure; and every built item's key is re-found from the prompt text alone. Then it builds 240
+// seeds per level in both languages.
 
 const SEEDS = Array.from({ length: 240 }, (_, i) => i * 104729 + 11);
 const LOCALES = ["en", "es"] as const;

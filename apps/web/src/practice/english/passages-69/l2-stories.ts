@@ -162,18 +162,18 @@ export const L2_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "contradicts-text", "too-narrow"],
+        ["topic-not-theme", "contradicts-text", "wrong-character"],
         [
           "Which statement best expresses a theme of the story?",
           "A bond can survive memory loss if you accept a person as they are now.",
-          ["Memory loss", "Once someone forgets your name, the relationship between you can never be repaired.", "Skills learned over a lifetime can outlast other memories."],
+          ["Memory loss", "Once someone forgets your name, the relationship between you can never be repaired.", "The simplest fix is usually the right one."],
           ["Now Minh only smiled and handed him the screwdriver."],
           "Ông cannot remember Minh's name, but working on the radio gives them a way to be together. By the end, Minh accepts the question and chooses to keep connecting.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "El lazo con alguien puede sobrevivir a la pérdida de memoria si lo aceptas como es ahora.",
-          ["El olvido", "Cuando alguien olvida tu nombre, la relación entre ustedes dos ya nunca se puede volver a reparar.", "Las habilidades de toda una vida pueden durar más que otros recuerdos."],
+          ["El olvido", "Cuando alguien olvida tu nombre, la relación entre ustedes dos ya nunca se puede volver a reparar.", "La solución más sencilla suele ser la correcta."],
           ["Ahora Minh solo sonrió y le pasó el desarmador."],
           "Ông no recuerda el nombre de Minh, pero arreglar el radio les da una manera de estar juntos. Al final, Minh acepta la pregunta y elige seguir conectando con él.",
         ],
@@ -290,14 +290,14 @@ export const L2_STORIES: Passage[] = [
         ["plot-not-theme", "contradicts-text", "too-narrow"],
         [
           "Which statement best expresses a theme of the story?",
-          "Careless words can spread beyond your control, but you are still responsible for them.",
+          "Careless words spread beyond your control, but you are still responsible for them.",
           ["Daniela makes up a reason Priscilla skipped tryouts, and the story grows until half the team avoids her.", "People who start rumors are always found out in the end.", "A rumor grows a little bigger every time it is repeated."],
           ["That was the strange part: the rumor had spread so far from her that it no longer seemed to belong to her at all."],
           "No one could trace the rumor back to Daniela, yet she chooses to own it and repair what she can. The story shows that responsibility does not depend on getting caught.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
-          "Las palabras descuidadas pueden escaparse de tu control, pero sigues siendo responsable de ellas.",
+          "Las palabras descuidadas se escapan de tu control, pero sigues siendo responsable de ellas.",
           ["Daniela inventa por qué Priscilla faltó a las pruebas, y la historia crece hasta que la mitad del equipo la evita.", "Quienes empiezan un rumor siempre terminan descubiertos.", "Un rumor crece un poco cada vez que alguien lo repite."],
           ["Eso era lo raro: el rumor se había alejado tanto de ella que ya ni parecía suyo."],
           "Nadie podía saber que el rumor salió de Daniela, y aun así ella decide hacerse cargo y reparar lo que puede. El cuento muestra que la responsabilidad no depende de que te descubran.",
