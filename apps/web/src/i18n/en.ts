@@ -346,6 +346,7 @@ const en = {
   "family.quiet": "No activity this week yet.",
   "course.inEnglish": "In English",
   "course.inSpanish": "In Spanish",
+  "course.spanishArts": "Spanish language arts",
   "course.lessons_one": "1 lesson",
   "courses.progress_one": "{done} of 1 lesson finished",
   "course.scenes_one": "1 scene",

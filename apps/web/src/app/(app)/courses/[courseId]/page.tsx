@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { LangTag } from "@/components/courses/LangTag";
+import { LangTag, subjectKey } from "@/components/courses/LangTag";
 import { NotFound } from "@/components/courses/NotFound";
 import { OriginBadge } from "@/components/courses/Origin";
 import { isYoung } from "@/components/courses/Path";
@@ -71,7 +71,7 @@ function CourseView() {
       <header className="space-y-4">
         <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
           <SubjectDot subject={course.subject} />
-          {t(`subject.${course.subject}` as const)} · {gradeLabel(learner.locale, course.grade)}
+          {t(subjectKey(course.subject, course.locale))} · {gradeLabel(learner.locale, course.grade)}
           {course.assigned && <Badge tone="good">{t("course.fromGrownUp")}</Badge>}
           <OriginBadge course={course} />
           <LangTag course={course.locale} learner={learner.locale} />

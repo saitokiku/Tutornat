@@ -348,6 +348,7 @@ const es: Record<Key, string> = {
   "family.quiet": "Sin actividad esta semana todavía.",
   "course.inEnglish": "En inglés",
   "course.inSpanish": "En español",
+  "course.spanishArts": "Lengua",
   "course.lessons_one": "1 lección",
   "courses.progress_one": "{done} de 1 lección terminada",
   "course.scenes_one": "1 escena",

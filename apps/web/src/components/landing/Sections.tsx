@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { subjectKey } from "@/components/courses/LangTag";
 import { IconCheck, IconNotYet } from "@/components/icons";
 import { Badge, SubjectDot } from "@/components/ui";
 import { gradeLabel, useT } from "@/i18n";
@@ -184,7 +185,8 @@ export function Courses({ courses, locale }: { courses: CourseLine[]; locale: Lo
               <div key={s}>
                 <h3 className="flex items-center gap-2 border-b border-ink pb-3 font-brand text-t3 font-semibold text-ink">
                   <SubjectDot subject={s} />
-                  {t(`subject.${s}`)}
+                  {/* Named by the visitor's language, as its courses come first: Spanish reading courses are "Lengua". */}
+                  {t(subjectKey(s, locale))}
                 </h3>
                 <ul className="divide-y divide-border">
                   {list.map((c) => (

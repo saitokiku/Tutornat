@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { subjectKey } from "@/components/courses/LangTag";
+import { t } from "@/i18n";
 import { readyMadeMatch } from "@/lib/source-course";
 import type { Grade, Locale, Scene } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
@@ -71,6 +73,14 @@ describe("English K–5 ready-made courses", () => {
         expect(lone.test(text), `${c.id}: “${text}”`).toBe(false);
         expect(part.test(text), `${c.id}: “${text}”`).toBe(false);
       }
+  });
+
+  it("are filed under the language they teach, so a Spanish reading course is never called Inglés", () => {
+    for (const c of COURSES) {
+      const label = (ui: Locale) => t(ui, subjectKey(c.subject, c.locale));
+      if (c.locale === "es") expect([label("es"), label("en")], c.id).toEqual(["Lengua", "Spanish language arts"]);
+      else expect([label("es"), label("en")], c.id).toEqual(["Inglés", "English"]);
+    }
   });
 
   it("say clasifica for a sort in Spanish (ordena means unscramble)", () => {
