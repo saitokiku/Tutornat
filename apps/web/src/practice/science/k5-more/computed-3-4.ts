@@ -2,7 +2,7 @@ import type { Locale } from "@/lib/types";
 import type { Rng } from "../../rng";
 import { tr } from "../../text";
 import type { Choice, ItemBody } from "../../types";
-import { choose, NAMES, wrongValues } from "./util";
+import { cap, choose, NAMES, wrongValues } from "./util";
 
 // Computed grade 3–4 science: weather and climate data (3-ESS2-1, 3-ESS2-2), balanced forces and
 // patterns of motion (3-PS2-1, 3-PS2-2), and reading a wave's amplitude and wavelength from a graph
@@ -11,13 +11,23 @@ import { choose, NAMES, wrongValues } from "./util";
 const opt = (label: string, why?: string): Choice => ({ label, say: label, ...(why ? { why } : {}) });
 
 // ── Weather and climate data (grade 3) ───────────────────────────────────────────────────────
-// Average high temperatures (°F) drawn from ranges that fit each half of the world: north of the
-// equator July is warmest; south of it, January is. The ranges never overlap at the extremes.
+// Average daily high temperatures (°F) for January, April, July and October: the 1991–2020 normals
+// (NOAA for the US cities, Environment Canada, Argentina's weather service and Australia's Bureau of
+// Meteorology), rounded. Each item shows every month within 2 °F of its normal, so the numbers vary
+// from seed to seed and stay true. North of the equator July is warmest; south of it, January is.
 const QUARTER_MONTHS: [string, string][] = [["January", "enero"], ["April", "abril"], ["July", "julio"], ["October", "octubre"]];
-const NORTH: [number, number][] = [[25, 45], [55, 68], [80, 95], [56, 70]];
-const SOUTH: [number, number][] = [[80, 92], [66, 74], [50, 60], [64, 75]];
-const NORTH_PLACES: [string, string][] = [["the northern United States", "el norte de Estados Unidos"], ["Canada", "Canadá"]];
-const SOUTH_PLACES: [string, string][] = [["Argentina", "Argentina"], ["Chile", "Chile"], ["Australia", "Australia"]];
+type Climate = { en: string; es: string; south: boolean; highs: [jan: number, apr: number, jul: number, oct: number] };
+const CLIMATES: Climate[] = [
+  { en: "Minneapolis, Minnesota", es: "Minneapolis, Minnesota", south: false, highs: [24, 57, 83, 58] },
+  { en: "Chicago, Illinois", es: "Chicago, Illinois", south: false, highs: [32, 59, 85, 63] },
+  { en: "Toronto, Canada", es: "Toronto, Canadá", south: false, highs: [30, 54, 81, 58] },
+  { en: "Montreal, Canada", es: "Montreal, Canadá", south: false, highs: [23, 52, 80, 56] },
+  { en: "Winnipeg, Canada", es: "Winnipeg, Canadá", south: false, highs: [12, 50, 78, 51] },
+  { en: "Buenos Aires, Argentina", es: "Buenos Aires, Argentina", south: true, highs: [86, 74, 60, 73] },
+  { en: "Sydney, Australia", es: "Sídney, Australia", south: true, highs: [81, 75, 64, 74] },
+  { en: "Melbourne, Australia", es: "Melbourne, Australia", south: true, highs: [80, 70, 57, 68] },
+  { en: "Adelaide, Australia", es: "Adelaida, Australia", south: true, highs: [84, 73, 59, 71] },
+];
 
 export function climateData(r: Rng, level: number, locale: Locale): ItemBody {
   const kid = r.pick(NAMES);
@@ -58,12 +68,13 @@ export function climateData(r: Rng, level: number, locale: Locale): ItemBody {
       seconds: 40,
     };
   }
-  const south = r.bool();
-  const [placeEn, placeEs] = r.pick(south ? SOUTH_PLACES : NORTH_PLACES);
+  const { en: placeEn, es: placeEs, south, highs } = r.pick(CLIMATES);
   let temps: number[];
-  do temps = (south ? SOUTH : NORTH).map(([lo, hi]) => r.int(lo, hi));
+  do temps = highs.map((t) => t + r.int(-2, 2));
   while (temps[1] === temps[3]);
   const month = (i: number) => tr(locale, QUARTER_MONTHS[i][0], QUARTER_MONTHS[i][1]);
+  /** A month as a choice label, capitalized in Spanish too. */
+  const Month = (i: number) => cap(month(i));
   const order = temps.map((_, i) => i).sort((a, b) => temps[b] - temps[a]);
   const [hot, , , cold] = order;
   const where = tr(locale, `${kid} lives in ${placeEn}${south ? ", south of the equator" : ""}.`, `${kid} vive en ${placeEs}${south ? ", al sur del ecuador" : ""}.`);
@@ -76,7 +87,7 @@ export function climateData(r: Rng, level: number, locale: Locale): ItemBody {
     const warmest = r.bool();
     const key = warmest ? hot : cold;
     const far = warmest ? cold : hot;
-    const q = warmest ? tr(locale, "Which month is warmest?", "¿Qué mes es el más caluroso?") : tr(locale, "Which month is coldest?", "¿Qué mes es el más frío?");
+    const q = warmest ? tr(locale, "Which of these months is warmest?", "¿Cuál de estos meses es el más caluroso?") : tr(locale, "Which of these months is coldest?", "¿Cuál de estos meses es el más frío?");
     // South of the equator, picking July as warmest (or January as coldest) is the northern-seasons mix-up.
     const farWhy = south ? "assumed-northern-seasons" : "picked-the-opposite-extreme";
     return {
@@ -84,8 +95,8 @@ export function climateData(r: Rng, level: number, locale: Locale): ItemBody {
       say: `${factsSaid} ${q}`,
       ...choose(
         r,
-        opt(month(key)),
-        [0, 1, 2, 3].filter((i) => i !== key).map((i) => opt(month(i), i === far ? farWhy : "picked-a-middle-value")),
+        opt(Month(key)),
+        [0, 1, 2, 3].filter((i) => i !== key).map((i) => opt(Month(i), i === far ? farWhy : "picked-a-middle-value")),
       ),
       hints: [
         warmest ? tr(locale, "Look for the highest temperature.", "Busca la temperatura más alta.") : tr(locale, "Look for the lowest temperature.", "Busca la temperatura más baja."),
@@ -94,13 +105,13 @@ export function climateData(r: Rng, level: number, locale: Locale): ItemBody {
       ],
       steps: [
         tr(locale, `The ${warmest ? "highest" : "lowest"} temperature is ${temps[key]}°F, in ${month(key)}.`, `La temperatura más ${warmest ? "alta" : "baja"} es ${temps[key]} °F, en ${month(key)}.`),
-        warmest ? tr(locale, `${month(key)} is warmest.`, `${capEs(month(key), locale)} es el más caluroso.`) : tr(locale, `${month(key)} is coldest.`, `${capEs(month(key), locale)} es el más frío.`),
+        warmest ? tr(locale, `${month(key)} is warmest.`, `${Month(key)} es el más caluroso.`) : tr(locale, `${month(key)} is coldest.`, `${Month(key)} es el más frío.`),
       ],
       seconds: 30,
     };
   }
   const d = temps[hot] - temps[cold];
-  const q = tr(locale, "How many degrees warmer is the warmest month than the coldest month?", "¿Cuántos grados más caluroso es el mes más caluroso que el mes más frío?");
+  const q = tr(locale, "Of these four months, how many degrees warmer is the warmest than the coldest?", "De estos cuatro meses, ¿cuántos grados más caluroso es el más caluroso que el más frío?");
   return {
     prompt: [`${facts} ${q}`],
     say: `${factsSaid} ${q}`,
@@ -120,14 +131,11 @@ export function climateData(r: Rng, level: number, locale: Locale): ItemBody {
     steps: [
       tr(locale, `Warmest: ${month(hot)}, ${temps[hot]}°F. Coldest: ${month(cold)}, ${temps[cold]}°F.`, `Más caluroso: ${month(hot)}, ${temps[hot]} °F. Más frío: ${month(cold)}, ${temps[cold]} °F.`),
       `${temps[hot]} − ${temps[cold]} = ${d}`,
-      tr(locale, `${month(hot)} is ${d} degrees warmer than ${month(cold)}.`, `${capEs(month(hot), locale)} es ${d} grados más caluroso que ${month(cold)}.`),
+      tr(locale, `${month(hot)} is ${d} degrees warmer than ${month(cold)}.`, `${Month(hot)} es ${d} grados más caluroso que ${month(cold)}.`),
     ],
     seconds: 45,
   };
 }
-
-/** Spanish month names are lowercase; capitalize one that starts a sentence. */
-const capEs = (s: string, locale: Locale) => (locale === "es" ? s[0].toUpperCase() + s.slice(1) : s);
 
 // ── Forces and patterns of motion (grade 3) ──────────────────────────────────────────────────
 
@@ -228,7 +236,7 @@ function nextTime(r: Rng, locale: Locale): ItemBody {
   const q = tr(
     locale,
     `${c.en} It ${c.whenEn} at ${times[0]}, ${times[1]} and ${times[2]} seconds. When will it next do that? Tap the time on the number line.`,
-    `${c.es} ${capEs(c.whenEs, "es")} a los ${times[0]}, ${times[1]} y ${times[2]} segundos. ¿Cuándo lo hará otra vez? Toca el tiempo en la recta numérica.`,
+    `${c.es} ${cap(c.whenEs)} a los ${times[0]}, ${times[1]} y ${times[2]} segundos. ¿Cuándo lo hará otra vez? Toca el tiempo en la recta numérica.`,
   );
   return {
     prompt: [q],
@@ -288,7 +296,7 @@ function fullCycles(r: Rng, locale: Locale): ItemBody {
     hints: [
       tr(locale, "How long does each one take?", "¿Cuánto tiempo toma cada vez?"),
       tr(locale, "A steady pattern repeats in equal steps. Divide the total time by the time for each one.", "Un patrón parejo se repite en pasos iguales. Divide el tiempo total entre el tiempo de cada vez."),
-      tr(locale, `Skip count by ${p}: ${p}, ${2 * p}, ${3 * p}, and keep going.`, `Cuenta de ${p} en ${p}: ${p}, ${2 * p}, ${3 * p}, y sigue.`),
+      tr(locale, `Skip count by ${p}: ${p}, ${2 * p}, and keep going until you reach ${total}.`, `Cuenta de ${p} en ${p}: ${p}, ${2 * p}, y sigue hasta llegar a ${total}.`),
     ],
     steps: [`${total} ÷ ${p} = ${k}`, tr(locale, `That is ${k} ${c.nounEn} in ${total} ${unit}.`, `Son ${k} ${c.nounEs} en ${total} ${unit}.`)],
     seconds: 45,
@@ -298,12 +306,13 @@ function fullCycles(r: Rng, locale: Locale): ItemBody {
 // ── Waves: amplitude and wavelength (grade 4) ────────────────────────────────────────────────
 // The wave is drawn as a zigzag through its crests, rest line and troughs, a crest at distance 0.
 // Every crest lands on a labeled whole number and the height axis counts by ones (heights ≤ 6).
+// Waves travel along ropes and springs, never water: water waves this steep would break.
 
 type WaveCtx = { en: (name: string) => string; es: (name: string) => string; unit: [string, string, string, string]; restEn: string; restEs: string };
 const WAVES: WaveCtx[] = [
   { en: (n) => `${n} shakes one end of a long rope.`, es: (n) => `${n} sacude la punta de una cuerda larga.`, unit: ["foot", "feet", "pie", "pies"], restEn: "the rope", restEs: "la cuerda" },
   { en: () => "A wave moves along a long toy spring.", es: () => "Una onda recorre un resorte largo de juguete.", unit: ["inch", "inches", "pulgada", "pulgadas"], restEn: "the spring", restEs: "el resorte" },
-  { en: () => "A wave crosses the water in a wave tank.", es: () => "Una ola cruza el agua de un tanque de olas.", unit: ["inch", "inches", "pulgada", "pulgadas"], restEn: "the water", restEs: "el agua" },
+  { en: (n) => `${n} wiggles one end of a long jump rope tied to a fence.`, es: (n) => `${n} mueve la punta de una cuerda de saltar larga atada a una cerca.`, unit: ["foot", "feet", "pie", "pies"], restEn: "the jump rope", restEs: "la cuerda" },
 ];
 
 export function waveShape(r: Rng, level: number, locale: Locale): ItemBody {
@@ -379,8 +388,9 @@ export function waveShape(r: Rng, level: number, locale: Locale): ItemBody {
 
 function compareWaves(r: Rng, locale: Locale): ItemBody {
   const kind = r.int(0, 2); // 0 amplitude, 1 wavelength, 2 energy (same wavelength)
-  let [a1, a2] = [r.int(1, 5), r.int(1, 5)];
-  while (a1 === a2) [a1, a2] = [r.int(1, 5), r.int(1, 5)];
+  // Rope waves a few inches high and several feet long, as in a classroom demonstration.
+  let [a1, a2] = [r.int(2, 9), r.int(2, 9)];
+  while (a1 === a2) [a1, a2] = [r.int(2, 9), r.int(2, 9)];
   let w1: number, w2: number;
   if (kind === 2) w1 = w2 = r.int(3, 12);
   else {
@@ -389,10 +399,11 @@ function compareWaves(r: Rng, locale: Locale): ItemBody {
     while (w1 === w2 || (a1 > a2) === (w1 > w2)) [w1, w2] = [r.int(3, 12), r.int(3, 12)];
   }
   const ft = (v: number) => tr(locale, v === 1 ? "foot" : "feet", v === 1 ? "pie" : "pies");
+  const inch = (v: number) => tr(locale, v === 1 ? "inch" : "inches", v === 1 ? "pulgada" : "pulgadas");
   const facts = tr(
     locale,
-    `Two water waves cross a pool. Wave A has an amplitude of ${a1} ${ft(a1)} and a wavelength of ${w1} ${ft(w1)}. Wave B has an amplitude of ${a2} ${ft(a2)} and a wavelength of ${w2} ${ft(w2)}.`,
-    `Dos ondas de agua cruzan una piscina. La onda A tiene una amplitud de ${a1} ${ft(a1)} y una longitud de onda de ${w1} ${ft(w1)}. La onda B tiene una amplitud de ${a2} ${ft(a2)} y una longitud de onda de ${w2} ${ft(w2)}.`,
+    `Two waves travel along two long ropes that are just alike. Wave A has an amplitude of ${a1} ${inch(a1)} and a wavelength of ${w1} ${ft(w1)}. Wave B has an amplitude of ${a2} ${inch(a2)} and a wavelength of ${w2} ${ft(w2)}.`,
+    `Dos ondas recorren dos cuerdas largas iguales. La onda A tiene una amplitud de ${a1} ${inch(a1)} y una longitud de onda de ${w1} ${ft(w1)}. La onda B tiene una amplitud de ${a2} ${inch(a2)} y una longitud de onda de ${w2} ${ft(w2)}.`,
   );
   const A = tr(locale, "Wave A", "La onda A"), B = tr(locale, "Wave B", "La onda B"), same = tr(locale, "They are the same", "Son iguales");
   const bigAmpIsA = a1 > a2;

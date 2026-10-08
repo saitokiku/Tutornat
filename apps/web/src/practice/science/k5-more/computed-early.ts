@@ -32,14 +32,16 @@ export function weatherChart(r: Rng, level: number, locale: Locale): ItemBody {
     `Una clase dibujó un punto por cada día. El primer grupo son los ${days(ka, locale)}. El segundo grupo son los ${days(kb, locale)}.`,
   );
   const visual = { visual: { kind: "dots" as const, groups: [a, b] }, markable: true };
+  // The description names the groups but not their sizes: counting is the task. Each dot is a
+  // button, so a child using a screen reader counts by moving from dot to dot.
   const alt = tr(
     locale,
-    `Two groups of dots. The first group, for ${ka.en} days, has ${a} dots. The second group, for ${kb.en} days, has ${b} dots.`,
-    `Dos grupos de puntos. El primer grupo, de ${days(ka, locale)}, tiene ${a} puntos. El segundo grupo, de ${days(kb, locale)}, tiene ${b} puntos.`,
+    `Two groups of dots to count. The first group is for ${ka.en} days. The second group is for ${kb.en} days.`,
+    `Dos grupos de puntos para contar. El primer grupo es de los ${days(ka, locale)}. El segundo grupo es de los ${days(kb, locale)}.`,
   );
   if (level === 1) {
     const [more, less, mn, ln] = a > b ? [ka, kb, a, b] : [kb, ka, b, a];
-    const q = tr(locale, "Which kind of day happened more?", "¿Qué tipo de día hubo más?");
+    const q = tr(locale, "Which kind of day happened more?", "¿Qué tipo de día hubo más veces?");
     const label = (k: Kind) => cap(days(k, locale));
     return {
       prompt: [`${setup} ${q}`],
@@ -150,7 +152,7 @@ export function daylight(r: Rng, level: number, locale: Locale): ItemBody {
       ]),
       hints: [tr(locale, "Which group of dots is bigger?", "¿Qué grupo de puntos es más grande?"), strategy, tr(locale, `Compare ${hs[0]} and ${hs[1]}.`, `Compara ${hs[0]} y ${hs[1]}.`)],
       steps: [
-        ms.map((m, i) => `${Name(m)}: ${hs[i]}`).join(". ") + ".",
+        ms.map((m, i) => tr(locale, `${Name(m)}: ${hs[i]} hours.`, `${Name(m)}: ${hs[i]} horas.`)).join(" "),
         tr(locale, `${hi} is more than ${lo}, so ${Name(top)} has more daylight.`, `${hi} es más que ${lo}, así que ${name(top)} tiene más luz del día.`),
       ],
       seconds: 20,
@@ -173,7 +175,7 @@ export function daylight(r: Rng, level: number, locale: Locale): ItemBody {
         tr(locale, `Put the hours in order: ${[...hs].sort((p, q) => p - q).join(", ")}.`, `Ordena las horas: ${[...hs].sort((p, q) => p - q).join(", ")}.`),
       ],
       steps: [
-        tr(locale, `In order: ${sorted.map(([m, h]) => `${Name(m)} ${h}`).join(", ")}.`, `En orden: ${sorted.map(([m, h]) => `${name(m)} ${h}`).join(", ")}.`),
+        tr(locale, `In order: ${sorted.map(([m, h]) => `${Name(m)} (${h} hours)`).join(", ")}.`, `En orden: ${sorted.map(([m, h]) => `${name(m)} (${h} horas)`).join(", ")}.`),
         most
           ? tr(locale, `${Name(key)} has the most daylight.`, `${Name(key)} tiene más luz del día.`)
           : tr(locale, `${Name(key)} has the least daylight.`, `${Name(key)} tiene menos luz del día.`),
@@ -214,8 +216,8 @@ const PLACES: Place[] = [
   { en: "the pond", es: "el estanque", pic: "🦆", min: 8, max: 16, rich: true },
   { en: "the forest", es: "el bosque", pic: "🌲", min: 10, max: 18, rich: true },
   { en: "the meadow", es: "la pradera", pic: "🌼", min: 8, max: 15, rich: true },
-  { en: "the garden", es: "el huerto", pic: "🌻", min: 6, max: 12, rich: true },
-  { en: "the tide pool", es: "el charco de marea", pic: "🦀", min: 6, max: 12, rich: true },
+  { en: "the garden", es: "el jardín", pic: "🌻", min: 6, max: 12, rich: true },
+  { en: "the tide pool", es: "la poza de marea", pic: "🦀", min: 6, max: 12, rich: true },
   { en: "the parking lot", es: "el estacionamiento", pic: "🚗", min: 1, max: 4, rich: false },
   { en: "the sidewalk", es: "la acera", pic: "🚶", min: 1, max: 4, rich: false },
   { en: "the mowed lawn", es: "el césped cortado", pic: "🌱", min: 2, max: 5, rich: false },
@@ -251,7 +253,7 @@ export function habitatSurvey(r: Rng, level: number, locale: Locale): ItemBody {
   const strategy = tr(
     locale,
     "Many kinds of living things in one place is called biodiversity. Compare the counts.",
-    "Muchos tipos de seres vivos en un lugar se llama biodiversidad. Compara los números.",
+    "Cuando hay muchos tipos de seres vivos en un lugar, eso se llama biodiversidad. Compara los números.",
   );
   const sorted = [...s].sort((p, q) => q[1] - p[1]);
   const [hiP, hi] = sorted[0];
@@ -269,7 +271,7 @@ export function habitatSurvey(r: Rng, level: number, locale: Locale): ItemBody {
       ]),
       hints: [tr(locale, "Which group of dots is bigger?", "¿Qué grupo de puntos es más grande?"), strategy, tr(locale, `Compare ${s[0][1]} and ${s[1][1]}.`, `Compara ${s[0][1]} y ${s[1][1]}.`)],
       steps: [
-        s.map(([p, c]) => `${Where(p)}: ${c}`).join(". ") + ".",
+        s.map(([p, c]) => tr(locale, `${Where(p)}: ${c} ${c === 1 ? "kind" : "kinds"}.`, `${Where(p)}: ${c} ${c === 1 ? "tipo" : "tipos"}.`)).join(" "),
         tr(locale, `${hi} is more than ${lo}, so ${where(hiP)} has more kinds.`, `${hi} es más que ${lo}, así que ${where(hiP)} tiene más tipos.`),
       ],
       seconds: 20,
@@ -316,7 +318,7 @@ export function habitatSurvey(r: Rng, level: number, locale: Locale): ItemBody {
       tr(locale, `Put the counts in order: ${s.map(([, c]) => c).sort((p, q) => p - q).join(", ")}.`, `Ordena los números: ${s.map(([, c]) => c).sort((p, q) => p - q).join(", ")}.`),
     ],
     steps: [
-      tr(locale, `In order: ${sorted.map(([p, c]) => `${where(p)} ${c}`).join(", ")}.`, `En orden: ${sorted.map(([p, c]) => `${where(p)} ${c}`).join(", ")}.`),
+      tr(locale, `In order: ${sorted.map(([p, c]) => `${where(p)} (${c})`).join(", ")}.`, `En orden: ${sorted.map(([p, c]) => `${where(p)} (${c})`).join(", ")}.`),
       most ? tr(locale, `${Where(key)} has the most kinds.`, `${Where(key)} tiene más tipos.`) : tr(locale, `${Where(key)} has the fewest kinds.`, `${Where(key)} tiene menos tipos.`),
     ],
     seconds: 30,

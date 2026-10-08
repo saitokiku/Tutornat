@@ -2,7 +2,7 @@ import type { Locale } from "@/lib/types";
 import type { Rng } from "../../rng";
 import { tr } from "../../text";
 import type { Choice, ItemBody } from "../../types";
-import { choose, fmt, NAMES, wrongValues } from "./util";
+import { cap, choose, fmt, NAMES, wrongValues } from "./util";
 
 // Computed grade 5 science: matter is made of particles too small to see and its mass is conserved
 // (5-PS1-1, 5-PS1-2), materials are identified by their properties (5-PS1-3), and the share of
@@ -30,7 +30,7 @@ export function matterMass(r: Rng, level: number, locale: Locale): ItemBody {
     const q = tr(
       locale,
       `${name} stirs ${solute} grams of ${what} into ${water} grams of water. The ${what} disappears from view. What is the mass of the ${what} water, in grams?`,
-      `${name} mezcla ${solute} gramos de ${what} en ${water} gramos de agua. ${sugar ? "El azúcar" : "La sal"} desaparece de la vista. ¿Cuál es la masa del agua con ${what}, en gramos?`,
+      `${name} disuelve ${solute} gramos de ${what} en ${water} gramos de agua. ${sugar ? "El azúcar" : "La sal"} desaparece de la vista. ¿Cuál es la masa del agua con ${what}, en gramos?`,
     );
     return {
       prompt: [q],
@@ -161,50 +161,103 @@ export function matterMass(r: Rng, level: number, locale: Locale): ItemBody {
   };
 }
 
-// Identify a material from test results. Each test result is a fixed property of the material.
-type Material = { en: string; es: string; theEs: string; lookEn: string; lookEs: string; magnet: boolean; conducts: boolean; dissolves: boolean; solutionConducts?: boolean };
+// Identify a material from test results (5-PS1-3). Each result is a fixed property of the material.
+// An item reports, in a random order, only the tests needed to rule out both wrong choices (plus,
+// sometimes, one more), so the same key comes with different evidence from seed to seed.
+type Material = {
+  en: string;
+  es: string;
+  theEs: string;
+  /** How it looks, as a sentence about "it" (the mystery solid). */
+  look: [string, string];
+  magnet: boolean;
+  conducts: boolean;
+  dissolves: boolean;
+  /** Dissolved: does the water then conduct? Not dissolved: does it float? */
+  water: boolean;
+};
 const MATERIALS: Material[] = [
-  { en: "Iron", es: "Hierro", theEs: "el hierro", lookEn: "a shiny gray metal", lookEs: "un metal gris y brillante", magnet: true, conducts: true, dissolves: false },
-  { en: "Aluminum", es: "Aluminio", theEs: "el aluminio", lookEn: "a shiny silver metal", lookEs: "un metal plateado y brillante", magnet: false, conducts: true, dissolves: false },
-  { en: "Copper", es: "Cobre", theEs: "el cobre", lookEn: "a shiny reddish-brown metal", lookEs: "un metal café rojizo y brillante", magnet: false, conducts: true, dissolves: false },
-  { en: "Salt", es: "Sal", theEs: "la sal", lookEn: "white crystals", lookEs: "cristales blancos", magnet: false, conducts: false, dissolves: true, solutionConducts: true },
-  { en: "Sugar", es: "Azúcar", theEs: "el azúcar", lookEn: "white crystals", lookEs: "cristales blancos", magnet: false, conducts: false, dissolves: true, solutionConducts: false },
-  { en: "Chalk", es: "Tiza", theEs: "la tiza", lookEn: "a white powder", lookEs: "un polvo blanco", magnet: false, conducts: false, dissolves: false },
+  { en: "Iron", es: "Hierro", theEs: "el hierro", look: ["It is a shiny gray metal.", "Es un metal gris y brillante."], magnet: true, conducts: true, dissolves: false, water: false },
+  { en: "Aluminum", es: "Aluminio", theEs: "el aluminio", look: ["It is a shiny silver metal.", "Es un metal plateado y brillante."], magnet: false, conducts: true, dissolves: false, water: false },
+  { en: "Copper", es: "Cobre", theEs: "el cobre", look: ["It is a shiny reddish-brown metal.", "Es un metal café rojizo y brillante."], magnet: false, conducts: true, dissolves: false, water: false },
+  { en: "Salt", es: "Sal", theEs: "la sal", look: ["It is made of small white crystals.", "Está formado por cristalitos blancos."], magnet: false, conducts: false, dissolves: true, water: true },
+  { en: "Sugar", es: "Azúcar", theEs: "el azúcar", look: ["It is made of small white crystals.", "Está formado por cristalitos blancos."], magnet: false, conducts: false, dissolves: true, water: false },
+  { en: "Baking soda", es: "Bicarbonato", theEs: "el bicarbonato", look: ["It is a fine white powder.", "Es un polvo blanco y fino."], magnet: false, conducts: false, dissolves: true, water: true },
+  { en: "Chalk", es: "Tiza", theEs: "la tiza", look: ["It is white and leaves dusty marks when you rub it.", "Es blanco y deja marcas de polvo al frotarlo."], magnet: false, conducts: false, dissolves: false, water: false },
+  { en: "Wax", es: "Cera", theEs: "la cera", look: ["It is white, smooth and a little slippery.", "Es blanco, liso y un poco resbaladizo."], magnet: false, conducts: false, dissolves: false, water: true },
+  { en: "Wood", es: "Madera", theEs: "la madera", look: ["It is light brown, with thin stripes.", "Es café claro, con rayitas delgadas."], magnet: false, conducts: false, dissolves: false, water: true },
+  { en: "Glass", es: "Vidrio", theEs: "el vidrio", look: ["It is clear and hard.", "Es transparente y duro."], magnet: false, conducts: false, dissolves: false, water: false },
+  { en: "Sand", es: "Arena", theEs: "la arena", look: ["It is made of tiny tan grains.", "Está formado por granitos de color café claro."], magnet: false, conducts: false, dissolves: false, water: false },
 ];
 
-/** The first test (in the order they are listed) that tells two materials apart. */
-function firstDifference(a: Material, b: Material): string {
-  if (a.lookEn !== b.lookEn && a.magnet === b.magnet && a.conducts === b.conducts && a.dissolves === b.dissolves && a.solutionConducts === b.solutionConducts) return "ignored-how-it-looks";
-  if (a.magnet !== b.magnet) return "ignored-magnet-test";
-  if (a.conducts !== b.conducts) return "ignored-conductivity-test";
-  if (a.dissolves !== b.dissolves) return "ignored-dissolving-test";
-  if (a.solutionConducts !== b.solutionConducts) return "ignored-solution-test";
-  return "ignored-how-it-looks";
+type Test = "look" | "magnet" | "conducts" | "water";
+/** Does test `t` give the same result for both materials? */
+const same = (t: Test, a: Material, b: Material) =>
+  t === "look" ? a.look[0] === b.look[0] : t === "water" ? a.dissolves === b.dissolves && a.water === b.water : a[t] === b[t];
+/** The misconception behind picking `m` when test `t` rules it out. */
+function ignored(t: Test, key: Material, m: Material): string {
+  if (t === "look") return "ignored-how-it-looks";
+  if (t === "magnet") return "ignored-magnet-test";
+  if (t === "conducts") return "ignored-conductivity-test";
+  if (key.dissolves !== m.dissolves) return "ignored-dissolving-test";
+  return key.dissolves ? "ignored-solution-test" : "ignored-floating-test";
 }
 
 function identifyMaterial(r: Rng, locale: Locale): ItemBody {
   const key = r.pick(MATERIALS);
   const others = r.shuffle(MATERIALS.filter((m) => m !== key)).slice(0, 2);
-  const results = [
-    tr(locale, `It is ${key.lookEn}.`, `Es ${key.lookEs}.`),
-    key.magnet ? tr(locale, "A magnet pulls it.", "Un imán lo atrae.") : tr(locale, "A magnet does not pull it.", "Un imán no lo atrae."),
-    key.conducts ? tr(locale, "It conducts electricity.", "Conduce la electricidad.") : tr(locale, "It does not conduct electricity.", "No conduce la electricidad."),
-    key.dissolves
-      ? key.solutionConducts
+  // Take tests in a random order, keeping each one that rules out a choice not yet ruled out, until
+  // both wrong choices are out (every two materials differ in some test). Looks alone never decide
+  // it: a measured property is always reported. Sometimes one more test is added.
+  const order = r.shuffle<Test>(["look", "magnet", "conducts", "water"]);
+  const tests: Test[] = [];
+  const out = (m: Material) => tests.some((t) => !same(t, key, m));
+  for (const t of order) if (others.some((m) => !out(m) && !same(t, key, m))) tests.push(t);
+  const add = (t: Test | undefined) => {
+    if (t) tests.splice(r.int(0, tests.length), 0, t);
+  };
+  if (tests.every((t) => t === "look")) add(order.find((t) => t !== "look"));
+  if (r.bool()) add(order.find((t) => !tests.includes(t)));
+  const result = (t: Test) => {
+    if (t === "look") return tr(locale, ...key.look);
+    if (t === "magnet") return key.magnet ? tr(locale, "A magnet pulls it.", "Un imán lo atrae.") : tr(locale, "A magnet does not pull it.", "Un imán no lo atrae.");
+    if (t === "conducts") return key.conducts ? tr(locale, "It conducts electricity.", "Conduce la electricidad.") : tr(locale, "It does not conduct electricity.", "No conduce la electricidad.");
+    if (key.dissolves)
+      return key.water
         ? tr(locale, "It dissolves in water, and then the water conducts electricity.", "Se disuelve en agua, y luego el agua conduce la electricidad.")
-        : tr(locale, "It dissolves in water, but the water still does not conduct electricity.", "Se disuelve en agua, pero el agua sigue sin conducir la electricidad.")
-      : tr(locale, "It does not dissolve in water.", "No se disuelve en agua."),
-  ];
-  const q = tr(locale, "A mystery solid is tested in class.", "En clase se prueba un sólido misterioso.") + " " + results.join(" ") + " " + tr(locale, "Which material is it most likely?", "¿Qué material es, lo más probable?");
+        : tr(locale, "It dissolves in water, but the water still does not conduct electricity.", "Se disuelve en agua, pero el agua sigue sin conducir la electricidad.");
+    return key.water ? tr(locale, "It does not dissolve in water, and it floats.", "No se disuelve en agua, y flota.") : tr(locale, "It does not dissolve in water, and it sinks.", "No se disuelve en agua, y se hunde.");
+  };
+  const q = [tr(locale, "A mystery solid is tested in class.", "En clase se prueba un sólido misterioso."), ...tests.map(result), tr(locale, "Which material is it most likely to be?", "¿Qué material es, probablemente?")].join(" ");
   const label = (m: Material) => tr(locale, m.en, m.es);
+  /** The first reported test that rules `m` out. */
+  const ruledBy = (m: Material) => tests.find((t) => !same(t, key, m))!;
+  // Hint 3 rules out one wrong choice with that test, saying what that material would do.
+  const [d] = others;
+  const by = ruledBy(d);
+  const dEn = d.en.toLowerCase(), dEs = d.es.toLowerCase(), DEs = cap(d.theEs);
+  const ruleOut =
+    by === "look"
+      ? tr(locale, `${d.en} does not look like this, so it is not ${dEn}.`, `${DEs} no se ve así, así que no es ${dEs}.`)
+      : by === "magnet"
+        ? d.magnet
+          ? tr(locale, `A magnet pulls ${dEn}, so it is not ${dEn}.`, `Un imán atrae ${d.theEs}, así que no es ${dEs}.`)
+          : tr(locale, `A magnet does not pull ${dEn}, so it is not ${dEn}.`, `Un imán no atrae ${d.theEs}, así que no es ${dEs}.`)
+        : by === "conducts"
+          ? tr(locale, `${d.en} ${d.conducts ? "conducts" : "does not conduct"} electricity, so it is not ${dEn}.`, `${DEs} ${d.conducts ? "conduce" : "no conduce"} la electricidad, así que no es ${dEs}.`)
+          : key.dissolves !== d.dissolves
+            ? tr(locale, `${d.en} ${d.dissolves ? "dissolves" : "does not dissolve"} in water, so it is not ${dEn}.`, `${DEs} ${d.dissolves ? "se disuelve" : "no se disuelve"} en agua, así que no es ${dEs}.`)
+            : d.dissolves
+              ? tr(locale, `${d.en} water ${d.water ? "conducts" : "does not conduct"} electricity, so it is not ${dEn}.`, `El agua con ${dEs} ${d.water ? "conduce" : "no conduce"} la electricidad, así que no es ${dEs}.`)
+              : tr(locale, `${d.en} ${d.water ? "floats" : "sinks"} in water, so it is not ${dEn}.`, `${DEs} ${d.water ? "flota" : "se hunde"} en el agua, así que no es ${dEs}.`);
   return {
     prompt: [q],
     say: q,
-    ...choose(r, opt(label(key)), others.map((m) => opt(label(m), firstDifference(key, m)))),
+    ...choose(r, opt(label(key)), others.map((m) => opt(label(m), ignored(ruledBy(m), key, m)))),
     hints: [
       tr(locale, "Check each choice against every test result.", "Compara cada opción con cada resultado."),
       tr(locale, "Each material has its own set of properties. The right one matches every result.", "Cada material tiene sus propias propiedades. El correcto coincide con todos los resultados."),
-      tr(locale, key.magnet ? "Magnets pull iron, but not aluminum or copper." : "A magnet did not pull it, so it is not iron.", key.magnet ? "Los imanes atraen el hierro, pero no el aluminio ni el cobre." : "El imán no lo atrajo, así que no es hierro."),
+      ruleOut,
     ],
     steps: [tr(locale, `Only ${key.en.toLowerCase()} matches every result.`, `Solo ${key.theEs} coincide con todos los resultados.`), tr(locale, `It is most likely ${key.en.toLowerCase()}.`, `Lo más probable es que sea ${key.es.toLowerCase()}.`)],
     seconds: 50,
@@ -270,10 +323,12 @@ export function earthWater(r: Rng, level: number, locale: Locale): ItemBody {
     const part = (i: number) => (FRESH_PARTS[i].share * fresh) / 100;
     const key = part(ask);
     const desc = (i: number) => tr(locale, FRESH_PARTS[i].en, FRESH_PARTS[i].es);
+    // Only the smallest share can come out as 1, and its place words stay the same for one.
+    const unasEs = (n: number) => (n === 1 ? "Más o menos 1 estaría" : `Unas ${fmt(n)} estarían`);
     const q = tr(
       locale,
       `Imagine all of Earth's fresh water in ${fmt(fresh)} ${many}. About ${fmt(part(a))} would be ${desc(a)}. About ${fmt(part(b))} would be ${desc(b)}. The rest would be ${desc(ask)}. How many ${many} is that?`,
-      `Imagina toda el agua dulce de la Tierra en ${fmt(fresh)} ${many}. Unas ${fmt(part(a))} estarían ${desc(a)}. Unas ${fmt(part(b))} estarían ${desc(b)}. Las demás estarían ${desc(ask)}. ¿Cuántas ${many} son?`,
+      `Imagina toda el agua dulce de la Tierra en ${fmt(fresh)} ${many}. ${unasEs(part(a))} ${desc(a)}. ${unasEs(part(b))} ${desc(b)}. ${key === 1 ? "La que queda estaría" : "Las demás estarían"} ${desc(ask)}. ¿Cuántas ${many} son?`,
     );
     return {
       prompt: [q],
@@ -290,7 +345,7 @@ export function earthWater(r: Rng, level: number, locale: Locale): ItemBody {
         tr(locale, "Add the parts you know. Subtract that sum from the total.", "Suma las partes que conoces. Resta esa suma del total."),
         `${fmt(part(a))} + ${fmt(part(b))} = ${fmt(part(a) + part(b))}`,
       ],
-      steps: [`${fmt(part(a))} + ${fmt(part(b))} = ${fmt(part(a) + part(b))}`, `${fmt(fresh)} − ${fmt(part(a) + part(b))} = ${fmt(key)}`, tr(locale, `About ${fmt(key)} ${many}.`, `Unas ${fmt(key)} ${many}.`)],
+      steps: [`${fmt(part(a))} + ${fmt(part(b))} = ${fmt(part(a) + part(b))}`, `${fmt(fresh)} − ${fmt(part(a) + part(b))} = ${fmt(key)}`, key === 1 ? tr(locale, `About 1 ${h.one[0]}.`, `Más o menos 1 ${h.one[1]}.`) : tr(locale, `About ${fmt(key)} ${many}.`, `Unas ${fmt(key)} ${many}.`)],
       seconds: 60,
     };
   }
@@ -302,8 +357,8 @@ export function earthWater(r: Rng, level: number, locale: Locale): ItemBody {
   const key = (share * fresh) / 100;
   const q = tr(
     locale,
-    `Imagine all of Earth's water as ${fmt(total)} drops. About 3 out of every 100 drops are fresh water. Of the fresh water, about ${share} out of every 100 drops are ${FRESH_PARTS[ask].en}. About how many drops is that?`,
-    `Imagina toda el agua de la Tierra como ${fmt(total)} gotas. Unas 3 de cada 100 gotas son de agua dulce. Del agua dulce, unas ${share} de cada 100 gotas están ${FRESH_PARTS[ask].es}. ¿Cuántas gotas son, más o menos?`,
+    `Imagine all of Earth's water as ${fmt(total)} drops. About 3 out of every 100 drops are fresh water. Of the fresh water, about ${share} out of every 100 drops ${share === 1 ? "is" : "are"} ${FRESH_PARTS[ask].en}. About how many drops is that?`,
+    `Imagina toda el agua de la Tierra como ${fmt(total)} gotas. Unas 3 de cada 100 gotas son de agua dulce. Del agua dulce, ${share === 1 ? "1 de cada 100 gotas está" : `unas ${share} de cada 100 gotas están`} ${FRESH_PARTS[ask].es}. ¿Cuántas gotas son, más o menos?`,
   );
   return {
     prompt: [q],

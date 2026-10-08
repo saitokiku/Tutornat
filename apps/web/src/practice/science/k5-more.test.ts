@@ -317,6 +317,8 @@ describe("s.weather.chart", () => {
     const pattern = /The first group is (\w+) days\. The second group is (\w+) days\./;
     eachItem("s.weather.chart", (en, es, level, where) => {
       const [a, b] = dotsOf(en);
+      // Counting is the task, so the picture's description never gives the counts.
+      for (const item of [en, es]) expect(item.alt, `${where} alt gives the counts`).not.toMatch(/\d/);
       const [, first, second] = pattern.exec(promptText(en))!;
       expect(first, where).not.toBe(second);
       if (level === 1) {
@@ -385,6 +387,23 @@ describe("s.habitat.survey", () => {
 });
 
 describe("s.climate.data", () => {
+  // Mean daily high temperatures (°F), 1991–2020 normals, for January, April, July and October:
+  // NOAA (Minneapolis–St. Paul and Chicago O'Hare airports), Environment Canada (Toronto Pearson,
+  // Montréal–Trudeau, Winnipeg airports), Argentina's SMN (Buenos Aires Observatorio Central) and
+  // Australia's BOM (Sydney Observatory Hill, Melbourne Olympic Park, Adelaide Kent Town).
+  const NORMALS: Record<string, [number, number, number, number]> = {
+    "Minneapolis, Minnesota": [23.6, 56.6, 83.4, 58.1],
+    "Chicago, Illinois": [31.6, 59.0, 84.5, 62.7],
+    "Toronto, Canada": [29.8, 53.6, 81.3, 58.3],
+    "Montreal, Canada": [23.0, 52.3, 80.1, 55.8],
+    "Winnipeg, Canada": [11.5, 50.0, 78.4, 50.7],
+    "Buenos Aires, Argentina": [86.2, 73.8, 59.9, 72.7],
+    "Sydney, Australia": [80.6, 74.5, 64.2, 73.8],
+    "Melbourne, Australia": [79.9, 69.8, 57.4, 67.6],
+    "Adelaide, Australia": [83.5, 72.5, 59.4, 71.1],
+  };
+  const SOUTH = new Set(["Buenos Aires, Argentina", "Sydney, Australia", "Melbourne, Australia", "Adelaide, Australia"]);
+
   it("keys the warmest, coldest, difference or climate type from the listed data, with seasons that fit the hemisphere", () => {
     eachItem("s.climate.data", (en, es, level, where) => {
       const text = promptText(en);
@@ -403,6 +422,11 @@ describe("s.climate.data", () => {
       const temps = Object.fromEntries([...text.matchAll(/(January|April|July|October) (\d+)°F/g)].map((m) => [m[1], Number(m[2])]));
       expect(Object.keys(temps).length, where).toBe(4);
       const south = /south of the equator/.test(text);
+      // Every temperature is within 2.5 °F of the real normal for the named city and month.
+      const place = /lives in (.+?)(?:, south of the equator)?\. Average high/.exec(text)![1];
+      expect(NORMALS[place], `${where} unknown place ${place}`).toBeDefined();
+      expect(south, `${where} ${place} hemisphere`).toBe(SOUTH.has(place));
+      ["January", "April", "July", "October"].forEach((m, i) => expect(Math.abs(temps[m] - NORMALS[place][i]), `${where} ${m} in ${place}`).toBeLessThanOrEqual(2.5));
       // Summer is in July north of the equator and in January south of it.
       if (south) expect(temps.January, where).toBeGreaterThan(temps.July);
       else expect(temps.July, where).toBeGreaterThan(temps.January);
@@ -412,6 +436,8 @@ describe("s.climate.data", () => {
       if (level === 1) {
         const warmest = /warmest\?$/.test(text);
         expect(keyLabel(en), where).toBe(warmest ? sorted[0][0] : sorted[3][0]);
+        // Month names are capitalized as choice labels in both languages.
+        for (const c of es.choices!) expect(c.label, where).toMatch(/^[A-Z]/);
         const july = en.choices!.find((c) => c.label === (warmest ? "July" : "January"));
         if (south && july && july.label !== keyLabel(en)) expect(july.why, where).toBe("assumed-northern-seasons");
       } else {
@@ -455,6 +481,9 @@ describe("s.wave.shape", () => {
   it("reads amplitude and wavelength from the drawn wave, and compares waves from their numbers", () => {
     eachItem("s.wave.shape", (en, es, level, where) => {
       const text = promptText(en);
+      // Water waves this steep would break; the waves travel along ropes and springs.
+      expect(text, `${where} water wave`).not.toMatch(/water|pool|tank/i);
+      expect(promptText(es), `${where} water wave`).not.toMatch(/agua|piscina|tanque|ola\b/i);
       if (level === 3) {
         const [a1, w1, a2, w2] = /Wave A has an amplitude of (\d+) \w+ and a wavelength of (\d+) \w+\. Wave B has an amplitude of (\d+) \w+ and a wavelength of (\d+) \w+\./
           .exec(text)!
@@ -491,37 +520,91 @@ describe("s.matter.mass", () => {
   // (60.05 g/mol), one acid per CO2.
   const CO2_PER_G_SODA = 44.01 / 84.01;
   const CO2_PER_G_VINEGAR = (0.05 / 60.05) * 44.01;
-  // Properties of each material, written independently: [magnet pulls it, conducts, dissolves, its water conducts].
-  const PROPS: Record<string, [boolean, boolean, boolean, boolean | null, RegExp]> = {
-    Iron: [true, true, false, null, /gray/],
-    Aluminum: [false, true, false, null, /silver/],
-    Copper: [false, true, false, null, /reddish-brown/],
-    Salt: [false, false, true, true, /white crystals/],
-    Sugar: [false, false, true, false, /white crystals/],
-    Chalk: [false, false, false, null, /white powder/],
+  // Properties of each material, written independently: a magnet pulls it, it conducts electricity,
+  // it dissolves in water, the water then conducts (dissolving ones), it floats (the others), and
+  // words that fit how it looks.
+  type Props = { magnet: boolean; conducts: boolean; dissolves: boolean; solution?: boolean; floats?: boolean; look: RegExp };
+  const PROPS: Record<string, Props> = {
+    Iron: { magnet: true, conducts: true, dissolves: false, floats: false, look: /gray metal/ },
+    Aluminum: { magnet: false, conducts: true, dissolves: false, floats: false, look: /silver metal/ },
+    Copper: { magnet: false, conducts: true, dissolves: false, floats: false, look: /reddish-brown metal/ },
+    Salt: { magnet: false, conducts: false, dissolves: true, solution: true, look: /white crystals/ },
+    Sugar: { magnet: false, conducts: false, dissolves: true, solution: false, look: /white crystals/ },
+    "Baking soda": { magnet: false, conducts: false, dissolves: true, solution: true, look: /white powder/ },
+    Chalk: { magnet: false, conducts: false, dissolves: false, floats: false, look: /dusty marks/ },
+    Wax: { magnet: false, conducts: false, dissolves: false, floats: true, look: /smooth/ },
+    Wood: { magnet: false, conducts: false, dissolves: false, floats: true, look: /light brown/ },
+    Glass: { magnet: false, conducts: false, dissolves: false, floats: false, look: /clear and hard/ },
+    Sand: { magnet: false, conducts: false, dissolves: false, floats: false, look: /tan grains/ },
+  };
+  type Seen = { magnet?: boolean; conducts?: boolean; dissolves?: boolean; solution?: boolean; floats?: boolean; look?: string };
+  /** The test results a learner reads in the prompt; a test that is not reported stays undefined. */
+  const seenIn = (text: string): Seen => {
+    const yes = (re: RegExp, no: RegExp) => (re.test(text) ? true : no.test(text) ? false : undefined);
+    return {
+      magnet: yes(/A magnet pulls it\./, /A magnet does not pull it\./),
+      conducts: yes(/(^|\. )It conducts electricity\./, /(^|\. )It does not conduct electricity\./),
+      dissolves: yes(/It dissolves in water/, /It does not dissolve in water/),
+      solution: yes(/then the water conducts/, /water still does not conduct/),
+      floats: yes(/and it floats\./, /and it sinks\./),
+      look: /(?:^|\. )(It is [^.]+)\./.exec(text)?.[1],
+    };
+  };
+  /** Which reported results `name` contradicts; empty when every reported result fits it. */
+  const misfits = (name: string, seen: Seen) => {
+    const p = PROPS[name];
+    const out: string[] = [];
+    for (const t of ["magnet", "conducts", "dissolves", "solution", "floats"] as const) if (seen[t] !== undefined && seen[t] !== p[t]) out.push(t);
+    if (seen.look !== undefined && !p.look.test(seen.look)) out.push("look");
+    return out;
+  };
+  const TAG_TEST: Record<string, string> = {
+    "ignored-how-it-looks": "look",
+    "ignored-magnet-test": "magnet",
+    "ignored-conductivity-test": "conducts",
+    "ignored-dissolving-test": "dissolves",
+    "ignored-solution-test": "solution",
+    "ignored-floating-test": "floats",
   };
 
-  it("conserves mass, finds escaped gas within what the reaction can make, and names the material every test fits", () => {
+  it("identifies a material from varied test results that rule out every wrong choice", () => {
+    const prompts = { en: new Set<string>(), es: new Set<string>() };
+    const keys = new Set<string>();
+    for (const seed of SEEDS) {
+      const en = makeItem("s.matter.mass", 3, seed, "en");
+      const es = makeItem("s.matter.mass", 3, seed, "es");
+      const where = `s.matter.mass L3 seed ${seed}`;
+      const text = promptText(en);
+      const seen = seenIn(text);
+      const key = keyLabel(en);
+      expect(misfits(key, seen), `${where} key ${key} does not fit: ${text}`).toEqual([]);
+      // At least one measured property is reported, not only how it looks.
+      expect(seen.magnet ?? seen.conducts ?? seen.dissolves, `${where} looks only: ${text}`).toBeDefined();
+      for (const c of en.choices!) {
+        if (c.label === key) continue;
+        const why = misfits(c.label, seen);
+        expect(why.length, `${where} ${c.label} also fits: ${text}`).toBeGreaterThan(0);
+        expect(why, `${where} ${c.label} tagged ${c.why}`).toContain(TAG_TEST[c.why!]);
+      }
+      // Hint 3 rules out a wrong choice that is shown, and never names the key.
+      const wrongNames = en.choices!.filter((c) => c.label !== key).map((c) => c.label.toLowerCase());
+      expect(wrongNames.some((n) => en.hints[2].toLowerCase().includes(n)), `${where} hint 3: ${en.hints[2]}`).toBe(true);
+      expect(en.hints[2].toLowerCase(), where).not.toContain(key.toLowerCase());
+      expect(es.hints[2].toLowerCase(), where).not.toContain(keyLabel(es).toLowerCase());
+      prompts.en.add(text);
+      prompts.es.add(promptText(es));
+      keys.add(key);
+    }
+    expect(keys.size, "materials used as keys").toBeGreaterThanOrEqual(10);
+    expect(prompts.en.size, "distinct English questions").toBeGreaterThanOrEqual(12);
+    expect(prompts.es.size, "distinct Spanish questions").toBeGreaterThanOrEqual(12);
+  });
+
+  it("conserves mass and finds escaped gas within what the reaction can make", () => {
     const kinds = new Set<string>();
     eachItem("s.matter.mass", (en, es, level, where) => {
       const text = promptText(en);
-      if (level === 3) {
-        const observed: [boolean, boolean, boolean, boolean | null] = [
-          /A magnet pulls it\./.test(text),
-          /It conducts electricity\./.test(text),
-          /It dissolves in water/.test(text),
-          /then the water conducts/.test(text) ? true : /water still does not conduct/.test(text) ? false : null,
-        ];
-        const look = /It is ([^.]+)\./.exec(text)![1];
-        const fits = (name: string) => {
-          const p = PROPS[name];
-          return p[0] === observed[0] && p[1] === observed[1] && p[2] === observed[2] && p[3] === observed[3] && p[4].test(look);
-        };
-        expect(fits(keyLabel(en)), `${where} key ${keyLabel(en)} does not fit`).toBe(true);
-        for (const c of en.choices!) if (c.label !== keyLabel(en)) expect(fits(c.label), `${where} ${c.label} also fits`).toBe(false);
-        kinds.add("identify");
-        return;
-      }
+      if (level === 3) return;
       const key = Number(keyLabel(en));
       let m: RegExpExecArray | null;
       if ((m = /stirs (\d+) grams of (sugar|salt) into (\d+) grams of water/.exec(text))) {
@@ -551,7 +634,7 @@ describe("s.matter.mass", () => {
         }
       } else throw new Error(`${where} unknown prompt: ${text}`);
     });
-    expect([...kinds].sort()).toEqual(["dissolve", "evaporate", "identify", "open", "rust", "sealed"]);
+    expect([...kinds].sort()).toEqual(["dissolve", "evaporate", "open", "rust", "sealed"]);
   });
 });
 
@@ -564,6 +647,8 @@ describe("s.earth.water", () => {
   it("uses the real shares, rounded, and keys each amount from the totals in the prompt", () => {
     eachItem("s.earth.water", (en, es, level, where) => {
       const text = promptText(en);
+      // A share or count of one takes the singular in both languages.
+      for (const t of [text, promptText(es), ...en.steps, ...es.steps]) expect(t, `${where} plural with one`).not.toMatch(/\b[Uu]nas 1(?![\d,])|(?<![\d,])1 (buckets|jugs|bottles|cups|cubetas|jarras|botellas|tazas|drops are|de cada 100 gotas están)\b/);
       const key = num(keyLabel(en));
       if (level === 1) {
         const total = num(/poured into ([\d,]+) /.exec(text)![1]);
@@ -580,7 +665,8 @@ describe("s.earth.water", () => {
         expect(new Set(parts.map(([, d]) => shareOf(d))).size, where).toBe(3);
       } else {
         const total = num(/water as ([\d,]+) drops/.exec(text)![1]);
-        const [, share, desc] = /about (\d+) out of every 100 drops are ([^.]+)\./.exec(text)!;
+        const [, share, verb, desc] = /about (\d+) out of every 100 drops (is|are) ([^.]+)\./.exec(text)!;
+        expect(verb, where).toBe(share === "1" ? "is" : "are");
         expect(Math.abs(Number(share) - USGS[shareOf(desc)]), where).toBeLessThan(0.5);
         expect(key * 100 * 100, where).toBe(total * 3 * Number(share));
       }
