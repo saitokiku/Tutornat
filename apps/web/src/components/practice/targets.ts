@@ -1,5 +1,5 @@
 /**
- * The shared read-aloud button draws 40 px. Practice needs 44 px targets, and 56 px for K–2 learners,
- * so every Hear in practice takes this size (the important flag beats the button's own size).
+ * Every Hear in practice is a full target: 44 px, and 56 px in the K–2 band. Sized from
+ * --spacing-target, so a 320 px screen never shrinks it (the important flag beats Hear's own size).
  */
-export const hearSize = (young?: boolean) => (young ? "size-14!" : "size-11!");
+export const HEAR = "size-target!";

@@ -5,7 +5,7 @@ import { IconMinus, IconPlus } from "@/components/icons";
 import { Hear } from "@/components/stage/hear";
 import { useT } from "@/i18n";
 import { angleAt, CLOCK_START, clockText, DEFAULT_PADS, handAngles, hourAt, minuteAt, stepHour, stepMinute, type ClockPadSettings } from "./pad-math";
-import { hearSize } from "./targets";
+import { HEAR } from "./targets";
 
 // Answer by setting the hands. Tap the face to move the chosen hand there, or use each hand's −/+
 // buttons, or focus a hand's number and use the arrow keys. Minutes snap to the pad's step; the hour
@@ -178,7 +178,7 @@ export function ClockPad({ pad = DEFAULT_PADS.clock, value, onChange, onSubmit, 
       {!touched && !disabled && (
         <div className="flex items-center justify-center gap-2">
           <p className={`text-center text-muted ${young ? "text-t3" : "text-sm"}`}>{t(minutesMove ? "pr.clock.how" : "pr.clock.howHour")}</p>
-          <Hear text={t(minutesMove ? "pr.clock.how" : "pr.clock.howHour")} className={hearSize(young)} />
+          <Hear text={t(minutesMove ? "pr.clock.how" : "pr.clock.howHour")} className={HEAR} />
         </div>
       )}
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-10">

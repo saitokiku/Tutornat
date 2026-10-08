@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, type Ref } from "react";
-import { IconX } from "@/components/icons";
-import { Hear } from "@/components/stage/hear";
+import { IconBackspace } from "@/components/icons";
+import { Hear, sentences } from "@/components/stage/hear";
 import { useT } from "@/i18n";
 import type { Choice, Input, Pad } from "@/practice/types";
 import { ClockPad } from "./ClockPad";
 import { FractionBarPad } from "./FractionBarPad";
 import { NumberLinePad } from "./NumberLinePad";
-import { hearSize } from "./targets";
+import { HEAR } from "./targets";
 
 // How a learner answers. Big targets, the physical keyboard works everywhere, nothing is drag-only.
 // Every pad reports a plain string (choices report the index), so the checker sees one shape.
@@ -21,6 +21,8 @@ type PadProps = {
   onSubmit: () => void;
   disabled?: boolean;
   young?: boolean;
+  /** False when the answer is written into the question's own blank: the readout is for screen readers only. */
+  readout?: boolean;
 };
 
 const KEY = "grid place-items-center rounded-md border border-border bg-panel font-opmono text-ink shadow-soft transition-colors hover:border-ink/30 active:bg-panel2 disabled:opacity-40";
@@ -43,7 +45,7 @@ function Keys({ onKey, extra, disabled, young, target }: { onKey: (k: string) =>
       {keys.map((k, i) =>
         k ? (
           <button key={i} type="button" disabled={disabled} onClick={() => onKey(k)} aria-label={name(k)} className={`${KEY} ${size} ${k === "⌫" ? "text-muted" : ""}`}>
-            {k === "-" ? "\u2212" : k === "⌫" ? <IconX size={20} /> : k}
+            {k === "-" ? "\u2212" : k === "⌫" ? <IconBackspace size={22} /> : k}
           </button>
         ) : (
           <span key={i} aria-hidden="true" />
@@ -115,7 +117,7 @@ const DIGITS_NEG = /^[0-9-]$/;
 const DIGITS_DOT = /^[0-9.]$/;
 const DIGITS_ALL = /^[0-9.-]$/;
 
-export function Keypad({ value, onChange, onSubmit, disabled, young, keys = [] }: PadProps & { keys?: ("-" | ".")[] }) {
+export function Keypad({ value, onChange, onSubmit, disabled, young, readout = true, keys = [] }: PadProps & { keys?: ("-" | ".")[] }) {
   const t = useT();
   const keypad = useRef<HTMLDivElement>(null);
   const press = (k: string) => onChange(apply(value, k));
@@ -127,8 +129,12 @@ export function Keypad({ value, onChange, onSubmit, disabled, young, keys = [] }
   }, onSubmit, allowed);
   return (
     <div className="mx-auto w-full max-w-xs space-y-3">
-      <output aria-live="polite" aria-label={t("practice.yourAnswer")} className={`flex items-center justify-center rounded-md border-2 border-ink/80 bg-panel px-4 font-opmono tabular-nums text-ink ${young ? "h-20 text-4xl" : "h-16 text-3xl"}`}>
-        {value ? value.replace("-", "−") : <span className="text-muted/50">?</span>}
+      <output
+        aria-live="polite"
+        aria-label={t("practice.yourAnswer")}
+        className={readout ? `flex items-center justify-center rounded-md border-2 border-ink/80 bg-panel px-4 font-brand font-semibold tabular-nums text-ink ${young ? "h-20 text-4xl" : "h-16 text-3xl"}` : "sr-only"}
+      >
+        {value ? value.replace("-", "−") : <span className="text-muted">?</span>}
       </output>
       <Keys onKey={press} extra={keys} disabled={disabled} young={young} target={keypad} />
     </div>
@@ -176,11 +182,11 @@ export function FractionPad({ value, onChange, onSubmit, disabled, young }: PadP
       aria-label={`${label}: ${parts[field] || t("practice.empty")}`}
       aria-pressed={focus === field}
       data-answer-target={focus === field ? "" : undefined}
-      className={`grid min-w-16 place-items-center rounded-md border-2 bg-panel px-3 font-opmono tabular-nums ${young ? "h-16 text-3xl" : "h-14 text-2xl"} ${
+      className={`grid min-w-16 place-items-center rounded-md border-2 bg-panel px-3 font-brand font-semibold tabular-nums ${young ? "h-16 text-3xl" : "h-14 text-2xl"} ${
         focus === field ? "border-accent text-ink" : "border-border text-ink"
       }`}
     >
-      {parts[field] ? parts[field].replace("-", "−") : <span className="text-muted/40">?</span>}
+      {parts[field] ? parts[field].replace("-", "−") : <span className="text-muted">?</span>}
     </button>
   );
   return (
@@ -242,9 +248,9 @@ export function RemainderPad({ value, onChange, onSubmit, disabled, young }: Pad
       aria-label={`${label}: ${text || t("practice.empty")}`}
       aria-pressed={focus === field}
       data-answer-target={focus === field ? "" : undefined}
-      className={`grid min-w-20 place-items-center rounded-md border-2 bg-panel px-3 font-opmono tabular-nums ${young ? "h-16 text-3xl" : "h-14 text-2xl"} ${focus === field ? "border-accent" : "border-border"}`}
+      className={`grid min-w-20 place-items-center rounded-md border-2 bg-panel px-3 font-brand font-semibold tabular-nums ${young ? "h-16 text-3xl" : "h-14 text-2xl"} ${focus === field ? "border-accent" : "border-border"}`}
     >
-      {text || <span className="text-muted/40">?</span>}
+      {text || <span className="text-muted">?</span>}
     </button>
   );
   return (
@@ -270,8 +276,9 @@ export function choiceForKey(choices: Pick<Choice, "label">[], key: string) {
 }
 
 /**
- * Tap to answer. Young learners can hear each choice first. Enter and Space press a focused tile.
- * After a right answer the tiles stay, disabled, with the chosen one at full strength.
+ * Tap to answer. Enter and Space press a focused tile. One speaker reads the choices in order (a
+ * speaker inside each tile left a child unsure whether a tap answers or reads). After a right answer
+ * the tiles stay, disabled, with the chosen one at full strength.
  */
 export function ChoiceTiles({ choices, onPick, disabled, young, picked }: { choices: Choice[]; onPick: (i: number) => void; disabled?: boolean; young?: boolean; picked?: number }) {
   const twoUp = choices.length <= 4 && choices.every((c) => c.label.length <= 24);
@@ -279,30 +286,37 @@ export function ChoiceTiles({ choices, onPick, disabled, young, picked }: { choi
     const i = choiceForKey(choices, k);
     if (i >= 0) onPick(i);
   }, undefined, /^[1-9]$/);
+  const spoken = choices.some((c) => c.say) ? sentences(...choices.map((c) => c.say ?? c.label)) : "";
   return (
-    <ul className={`grid gap-3 ${twoUp ? "grid-cols-2" : "grid-cols-1"}`}>
-      {choices.map((c, i) => (
-        <li key={i} className="relative">
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onPick(i)}
-            aria-pressed={picked === i}
-            className={`flex w-full items-center justify-center gap-3 rounded-md border-2 border-border bg-panel px-4 text-center text-ink shadow-soft transition-colors hover:border-ink/40 aria-pressed:border-accent aria-pressed:bg-accent/5 ${picked === i ? "" : "disabled:opacity-60"} ${
-              young ? "min-h-20 text-2xl" : "min-h-16 text-lg"
-            } ${c.say ? (young ? "pr-18" : "pr-14") : ""}`}
-          >
-            {c.picture && (
-              <span aria-hidden="true" className={young ? "text-4xl" : "text-3xl"}>
-                {c.picture}
-              </span>
-            )}
-            <span className="font-medium">{c.label}</span>
-          </button>
-          {c.say && <Hear text={c.say} className={`absolute right-2 top-1/2 -translate-y-1/2 ${hearSize(young)}`} />}
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-3">
+      <ul className={`grid gap-3 ${twoUp ? "grid-cols-2" : "grid-cols-1"}`}>
+        {choices.map((c, i) => (
+          <li key={i}>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(i)}
+              aria-pressed={picked === i}
+              className={`flex w-full items-center justify-center gap-3 rounded-md border-2 border-border bg-panel px-4 text-center text-ink shadow-soft transition-colors hover:border-ink/40 aria-pressed:border-accent aria-pressed:bg-accent/5 ${picked === i ? "" : "disabled:opacity-60"} ${
+                young ? "min-h-20 text-2xl" : "min-h-16 text-lg"
+              }`}
+            >
+              {c.picture && (
+                <span aria-hidden="true" className={young ? "text-4xl" : "text-3xl"}>
+                  {c.picture}
+                </span>
+              )}
+              <span className="font-medium tabular-nums">{c.label}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {spoken && (
+        <div className="flex justify-center">
+          <Hear text={spoken} className={HEAR} />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -333,7 +347,7 @@ export function TextAnswer({ value, onChange, onSubmit, disabled, algebra, label
         autoCapitalize="off"
         spellCheck={false}
         placeholder={algebra ? t("practice.algebraPlaceholder") : t("practice.textPlaceholder")}
-        className="k-input h-14 text-center font-opmono text-xl"
+        className="k-input h-14 text-center text-xl tabular-nums"
       />
       {algebra && (
         <div className="flex flex-wrap justify-center gap-2" role="group" aria-label={t("practice.symbols")}>

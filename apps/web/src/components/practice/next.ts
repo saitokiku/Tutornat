@@ -1,4 +1,4 @@
-import { t } from "@/i18n";
+import { t, type Key } from "@/i18n";
 import type { PracticeSet } from "@/learning/types";
 import { startPlanItem, todayPlan } from "@/lib/plan";
 import { nextSkillFor, startSet } from "@/lib/practice";
@@ -60,11 +60,22 @@ export function offerTitle(offer: Offer, locale: Locale): string {
 }
 
 /**
- * Starts what the learner chose and returns where to go: a practice set (keeping the way back to
- * Today when the set came from there) or a lesson. Null when there is nothing to start.
+ * Where a set's way back goes: where it was started. `from` is the set page's ?from=: "today", a school
+ * item ("event:<id>"), "talk", or nothing (the practice home).
  */
-export function startOffer(s: StoreState, learner: Profile, offer: Offer, fromToday: boolean, now: number): string | null {
+export function exitFor(from: string | null | undefined): { href: string; label: Key; from?: string } {
+  if (from === "today") return { href: "/home", label: "practice.backToday", from };
+  if (from?.startsWith("event:") && from.length > 6) return { href: `/calendar/${encodeURIComponent(from.slice(6))}`, label: "intake.backToItem", from };
+  if (from === "talk") return { href: "/talk", label: "pp.backTalk", from };
+  return { href: "/practice", label: "practice.backPractice" };
+}
+
+/**
+ * Starts what the learner chose and returns where to go: a practice set (keeping the way back to
+ * where the first set came from) or a lesson. Null when there is nothing to start.
+ */
+export function startOffer(s: StoreState, learner: Profile, offer: Offer, from: string | undefined, now: number): string | null {
   if (offer.kind === "plan" && offer.item.kind === "lesson" && offer.item.lesson) return `/learn/${offer.item.lesson.courseId}/${offer.item.lesson.lessonId}`;
   const id = offer.kind === "plan" ? startPlanItem(s, learner, offer.item, offer.date, now) : startSet(s, { profile: learner, kind: "pick", skillIds: [offer.skillId], now });
-  return id ? `/practice/${id}${fromToday ? "?from=today" : ""}` : null;
+  return id ? `/practice/${id}${from ? `?from=${encodeURIComponent(from)}` : ""}` : null;
 }

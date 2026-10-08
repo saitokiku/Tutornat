@@ -7,7 +7,8 @@ const INK = "var(--color-ink)";
 const MUTED = "var(--color-muted)";
 const LINE = "var(--color-border)";
 const EMPTY = "var(--color-panel2)";
-const MONO = "var(--font-opmono)";
+const BODY = "var(--font-body)";
+const FACE = "var(--font-brand)";
 
 type P = { alt: string; tint: string };
 
@@ -149,37 +150,44 @@ export function ArrayVisual({ rows, cols, alt, tint }: P & { rows: number; cols:
   );
 }
 
-/** Vertical arithmetic, digits right-aligned in columns, with an empty answer row. */
-export function ColumnVisual({ op, top, bottom, alt }: P & { op: string; top: number; bottom: number }) {
-  const digits = Math.max(String(top).length, String(bottom).length) + 1;
-  const cw = 24, w = (digits + 1) * cw + 16, row = 34;
-  const right = w - 12;
-  const num = (n: number, y: number) =>
-    String(n)
-      .split("")
-      .reverse()
-      .map((d, i) => (
-        <text key={i} x={right - i * cw - cw / 2} y={y} textAnchor="middle" fontSize="26" fill={INK} fontFamily={MONO}>
-          {d}
-        </text>
-      ));
+/**
+ * Vertical arithmetic, digits right-aligned in columns, the sign beside the widest number, and an answer
+ * row of wells. `value` is the answer being written (filled in from the ones place leftward, as on paper);
+ * `right` marks it right. The digits use the equation's face and weight, the numerals children write.
+ */
+export function ColumnVisual({ op, top, bottom, alt, value = "", right = false }: P & { op: string; top: number; bottom: number; value?: string; right?: boolean }) {
+  const wide = Math.max(String(top).length, String(bottom).length);
+  // Room for the answer: a carry on +, the same width on −, both lengths on ×.
+  const slots = Math.max(op === "+" ? wide + 1 : op === "×" ? String(top).length + String(bottom).length : wide, value.length);
+  const cols = Math.max(slots, wide + 1);
+  const cw = 26, row = 36, w = cols * cw + 12;
+  const edge = w - 6;
+  const x = (col: number) => edge - col * cw - cw / 2;
+  const digit = (d: string, col: number, y: number, fill = INK) => (
+    <text key={col} x={x(col)} y={y} textAnchor="middle" fontSize="27" fontWeight={600} fill={fill} fontFamily={FACE} style={{ fontVariantNumeric: "tabular-nums lining-nums" }}>
+      {d}
+    </text>
+  );
+  const num = (n: number, y: number) => String(n).split("").reverse().map((d, i) => digit(d, i, y));
+  const written = value.split("").reverse();
   return (
-    <svg viewBox={`0 0 ${w} ${row * 3 + 10}`} role="img" aria-label={alt} className="w-full" style={{ maxWidth: Math.min(w * 1.5, 260) }}>
+    <svg viewBox={`0 0 ${w} ${row * 3 + 12}`} role="img" aria-label={alt} className="w-full" style={{ maxWidth: Math.min(w * 1.6, 280) }}>
       {num(top, row)}
-      <text x={12} y={row * 2} fontSize="26" fill={INK} fontFamily={MONO}>
-        {op}
-      </text>
+      {digit(op, wide, row * 2)}
       {num(bottom, row * 2)}
-      <line x1={8} x2={right + 4} y1={row * 2 + 12} y2={row * 2 + 12} stroke={INK} strokeWidth={2.5} strokeLinecap="round" />
-      {Array.from({ length: digits }, (_, i) => (
-        <rect key={i} x={right - (i + 1) * cw + 3} y={row * 2 + 20} width={cw - 6} height={row - 6} rx={4} fill="none" stroke={LINE} strokeDasharray="3 3" />
+      <line x1={x(cols - 1) - cw / 2 + 2} x2={edge} y1={row * 2 + 12} y2={row * 2 + 12} stroke={INK} strokeWidth={2.5} strokeLinecap="round" />
+      {Array.from({ length: slots }, (_, i) => (
+        <g key={i}>
+          <rect x={x(i) - cw / 2 + 2} y={row * 2 + 19} width={cw - 4} height={row - 2} rx={5} fill={written[i] ? "var(--color-panel)" : EMPTY} stroke={LINE} />
+          {written[i] && digit(written[i], i, row * 3 + 9, right ? "var(--color-good)" : INK)}
+        </g>
       ))}
     </svg>
   );
 }
 
 const label = (x: number, y: number, text: string, anchor: "start" | "middle" | "end" = "middle") => (
-  <text x={x} y={y} textAnchor={anchor} fontSize="13" fill={INK} fontFamily={MONO}>
+  <text x={x} y={y} textAnchor={anchor} fontSize="13" fill={INK} fontFamily={BODY}>
     {text}
   </text>
 );
@@ -290,7 +298,7 @@ export function CoordVisual({ points, line, alt, tint }: P & { points: [number, 
       {ticks
         .filter((v) => v !== 0 && v % step === 0 && Math.abs(v) < lim)
         .map((v) => (
-          <g key={`l${v}`} fontSize="9" fill={MUTED} fontFamily={MONO}>
+          <g key={`l${v}`} fontSize="9" fill={MUTED} fontFamily={BODY}>
             <text x={X(v)} y={Y(0) + 12} textAnchor="middle">{v < 0 ? `−${-v}` : v}</text>
             <text x={X(0) - 4} y={Y(v) + 3} textAnchor="end">{v < 0 ? `−${-v}` : v}</text>
           </g>

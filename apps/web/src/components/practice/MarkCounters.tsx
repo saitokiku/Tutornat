@@ -6,7 +6,7 @@ import { Hear } from "@/components/stage/hear";
 import { crossPath, dotsPerRow } from "@/components/stage/visuals-practice";
 import { useT } from "@/i18n";
 import type { Visual } from "@/lib/types";
-import { hearSize } from "./targets";
+import { HEAR } from "./targets";
 
 // Tap-to-mark counting: the dots, ten-frame or array picture drawn large enough to touch, with a
 // button over every counter. Marking is a counting aid, not help: it never marks an answer as helped.
@@ -225,7 +225,7 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
         <p aria-live="polite" className={`text-ink ${young ? "text-t3" : "text-sm"}`}>
           {count ? t("pr.mark.count", { n: count }) : t("pr.mark.how")}
         </p>
-        {!count && <Hear text={t("pr.mark.how")} className={hearSize(young)} />}
+        {!count && <Hear text={t("pr.mark.how")} className={HEAR} />}
         {count > 0 && (
           <button
             type="button"

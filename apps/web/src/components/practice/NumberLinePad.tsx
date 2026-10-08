@@ -5,7 +5,7 @@ import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 import { useT } from "@/i18n";
 import { Hear } from "@/components/stage/hear";
 import { DEFAULT_PADS, labelsCrowded, linePoints, nearestPoint, pointOf, startPoint, type LinePad } from "./pad-math";
-import { hearSize } from "./targets";
+import { HEAR } from "./targets";
 
 // Answer by placing a point on a number line: tap anywhere on the (tall) line, or use the arrow keys
 // or the two step buttons. The response is the point's value ("-2", "3/4"), read by the checker.
@@ -85,7 +85,7 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
       {!placed && !disabled && (
         <div className="flex items-center justify-center gap-2">
           <p className={`text-center text-muted ${young ? "text-t3" : "text-sm"}`}>{t("pr.line.tap")}</p>
-          <Hear text={t("pr.line.tap")} className={hearSize(young)} />
+          <Hear text={t("pr.line.tap")} className={HEAR} />
         </div>
       )}
       <div

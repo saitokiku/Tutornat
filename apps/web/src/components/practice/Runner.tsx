@@ -8,6 +8,7 @@ import { useTitle } from "@/components/LangSync";
 import { SkillResources } from "@/components/resources/ResourceList";
 import { HearContext, Hear, speakText } from "@/components/stage/hear";
 import { VisualView } from "@/components/stage/visuals";
+import { ColumnVisual } from "@/components/stage/visuals-practice";
 import { StoreHealthNotice } from "@/components/gate";
 import { Badge, Button, SUBJECT_TINT, btn } from "@/components/ui";
 import { useT } from "@/i18n";
@@ -28,10 +29,10 @@ import type { Input, Item } from "@/practice/types";
 import { AnswerInput } from "./AnswerPad";
 import { isMarkable, MarkCounters } from "./MarkCounters";
 import { MathText } from "./MathText";
-import { nextOffer, offerTitle, planFinished, startOffer } from "./next";
+import { exitFor, nextOffer, offerTitle, planFinished, startOffer } from "./next";
 import { responseOf } from "./pad-math";
 import { SaveNotice } from "./SaveNotice";
-import { hearSize } from "./targets";
+import { HEAR } from "./targets";
 import { useTutorDock } from "./tutor-dock";
 
 type Feedback = { kind: "right" } | { kind: "notYet"; form?: Verdict["form"] } | null;
@@ -66,8 +67,9 @@ export const speakableSteps = (steps: string[]) => !steps.some((s) => /\d\s*\/\s
 export const isYoung = (p: Profile) => p.grade === "K" || p.grade === "1" || p.grade === "2";
 
 /** Plays one practice set: problems one at a time, help on request, corrections at the end, an honest finish. */
-export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: Profile; exitHref: string }) {
+export function Runner({ set, learner, from }: { set: PracticeSet; learner: Profile; from?: string | null }) {
   const t = useT();
+  const exit = exitFor(from);
   const young = isYoung(learner);
   const subjectTint = SUBJECT_TINT[set.subject];
   const silent = set.kind === "check" || set.kind === "placement";
@@ -239,6 +241,18 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     pad.current?.querySelector<HTMLElement>("[data-answer-target]")?.focus({ preventScroll: true });
   };
   const pressed = (e: PointerEvent) => void (pressedWith.current = e.pointerType);
+  const hintList = useRef<HTMLOListElement>(null);
+  const stepsBox = useRef<HTMLDivElement>(null);
+  /**
+   * Help just shown comes into view: on a short screen it would otherwise sit above, scrolled away, with
+   * only the keypad showing. A K–2 learner hears it too; screen readers get it from its live region.
+   */
+  const reveal = (box: () => Element | null | undefined, text: string) =>
+    requestAnimationFrame(() => {
+      const still = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      box()?.scrollIntoView?.({ block: "nearest", behavior: still ? "auto" : "smooth" });
+      if (young && text) speakText(text, learner.locale);
+    });
   /** Saves help before it shows. False when it wasn't saved, and then it doesn't show. */
   const saveHelp = (kind: "hint" | "steps", n?: number) => {
     if (!source) return false;
@@ -256,12 +270,14 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     setHints(hints + 1);
     helpAct("hint", String(hints + 1));
     toAnswer(e);
+    reveal(() => hintList.current?.lastElementChild, item?.hints[hints] ?? "");
   };
   const showSteps = (e: MouseEvent) => {
     if (!saveHelp("steps")) return;
     setSteps(true);
     helpAct("steps");
     toAnswer(e);
+    reveal(() => stepsBox.current, item && speakableSteps(item.steps) ? item.steps.join(" ") : "");
   };
 
   const submit = (response: string | number) => {
@@ -333,7 +349,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   if (done || (set.kind === "placement" && liveSet.finishedAt && hold === null))
     return (
       <HearContext.Provider value={{ hear: true, young, locale: learner.locale }}>
-        <Finish set={liveSet} learner={learner} tally={tally} answers={answers} exitHref={exitHref} draft={anyDraft} />
+        <Finish set={liveSet} learner={learner} tally={tally} answers={answers} exit={exit} draft={anyDraft} />
       </HearContext.Provider>
     );
   if (!item || index === undefined) return null;
@@ -344,24 +360,39 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   const primarySize = young ? "min-h-14 px-7 text-base" : "";
   // K–2 learners get 56 px targets on every action, not just the main one.
   const secondarySize = young ? "min-h-14 px-6 text-base" : "";
-  const hear = hearSize(young);
+  const hear = HEAR;
   const counting = item.markable && isMarkable(item.visual) ? item.visual : undefined;
+  const column = item.visual?.kind === "column" && item.input === "keypad" ? item.visual : undefined;
+  // A keypad answer is written where the question leaves its blank (and in a column sum's answer row),
+  // like on paper: one place the answer goes, so the keypad keeps no box of its own.
+  const inBlank = item.input === "keypad" && item.prompt.some((p) => typeof p !== "string" && "blank" in p);
+  const typed = value.replace("-", "−");
+  const blank = holding ? (typeof picked === "number" ? item.choices?.[picked]?.label : typed) : inBlank && value ? typed : undefined;
+  // What was marked "Not yet" stays on screen, struck through, until the next answer.
+  const missed = feedback?.kind === "notYet" && lastMiss !== undefined ? String(labelOf(lastMiss)).replace("-", "−") : undefined;
+  // Check and Hint stay pinned to the bottom of a phone screen while the pad scrolls under them, so a
+  // hint that pushes the pad down never pushes Check out of reach. Choice tiles answer themselves.
+  const pin =
+    item.input !== "choices"
+      ? "max-sm:sticky max-sm:bottom-0 max-sm:z-10 max-sm:-mx-4 max-sm:border-t max-sm:border-border max-sm:bg-paper max-sm:px-4 max-sm:py-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      : "";
   return (
     <HearContext.Provider value={{ hear: true, young, locale: learner.locale }}>
       <div className="min-h-dvh bg-paper">
         <header className="sticky top-0 z-10 border-b border-border bg-panel/95 backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2 sm:px-6">
-            <Link href={exitHref} aria-label={t("practice.exit")} className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
+            <Link href={exit.href} aria-label={t("practice.exit")} className="grid size-target shrink-0 place-items-center rounded-full text-muted hover:bg-panel2 hover:text-ink">
               <IconX size={20} />
             </Link>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-ink">{heading}</p>
-              <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
+              <p className="k-meta flex flex-wrap items-center gap-x-2">
                 <span>
                   {set.ai ? t("practice.aiQuestions") : t(KIND_LABEL[set.kind])}
                   {fixing ? ` · ${t("practice.fixThese")}` : ""}
                 </span>
-                {draft && <Badge>{t("practice.draft")}</Badge>}
+                {/* A pre-reader's screen carries no status words; the grown-up's line sits at the foot. */}
+                {draft && !young && <Badge>{t("practice.draft")}</Badge>}
               </p>
             </div>
             <Progress set={liveSet} answers={answers} index={index} />
@@ -381,10 +412,17 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
             </p>
           )}
           <section aria-labelledby="problem" className="rounded-lg border border-border bg-panel p-5 shadow-soft sm:p-8">
-            {item.visual && !counting && (
+            {column ? (
               <div className="mb-6 flex justify-center">
-                <VisualView visual={item.visual} alt={item.alt ?? ""} tint={subjectTint} />
+                <ColumnVisual {...column} alt={item.alt ?? ""} tint={subjectTint} value={holding || inBlank ? typed : undefined} right={holding} />
               </div>
+            ) : (
+              item.visual &&
+              !counting && (
+                <div className="mb-6 flex justify-center">
+                  <VisualView visual={item.visual} alt={item.alt ?? ""} tint={subjectTint} />
+                </div>
+              )
             )}
             {item.picture && (
               <div className="mb-4 flex justify-center">
@@ -396,7 +434,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
             <div className="flex items-start justify-center gap-3">
               <h1 id="problem" tabIndex={-1} className={`text-center font-brand font-semibold text-ink outline-none ${young ? "text-t1 sm:text-d3" : "text-t2 sm:text-t1"}`}>
                 <span className="sr-only">{t("practice.problemN", { n: index + 1, total: liveSet.slots.length })}. </span>
-                <MathText center parts={item.prompt} blank={holding ? <span className="font-opmono text-good">{typeof picked === "number" ? item.choices?.[picked]?.label : value}</span> : undefined} />
+                <MathText center parts={item.prompt} blank={blank} right={holding} />
               </h1>
               <Hear text={item.say} className={`mt-1 ${hear}`} />
             </div>
@@ -415,34 +453,49 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
                 </p>
               )}
               {feedback?.kind === "notYet" && (
-                <p className="font-medium text-ink">{feedback.form ? t(FORM_KEY[feedback.form]) : tries >= 2 ? t("practice.notYetSteps") : t("practice.notYet")}</p>
+                <p className="font-medium text-ink">
+                  {missed && (
+                    <>
+                      <s aria-hidden="true" className="mr-2 text-muted tabular-nums decoration-bad/70 decoration-2">
+                        {missed}
+                      </s>
+                      <span className="sr-only">{t("pp.tried", { answer: missed })} </span>
+                    </>
+                  )}
+                  <span>{feedback.form ? t(FORM_KEY[feedback.form]) : tries >= 2 ? t("practice.notYetSteps") : t("practice.notYet")}</span>
+                </p>
               )}
             </div>
           </section>
 
-          {hintText.length > 0 && !silent && (
-            <ol className="mt-4 space-y-2" aria-label={t("practice.hints")}>
-              {hintText.map((h, i) => (
-                <li key={i} className="flex items-start gap-3 rounded-md border border-border bg-panel2 px-4 py-3 text-sm text-ink">
-                  <IconLightbulb size={18} className="mt-0.5 shrink-0 text-warn" />
-                  <span className="min-w-0 flex-1">{h}</span>
-                  <Hear text={h} className={hear} />
-                </li>
-              ))}
-            </ol>
-          )}
-          {steps && !silent && (
-            <div className="mt-4 rounded-md border border-border bg-panel px-4 py-4">
-              <div className="flex items-start gap-3">
-                <p className="flex-1 text-sm font-semibold text-ink">{t("practice.howTitle")}</p>
-                {speakableSteps(item.steps) && <Hear text={item.steps.join(" ")} className={hear} />}
-              </div>
-              <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink">
-                {item.steps.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ol>
-              <p className="mt-2 text-xs text-muted">{t("pr.howNote")}</p>
+          {!silent && (
+            // Help is announced as it arrives (this live region) and brought into view (reveal).
+            <div aria-live="polite">
+              {hintText.length > 0 && (
+                <ol ref={hintList} className="mt-4 space-y-2" aria-label={t("practice.hints")}>
+                  {hintText.map((h, i) => (
+                    <li key={i} className="flex scroll-mt-24 scroll-mb-28 items-start gap-3 rounded-md border border-border bg-panel2 px-4 py-3 text-sm text-ink">
+                      <IconLightbulb size={18} className="mt-0.5 shrink-0 text-warn" />
+                      <span className="min-w-0 flex-1 self-center">{h}</span>
+                      <Hear text={h} className={hear} />
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {steps && (
+                <div ref={stepsBox} className="mt-4 scroll-mt-24 scroll-mb-28 rounded-md border border-border bg-panel px-4 py-4">
+                  <div className="flex items-start gap-3">
+                    <p className="flex-1 text-sm font-semibold text-ink">{t("practice.howTitle")}</p>
+                    {speakableSteps(item.steps) && <Hear text={item.steps.join(" ")} className={hear} />}
+                  </div>
+                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink">
+                    {item.steps.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ol>
+                  <p className="mt-2 text-xs text-muted">{t("pr.howNote")}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -458,6 +511,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
               value={value}
               picked={picked}
               disabled={holding}
+              readout={!inBlank}
               onChange={(v) => {
                 setValue(v);
                 if (feedback?.kind === "notYet") setFeedback(null);
@@ -470,8 +524,8 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
               young={young}
               label={t("practice.yourAnswer")}
             />
-            {holding ? (
-              <div className="mt-5 flex justify-center">
+            <div className={`mt-5 flex flex-wrap items-center justify-center gap-2 ${pin}`}>
+              {holding ? (
                 <NextButton
                   label={t("practice.next")}
                   className={primarySize}
@@ -480,37 +534,39 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
                     setFeedback(null);
                   }}
                 />
-              </div>
-            ) : (
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                {item.input !== "choices" && (
-                  <Button onClick={() => submit(response)} disabled={!response.trim()} className={`min-w-36 ${primarySize}`}>
-                    {silent ? t("practice.answer") : t("practice.check")}
-                  </Button>
-                )}
-                {!silent && hints < item.hints.length && (
-                  <Button variant="secondary" onPointerDown={pressed} onClick={takeHint} className={secondarySize}>
-                    <IconLightbulb size={16} /> {hints === 0 ? t("practice.hint") : t("practice.anotherHint")}
-                  </Button>
-                )}
-                {!silent && !steps && (tries >= 2 || hints >= item.hints.length) && (
-                  <Button variant="secondary" onPointerDown={pressed} onClick={showSteps} className={secondarySize}>
-                    {t("practice.showHow")}
-                  </Button>
-                )}
-                {!silent && (
-                  <Button variant="ghost" onClick={askTutor} className={secondarySize}>
-                    <IconChat size={16} /> {t("practice.askTutor")}
-                  </Button>
-                )}
-                {!silent && (
-                  <Button variant="ghost" onClick={skip} className={secondarySize}>
-                    {fixing ? t("practice.giveUp") : t("practice.skip")}
-                  </Button>
-                )}
+              ) : (
+                <>
+                  {item.input !== "choices" && (
+                    <Button onClick={() => submit(response)} disabled={!response.trim()} className={`min-w-28 max-sm:flex-1 sm:min-w-36 ${primarySize}`}>
+                      {silent ? t("practice.answer") : t("practice.check")}
+                    </Button>
+                  )}
+                  {!silent && hints < item.hints.length && (
+                    <Button variant="secondary" onPointerDown={pressed} onClick={takeHint} className={`max-sm:flex-1 ${secondarySize}`}>
+                      <IconLightbulb size={16} /> {hints === 0 ? t("practice.hint") : t("practice.anotherHint")}
+                    </Button>
+                  )}
+                  {!silent && !steps && (tries >= 2 || hints >= item.hints.length) && (
+                    <Button variant="secondary" onPointerDown={pressed} onClick={showSteps} className={`max-sm:flex-1 ${secondarySize}`}>
+                      {t("practice.showHow")}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+            {!holding && !silent && (
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <Button variant="ghost" onClick={askTutor} className={secondarySize}>
+                  <IconChat size={16} /> {t("practice.askTutor")}
+                </Button>
+                <Button variant="ghost" onClick={skip} className={secondarySize}>
+                  {fixing ? t("practice.giveUp") : t("practice.skip")}
+                </Button>
               </div>
             )}
           </div>
+          {/* The honesty line for the grown-up beside a pre-reader: quiet, at the foot, never on the child's work. */}
+          {draft && young && <p className="k-meta mt-12 text-center">{t("pr.finish.draft")}</p>}
         </main>
       </div>
     </HearContext.Provider>
@@ -548,7 +604,7 @@ function Progress({ set, answers, index }: { set: PracticeSet; answers: { seed: 
           return <li key={s.seed} className={`size-2.5 rounded-full ${cls}`} />;
         })}
       </ol>
-      <span className="font-opmono text-xs tabular-nums text-muted">{t("practice.count", { n: Math.min(done + 1, set.slots.length), total: set.slots.length })}</span>
+      <span className="k-meta whitespace-nowrap">{t("practice.count", { n: Math.min(done + 1, set.slots.length), total: set.slots.length })}</span>
     </div>
   );
 }
@@ -565,14 +621,14 @@ function Finish({
   learner,
   tally,
   answers,
-  exitHref,
+  exit,
   draft,
 }: {
   set: PracticeSet;
   learner: Profile;
   tally: { own: number; help: number; missed: number };
   answers: { seconds: number; seed: number; skillId: string; level: number }[];
-  exitHref: string;
+  exit: ReturnType<typeof exitFor>;
   draft: boolean;
 }) {
   const t = useT();
@@ -580,7 +636,7 @@ function Finish({
   const young = isYoung(learner);
   const settings = settingsOf(learner);
   const skill = getSkill(set.skillId);
-  const fromToday = exitHref === "/home";
+  const fromToday = exit.from === "today";
   const heading = useRef<HTMLHeadingElement>(null);
   const [now] = useState(() => Date.now());
   const offer = useStore((s) => nextOffer(s, learner, set, now));
@@ -616,12 +672,12 @@ function Finish({
   const start = () => {
     if (!offer) return;
     setStarting(true);
-    const href = startOffer(read(), learner, offer, fromToday, Date.now());
+    const href = startOffer(read(), learner, offer, exit.from, Date.now());
     if (href) router.push(href);
     else setStarting(false);
   };
   const big = young ? "min-h-14 px-7 text-base" : "";
-  const hear = hearSize(young);
+  const hear = HEAR;
 
   return (
     <main className="mx-auto max-w-xl px-4 py-12 sm:py-20">
@@ -642,7 +698,7 @@ function Finish({
             <div key={k as string} className="flex items-center gap-3 px-5 py-3.5">
               <span aria-hidden="true" className={`size-2.5 rounded-full ${dot}`} />
               <dt className="flex-1 text-sm text-ink">{t(k as Key)}</dt>
-              <dd className="font-opmono text-sm tabular-nums text-ink">{v as number}</dd>
+              <dd className="font-brand text-t3 font-semibold tabular-nums text-ink">{v as number}</dd>
             </div>
           ))}
         </dl>
@@ -677,8 +733,8 @@ function Finish({
           planDone && <p className="mt-2 text-sm text-ink">{t("pr.finish.planDone")}</p>
         )}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href={exitHref} className={btn("ghost", "md", big)}>
-            {fromToday ? t("practice.backToday") : t("practice.backPractice")}
+          <Link href={exit.href} className={btn("ghost", "md", big)}>
+            {t(exit.label)}
           </Link>
           {practiceSet && skill && (
             <Link href={`/practice?again=${encodeURIComponent(skill.id)}`} className={btn("ghost", "md", big)}>
@@ -712,9 +768,4 @@ function fromAi(q: { prompt: string; choices: string[]; answer: number; hints: s
     steps: [q.explain],
     seconds: 30,
   };
-}
-
-/** A practice set started from anywhere: creates the set and returns its URL. */
-export function setHref(setId: string, from?: "today" | "practice") {
-  return `/practice/${setId}${from === "today" ? "?from=today" : ""}`;
 }

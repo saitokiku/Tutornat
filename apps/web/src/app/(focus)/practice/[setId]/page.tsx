@@ -22,7 +22,7 @@ export default function PracticeSetPage() {
     );
   return (
     <TutorDrawer learner={learner} surface="practice">
-      <Runner key={set.id} set={set} learner={learner} exitHref={from === "today" ? "/home" : "/practice"} />
+      <Runner key={set.id} set={set} learner={learner} from={from} />
     </TutorDrawer>
   );
 }
