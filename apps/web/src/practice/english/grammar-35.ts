@@ -608,7 +608,7 @@ const ES_CMP2: Cmp[] = [
   ["Tengo más fiebre que el lunes. Hoy me siento ___ que el lunes.", "mal", "peor", [["mejor", "reversed-comparison"], ["más peor", "doubled-comparison"]], "Hoy hay más fiebre que el lunes, y la palabra es mal."],
   ["Este es el ___ libro que he leído.", "bueno", "mejor", [["más bueno", "mas-bueno-for-mejor"], ["más mejor", "doubled-comparison"]], "Este libro se compara con todos los que he leído, y la palabra es bueno."],
   ["La segunda canción fue ___ que la primera.", "buena", "mejor", [["más mejor", "doubled-comparison"], ["más buena", "mas-bueno-for-mejor"]], "Se comparan dos canciones, y la palabra es buena."],
-  ["En mi familia, nadie tiene más años que mi abuelo. Es el ___ de la familia.", "grande|edad", "mayor", [["más mayor", "doubled-comparison"], ["menor", "reversed-comparison"]], "Se compara la edad del abuelo con la de todos los demás de la familia."],
+  ["Tomás tiene doce años, y sus hermanos tienen siete y nueve. Es el ___ de los tres.", "grande|edad", "mayor", [["más mayor", "doubled-comparison"], ["menor", "reversed-comparison"]], "Compara doce años con siete y con nueve."],
   ["Sofía tiene cinco años, y sus hermanas tienen ocho y diez. Es la ___ de las tres.", "pequeña|edad", "menor", [["más menor", "doubled-comparison"], ["mayor", "reversed-comparison"]], "Compara cinco años con ocho y con diez."],
   ["Las fresas de este mercado son ___ que las del otro.", "buenas|plural", "mejores", [["mejor", "number-agreement-slip"], ["más mejores", "doubled-comparison"]], "Se comparan dos mercados. Fresas es plural."],
   ["Este pastel me salió ___ que el de la semana pasada.", "bien", "mejor", [["más bien", "mas-bien-for-mejor"], ["más mejor", "doubled-comparison"]], "Se comparan dos pasteles, y la palabra es bien."],
@@ -1525,8 +1525,8 @@ const PREPOSITIONS: Level[] = [
   {
     ask: bi("Which word is the preposition?", "¿Qué palabra es la preposición?"),
     hints: bi(
-      ["A preposition shows where, when, or how something is, compared with a noun.", "A preposition comes right before a noun and links it to the rest of the sentence, as in toward the door, against the wall, or through the rain. Nouns and action words do not do that job."],
-      ["Una preposición es la palabra que une un sustantivo y la oración; dice dónde, cuándo o cómo.", "Siempre la sigue un sustantivo: ante la puerta, contra la pared, tras la lluvia. Los sustantivos y los verbos no hacen ese trabajo."],
+      ["A preposition shows where, when, or how something is, compared with a noun.", "A preposition comes before a noun and links it to the rest of the sentence: toward the door, against the wall, through the rain. Words like the, my, or big can stand next to the noun. Nouns and action words do not do that job."],
+      ["Una preposición une un sustantivo y las demás palabras; dice dónde, cuándo o cómo.", "Luego viene un sustantivo, que puede llevar antes palabras como la o mi: ante la puerta, contra la pared, tras la lluvia. Los sustantivos y los verbos no hacen ese trabajo."],
     ),
     seconds: 15,
     bank: pair(EN_PREP1.map(prepQ("en", false)), ES_PREP1.map(prepQ("es", false))),

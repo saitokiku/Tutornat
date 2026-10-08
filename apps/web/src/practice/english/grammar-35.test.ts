@@ -454,8 +454,10 @@ describe("answer keys, checked another way (grade 3)", () => {
     for (const e of picks("e.comparatives", 2, "es")) {
       const [word, ...flags] = e[5]!.split("|");
       if (["grande", "grandes", "pequeño", "pequeña"].includes(word)) expect(flags, e[0]).toContain("edad");
-      // mayor or menor can only be decided when the sentence gives the ages (or says nobody is older).
-      if (flags.includes("edad")) expect((e[0].match(/\b(cinco|seis|siete|ocho|nueve|diez|once|doce)\b/g) ?? []).length >= 2 || /nadie tiene más años/.test(e[0]), e[0]).toBe(true);
+      // mayor or menor can only be decided when the sentence gives the ages. They are children's ages, so mayor
+      // never means "elderly", the one sense in which the RAE accepts "más mayor".
+      if (flags.includes("edad")) expect((e[0].match(/\b(cinco|seis|siete|ocho|nueve|diez|once|doce)\b/g) ?? []).length, e[0]).toBeGreaterThanOrEqual(2);
+      if (flags.includes("edad")) expect(e[0], e[0]).not.toMatch(/abuel/);
       expect(keyOf(e), e[0]).toBe(ES_IRR[word] + (flags.includes("plural") ? "es" : ""));
     }
   });
