@@ -88,6 +88,21 @@ const FIXTURES = {
     v("Google español", "es-ES", false),
     v("Google español de Estados Unidos", "es-US", false),
   ],
+  // Firefox on a Windows PC set up for Canada, the UK, Australia, India and Ireland, online voices off:
+  // every one is the old desktop generation.
+  winFirefoxIntl: [
+    v("Microsoft Linda - English (Canada)", "en-CA"),
+    v("Microsoft Richard - English (Canada)", "en-CA"),
+    v("Microsoft Susan - English (United Kingdom)", "en-GB"),
+    v("Microsoft Hazel Desktop - English (Great Britain)", "en-GB"),
+    v("Microsoft Catherine - English (Australia)", "en-AU"),
+    v("Microsoft James - English (Australia)", "en-AU"),
+    v("Microsoft Heera - English (India)", "en-IN"),
+    v("Microsoft Ravi - English (India)", "en-IN"),
+    v("Microsoft Sean - English (Ireland)", "en-IE"),
+    v("Microsoft Raul - Spanish (Mexico)", "es-MX"),
+    v("Microsoft Clara Online (Natural) - English (Canada)", "en-CA", false),
+  ],
   // Chrome on Android: the phone's own Google TTS voices, local.
   android: [
     v("English United States", "en-US", true, "English United States"),
@@ -125,6 +140,11 @@ const ROWS: Row[] = [
   ["winChrome", "en", true, "Google US English", "B"],
   ["winChrome", "es", true, "Google español de Estados Unidos", "B"],
   ["winChrome", "en", false, null, null],
+  // Outside en-US on Windows the desktop voices are robots too: text only, never Linda or Susan.
+  ["winFirefoxIntl", "en", false, null, null],
+  ["winFirefoxIntl", "es", false, null, null],
+  // Online allowed: the natural Canadian voice reads on a tap (Tier A is en-US only).
+  ["winFirefoxIntl", "en", true, "Microsoft Clara Online (Natural) - English (Canada)", "B"],
   ["android", "en", false, "English United States", "A", ANDROID],
   ["android", "es", false, "Spanish United States", "A", ANDROID],
   ["chromeOs", "en", true, "Google US English", "B"],
@@ -143,7 +163,7 @@ describe("the browser voice picker", () => {
       for (const locale of ["en", "es"] as const)
         for (const p of rankVoices(list, locale, { online: true, userAgent: DESKTOP })) {
           expect(p.voice.name).not.toMatch(/^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Albert|Zarvox|Bad News|Fred|Junior|Kathy|Ralph)\b/);
-          expect(p.voice.name).not.toMatch(/^Microsoft (David|Mark|Zira|Sabina|Helena) -/);
+          expect(p.voice.name).not.toMatch(/^Microsoft \S+( Desktop)? -/);
           expect(p.voice.name).not.toMatch(/^Chrome OS/);
         }
   });

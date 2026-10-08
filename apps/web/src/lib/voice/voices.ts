@@ -24,14 +24,16 @@ const baseName = (v: VoiceLike) => v.name.replace(/\s*\(.*$/, "").trim();
 
 // ---- Tier C: never
 
-const SAPI = /^Microsoft (David|Mark|Zira|Sabina|Helena|Hazel|George|Pablo|Laura|Raul)\b/;
+// Every Windows desktop voice ("Microsoft Linda - English (Canada)", "Microsoft David Desktop - …") is
+// the same old OneCore/SAPI generation; only the "Online (Natural)" ones are natural.
+const SAPI = /^Microsoft \S+( Desktop)? - /;
 const NOVELTY = new Set(
   "Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Fred|Good News|Jester|Junior|Kathy|Organ|Ralph|Superstar|Trinoids|Whisper|Wobble|Zarvox".split("|"),
 );
 const ELOQUENCE = new Set("Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley".split("|"));
 
 function isTierC(v: VoiceLike): boolean {
-  if (SAPI.test(v.name) && !/Online/.test(v.name)) return true;
+  if (SAPI.test(v.name) && !/Online|Natural/.test(v.name)) return true;
   const base = baseName(v);
   return NOVELTY.has(base) || ELOQUENCE.has(base) || /^Chrome OS\b/.test(v.name);
 }
