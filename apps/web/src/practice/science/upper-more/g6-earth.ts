@@ -17,8 +17,8 @@ const COLD_DRY = bi("Cold and dry", "Fría y seca");
 export const AIR_MASSES: Bank = {
   nudge: bi("Where did the air come from, and which air is moving into which?", "¿De dónde vino el aire y cuál aire avanza sobre cuál?"),
   strategy: bi(
-    "Air takes on the traits of where it forms: over oceans it is humid, over land it is dry, near the poles it is cold, near the tropics it is warm. At a front, the warmer air always rises over the colder air.",
-    "El aire toma las características del lugar donde se forma: sobre el océano es húmedo, sobre la tierra es seco, cerca de los polos es frío y cerca de los trópicos es cálido. En un frente, el aire más cálido siempre sube sobre el más frío.",
+    "Ask where the air formed: over water or over land, and nearer the poles or the tropics. Each answer sets one of its traits. At a boundary, ask which air is moving in and how quickly it lifts the other air.",
+    "Pregúntate dónde se formó el aire: sobre agua o sobre tierra, y más cerca de los polos o de los trópicos. Cada respuesta define uno de sus rasgos. En un límite, pregúntate qué aire está llegando y qué tan rápido levanta al otro.",
   ),
   seconds: 25,
   items: [
@@ -26,7 +26,7 @@ export const AIR_MASSES: Bank = {
       bi("What is an air mass?", "¿Qué es una masa de aire?"),
       bi("A huge body of air with about the same temperature and humidity throughout", "Un gran volumen de aire con casi la misma temperatura y humedad en todas sus partes"),
       [
-        m("confused-air-mass-and-front", "A narrow boundary where two kinds of air meet", "Un límite angosto donde se encuentran dos tipos de aire"),
+        m("confused-air-mass-and-front", "A narrow boundary line where two kinds of air with different temperatures meet", "Una franja angosta donde se encuentran dos tipos de aire con distinta temperatura y humedad"),
         m("confused-air-mass-and-jet-stream", "A fast wind high in the sky that circles the planet", "Un viento rápido en lo alto del cielo que rodea el planeta"),
         m("thinks-air-mass-is-a-cloud", "A large cloud that brings rain", "Una nube grande que trae lluvia"),
       ],
@@ -67,27 +67,27 @@ export const AIR_MASSES: Bank = {
       [
         m("confused-air-mass-and-front", "The center of a single air mass", "El centro de una sola masa de aire"),
         m("thinks-front-means-direction", "The direction an air mass comes from", "La dirección de donde viene una masa de aire"),
-        m("confused-air-mass-and-jet-stream", "A narrow river of fast wind high in the sky", "Un río angosto de viento rápido en lo alto del cielo"),
+        m("confused-air-mass-and-jet-stream", "A narrow river of fast wind high in the sky, above the clouds", "Un río angosto de viento rápido en lo alto del cielo, sobre las nubes"),
       ],
       bi("Fronts are drawn as lines on weather maps.", "Los frentes se dibujan como líneas en los mapas del tiempo."),
       bi("A front is where two air masses with different temperatures and humidity meet. Most changes in weather happen along fronts.", "Un frente es donde se encuentran dos masas de aire con distinta temperatura y humedad. La mayoría de los cambios de tiempo ocurren a lo largo de los frentes."),
     ),
     e(
       bi("A cold front is arriving. Which weather is most likely as it passes?", "Se acerca un frente frío. ¿Qué tiempo es más probable cuando pase?"),
-      bi("Tall clouds, thunderstorms, and heavy rain for a short time", "Nubes altas, tormentas eléctricas y lluvia fuerte por poco tiempo"),
+      bi("Tall clouds, thunderstorms, and heavy rain for a short time", "Nubes de tormenta, tormentas eléctricas y lluvia fuerte por poco tiempo"),
       [
         m("cold-warm-front-mixup", "Layers of low clouds and light, steady rain for a day or two", "Capas de nubes bajas y lluvia ligera y constante durante uno o dos días"),
         m("thinks-fronts-bring-no-weather", "Clear skies with no change at all", "Cielo despejado sin ningún cambio"),
         m("cold-stationary-front-mixup", "Clouds and drizzle that stay in place for a week", "Nubes y llovizna que se quedan en el mismo lugar una semana"),
       ],
       bi("Cold air moves in fast and shoves the warm air straight up.", "El aire frío avanza rápido y empuja el aire cálido hacia arriba de golpe."),
-      bi("At a cold front, dense cold air pushes under warm air and forces it up quickly. The rising air builds tall clouds and short, strong storms.", "En un frente frío, el aire frío y denso se mete debajo del aire cálido y lo obliga a subir rápido. El aire que sube forma nubes altas y tormentas cortas y fuertes."),
+      bi("At a cold front, dense cold air pushes under warm air and forces it up quickly. The rising air builds tall clouds and short, strong storms.", "En un frente frío, el aire frío y denso se mete debajo del aire cálido y lo obliga a subir rápido. El aire que sube forma nubes de gran desarrollo vertical y tormentas cortas y fuertes."),
     ),
     e(
       bi("A warm front is arriving. Which weather is most likely?", "Se acerca un frente cálido. ¿Qué tiempo es más probable?"),
       bi("Layers of clouds and light, steady rain that can last a day or more", "Capas de nubes y lluvia ligera y constante que puede durar un día o más"),
       [
-        m("cold-warm-front-mixup", "A short burst of thunderstorms, then cooler air", "Una racha corta de tormentas y luego aire más fresco"),
+        m("cold-warm-front-mixup", "A short burst of strong thunderstorms, then cooler, drier air behind it", "Una racha corta de tormentas fuertes y luego aire más fresco y seco detrás"),
         m("thinks-fronts-bring-no-weather", "Clear skies and no clouds", "Cielo despejado y sin nubes"),
         m("mixed-up-air-properties", "Colder, drier air right away", "Aire más frío y seco de inmediato"),
       ],
@@ -96,7 +96,7 @@ export const AIR_MASSES: Bank = {
     ),
     e(
       bi("After a cold front passes, what is the air usually like?", "Después de que pasa un frente frío, ¿cómo suele ser el aire?"),
-      bi("Cooler and drier, with clearing skies", "Más fresco y seco, con cielo que se despeja"),
+      bi("Cooler and drier", "Más fresco y seco"),
       [
         m("cold-warm-front-mixup", "Warmer and more humid", "Más cálido y húmedo"),
         m("thinks-fronts-bring-no-weather", "The same as before the front", "Igual que antes del frente"),
@@ -128,14 +128,14 @@ export const AIR_MASSES: Bank = {
     ),
     e(
       bi("Why does a cold front often cause thunderstorms?", "¿Por qué un frente frío suele causar tormentas eléctricas?"),
-      bi("Cold, dense air pushes warm, moist air up fast; the rising air cools and its water vapor condenses.", "El aire frío y denso empuja hacia arriba al aire cálido y húmedo; el aire que sube se enfría y su vapor de agua se condensa."),
+      bi("Warm, moist air is pushed up fast, cools, and its water vapor condenses.", "El aire cálido y húmedo sube rápido, se enfría y su vapor de agua se condensa."),
       [
         m("thinks-warm-air-sinks", "Warm air sinks under the cold air and heats the ground.", "El aire cálido baja debajo del aire frío y calienta el suelo."),
-        m("thinks-cold-air-holds-more-water", "Cold air holds more water vapor, so it rains as it arrives.", "El aire frío contiene más vapor de agua, así que llueve cuando llega."),
+        m("thinks-cold-air-holds-more-water", "Cold air holds more water vapor than warm air, so it rains as soon as it arrives.", "El aire frío contiene más vapor de agua que el cálido, así que llueve en cuanto llega."),
         m("thinks-fronts-bring-no-weather", "The front itself is a giant storm cloud.", "El frente mismo es una nube de tormenta gigante."),
       ],
       bi("Clouds form when air rises and cools.", "Las nubes se forman cuando el aire sube y se enfría."),
-      bi("Fast-rising warm, moist air cools quickly, so its water vapor condenses into tall storm clouds.", "El aire cálido y húmedo que sube rápido se enfría pronto, así que su vapor de agua se condensa en nubes altas de tormenta."),
+      bi("Fast-rising warm, moist air cools quickly, so its water vapor condenses into tall storm clouds.", "El aire cálido y húmedo que sube rápido se enfría pronto, así que su vapor de agua se condensa en nubes de tormenta de gran desarrollo vertical."),
     ),
     e(
       bi("Across most of the United States, in which direction do weather systems usually move?", "En la mayor parte de Estados Unidos, ¿en qué dirección suelen moverse los sistemas de tiempo?"),
@@ -171,8 +171,8 @@ const METAMORPHIC = bi("Metamorphic rock", "Roca metamórfica");
 export const ROCK_CYCLE: Bank = {
   nudge: bi("Which process is acting here: melting, cooling, breaking, settling, pressing, or heating without melting?", "¿Qué proceso actúa aquí: fundirse, enfriarse, romperse, depositarse, compactarse o calentarse sin fundirse?"),
   strategy: bi(
-    "Igneous rock forms when melted rock cools. Sedimentary rock forms when bits of rock are pressed and cemented. Metamorphic rock forms when heat and pressure change a rock without melting it.",
-    "La roca ígnea se forma cuando la roca fundida se enfría. La roca sedimentaria se forma cuando pedazos de roca se compactan y se cementan. La roca metamórfica se forma cuando el calor y la presión cambian una roca sin fundirla.",
+    "Find the process in the question first: melting and then cooling, breaking and piling up, or squeezing and heating while the rock stays solid. Then name the kind of rock that process builds.",
+    "Primero encuentra el proceso en la pregunta: fundirse y luego enfriarse, romperse y acumularse, o apretarse y calentarse mientras la roca sigue sólida. Luego nombra el tipo de roca que forma ese proceso.",
   ),
   seconds: 25,
   items: [
@@ -181,7 +181,7 @@ export const ROCK_CYCLE: Bank = {
       bi("Melted rock (magma or lava) cools and hardens.", "La roca fundida (magma o lava) se enfría y se endurece."),
       [
         m("confused-with-sedimentary", "Layers of sediment are pressed and cemented together.", "Capas de sedimento se compactan y se cementan."),
-        m("confused-with-metamorphic", "Heat and pressure change a rock without melting it.", "El calor y la presión cambian una roca sin fundirla."),
+        m("confused-with-metamorphic", "Heat and pressure change a rock without ever melting it.", "El calor y la presión cambian una roca sin llegar a fundirla."),
         m("weathering-erosion-mixup", "Wind and water break a rock into pieces.", "El viento y el agua rompen una roca en pedazos."),
       ],
       bi("Igneous comes from the Latin word for fire.", "Ígnea viene de la palabra latina para fuego."),
@@ -189,10 +189,10 @@ export const ROCK_CYCLE: Bank = {
     ),
     e(
       bi("How does sedimentary rock form?", "¿Cómo se forma la roca sedimentaria?"),
-      bi("Sediments settle in layers and are pressed and cemented together.", "Los sedimentos se depositan en capas y se compactan y cementan."),
+      bi("Sediments settle in layers and are pressed and cemented.", "Los sedimentos se depositan en capas y se compactan y cementan."),
       [
         m("confused-with-igneous", "Lava cools quickly at the surface.", "La lava se enfría rápido en la superficie."),
-        m("confused-with-metamorphic", "Heat and pressure deep underground change it.", "El calor y la presión en lo profundo la cambian."),
+        m("confused-with-metamorphic", "Heat and pressure deep underground change it without melting it.", "El calor y la presión en lo profundo de la Tierra la cambian sin fundirla."),
         m("thinks-metamorphic-melts", "Rock melts and then cools slowly.", "La roca se funde y luego se enfría despacio."),
       ],
       bi("Think of sand and mud piling up at the bottom of a lake.", "Piensa en arena y lodo que se acumulan en el fondo de un lago."),
@@ -202,7 +202,7 @@ export const ROCK_CYCLE: Bank = {
       bi("How does metamorphic rock form?", "¿Cómo se forma la roca metamórfica?"),
       bi("Heat and pressure change an existing rock without melting it.", "El calor y la presión cambian una roca que ya existe sin fundirla."),
       [
-        m("thinks-metamorphic-melts", "A rock melts completely and then cools.", "Una roca se funde por completo y luego se enfría."),
+        m("thinks-metamorphic-melts", "A rock melts completely deep underground and then cools again.", "Una roca se funde por completo en lo profundo y luego se vuelve a enfriar."),
         m("confused-with-sedimentary", "Sand grains are cemented together.", "Granos de arena se cementan."),
         m("weathering-erosion-mixup", "Water wears a rock smooth.", "El agua desgasta una roca hasta alisarla."),
       ],
@@ -235,7 +235,7 @@ export const ROCK_CYCLE: Bank = {
       bi("Marble is a metamorphic rock. Which rock does it form from?", "El mármol es una roca metamórfica. ¿De qué roca se forma?"),
       bi("Limestone changed by heat and pressure", "Caliza cambiada por el calor y la presión"),
       [
-        m("thinks-metamorphic-melts", "Granite that melted and cooled again", "Granito que se fundió y se volvió a enfriar"),
+        m("thinks-metamorphic-melts", "Granite that melted and then cooled again", "Granito que se fundió y se volvió a enfriar"),
         m("confused-with-sedimentary", "Sand cemented together on a beach", "Arena cementada en una playa"),
         m("wrong-parent-rock", "Shale changed by heat and pressure", "Lutita cambiada por el calor y la presión"),
       ],
@@ -268,7 +268,7 @@ export const ROCK_CYCLE: Bank = {
       bi("Weathering breaks it into smaller pieces.", "La meteorización la rompe en pedazos más pequeños."),
       [
         m("mixed-up-processes", "It has to melt into magma.", "Tiene que fundirse y volverse magma."),
-        m("thinks-cycle-has-fixed-order", "It has to become metamorphic rock first.", "Primero tiene que volverse roca metamórfica."),
+        m("thinks-cycle-has-fixed-order", "It has to become a metamorphic rock first.", "Primero tiene que convertirse en roca metamórfica."),
         m("mixed-up-processes", "It has to be cemented.", "Tiene que cementarse."),
       ],
       bi("Sediment is made of small pieces.", "El sedimento está hecho de pedazos pequeños."),
@@ -288,13 +288,13 @@ export const ROCK_CYCLE: Bank = {
     e(
       bi("What provides the energy that melts rock and forms metamorphic rock deep underground?", "¿Qué aporta la energía que funde la roca y forma la roca metamórfica en lo profundo?"),
       bi("Heat from Earth's interior", "El calor del interior de la Tierra"),
-      [m("mixed-up-energy-sources", "Energy from the Sun", "La energía del Sol"), m("surface-heat-for-deep-rock", "Heat from forest fires", "El calor de los incendios forestales")],
+      [m("mixed-up-energy-sources", "Energy from the Sun", "La energía del Sol"), m("surface-heat-for-deep-rock", "Heat from wildfires at the surface", "El calor de los incendios en la superficie")],
       bi("The Sun's heat reaches only a short way into the ground.", "El calor del Sol solo llega un poco bajo el suelo."),
       bi("Earth's internal heat, from its formation and from radioactive elements, drives melting and metamorphism.", "El calor interno de la Tierra, que viene de su formación y de elementos radiactivos, impulsa la fusión y el metamorfismo."),
     ),
     e(
       bi("What provides the energy that drives weathering and erosion at Earth's surface?", "¿Qué aporta la energía que impulsa la meteorización y la erosión en la superficie de la Tierra?"),
-      bi("Energy from the Sun, through wind, rain, and the water cycle", "La energía del Sol, mediante el viento, la lluvia y el ciclo del agua"),
+      bi("Energy from the Sun", "La energía del Sol"),
       [m("mixed-up-energy-sources", "Heat from Earth's interior", "El calor del interior de la Tierra"), m("thinks-magnetism-is-energy", "Earth's magnetic field", "El campo magnético de la Tierra")],
       bi("Where does the energy for wind and rain come from?", "¿De dónde viene la energía del viento y de la lluvia?"),
       bi("Sunlight heats air and water, which drives wind, evaporation, and rain. These break rock and carry it away.", "La luz del Sol calienta el aire y el agua, lo que impulsa el viento, la evaporación y la lluvia. Estos rompen la roca y se la llevan."),
@@ -305,7 +305,7 @@ export const ROCK_CYCLE: Bank = {
       [
         m("weathering-erosion-mixup", "Water slowly dissolved holes in the rock.", "El agua disolvió agujeros en la roca poco a poco."),
         m("confused-with-sedimentary", "Shells were cemented together with spaces between them.", "Conchas se cementaron dejando espacios entre ellas."),
-        m("confused-with-metamorphic", "Heat and pressure squeezed the rock full of holes.", "El calor y la presión apretaron la roca hasta llenarla de agujeros."),
+        m("confused-with-metamorphic", "Heat and pressure squeezed the rock full of holes.", "El calor y la presión apretaron tanto la roca que la dejaron llena de agujeros."),
       ],
       bi("Think of the bubbles in a shaken soda bottle when you open it.", "Piensa en las burbujas de una botella de refresco agitada cuando la abres."),
       bi("Pumice comes from frothy lava. Gas escaped as bubbles, and the lava hardened around them before they could leave.", "La piedra pómez viene de lava espumosa. El gas salió en burbujas, y la lava se endureció a su alrededor antes de que escaparan."),
@@ -322,8 +322,8 @@ const RADIATION = bi("Radiation", "Radiación");
 export const HEAT_TRANSFER: Bank = {
   nudge: bi("Is the energy moving through touching, through a moving fluid, or through empty space?", "¿La energía se mueve por contacto, por un fluido en movimiento o a través del espacio vacío?"),
   strategy: bi(
-    "Conduction passes energy between touching particles. Convection carries energy as warm liquid or gas moves. Radiation carries energy as waves, even through empty space. Energy always flows from warmer to cooler.",
-    "La conducción pasa la energía entre partículas que se tocan. La convección lleva la energía cuando un líquido o gas caliente se mueve. La radiación lleva la energía en forma de ondas, incluso por el espacio vacío. La energía siempre fluye de lo más caliente a lo más frío.",
+    "Ask what carries the energy: particles that bump their neighbors but stay in place, a warm liquid or gas that moves from place to place, or waves that need no matter at all. Then ask which way the energy moves.",
+    "Pregúntate qué lleva la energía: partículas que chocan con sus vecinas pero se quedan en su lugar, un líquido o gas tibio que se mueve de un lugar a otro, u ondas que no necesitan materia. Luego pregúntate hacia dónde se mueve la energía.",
   ),
   seconds: 25,
   items: [
@@ -360,7 +360,7 @@ export const HEAT_TRANSFER: Bank = {
       bi("Thermal energy flows from your hand into the ice.", "La energía térmica fluye de tu mano hacia el hielo."),
       [
         m("thinks-cold-flows", "Cold flows from the ice into your hand.", "El frío fluye del hielo hacia tu mano."),
-        m("energy-direction-reversed", "Thermal energy flows from the ice into your hand.", "La energía térmica fluye del hielo hacia tu mano."),
+        m("energy-direction-reversed", "Thermal energy flows from the ice into your hand.", "La energía térmica fluye desde el hielo hacia tu mano."),
         m("thinks-no-transfer", "No energy moves; the ice just feels cold.", "No se mueve energía; el hielo solo se siente frío."),
       ],
       bi("Energy only flows one way: from warmer to cooler.", "La energía solo fluye en un sentido: de lo más caliente a lo más frío."),
@@ -377,7 +377,7 @@ export const HEAT_TRANSFER: Bank = {
       bi("A metal bench and a wooden bench sit outside on a cold morning at the same temperature. Why does the metal one feel colder?", "Una banca de metal y una de madera están afuera en una mañana fría a la misma temperatura. ¿Por qué la de metal se siente más fría?"),
       bi("Metal conducts energy away from your skin faster.", "El metal conduce la energía lejos de tu piel más rápido."),
       [
-        m("thinks-metal-is-colder", "The metal bench is at a lower temperature.", "La banca de metal está a una temperatura más baja."),
+        m("thinks-metal-is-colder", "The metal bench is at a lower temperature than the wooden one.", "La banca de metal está a una temperatura más baja que la de madera."),
         m("thinks-cold-flows", "Metal gives off more cold.", "El metal suelta más frío."),
         m("thinks-wood-makes-heat", "Wood makes its own heat.", "La madera produce su propio calor."),
       ],
@@ -389,7 +389,7 @@ export const HEAT_TRANSFER: Bank = {
       bi("It expands and becomes less dense, so cooler, denser air pushes it up.", "Se expande y se vuelve menos denso, así que el aire más frío y denso lo empuja hacia arriba."),
       [
         m("density-reversed", "It becomes heavier and denser.", "Se vuelve más pesado y más denso."),
-        m("thinks-heat-is-a-substance", "Heat is a substance that always floats upward by itself.", "El calor es una sustancia que siempre flota hacia arriba sola."),
+        m("thinks-heat-is-a-substance", "Heat is a light substance that always floats up on its own and lifts the air.", "El calor es una sustancia ligera que siempre flota hacia arriba por sí sola y levanta el aire."),
         m("thinks-cold-flows", "Cold air pulls it up from above.", "El aire frío lo jala desde arriba."),
       ],
       bi("Compare how tightly packed the particles are in warm air and cool air.", "Compara qué tan juntas están las partículas en el aire caliente y en el frío."),
@@ -397,9 +397,9 @@ export const HEAT_TRANSFER: Bank = {
     ),
     e(
       bi("On a sunny afternoon at the beach, a breeze blows from the ocean onto the land. Why?", "En una tarde soleada en la playa, sopla una brisa del mar hacia la tierra. ¿Por qué?"),
-      bi("The land heats faster, warm air over it rises, and cooler air from the sea moves in.", "La tierra se calienta más rápido, el aire caliente sobre ella sube y el aire más fresco del mar entra."),
+      bi("The land heats faster, warm air over it rises, and cooler sea air moves in.", "La tierra se calienta más rápido, el aire caliente sube y entra aire más fresco del mar."),
       [
-        m("land-sea-heating-reversed", "The ocean heats faster, so warm air moves from the sea to the land.", "El mar se calienta más rápido, así que el aire caliente va del mar a la tierra."),
+        m("land-sea-heating-reversed", "The ocean heats faster than the land, so warm air moves from the sea to the land.", "El mar se calienta más rápido que la tierra, así que el aire caliente va del mar hacia la tierra."),
         m("thinks-waves-make-wind", "The waves push the air toward the land.", "Las olas empujan el aire hacia la tierra."),
         m("convection-radiation-mixup", "Sunlight bounces off the water and pushes the air.", "La luz del Sol rebota en el agua y empuja el aire."),
       ],
@@ -407,7 +407,10 @@ export const HEAT_TRANSFER: Bank = {
       bi("Land warms faster than water. Air over the land warms and rises, and cooler air from over the water flows in: a convection current.", "La tierra se calienta más rápido que el agua. El aire sobre la tierra se calienta y sube, y el aire más fresco de sobre el agua entra: una corriente de convección."),
     ),
     e(
-      bi("Two identical shirts lie in direct sunlight. Which one warms up faster?", "Dos camisetas iguales están al sol directo. ¿Cuál se calienta más rápido?"),
+      bi(
+        "Two shirts are the same except that one is black and one is white. Both lie in direct sunlight. Which one warms up faster?",
+        "Dos camisetas son iguales, salvo que una es negra y la otra es blanca. Las dos están al sol directo. ¿Cuál se calienta más rápido?",
+      ),
       bi("The black shirt", "La camiseta negra"),
       [m("dark-light-surface-mixup", "The white shirt", "La camiseta blanca"), m("ignores-surface-color", "Both warm up at the same rate", "Las dos se calientan igual de rápido")],
       bi("Which color absorbs more of the light that hits it?", "¿Qué color absorbe más de la luz que le llega?"),
@@ -430,7 +433,7 @@ export const HEAT_TRANSFER: Bank = {
       [
         m("conductor-insulator-mixup", "Plastic and wood conduct energy better than metal.", "El plástico y la madera conducen la energía mejor que el metal."),
         m("thinks-cold-flows", "The handle keeps cold inside the pot.", "El mango mantiene el frío dentro de la olla."),
-        m("convection-radiation-mixup", "Metal sends radiation into the food, and handles block light.", "El metal envía radiación a los alimentos y los mangos bloquean la luz."),
+        m("convection-radiation-mixup", "Metal sends radiation into the food, and the handles block light from your hand.", "El metal envía radiación a los alimentos y los mangos le bloquean la luz a tu mano."),
       ],
       bi("One part should pass energy easily, and the other should not.", "Una parte debe dejar pasar la energía con facilidad y la otra no."),
       bi("Metal is a good conductor, so it heats food quickly. Plastic and wood are insulators, so the handle stays cool enough to hold.", "El metal es buen conductor, así que calienta los alimentos rápido. El plástico y la madera son aislantes, así que el mango no se calienta tanto."),
@@ -441,14 +444,14 @@ export const HEAT_TRANSFER: Bank = {
       [
         m("conduction-convection-mixup", "By conduction through the still air", "Por conducción a través del aire quieto"),
         m("thinks-cold-flows", "Cold air flows into the heater and is used up", "El aire frío entra al calentador y se gasta"),
-        m("conduction-radiation-mixup", "By conduction through the walls", "Por conducción a través de las paredes"),
+        m("conduction-convection-mixup", "By conduction through the walls", "Por conducción a través de las paredes"),
       ],
       bi("Air is a poor conductor, but it can move.", "El aire conduce mal la energía, pero se puede mover."),
       bi("Air warmed by the heater rises, spreads across the ceiling, cools, and sinks, so a loop of moving air carries energy around the room.", "El aire que calienta el calentador sube, se extiende por el techo, se enfría y baja, así que un circuito de aire en movimiento lleva la energía por el cuarto."),
     ),
     e(
       bi("A cup of water at 80 °C touches a cup of water at 20 °C. Which way does thermal energy flow?", "Una taza de agua a 80 °C toca una taza de agua a 20 °C. ¿Hacia dónde fluye la energía térmica?"),
-      bi("From the hot water to the cool water, until both are the same temperature", "Del agua caliente al agua fría, hasta que las dos tienen la misma temperatura"),
+      bi("From the hot water to the cool water", "Del agua caliente al agua fría"),
       [
         m("energy-direction-reversed", "From the cool water to the hot water", "Del agua fría al agua caliente"),
         m("thinks-cold-flows", "Cold flows from the cool water into the hot water", "El frío fluye del agua fría al agua caliente"),
@@ -462,10 +465,7 @@ export const HEAT_TRANSFER: Bank = {
 
 // ── s.design.criteria ───────────────────────────────────────────────────────────────────────────
 
-const CRITERION = bi("Criterion", "Criterio");
-const CONSTRAINT = bi("Constraint", "Restricción");
-const crit = (en: string, es: string) => bi(`${en} Is this a criterion or a constraint?`, `${es} ¿Es un criterio o una restricción?`);
-
+// Every entry has three or four choices, so a blind guess scores at most a third.
 export const DESIGN: Bank = {
   nudge: bi("Is it something the design must do, or a limit on how you can build it?", "¿Es algo que el diseño debe lograr o un límite sobre cómo puedes construirlo?"),
   strategy: bi(
@@ -475,60 +475,81 @@ export const DESIGN: Bank = {
   seconds: 25,
   items: [
     e(
-      crit("A team's water filter must remove the visible dirt from muddy water.", "El filtro de agua de un equipo debe quitar la suciedad visible del agua con lodo."),
-      CRITERION,
-      [mx("criterion-constraint-mixup", CONSTRAINT)],
-      bi("This describes what the filter has to do to succeed.", "Esto describe lo que el filtro tiene que hacer para tener éxito."),
-      bi("Removing visible dirt is the goal the filter must meet, so it is a criterion.", "Quitar la suciedad visible es la meta que debe cumplir el filtro, así que es un criterio."),
+      bi("A team is designing a filter for muddy water. Which of these is a criterion?", "Un equipo diseña un filtro para agua con lodo. ¿Cuál de estas es un criterio?"),
+      bi("It removes the visible dirt from the water.", "Quita del agua la suciedad visible."),
+      [
+        m("criterion-constraint-mixup", "Its materials can cost no more than $5 in all.", "Sus materiales no pueden costar más de $5 en total."),
+        m("criterion-constraint-mixup", "It may use only sand, gravel, and cloth.", "Solo puede usar arena, grava y tela."),
+      ],
+      bi("Look for the one that describes a result the filter must achieve.", "Busca la que describe un resultado que el filtro debe lograr."),
+      bi("Removing the dirt is the goal the filter must meet, so it is a criterion. The cost and the allowed materials are limits, so they are constraints.", "Quitar la suciedad es la meta que debe cumplir el filtro, así que es un criterio. El costo y los materiales permitidos son límites, así que son restricciones."),
     ),
     e(
-      crit("The materials for the water filter can cost no more than $5.", "Los materiales del filtro de agua no pueden costar más de $5."),
-      CONSTRAINT,
-      [mx("criterion-constraint-mixup", CRITERION)],
-      bi("A spending limit tells you how you may build it, not what it must do.", "Un límite de gasto te dice cómo puedes construirlo, no lo que debe lograr."),
-      bi("A budget is a limit on the design, so it is a constraint.", "Un presupuesto es un límite para el diseño, así que es una restricción."),
+      bi("A class is building model bridges. Which of these is a constraint?", "Una clase construye maquetas de puentes. ¿Cuál de estas es una restricción?"),
+      bi("It may be built only from craft sticks and glue.", "Solo se puede construir con palitos de madera y pegamento."),
+      [
+        m("criterion-constraint-mixup", "It must hold a 2 kg load without breaking.", "Debe aguantar una carga de 2 kg sin romperse."),
+        m("criterion-constraint-mixup", "It must stay standing when a toy truck rolls across it.", "Debe seguir en pie cuando un camión de juguete pasa por encima."),
+      ],
+      bi("Look for the one that limits how the bridge may be built.", "Busca la que limita cómo se puede construir el puente."),
+      bi("Holding 2 kg and staying standing are goals, so they are criteria. A rule about the allowed materials is a limit, so it is a constraint.", "Aguantar 2 kg y seguir en pie son metas, así que son criterios. Una regla sobre los materiales permitidos es un límite, así que es una restricción."),
     ),
     e(
-      crit("A model bridge must hold a 2 kg load without breaking.", "Un puente de modelo debe aguantar una carga de 2 kg sin romperse."),
-      CRITERION,
-      [mx("criterion-constraint-mixup", CONSTRAINT)],
-      bi("This is a test the bridge must pass.", "Esta es una prueba que el puente debe pasar."),
-      bi("Holding 2 kg is what the bridge must do to count as a success, so it is a criterion.", "Aguantar 2 kg es lo que debe lograr el puente para considerarse exitoso, así que es un criterio."),
+      bi("Students are designing a solar oven. Which of these is a criterion?", "Unos estudiantes diseñan un horno solar. ¿Cuál de estas es un criterio?"),
+      bi("It heats a cup of water to at least 50 °C.", "Calienta una taza de agua hasta al menos 50 °C."),
+      [
+        m("criterion-constraint-mixup", "It must be finished within three class periods.", "Debe terminarse en un máximo de tres clases."),
+        m("criterion-constraint-mixup", "It can be no larger than a shoebox.", "No puede ser más grande que una caja de zapatos."),
+      ],
+      bi("Which one is a measurable goal for the oven?", "¿Cuál es una meta medible para el horno?"),
+      bi("Reaching 50 °C is what the oven must achieve, so it is a criterion. The time limit and the size limit are constraints.", "Llegar a 50 °C es lo que el horno debe lograr, así que es un criterio. El límite de tiempo y el de tamaño son restricciones."),
     ),
     e(
-      crit("The bridge may be built only from craft sticks and glue.", "El puente solo se puede construir con palitos de madera y pegamento."),
-      CONSTRAINT,
-      [mx("criterion-constraint-mixup", CRITERION)],
-      bi("This limits the materials you may use.", "Esto limita los materiales que puedes usar."),
-      bi("A rule about allowed materials is a limit, so it is a constraint.", "Una regla sobre los materiales permitidos es un límite, así que es una restricción."),
+      bi("A team is designing a package to protect a raw egg in a 2 m drop. Which of these is a constraint?", "Un equipo diseña un empaque para proteger un huevo crudo en una caída de 2 m. ¿Cuál de estas es una restricción?"),
+      bi("It can use no more than 10 sheets of paper and 1 m of tape.", "No puede usar más de 10 hojas de papel y 1 m de cinta."),
+      [
+        m("criterion-constraint-mixup", "It keeps the egg from cracking when the package hits the floor.", "Evita que el huevo se rompa cuando el empaque choca contra el suelo."),
+        m("criterion-constraint-mixup", "It lands with the egg still inside.", "Cae con el huevo todavía adentro."),
+      ],
+      bi("Look for the one that limits what you may use.", "Busca la que limita lo que puedes usar."),
+      bi("Protecting the egg and keeping it inside are goals, so they are criteria. The limit on paper and tape is a constraint.", "Proteger el huevo y mantenerlo adentro son metas, así que son criterios. El límite de papel y cinta es una restricción."),
     ),
     e(
-      crit("A solar oven must heat a cup of water to at least 50 °C.", "Un horno solar debe calentar una taza de agua hasta al menos 50 °C."),
-      CRITERION,
-      [mx("criterion-constraint-mixup", CONSTRAINT)],
-      bi("This is a measurable goal for the oven.", "Esta es una meta medible para el horno."),
-      bi("Reaching 50 °C is what the oven must achieve, so it is a criterion.", "Llegar a 50 °C es lo que el horno debe lograr, así que es un criterio."),
+      bi("A student is building a toy car powered by a balloon. Which of these is a criterion?", "Una estudiante construye un carrito de juguete impulsado por un globo. ¿Cuál de estas es un criterio?"),
+      bi("It rolls at least 3 m in a straight line.", "Avanza al menos 3 m en línea recta."),
+      [
+        m("criterion-constraint-mixup", "It must use only one balloon.", "Solo debe usar un globo."),
+        m("criterion-constraint-mixup", "It must have a mass of less than 200 grams.", "Debe tener una masa de menos de 200 gramos."),
+      ],
+      bi("Which one describes how well the car must perform?", "¿Cuál describe qué tan bien debe funcionar el carrito?"),
+      bi("Rolling 3 m is a goal the car must meet, so it is a criterion. Using one balloon and staying under 200 g are limits, so they are constraints.", "Avanzar 3 m es una meta que debe cumplir el carrito, así que es un criterio. Usar un solo globo y pesar menos de 200 g son límites, así que son restricciones."),
     ),
     e(
-      crit("The project must be finished within three class periods.", "El proyecto debe terminarse en tres clases."),
-      CONSTRAINT,
-      [mx("criterion-constraint-mixup", CRITERION)],
+      bi("A club is building a birdhouse. Which of these is a constraint?", "Un club construye una casita para pájaros. ¿Cuál de estas es una restricción?"),
+      bi("It must be made from wood scraps the club already has.", "Debe hacerse con retazos de madera que el club ya tiene."),
+      [
+        m("criterion-constraint-mixup", "It keeps rain off the nest inside.", "Protege de la lluvia el nido de adentro."),
+        m("criterion-constraint-mixup", "It has an opening big enough for a small bird to get in.", "Tiene una entrada lo bastante grande para que entre un pájaro pequeño."),
+      ],
+      bi("Look for the one that limits the materials.", "Busca la que limita los materiales."),
+      bi("Keeping rain out and letting a bird in are goals, so they are criteria. Using only the club's wood scraps is a limit, so it is a constraint.", "Proteger de la lluvia y dejar entrar a un pájaro son metas, así que son criterios. Usar solo los retazos de madera del club es un límite, así que es una restricción."),
+    ),
+    e(
+      bi("A student is designing a phone stand for a class project. Which of these is a constraint?", "Un estudiante diseña un soporte para celular en un proyecto de la clase. ¿Cuál de estas es una restricción?"),
+      bi("It must be finished by Friday.", "Debe estar terminado para el viernes."),
+      [
+        m("criterion-constraint-mixup", "It holds the phone upright so the screen is easy to see.", "Sostiene el celular derecho para que la pantalla se vea bien."),
+        m("criterion-constraint-mixup", "It does not tip over when someone taps the screen.", "No se cae cuando alguien toca la pantalla."),
+      ],
       bi("Time is one of the most common limits on a design.", "El tiempo es uno de los límites más comunes de un diseño."),
-      bi("A deadline limits the work, so it is a constraint.", "Una fecha límite limita el trabajo, así que es una restricción."),
-    ),
-    e(
-      crit("A package must keep a raw egg from cracking when dropped from 2 m.", "Un empaque debe evitar que un huevo crudo se rompa al caer desde 2 m."),
-      CRITERION,
-      [mx("criterion-constraint-mixup", CONSTRAINT)],
-      bi("Ask what result tells you the package worked.", "Pregúntate qué resultado te dice que el empaque funcionó."),
-      bi("Protecting the egg in a 2 m drop is the goal the package must meet, so it is a criterion.", "Proteger el huevo en una caída de 2 m es la meta que debe cumplir el empaque, así que es un criterio."),
+      bi("Holding the phone and not tipping over are goals, so they are criteria. The deadline limits the work, so it is a constraint.", "Sostener el celular y no caerse son metas, así que son criterios. La fecha límite limita el trabajo, así que es una restricción."),
     ),
     e(
       bi("Which of these is a constraint for a school garden watering system?", "¿Cuál de estas es una restricción para un sistema de riego del huerto escolar?"),
       bi("It must be built with less than $50 of parts.", "Debe construirse con menos de $50 en piezas."),
       [
         m("criterion-constraint-mixup", "It must water every plant each day.", "Debe regar todas las plantas cada día."),
-        m("criterion-constraint-mixup", "It must turn off when the soil is wet.", "Debe apagarse cuando la tierra esté húmeda."),
+        m("criterion-constraint-mixup", "It must turn off on its own when the soil is wet.", "Debe apagarse solo cuando la tierra esté húmeda."),
       ],
       bi("Two of these describe what the system must do. One is a limit.", "Dos de estas describen lo que debe hacer el sistema. Una es un límite."),
       bi("Watering every plant and turning off when the soil is wet are criteria. The $50 limit on parts is a constraint.", "Regar todas las plantas y apagarse cuando la tierra esté húmeda son criterios. El límite de $50 en piezas es una restricción."),
@@ -547,7 +568,7 @@ export const DESIGN: Bank = {
       bi("What is a trade-off in engineering design?", "¿Qué es un compromiso (trade-off) en el diseño de ingeniería?"),
       bi("Giving up some of one feature to get more of another", "Ceder un poco en una característica para obtener más de otra"),
       [
-        m("literal-trade", "Trading materials with another team", "Intercambiar materiales con otro equipo"),
+        m("literal-trade", "Trading extra materials with another team to finish faster", "Intercambiar materiales sobrantes con otro equipo para terminar antes"),
         m("ignores-limits", "Adding every possible feature at once", "Agregar todas las características posibles a la vez"),
         m("skipped-testing", "Picking the first design without testing it", "Elegir el primer diseño sin probarlo"),
       ],
@@ -558,7 +579,7 @@ export const DESIGN: Bank = {
       bi("Thicker walls keep a lunch box cold longer, but they make it heavier. The design must stay under 1 kg. What should the team do?", "Paredes más gruesas mantienen fría una lonchera por más tiempo, pero la hacen más pesada. El diseño debe pesar menos de 1 kg. ¿Qué debe hacer el equipo?"),
       bi("Test thicknesses to find one that keeps food cold enough and stays under 1 kg.", "Probar grosores para encontrar uno que mantenga la comida bastante fría y pese menos de 1 kg."),
       [
-        m("ignored-constraint", "Make the walls as thick as possible.", "Hacer las paredes lo más gruesas posible."),
+        m("ignored-constraint", "Make the walls as thick as possible so the food stays cold for the longest time.", "Hacer las paredes lo más gruesas posible para que la comida se mantenga fría el mayor tiempo."),
         m("ignored-criterion", "Make the walls as thin as possible.", "Hacer las paredes lo más delgadas posible."),
         m("skipped-testing", "Guess a thickness and skip testing.", "Adivinar un grosor y no hacer pruebas."),
       ],
@@ -571,7 +592,7 @@ export const DESIGN: Bank = {
       [
         m("criteria-means-cost", "So the design will cost less", "Para que el diseño cueste menos"),
         m("judges-by-appearance", "So the design looks stronger", "Para que el diseño se vea más fuerte"),
-        m("thinks-one-right-answer", "So only one design can possibly work", "Para que solo un diseño pueda funcionar"),
+        m("thinks-one-right-answer", "So that only one of the team's designs can possibly work", "Para que solo uno de los diseños del equipo pueda funcionar"),
       ],
       bi("How would you check whether a bridge \"is strong\"?", "¿Cómo comprobarías si un puente \"es fuerte\"?"),
       bi("A precise criterion can be measured, so a test shows clearly whether the design succeeded.", "Un criterio preciso se puede medir, así que una prueba muestra con claridad si el diseño tuvo éxito."),
@@ -581,7 +602,7 @@ export const DESIGN: Bank = {
       bi("Find out what failed, change the design, and test it again.", "Averiguar qué falló, cambiar el diseño y volver a probarlo."),
       [
         m("thinks-failure-ends-design", "Give up on the idea.", "Abandonar la idea."),
-        m("moved-goalposts", "Change the criteria so the design passes.", "Cambiar los criterios para que el diseño pase."),
+        m("moved-goalposts", "Change the criteria so the same design passes the test next time.", "Cambiar los criterios para que el mismo diseño pase la prueba la próxima vez."),
         m("skipped-testing", "Build the final version anyway.", "Construir la versión final de todos modos."),
       ],
       bi("Engineering design is a loop, not a straight line.", "El diseño de ingeniería es un ciclo, no una línea recta."),
@@ -612,7 +633,7 @@ export const DESIGN: Bank = {
       bi("Comparing test results shows which design best meets the criteria.", "Comparar los resultados de las pruebas muestra qué diseño cumple mejor los criterios."),
       [
         m("skipped-testing", "One test of one design is always enough.", "Una prueba de un solo diseño siempre es suficiente."),
-        m("thinks-first-always-fails", "The first design always fails, so it must be thrown out.", "El primer diseño siempre falla, así que hay que tirarlo."),
+        m("thinks-first-always-fails", "The first design always fails, so it must be thrown out and started over.", "El primer diseño siempre falla, así que hay que tirarlo y empezar de nuevo desde cero."),
         m("ignores-limits", "Using more materials always makes a better design.", "Usar más materiales siempre da un mejor diseño."),
       ],
       bi("Data from several tries lets you compare.", "Los datos de varios intentos te dejan comparar."),
