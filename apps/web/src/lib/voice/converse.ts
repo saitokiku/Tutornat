@@ -15,6 +15,7 @@ import {
   type PlayedWord,
 } from "./bargein";
 import { sentencesFrom } from "./chunk";
+import { BLOCK_MS } from "./mic";
 import { speakable } from "./speakable";
 import { countWords, type HeardWord, type SpeakOptions, type SpeakSource, type SpeechIn, type SpeechOut, type SpeechRun, type TurnMeta, type Unsubscribe } from "./types";
 
@@ -291,7 +292,7 @@ export function converse({
     if (input.onLevel)
       subs.push(
         input.onLevel((level, at) => {
-          if (framesOn && !halfDuplex && input.listening) feed({ type: "frame", level, at, playing: playing() });
+          if (framesOn && !halfDuplex && input.listening) feed({ type: "frame", level, at, span: BLOCK_MS, playing: playing() });
         }),
       );
     // The vendor recognizer was lost and the browser's took over: it is half duplex from now on.

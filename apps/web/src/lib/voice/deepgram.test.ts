@@ -438,6 +438,44 @@ describe("Deepgram Flux", () => {
     expect(s.seen.turns).toEqual(["wait it's seven"]); // the same words: the speculative request stands
   });
 
+  it("after an answer's early end, Flux's own EndOfTurn for the same words is not a second turn; words after them are", async () => {
+    const s = setup({ model: "flux-general-en", band: "35" });
+    const ws = await listening(s, { turns: "auto", answer: (t) => t === "twelve" });
+    ws.receive(turn("Update", "twelve"));
+    await vi.advanceTimersByTimeAsync(700);
+    expect(s.seen.turns).toEqual(["twelve"]);
+    ws.receive(turn("Update", "twelve"));
+    ws.receive(turn("EagerEndOfTurn", "twelve"));
+    ws.receive(turn("EndOfTurn", "twelve"));
+    expect(s.seen.turns).toEqual(["twelve"]);
+    expect(s.seen.eager).toEqual([]);
+    // Same Flux turn, more words: only the new ones go (the loop joins them to the turn in flight).
+    const t2 = setup({ model: "flux-general-en", band: "35" });
+    const ws2 = await listening(t2, { turns: "auto", answer: (t) => t === "twelve" });
+    ws2.receive(turn("Update", "twelve"));
+    await vi.advanceTimersByTimeAsync(700);
+    ws2.receive(turn("Update", "twelve hundred"));
+    ws2.receive(turn("EndOfTurn", "twelve hundred"));
+    expect(t2.seen.turns).toEqual(["twelve", "hundred"]);
+  });
+
+  it("Nova: a turn our rules ended on interim words gets its final afterwards, and that is not a second turn", async () => {
+    const s = setup({ band: "69" });
+    const ws = await listening(s, { turns: "auto", answer: (t) => /twelve/i.test(t) });
+    ws.receive({ ...results("twelve", false), channel: { alternatives: [{ transcript: "twelve", words: [{ word: "twelve", start: 0, end: 0.4, confidence: 0.9 }] }] } });
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(s.seen.turns).toEqual(["twelve"]);
+    expect(s.seen.metas[0].lastWordEnd).toBe(1400); // the interim word's end, not null
+    ws.receive({ ...results("Twelve.", true, true), channel: { alternatives: [{ transcript: "Twelve.", words: [{ word: "twelve", punctuated_word: "Twelve.", start: 0, end: 0.4, confidence: 0.9 }] }] } });
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(s.seen.turns).toEqual(["twelve"]);
+    // New speech after it is a turn of its own.
+    ws.receive({ type: "SpeechStarted" });
+    ws.receive(results("Twelve.", true, true));
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(s.seen.turns).toEqual(["twelve", "Twelve."]);
+  });
+
   it("the early end for an answer runs from the last word, and repeated Updates don't push it back", async () => {
     const s = setup({ model: "flux-general-en", band: "35" });
     const ws = await listening(s, { turns: "auto", answer: (t) => t === "twelve" });

@@ -113,8 +113,12 @@ export type BargeState = {
 };
 
 export type BargeEvent =
-  /** One microphone frame's own level (0..1), while the tutor is `playing`. */
-  | { type: "frame"; level: number; at: number; playing: boolean }
+  /**
+   * One microphone frame's own level (0..1), while the tutor is `playing`. `at`: when its first
+   * sample was captured; `span`: how much audio it covers (ms; 0 for a polled meter), so six loud
+   * 20 ms blocks are 120 ms of voice.
+   */
+  | { type: "frame"; level: number; at: number; playing: boolean; span?: number }
   /** The recognizer heard speech begin (Flux StartOfTurn, Nova SpeechStarted). */
   | { type: "start"; at: number; playing: boolean }
   /** A recognized word: "real" interrupts; backchannels and echo don't. */
@@ -142,8 +146,9 @@ export function bargeStep(s: BargeState, e: BargeEvent): { state: BargeState; ac
       if (!loud) return { state: { ...s, loudSince: null }, actions: [] };
       const since = s.loudSince ?? e.at;
       const next = { ...s, loudSince: since };
-      if (s.phase === "idle" && e.playing && e.at - since >= ONSET_MS) return { ...duck(since), state: { ...next, phase: "ducked", onsetAt: since } };
-      if (s.phase === "ducked" && e.at - since >= VOICED_CANCEL_MS) return { state: { ...next, phase: "cancelled", loudSince: null }, actions: [{ type: "cancel", fadeMs: CANCEL_FADE_MS, onsetAt: s.onsetAt ?? since }] };
+      const loudFor = e.at + (e.span ?? 0) - since;
+      if (s.phase === "idle" && e.playing && loudFor >= ONSET_MS) return { ...duck(since), state: { ...next, phase: "ducked", onsetAt: since } };
+      if (s.phase === "ducked" && loudFor >= VOICED_CANCEL_MS) return { state: { ...next, phase: "cancelled", loudSince: null }, actions: [{ type: "cancel", fadeMs: CANCEL_FADE_MS, onsetAt: s.onsetAt ?? since }] };
       return { state: next, actions: [] };
     }
     case "word":

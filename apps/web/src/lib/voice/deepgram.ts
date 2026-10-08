@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/types";
-import { isHolding } from "./backchannel";
+import { isHolding, words as wordsOf } from "./backchannel";
 import { FLUX, HOLDING_MS, NOVA } from "./bands";
 import { MIC_RATE, micCapture, micError, type Capture, type MicCapture } from "./mic";
 import { hasName } from "./speakable";
@@ -167,6 +167,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
   let held: { text: string; words: HeardWord[]; timer: ReturnType<typeof setTimeout> } | null = null;
   let answerTimer: ReturnType<typeof setTimeout> | undefined;
   let novaWords: HeardWord[] = [];
+  let novaInterim: { text: string; words: HeardWord[] } = { text: "", words: [] };
   let fluxPast: { text: string; words: HeardWord[] }[] = [];
 
   const band = () => opts.band ?? o.band ?? "69";
@@ -259,6 +260,25 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
     ev.turn.emit(text, metaOf(words));
   };
 
+  // A turn handed over before the recognizer's own end (an answer's early end, or our rules on Nova's
+  // interim words): that recognizer still sends its EndOfTurn or final for the same words, which must
+  // not become a second turn. Words said after them are the start of what comes next.
+  let handedOver: string[] = [];
+  const foldWord = (t: string) => wordsOf(t).join("");
+  const handOver = (text: string) => (handedOver = text.split(/\s+/).filter(Boolean).map(foldWord));
+  /** A transcript without the words already handed over; null when it is only those. */
+  function afterHandedOver(text: string, ws: HeardWord[]): { text: string; words: HeardWord[] } | null {
+    if (!handedOver.length || !text) return { text, words: ws };
+    const toks = text.split(/\s+/).filter(Boolean);
+    const n = handedOver.length;
+    if (!toks.slice(0, n).every((t, i) => foldWord(t) === handedOver[i])) {
+      handedOver = []; // something else was said: a turn of its own
+      return { text, words: ws };
+    }
+    if (toks.length <= n) return null;
+    return { text: toks.slice(n).join(" "), words: ws.slice(n) };
+  }
+
   /** The stream is over (stop() or a failure): the words so far become the turn unless discarded. */
   function finishStop() {
     const text = discard ? "" : flux ? [held?.text, ...fluxPast.map((p) => p.text), fluxText].filter(Boolean).join(" ").trim() : (tracker?.flush() ?? "");
@@ -318,18 +338,26 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
   }
 
   function onFlux(m: FluxTurn) {
-    const text = (m.transcript ?? "").trim();
-    const words = fluxTimed(m, text);
+    const all = (m.transcript ?? "").trim();
+    const timed = fluxTimed(m, all);
     if (m.event === "StartOfTurn") {
       clearTimeout(answerTimer);
+      handedOver = [];
       if (held) clearTimeout(held.timer);
       ev.speech.emit();
       return;
     }
     if (m.event === "TurnResumed") {
-      ev.resumed.emit();
+      if (!handedOver.length) ev.resumed.emit();
       return;
     }
+    // After an answer's early end, this turn's own Updates and EndOfTurn carry the same words.
+    const rest = afterHandedOver(all, timed);
+    if (!rest) {
+      if (m.event === "EndOfTurn") handedOver = [];
+      return;
+    }
+    const { text, words } = rest;
     const changed = text !== fluxText;
     if (text) {
       fluxText = text;
@@ -359,7 +387,9 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
       const lastEnd = words.at(-1)?.end ?? now();
       const wait = Math.max(0, (turnOptions(band()).answerMs ?? 500) - Math.max(0, now() - lastEnd));
       answerTimer = setTimeout(() => {
-        if (fluxText === text) fluxEnd(text, words);
+        if (fluxText !== text) return;
+        handOver(all);
+        fluxEnd(text, words);
       }, wait);
     }
   }
@@ -368,18 +398,34 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
 
   function onNova(m: NovaResults) {
     const alt = m.channel?.alternatives?.[0];
-    const text = alt?.transcript?.trim() ?? "";
-    const words: HeardWord[] = (alt?.words ?? []).map((w) => ({ word: w.punctuated_word ?? w.word, start: streamAt(w.start), end: streamAt(w.end), confidence: typeof w.confidence === "number" ? w.confidence : null }));
+    const all = alt?.transcript?.trim() ?? "";
+    const timed: HeardWord[] = (alt?.words ?? []).map((w) => ({ word: w.punctuated_word ?? w.word, start: streamAt(w.start), end: streamAt(w.end), confidence: typeof w.confidence === "number" ? w.confidence : null }));
+    // A turn our rules ended on interim words gets its final afterwards: not a second turn.
+    const rest = afterHandedOver(all, timed);
+    if (!rest) return;
+    const { text, words } = rest;
     const at = now();
     const wordEnd = words.length ? words[words.length - 1].end : undefined;
     if (words.length) ev.words.emit(words);
     if (m.is_final) {
       novaWords.push(...words);
+      novaInterim = { text: "", words: [] };
       tracker?.feed({ type: "final", text, at, speechFinal: !!m.speech_final, wordEnd });
       if (text) ev.final.emit(text);
-    } else tracker?.feed({ type: "partial", text, at, wordEnd });
+    } else {
+      novaInterim = { text, words };
+      tracker?.feed({ type: "partial", text, at, wordEnd });
+    }
     const so = tracker?.text();
     if (so) ev.partial.emit(so);
+  }
+
+  /** Our rules ended the turn (Nova): its words include the interim ones, and their final, still to come, is not a new turn. */
+  function novaEnd(text: string) {
+    const interim = novaInterim;
+    novaInterim = { text: "", words: [] };
+    if (interim.text) handOver(interim.text);
+    emitTurn(text, [...novaWords, ...interim.words]);
   }
 
   function onMessage(data: unknown) {
@@ -394,6 +440,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
     if (!tracker) return;
     if (m.type === "Results") onNova(m as NovaResults);
     else if (m.type === "SpeechStarted") {
+      handedOver = [];
       tracker.feed({ type: "speech-start", at: now() });
       ev.speech.emit();
     } else if (m.type === "UtteranceEnd") tracker.feed({ type: "utterance-end", at: now() });
@@ -485,12 +532,14 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
       firstAt = null;
       socketBase = null;
       novaWords = [];
+      novaInterim = { text: "", words: [] };
+      handedOver = [];
       fluxPast = [];
       clearFluxTurn();
       keyterms = (o2.keyterms ?? []).filter((k) => !hasName(k, o.names ?? []));
       tracker = turnTracker({
         options: o2.turns === "auto" ? turnOptions(band(), o2.answer) : TURN_MANUAL,
-        onEnd: (text) => emitTurn(text, novaWords),
+        onEnd: novaEnd,
         now,
       });
       const [token, cap] = await Promise.allSettled([takeToken(), capture({ onFrame, onLevel: (level, at) => ev.level.emit(level, at), targetRate: MIC_RATE })]);
