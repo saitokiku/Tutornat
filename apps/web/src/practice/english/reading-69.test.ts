@@ -69,6 +69,28 @@ const count = (text: string, list: string[]) => list.reduce((n, w) => n + (lc(te
 const choicesOf = (x: Question, l: L) => [x[l][1], ...x[l][2]];
 const promptText = (item: Item) => item.prompt.map((p) => (typeof p === "string" ? p : "")).join("");
 const NO = [/[!¡]/, /\p{Extended_Pictographic}/u, / {2}/, /\d\/\d/, /[{}^]/, /"/];
+/** Function words left out when judging how much a hint repeats a choice (accents already folded). */
+const STOP = new Set(
+  "that this with from have were when what they them their then than into only also more most some very does about which there would could should been will your just over after because while other each every para como pero porque cuando esta este esto estos estas todo todos toda todas cada desde hasta sobre entre donde quien tiene tienen sino tambien aunque solo otra otro otros otras ellos ellas puede pueden habia sido eran fueron hace mismo misma".split(" "),
+);
+const contentWords = (s: string) => (s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().match(/\p{L}{4,}/gu) ?? []).filter((w) => !STOP.has(w));
+/** The share of a choice's content words that also appear in a hint. */
+const share = (choice: string, hint: string) => {
+  const mine = new Set(contentWords(choice));
+  const there = new Set(contentWords(hint));
+  return mine.size ? [...mine].filter((w) => there.has(w)).length / mine.size : 0;
+};
+/** Where the key's length falls among the choices, as every rank a length-guesser could reach it from. */
+const lengthRanks = (right: string, wrong: string[]) => {
+  const longer = wrong.filter((w) => w.length > right.length).length;
+  const shorter = wrong.filter((w) => w.length < right.length).length;
+  const ties = wrong.length - longer - shorter;
+  const span = (from: number) => Array.from({ length: ties + 1 }, (_, i) => from + i);
+  // Ties count against the key: a guess that lands on any of the tied lengths finds it.
+  return { fromLongest: span(longer), fromShortest: span(shorter) };
+};
+/** Words that name an overall structure; a hint that lists them hands over the category. */
+const NAMES_STRUCTURE = /\b(problem|solution|solv|caus|effect|compar|contrast|differ|soluci|resolv|efect|diferen)/i;
 
 describe("grades 6–9 reading: strand shape", () => {
   it("has the planned skills in teaching order, all draft English with two levels", () => {
@@ -233,6 +255,37 @@ describe("grades 6–9 reading: questions", () => {
       }
     }
   });
+
+  it("no length rank gives the key away: always picking the k-th longest or k-th shortest choice finds at most 40% of keys", () => {
+    for (const [f, levels] of Object.entries(POOLS)) {
+      for (const [i, pool] of levels.entries()) {
+        const authored = pool.flatMap((e) => (e.question ? [e.question] : []));
+        for (const l of LOCALES) {
+          const ranks = authored.map((x) => lengthRanks(x[l][1], x[l][2]));
+          for (const side of ["fromLongest", "fromShortest"] as const) {
+            for (let k = 0; k < 4; k++) {
+              const n = ranks.filter((r) => r[side].includes(k)).length;
+              expect(n / authored.length, `${f} L${i + 1} ${l}: the key is choice ${k + 1} ${side} in ${n} of ${authored.length}`).toBeLessThanOrEqual(0.4);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it("theme statements and comparisons do not follow one template", () => {
+    for (const level of [1, 2]) {
+      const at = (ask: Ask) => PASSAGES.filter((p) => p.level === level).flatMap((p) => p.qs.filter((x) => x.ask === ask));
+      // A one-word topic plus a plot retelling beside the key, in every item, lets a learner skip the text.
+      const themes = at("theme.statement");
+      const templated = themes.filter((x) => x.tags.includes("topic-not-theme") && x.tags.includes("plot-not-theme")).length;
+      expect(templated / themes.length, `theme L${level}: ${templated} of ${themes.length} use the topic + plot template`).toBeLessThanOrEqual(0.5);
+      // A word-for-word swap of the key makes a 50/50 guess; keep it in about half the comparisons at most.
+      const compares = [...at("compare.differ"), ...at("compare.approach")];
+      const swapped = compares.filter((x) => x.tags.includes("swaps-texts")).length;
+      expect(swapped / compares.length, `compare L${level}: ${swapped} of ${compares.length} carry a swap`).toBeLessThanOrEqual(0.5);
+    }
+  });
 });
 
 /** Finds the bank question an item was built from by reading its prompt, not by asking the generator. */
@@ -271,8 +324,14 @@ describe.each(ENGLISH_READING_6_9.map((s) => [s.id, s] as const))("%s items", (i
           for (const h of item.hints) expect(lc(h), `${where} hint gives away ${right}`).not.toContain(lc(right));
           expect(item.say, where).not.toMatch(/\^|\d\/\d|\{|\}/);
           for (const t of [promptText(item), item.say, ...item.hints, ...item.steps, ...labels]) expect(t, `${where} "${t}"`).not.toMatch(/[!¡]|\p{Extended_Pictographic}/u);
-          // Spanish articles agree with the place named: "la estrofa", "el párrafo"; no doubled period after a quote.
-          for (const t of [...item.hints, ...item.steps]) expect(t, `${where} "${t}"`).not.toMatch(/\bel estrofa|\bla párrafo|\.”\./);
+          // Spanish articles agree with the place named: "la estrofa", "el párrafo"; no doubled period after a quote,
+          // and no doubled quote marks around dialogue.
+          for (const t of [...item.hints, ...item.steps]) expect(t, `${where} "${t}"`).not.toMatch(/\bel estrofa|\bla párrafo|\.”\.|““|””/);
+          // Hint 3 must not read out the sentence the key restates: it may repeat at most half of the key's
+          // words, unless it repeats a wrong choice at least as much.
+          const third = item.hints[2];
+          const near = share(right, third);
+          expect(near < 0.5 || labels.some((c, i) => i !== index && share(c, third) >= near), `${where} hint 3 restates the key (${near.toFixed(2)}): ${third}`).toBe(true);
           // The same seed asks the same question in both languages: same key position, same tags.
           const other = makeItem(id, level, seed, l === "en" ? "es" : "en");
           expect(other.answer, where).toEqual(item.answer);
@@ -286,6 +345,8 @@ describe.each(ENGLISH_READING_6_9.map((s) => [s.id, s] as const))("%s items", (i
           } else {
             const s = passage!.structure!;
             expect(right, where).toBe(STRUCTURE_LABELS[l][["chronological", "compare-contrast", "cause-effect", "problem-solution"].indexOf(s.kind)]);
+            // The signal words point at the evidence; they do not name the category.
+            expect(item.hints[2], `${where} hint 3 names a structure`).not.toMatch(NAMES_STRUCTURE);
           }
         }
         expect(prompts.size, `${id} L${level} ${l} distinct items`).toBeGreaterThanOrEqual(12);
