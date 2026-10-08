@@ -73,10 +73,10 @@ describe("grades 3–5 reading: strand shape", () => {
     }
   });
 
-  it("has 45 original passages of all three kinds in both bands", () => {
-    expect(PASSAGES.length).toBe(45);
-    expect(new Set(PASSAGES.map((p) => p.id)).size).toBe(45);
-    for (const l of LOCALES) expect(new Set(PASSAGES.map((p) => p.title[idx(l)])).size, `${l} titles`).toBe(45);
+  it("has 63 original passages of all three kinds in both bands", () => {
+    expect(PASSAGES.length).toBe(63);
+    expect(new Set(PASSAGES.map((p) => p.id)).size).toBe(63);
+    for (const l of LOCALES) expect(new Set(PASSAGES.map((p) => p.title[idx(l)])).size, `${l} titles`).toBe(63);
     for (const kind of ["fiction", "info", "poem"] as const)
       for (const band of [1, 2]) expect(PASSAGES.filter((p) => p.kind === kind && p.band === band).length, `${kind} band ${band}`).toBeGreaterThanOrEqual(4);
   });
