@@ -8,8 +8,8 @@ import { bi, e, m, type Bank } from "./shared";
 export const GRAVITY_ORBITS: Bank = {
   nudge: bi("Which objects are pulling on each other here, and how massive and how far apart are they?", "¿Qué objetos se atraen aquí, y qué tanta masa tienen y qué tan lejos están?"),
   strategy: bi(
-    "Every object with mass pulls on every other one. The pull is stronger when the masses are bigger and weaker when the objects are farther apart. An orbit is a moving object that keeps falling around a more massive one instead of flying off in a straight line.",
-    "Todo objeto con masa atrae a todos los demás. La atracción es más fuerte cuando las masas son más grandes y más débil cuando los objetos están más lejos. Una órbita es un objeto en movimiento que sigue cayendo alrededor de otro con más masa en lugar de salir disparado en línea recta.",
+    "Name the objects pulling on each other, then compare how strongly each one can pull and how far apart they are. For an orbit, picture something moving sideways while it keeps falling.",
+    "Nombra los objetos que se atraen y compara qué tan fuerte puede atraer cada uno y qué tan lejos están. Para una órbita, imagina algo que se mueve de lado mientras sigue cayendo.",
   ),
   seconds: 25,
   items: [
@@ -18,7 +18,7 @@ export const GRAVITY_ORBITS: Bank = {
       bi("Earth's gravity pulling on the Moon as it moves", "La gravedad de la Tierra que jala a la Luna mientras se mueve"),
       [
         m("thinks-no-gravity-in-space", "Nothing; there is no gravity in space", "Nada; en el espacio no hay gravedad"),
-        m("thinks-orbits-need-push", "A force from the Moon pushing itself forward", "Una fuerza de la Luna que se empuja a sí misma hacia adelante"),
+        m("thinks-orbits-need-push", "A force from the Moon pushing itself forward around Earth", "Una fuerza de la Luna que se empuja a sí misma hacia adelante alrededor de la Tierra"),
         m("magnetism-gravity-mixup", "Earth's magnetic field", "El campo magnético de la Tierra"),
       ],
       bi("Without a pull toward Earth, the Moon would travel in a straight line.", "Sin una atracción hacia la Tierra, la Luna viajaría en línea recta."),
@@ -29,7 +29,7 @@ export const GRAVITY_ORBITS: Bank = {
       bi("Their masses and the distance between them", "Sus masas y la distancia entre ellos"),
       [
         m("irrelevant-property", "Their colors and shapes", "Sus colores y formas"),
-        m("irrelevant-property", "Their speeds and temperatures", "Sus rapideces y temperaturas"),
+        m("irrelevant-property", "Their speeds and the temperatures of their surfaces", "Sus rapideces y las temperaturas de sus superficies"),
         m("size-mass-mixup", "Only their sizes", "Solo sus tamaños"),
       ],
       bi("A big balloon and a small iron ball show that size alone is not what counts.", "Un globo grande y una bola de hierro pequeña muestran que el tamaño solo no es lo que cuenta."),
@@ -47,7 +47,7 @@ export const GRAVITY_ORBITS: Bank = {
       bi("They and the station are falling around Earth together.", "Ellos y la estación caen juntos alrededor de la Tierra."),
       [
         m("thinks-no-gravity-in-space", "There is no gravity in space.", "En el espacio no hay gravedad."),
-        m("thinks-no-gravity-in-space", "They are too far from Earth to feel its gravity.", "Están demasiado lejos de la Tierra para sentir su gravedad."),
+        m("thinks-no-gravity-in-space", "They are too far from Earth to feel any of its gravity.", "Están demasiado lejos de la Tierra para sentir su gravedad."),
         m("invented-cause", "The air in the station holds them up.", "El aire de la estación los sostiene."),
       ],
       bi("At the station's height, Earth's gravity is still about 90% as strong as on the ground.", "A la altura de la estación, la gravedad de la Tierra todavía es cerca del 90% de la que hay en el suelo."),
@@ -99,7 +99,7 @@ export const GRAVITY_ORBITS: Bank = {
     ),
     e(
       bi("What causes most of the ocean tides on Earth?", "¿Qué causa la mayor parte de las mareas del océano en la Tierra?"),
-      bi("The Moon's gravity pulling on Earth and its oceans", "La gravedad de la Luna que atrae a la Tierra y a sus océanos"),
+      bi("The Moon's gravity", "La gravedad de la Luna"),
       [
         m("invented-cause", "Wind blowing across the ocean", "El viento que sopla sobre el océano"),
         m("magnetism-gravity-mixup", "Earth's magnetic field", "El campo magnético de la Tierra"),
@@ -110,7 +110,7 @@ export const GRAVITY_ORBITS: Bank = {
     ),
     e(
       bi("How did gravity help form the solar system?", "¿Cómo ayudó la gravedad a formar el sistema solar?"),
-      bi("It pulled a spinning cloud of gas and dust together into the Sun and planets.", "Juntó una nube giratoria de gas y polvo para formar el Sol y los planetas."),
+      bi("It pulled a cloud of gas and dust together.", "Juntó una nube de gas y polvo."),
       [
         m("gravity-pushes", "It pushed gas and dust away from the center.", "Empujó el gas y el polvo lejos del centro."),
         m("invented-cause", "It had no part; the planets formed from light.", "No participó; los planetas se formaron a partir de la luz."),
@@ -124,7 +124,7 @@ export const GRAVITY_ORBITS: Bank = {
       bi("The Moon has less mass, so its gravity is weaker.", "La Luna tiene menos masa, así que su gravedad es más débil."),
       [
         m("thinks-no-gravity-in-space", "The Moon has no gravity.", "La Luna no tiene gravedad."),
-        m("mass-weight-mixup", "The astronauts have less mass on the Moon.", "Los astronautas tienen menos masa en la Luna."),
+        m("mass-weight-mixup", "The astronauts have less mass while they are on the Moon.", "Los astronautas tienen menos masa mientras están en la Luna."),
         m("irrelevant-property", "The Moon is colder than Earth.", "La Luna es más fría que la Tierra."),
       ],
       bi("The astronauts still come back down, so gravity is there.", "Los astronautas sí vuelven a bajar, así que hay gravedad."),
@@ -139,10 +139,10 @@ export const GRAVITY_ORBITS: Bank = {
     ),
     e(
       bi("A comet moves fastest when it is closest to the Sun. Why?", "Un cometa se mueve más rápido cuando está más cerca del Sol. ¿Por qué?"),
-      bi("The Sun's gravity pulls on it harder there and speeds it up as it falls inward.", "Ahí la gravedad del Sol lo atrae con más fuerza y lo acelera mientras cae hacia adentro."),
+      bi("The Sun's gravity pulls harder there and speeds it up.", "Ahí la gravedad del Sol lo atrae más fuerte y lo acelera."),
       [
         m("invented-cause", "Its glowing tail pushes it forward.", "Su cola brillante lo empuja hacia adelante."),
-        m("irrelevant-property", "The Sun's heat makes it lighter.", "El calor del Sol lo hace más ligero."),
+        m("irrelevant-property", "The Sun's heat boils off ice and makes it lighter and faster.", "El calor del Sol evapora su hielo y lo hace más ligero y rápido."),
         m("distance-effect-reversed", "Gravity is weakest near the Sun.", "La gravedad es más débil cerca del Sol."),
       ],
       bi("How does the pull of gravity change as the comet gets closer?", "¿Cómo cambia la atracción de la gravedad cuando el cometa se acerca?"),
@@ -154,25 +154,25 @@ export const GRAVITY_ORBITS: Bank = {
 // ── s.climate.impact ────────────────────────────────────────────────────────────────────────────
 
 export const CLIMATE_IMPACT: Bank = {
-  nudge: bi("Is the question about weather on one day, or about climate over many years?", "¿La pregunta trata del tiempo de un día o del clima a lo largo de muchos años?"),
+  nudge: bi("Is the question about a cause, an effect, or evidence of change?", "¿La pregunta trata de una causa, de un efecto o de evidencia del cambio?"),
   strategy: bi(
-    "Burning coal, oil, and gas adds carbon dioxide to the air. Carbon dioxide and other greenhouse gases absorb heat given off by Earth and send some back down, so average temperatures rise. Evidence comes from long-term records, not single days.",
-    "Quemar carbón, petróleo y gas agrega dióxido de carbono al aire. El dióxido de carbono y otros gases de efecto invernadero absorben el calor que emite la Tierra y regresan parte de él hacia abajo, así que las temperaturas promedio suben. La evidencia viene de registros de muchos años, no de días sueltos.",
+    "Separate the cause from the evidence. For a cause, follow the carbon: where did it come from, and what does it do in the air? For evidence, look for a change measured over many years across the whole planet.",
+    "Separa la causa de la evidencia. Para una causa, sigue al carbono: ¿de dónde vino y qué hace en el aire? Para la evidencia, busca un cambio medido durante muchos años en todo el planeta.",
   ),
   seconds: 30,
   items: [
     e(
       bi("Which gas, released by burning fossil fuels, is the main cause of global warming since the 1800s?", "¿Qué gas, liberado al quemar combustibles fósiles, es la causa principal del calentamiento global desde el siglo XIX?"),
       bi("Carbon dioxide", "El dióxido de carbono"),
-      [m("wrong-gas", "Oxygen", "El oxígeno"), m("wrong-gas", "Nitrogen", "El nitrógeno"), m("wrong-gas", "Helium", "El helio")],
+      [m("wrong-gas", "Oxygen", "El oxígeno"), m("wrong-gas", "Carbon monoxide", "El monóxido de carbono"), m("wrong-gas", "Nitrogen", "El nitrógeno")],
       bi("It forms when the carbon in fuel combines with oxygen.", "Se forma cuando el carbono del combustible se combina con oxígeno."),
       bi("Burning coal, oil, and gas releases carbon dioxide, a greenhouse gas. Its amount in the air has risen by about half since the 1800s.", "Quemar carbón, petróleo y gas libera dióxido de carbono, un gas de efecto invernadero. Su cantidad en el aire ha aumentado cerca de la mitad desde el siglo XIX."),
     ),
     e(
       bi("How do greenhouse gases warm Earth?", "¿Cómo calientan la Tierra los gases de efecto invernadero?"),
-      bi("They absorb heat given off by Earth's surface and send some of it back down.", "Absorben el calor que emite la superficie de la Tierra y regresan parte de él hacia abajo."),
+      bi("They absorb heat from Earth's surface and send some back down.", "Absorben el calor de la superficie de la Tierra y regresan parte hacia abajo."),
       [
-        m("ozone-hole-confusion", "They make holes in the atmosphere that let in more sunlight.", "Hacen agujeros en la atmósfera que dejan entrar más luz del Sol."),
+        m("ozone-hole-confusion", "They make holes in the atmosphere that let in more sunlight from space.", "Hacen agujeros en la atmósfera que dejan entrar más luz del Sol desde el espacio."),
         m("sun-causes-recent-warming", "They make the Sun shine brighter.", "Hacen que el Sol brille más."),
         m("invented-cause", "They are hot gases that warm the air when they are released.", "Son gases calientes que calientan el aire cuando se liberan."),
       ],
@@ -181,9 +181,9 @@ export const CLIMATE_IMPACT: Bank = {
     ),
     e(
       bi("Is the ozone hole the main cause of global warming?", "¿El agujero de la capa de ozono es la causa principal del calentamiento global?"),
-      bi("No; global warming is caused mainly by greenhouse gases such as carbon dioxide.", "No; el calentamiento global se debe sobre todo a gases de efecto invernadero como el dióxido de carbono."),
+      bi("No; warming comes mainly from greenhouse gases.", "No; el calentamiento viene sobre todo de los gases de efecto invernadero."),
       [
-        m("ozone-hole-confusion", "Yes; heat pours in through the hole.", "Sí; el calor entra por el agujero."),
+        m("ozone-hole-confusion", "Yes; the Sun's heat pours in through the hole in the ozone layer.", "Sí; el calor del Sol entra por el agujero de la capa de ozono y calienta la Tierra."),
         m("ozone-hole-confusion", "Yes; the hole lets the cold air out.", "Sí; el agujero deja salir el aire frío."),
       ],
       bi("The ozone layer blocks ultraviolet light; it is a different problem.", "La capa de ozono bloquea la luz ultravioleta; es un problema distinto."),
@@ -191,7 +191,7 @@ export const CLIMATE_IMPACT: Bank = {
     ),
     e(
       bi("What is the difference between weather and climate?", "¿Cuál es la diferencia entre el tiempo y el clima?"),
-      bi("Weather is day-to-day conditions; climate is the average pattern over many years.", "El tiempo es lo que pasa en la atmósfera día a día; el clima es el patrón promedio a lo largo de muchos años."),
+      bi("Weather is day to day; climate is the average over many years.", "El tiempo es lo de cada día; el clima es el promedio de muchos años."),
       [
         m("weather-climate-mixup", "They mean the same thing.", "Significan lo mismo."),
         m("weather-climate-mixup", "Climate is today's conditions; weather is the long-term average.", "El clima es lo que pasa hoy; el tiempo es el promedio de muchos años."),
@@ -201,10 +201,10 @@ export const CLIMATE_IMPACT: Bank = {
     ),
     e(
       bi("A city has one very cold week in winter. Does this show that global warming is not happening?", "Una ciudad tiene una semana muy fría en invierno. ¿Esto demuestra que no existe el calentamiento global?"),
-      bi("No; global warming is about long-term average temperatures across all of Earth.", "No; el calentamiento global trata de las temperaturas promedio de muchos años en toda la Tierra."),
+      bi("No; warming is about long-term averages over all of Earth.", "No; el calentamiento trata de promedios de muchos años en toda la Tierra."),
       [
         m("weather-climate-mixup", "Yes; any cold week disproves it.", "Sí; cualquier semana fría lo desmiente."),
-        m("weather-climate-mixup", "Yes, if the week is colder than the same week last year.", "Sí, si la semana es más fría que la misma semana del año pasado."),
+        m("weather-climate-mixup", "Yes, if the week is colder than the same week was last year.", "Sí, si esa semana es más fría que la misma semana del año pasado en esa ciudad."),
       ],
       bi("One week in one place is weather.", "Una semana en un lugar es tiempo, no clima."),
       bi("Cold spells still happen in a warming world. The trend shows up in averages over decades and over the whole planet.", "Siguen ocurriendo olas de frío en un mundo que se calienta. La tendencia se ve en los promedios de décadas y de todo el planeta."),
@@ -213,7 +213,7 @@ export const CLIMATE_IMPACT: Bank = {
       bi("Which observation is evidence that Earth's climate is warming?", "¿Qué observación es evidencia de que el clima de la Tierra se está calentando?"),
       bi("Most glaciers around the world are shrinking.", "La mayoría de los glaciares del mundo se están reduciendo."),
       [
-        m("weather-climate-mixup", "Some summer days are hot.", "Algunos días de verano son calurosos."),
+        m("weather-climate-mixup", "Some summer days in many cities are very hot.", "Algunos días de verano son muy calurosos en muchas ciudades."),
         m("irrelevant-evidence", "The Sun rises in the east.", "El Sol sale por el este."),
         m("irrelevant-evidence", "Volcanoes erupt in Hawaii.", "Los volcanes hacen erupción en Hawái."),
       ],
@@ -224,7 +224,7 @@ export const CLIMATE_IMPACT: Bank = {
       bi("How does global warming raise sea level?", "¿Cómo hace subir el nivel del mar el calentamiento global?"),
       bi("Ice on land melts into the ocean, and warmer seawater expands.", "El hielo sobre tierra se derrite hacia el océano, y el agua de mar más caliente se expande."),
       [
-        m("floating-ice-misconception", "Melting sea ice that already floats raises the sea a lot.", "El hielo marino que ya flota, al derretirse, hace subir mucho el mar."),
+        m("floating-ice-misconception", "Melting sea ice that already floats on the ocean raises the sea a lot.", "El hielo marino que ya flota sobre el océano, al derretirse, hace subir mucho el nivel del mar."),
         m("invented-cause", "More rain falls on the ocean than before.", "Cae más lluvia sobre el océano que antes."),
       ],
       bi("Think of an ice cube floating in a full glass: when it melts, the glass does not overflow.", "Piensa en un cubo de hielo que flota en un vaso lleno: cuando se derrite, el vaso no se desborda."),
@@ -232,11 +232,11 @@ export const CLIMATE_IMPACT: Bank = {
     ),
     e(
       bi("Which action reduces the carbon dioxide people add to the air?", "¿Qué acción reduce el dióxido de carbono que las personas agregan al aire?"),
-      bi("Getting electricity from solar panels and wind instead of coal", "Obtener electricidad de paneles solares y del viento en lugar del carbón"),
+      bi("Getting electricity from solar panels and wind", "Obtener electricidad de paneles solares y del viento"),
       [
         m("increases-emissions", "Burning more coal to make electricity", "Quemar más carbón para producir electricidad"),
         m("deforestation-misconception", "Cutting down forests to make farmland", "Talar bosques para hacer tierras de cultivo"),
-        m("increases-emissions", "Driving short trips instead of walking", "Ir en auto en trayectos cortos en lugar de caminar"),
+        m("increases-emissions", "Driving a car on short trips instead of walking or biking", "Ir en auto en trayectos cortos en lugar de caminar o ir en bicicleta"),
       ],
       bi("Which choice burns no fuel?", "¿Qué opción no quema combustible?"),
       bi("Solar and wind power make electricity without burning fuel, so they add little carbon dioxide.", "La energía solar y la eólica producen electricidad sin quemar combustible, así que agregan poco dióxido de carbono."),
@@ -245,7 +245,7 @@ export const CLIMATE_IMPACT: Bank = {
       bi("How does clearing large forests add to climate change?", "¿Cómo contribuye a cambiar el clima la tala de grandes bosques?"),
       bi("Fewer trees take in carbon dioxide, and burning or rotting wood releases it.", "Hay menos árboles que absorban dióxido de carbono, y la madera que se quema o se pudre lo libera."),
       [
-        m("invented-cause", "Trees block sunlight from space, so fewer trees let in more sunlight.", "Los árboles bloquean la luz que viene del espacio, así que menos árboles dejan entrar más luz."),
+        m("invented-cause", "Trees block sunlight from space, so fewer trees let in more sunlight and heat.", "Los árboles bloquean la luz que viene del espacio, así que menos árboles dejan entrar más luz y más calor."),
         m("ignores-carbon-cycle", "It has no effect on climate.", "No tiene ningún efecto en el clima."),
       ],
       bi("Trees store carbon that they took from the air.", "Los árboles guardan carbono que tomaron del aire."),
@@ -256,11 +256,11 @@ export const CLIMATE_IMPACT: Bank = {
         "Measurements on Mauna Loa in Hawaii show carbon dioxide in the air rising every year since 1958. What is the main source of the extra carbon dioxide?",
         "Las mediciones en el Mauna Loa, en Hawái, muestran que el dióxido de carbono en el aire sube cada año desde 1958. ¿Cuál es la fuente principal del dióxido de carbono adicional?",
       ),
-      bi("Burning fossil fuels such as coal, oil, and gas", "La quema de combustibles fósiles como el carbón, el petróleo y el gas"),
+      bi("Burning fossil fuels", "La quema de combustibles fósiles"),
       [
         m("volcano-misconception", "Volcanoes", "Los volcanes"),
         m("respiration-misconception", "People breathing out", "Las personas que exhalan"),
-        m("wrong-source", "The ocean giving off gas", "El océano que libera gas"),
+        m("wrong-source", "The ocean giving off gas into the air", "El océano, que libera gas al aire"),
       ],
       bi("Volcanoes release less than 1% as much carbon dioxide as people do each year.", "Los volcanes liberan menos del 1% del dióxido de carbono que liberan las personas cada año."),
       bi("Fossil fuel use releases carbon that was stored underground for millions of years. The ocean is actually taking in some of the extra carbon dioxide.", "Usar combustibles fósiles libera carbono que estuvo guardado bajo tierra millones de años. De hecho, el océano está absorbiendo parte del dióxido de carbono adicional."),
@@ -274,7 +274,7 @@ export const CLIMATE_IMPACT: Bank = {
     ),
     e(
       bi("As the ocean takes in more carbon dioxide, what happens to seawater?", "Al absorber el océano más dióxido de carbono, ¿qué le pasa al agua de mar?"),
-      bi("It becomes more acidic, which makes it harder for corals and shellfish to build shells.", "Se vuelve más ácida, lo que hace más difícil que los corales y los mariscos formen sus conchas."),
+      bi("It becomes more acidic.", "Se vuelve más ácida."),
       [
         m("trend-reversed", "It becomes more basic.", "Se vuelve más básica."),
         m("invented-cause", "It becomes much saltier.", "Se vuelve mucho más salada."),
@@ -285,10 +285,10 @@ export const CLIMATE_IMPACT: Bank = {
     ),
     e(
       bi("Which human activity releases methane, another greenhouse gas?", "¿Qué actividad humana libera metano, otro gas de efecto invernadero?"),
-      bi("Raising cattle and growing rice in flooded fields", "Criar ganado y cultivar arroz en campos inundados"),
+      bi("Raising cattle", "Criar ganado"),
       [
         m("reverses-carbon-sink", "Planting trees", "Plantar árboles"),
-        m("increases-emissions", "Using solar panels", "Usar paneles solares"),
+        m("not-a-methane-source", "Using solar panels", "Usar paneles solares"),
         m("irrelevant-evidence", "Recycling glass bottles", "Reciclar botellas de vidrio"),
       ],
       bi("Methane is made by microbes that live without oxygen, such as in a cow's stomach or in soggy soil.", "El metano lo producen microbios que viven sin oxígeno, como en el estómago de una vaca o en el suelo empapado."),
@@ -302,16 +302,16 @@ export const CLIMATE_IMPACT: Bank = {
 export const WAVES_INFO: Bank = {
   nudge: bi("Is the information carried as a smooth, changing wave or as separate on-and-off values?", "¿La información viaja como una onda continua que cambia o como valores separados de encendido y apagado?"),
   strategy: bi(
-    "An analog signal changes smoothly, like the original sound wave. A digital signal is a pattern of separate values, usually 0s and 1s (bits). Digital signals resist noise and copy exactly, which is why most information is now sent digitally by radio waves and light.",
-    "Una señal analógica cambia de forma continua, como la onda de sonido original. Una señal digital es un patrón de valores separados, casi siempre 0 y 1 (bits). Las señales digitales resisten el ruido y se copian con exactitud, por eso hoy casi toda la información se envía en forma digital con ondas de radio y luz.",
+    "Ask whether the signal can take any value in a range or only some set values. Then think about what happens to each kind when small wiggles get added on the way or when it is copied many times.",
+    "Pregúntate si la señal puede tomar cualquier valor dentro de un rango o solo algunos valores fijos. Luego piensa qué le pasa a cada tipo cuando se le agregan pequeñas ondulaciones en el camino o cuando se copia muchas veces.",
   ),
   seconds: 25,
   items: [
     e(
       bi("What is a digital signal?", "¿Qué es una señal digital?"),
-      bi("A signal sent as a pattern of separate values, such as 0s and 1s", "Una señal que se envía como un patrón de valores separados, como 0 y 1"),
+      bi("A pattern of separate values, such as 0s and 1s", "Un patrón de valores separados, como 0 y 1"),
       [
-        m("analog-digital-mixup", "A smooth wave that changes continuously", "Una onda continua que cambia sin saltos"),
+        m("analog-digital-mixup", "A smooth wave that rises and falls continuously, like a sound wave", "Una onda continua que sube y baja sin saltos, como una onda de sonido"),
         m("medium-confusion", "Any signal that travels through a wire", "Cualquier señal que viaja por un cable"),
         m("invented-property", "A signal that can never be copied", "Una señal que nunca se puede copiar"),
       ],
@@ -320,9 +320,9 @@ export const WAVES_INFO: Bank = {
     ),
     e(
       bi("What is an analog signal?", "¿Qué es una señal analógica?"),
-      bi("A signal that changes smoothly and continuously, like the original sound wave", "Una señal que cambia de forma continua, como la onda de sonido original"),
+      bi("A signal that changes smoothly, like the original wave", "Una señal que cambia de forma continua, como la onda original"),
       [
-        m("analog-digital-mixup", "A signal made only of 0s and 1s", "Una señal hecha solo de 0 y 1"),
+        m("analog-digital-mixup", "A signal made only of separate values, such as 0s and 1s", "Una señal hecha solo de valores separados, como los 0 y los 1"),
         m("invented-property", "A signal that cannot carry sound", "Una señal que no puede llevar sonido"),
         m("medium-confusion", "A signal that travels only as light", "Una señal que viaja solo como luz"),
       ],
@@ -333,7 +333,7 @@ export const WAVES_INFO: Bank = {
       bi("Why are digital signals more reliable than analog signals over long distances?", "¿Por qué las señales digitales son más confiables que las analógicas en distancias largas?"),
       bi("A little noise does not change whether a value is read as 0 or 1.", "Un poco de ruido no cambia si un valor se lee como 0 o como 1."),
       [
-        m("thinks-digital-is-faster", "Digital signals travel faster than light.", "Las señales digitales viajan más rápido que la luz."),
+        m("thinks-digital-is-faster", "Digital signals travel faster than light, so noise cannot catch them.", "Las señales digitales viajan más rápido que la luz, así que el ruido no las alcanza."),
         m("invented-property", "Digital signals never lose any energy.", "Las señales digitales nunca pierden energía."),
         m("medium-confusion", "Analog signals cannot travel through wires.", "Las señales analógicas no pueden viajar por cables."),
       ],
@@ -345,7 +345,7 @@ export const WAVES_INFO: Bank = {
       bi("A single 0 or 1 in digital information", "Un solo 0 o 1 en la información digital"),
       [
         m("bit-byte-mixup", "A group of eight 0s and 1s", "Un grupo de ocho 0 y 1"),
-        m("analog-digital-mixup", "One complete wave of an analog signal", "Una onda completa de una señal analógica"),
+        m("analog-digital-mixup", "One complete wave of an analog sound signal", "Una onda completa de una señal analógica de sonido"),
         m("invented-property", "A unit of loudness", "Una unidad de volumen del sonido"),
       ],
       bi("It is the smallest piece of digital information.", "Es la pieza más pequeña de información digital."),
@@ -367,11 +367,11 @@ export const WAVES_INFO: Bank = {
     ),
     e(
       bi("A copy of a copy of an analog cassette tape sounds worse each time, but a copy of a digital music file sounds the same. Why?", "Una copia de una copia de un casete analógico suena peor cada vez, pero la copia de un archivo de música digital suena igual. ¿Por qué?"),
-      bi("Each analog copy adds noise, while digital copies repeat the same 0s and 1s exactly.", "Cada copia analógica agrega ruido, mientras que las copias digitales repiten exactamente los mismos 0 y 1."),
+      bi("Analog copies add noise; digital copies repeat the same 0s and 1s.", "Las copias analógicas agregan ruido; las digitales repiten los mismos 0 y 1."),
       [
         m("invented-property", "Digital files are played louder.", "Los archivos digitales se reproducen más fuerte."),
         m("invented-property", "Analog copies are made too quickly.", "Las copias analógicas se hacen demasiado rápido."),
-        m("analog-digital-mixup", "Cassette tapes store 0s and 1s.", "Los casetes guardan 0 y 1."),
+        m("analog-digital-mixup", "Cassette tapes store 0s and 1s that wear off a little each time they are copied.", "Los casetes guardan 0 y 1 que se van borrando un poco cada vez que se copian."),
       ],
       bi("What gets added to a smooth wave each time it is copied?", "¿Qué se le agrega a una onda continua cada vez que se copia?"),
       bi("Copying an analog wave adds a little noise each time, and it builds up. A digital copy just repeats the same list of numbers.", "Copiar una onda analógica agrega un poco de ruido cada vez, y se va acumulando. Una copia digital solo repite la misma lista de números."),
@@ -379,7 +379,7 @@ export const WAVES_INFO: Bank = {
     e(
       bi("Fiber-optic cables carry internet data under the ocean. What do they send the data as?", "Los cables de fibra óptica llevan datos de internet bajo el océano. ¿Cómo envían los datos?"),
       bi("Pulses of light", "Como pulsos de luz"),
-      [m("medium-confusion", "Sound waves", "Como ondas de sonido"), m("medium-confusion", "Water waves", "Como olas de agua")],
+      [m("medium-confusion", "Sound waves", "Como ondas de sonido"), m("medium-confusion", "Tiny waves of water", "Como olas de agua")],
       bi("The glass fibers are thin and very clear.", "Las fibras de vidrio son delgadas y muy transparentes."),
       bi("Lasers flash light on and off inside glass fibers, and the light carries the 0s and 1s across long distances.", "Unos láseres encienden y apagan la luz dentro de fibras de vidrio, y la luz lleva los 0 y 1 a grandes distancias."),
     ),
@@ -387,7 +387,7 @@ export const WAVES_INFO: Bank = {
       bi("How does a cell phone send your voice to a cell tower?", "¿Cómo envía un teléfono celular tu voz a una torre de telefonía?"),
       bi("It turns your voice into a digital signal and sends it as radio waves.", "Convierte tu voz en una señal digital y la envía como ondas de radio."),
       [
-        m("sound-travels-far", "It sends the sound waves of your voice through the air to the tower.", "Envía las ondas de sonido de tu voz por el aire hasta la torre."),
+        m("sound-travels-far", "It sends the sound waves of your voice through the air all the way to the tower.", "Envía las ondas de sonido de tu voz por el aire hasta llegar a la torre."),
         m("medium-confusion", "It sends light from its screen to the tower.", "Envía luz desde su pantalla hasta la torre."),
         m("analog-digital-mixup", "It sends a copy of the sound wave down a wire to the tower.", "Envía una copia de la onda de sonido por un cable hasta la torre."),
       ],
@@ -396,9 +396,9 @@ export const WAVES_INFO: Bank = {
     ),
     e(
       bi("To make a digital recording, a computer measures a sound wave many times each second. What happens if it measures more times per second?", "Para hacer una grabación digital, una computadora mide una onda de sonido muchas veces por segundo. ¿Qué pasa si la mide más veces por segundo?"),
-      bi("The digital copy matches the original sound more closely.", "La copia digital se parece más al sonido original."),
+      bi("The copy sounds more like the original.", "La copia se parece más al sonido original."),
       [
-        m("invented-property", "The sound gets louder.", "El sonido se vuelve más fuerte."),
+        m("invented-property", "The sound gets louder each time it is played.", "El sonido se vuelve más fuerte cada vez que se reproduce."),
         m("trend-reversed", "The file gets smaller.", "El archivo se vuelve más pequeño."),
         m("ignores-sampling", "Nothing changes.", "No cambia nada."),
       ],
