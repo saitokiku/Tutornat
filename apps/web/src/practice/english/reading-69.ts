@@ -103,8 +103,8 @@ const HINTS: Record<Ask | "structure.overall", Bi<[string, string]>> = {
     es: ["¿Qué perdería el texto si se quitara esta parte?", "Fíjate en lo que viene justo antes y después. Decide si esta parte introduce, explica, da un ejemplo, muestra un cambio o concluye."],
   },
   "theme.statement": {
-    en: ["What does the main character or speaker learn or come to understand?", "A theme is a message about life that the whole text supports, ending included. Test each choice against the ending: does the main character's change back it up, or only one scene, or someone else's view?"],
-    es: ["¿Qué aprende o llega a comprender el personaje principal o la voz poética?", "El mensaje es una idea sobre la vida que todo el texto apoya, también el final. Compara cada opción con el final: ¿la respalda el cambio del personaje principal, o solo una escena, o lo que piensa otra persona?"],
+    en: ["What does the main character or speaker learn or come to understand?", "A theme is a message about life that the whole text supports, ending included. Test each choice against the ending: does the change in the main character or speaker back it up, or only one scene, or someone else's view?"],
+    es: ["¿Qué aprende o llega a comprender el personaje principal o la voz poética?", "El mensaje es una idea sobre la vida que todo el texto apoya, también el final. Compara cada opción con el final: ¿la respalda el cambio del personaje principal o de la voz poética, o solo una escena, o lo que piensa otra persona?"],
   },
   "theme.develop": {
     en: ["Themes grow through what characters do, say, and feel, especially when they change.", "Find the moment that most clearly carries the message, and rule out details from before the change or about someone else."],
@@ -203,13 +203,47 @@ export function locate(passage: Passage, quote: string, locale: Locale, article:
 
 const inPassage = (passage: Passage, locale: Locale, s: string) => lang(locale, passage).some((t) => t.paras.some((p) => p.includes(s)));
 
-/** Words of five letters or more, accents and case folded: enough to tell content from "the", "que". */
-const bigWords = (s: string) => new Set(s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().match(/\p{L}{5,}/gu) ?? []);
-/** The share of a choice's words that a text repeats. */
+/** Function words of three letters or more (accents folded), left out when judging what two texts share. */
+const STOP = new Set(
+  "the and for are but not you all any can had her was one our out has his how its may who did get him she too use that this with from have were when what they them their then than into only also more most some very does about which there would could should been will your just over after because while other each every los las les del una uno unos unas por con sin que para como pero porque cuando esta este esto estos estas todo todos toda todas cada desde hasta sobre entre donde quien tiene tienen sino tambien aunque solo otra otro otros otras ellos ellas puede pueden habia sido eran fueron hace mismo misma sus mas muy ese esa eso text texto".split(" "),
+);
+/** Word stems: the first five letters of each word of three letters or more, function words left out, so
+ *  "forests" meets "forest" and "sighed" meets "sigh". Accents and case are folded. */
+const stems = (s: string) =>
+  new Set((s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().match(/\p{L}{3,}/gu) ?? []).filter((w) => !STOP.has(w)).map((w) => w.slice(0, 5)));
+/** The share of a choice's stems that a text repeats. */
 function repeats(choice: string, text: string) {
-  const mine = bigWords(choice);
-  const there = bigWords(text);
+  const mine = stems(choice);
+  const there = stems(text);
   return mine.size ? [...mine].filter((w) => there.has(w)).length / mine.size : 0;
+}
+
+const BOTH = ["en", "es"] as const;
+/**
+ * Whether hint 3 rules a choice out instead of pointing at the evidence, decided over both languages so
+ * they get the same kind of hint. Pointing would hand over the key when the choices are quotes from the
+ * passage; when the key restates a third or more of the evidence and no wrong choice restates as much (a
+ * mirror that swaps the two texts restates it just as much, and the evidence is what tells them apart);
+ * when the ask already quotes the evidence, so rereading adds nothing; and always for "what do both texts
+ * agree on", whose evidence is the two places that state the shared point.
+ */
+function rulesOut(passage: Passage, question: Question) {
+  if (question.ask === "compare.agree") return true;
+  return BOTH.some((l) => {
+    const [ask, right, wrong, evidence] = question[l];
+    const all = evidence.join(" ");
+    const near = repeats(right, all);
+    return (
+      inPassage(passage, l, right) ||
+      evidence.every((e) => ask.includes(e.replace(/[.,;:?!]$/, ""))) ||
+      (near >= 1 / 3 && wrong.every((w) => repeats(w, all) < near))
+    );
+  });
+}
+/** The wrong choice least like the key in both languages: ruling it out never settles a pair of look-alikes. */
+function farthest(question: Question) {
+  const like = (i: number) => BOTH.reduce((n, l) => n + repeats(question[l][2][i], question[l][1]) + repeats(question[l][1], question[l][2][i]), 0);
+  return question.tags.reduce((best, _, i) => (like(i) < like(best) ? i : best), 0);
 }
 
 /** A quote that ends a sentence: the period goes inside the marks in English and after them in Spanish. */
@@ -249,13 +283,9 @@ function itemFor({ passage, question }: Entry, r: Rng, level: number, locale: Lo
   const options: Choice[] = [{ label: right }, ...wrong.map((label, i): Choice => ({ label, why: question.tags[i] }))];
   const choices = r.shuffle(options);
   const [h1, h2] = lang(locale, HINTS[question.ask]);
-  const ruleOut = `${tr(locale, "Rule out", "Descarta")} ${qEnd(locale, wrong[0])} ${lang(locale, TAG_TEXT[question.tags[0]])}`;
-  // When the choices are quotes from the passage, pointing at the evidence would hand over the key; so
-  // it would when the key mostly restates the evidence and no wrong choice restates it more (a mirror
-  // that swaps the two texts restates it just as much, and the evidence is what tells them apart).
+  const out = farthest(question);
+  const ruleOut = `${tr(locale, "Rule out", "Descarta")} ${qEnd(locale, wrong[out])} ${lang(locale, TAG_TEXT[question.tags[out]])}`;
   const quoted = inPassage(passage, locale, right);
-  const near = repeats(right, evidence.join(" "));
-  const restated = near >= 0.4 && wrong.every((w) => repeats(w, evidence.join(" ")) <= near);
   const and = tr(locale, " and ", " y ");
   const last = evidence.length - 1;
   const reread = `${tr(locale, "Reread", "Vuelve a leer")} ${evidence.map((e, i) => `${locate(passage, e, locale, true)}: ${i === last ? qEnd(locale, e) : qMid(e)}`).join(and)}`;
@@ -266,7 +296,7 @@ function itemFor({ passage, question }: Entry, r: Rng, level: number, locale: Lo
     choices,
     input: "choices",
     answer: { kind: "choice", index: choices.indexOf(options[0]) },
-    hints: [h1, h2, quoted || restated ? ruleOut : reread],
+    hints: [h1, h2, rulesOut(passage, question) ? ruleOut : reread],
     steps: [quoted ? ruleOut : cited, explain, `${tr(locale, "Answer", "Respuesta")}: ${right}`],
     seconds,
   };
