@@ -71,15 +71,19 @@ const count = (text: string, list: string[]) => list.reduce((n, w) => n + (lc(te
 const choicesOf = (x: Question, l: L) => [x[l][1], ...x[l][2]];
 const promptText = (item: Item) => item.prompt.map((p) => (typeof p === "string" ? p : "")).join("");
 const NO = [/[!¡]/, /\p{Extended_Pictographic}/u, / {2}/, /\d\/\d/, /[{}^]/, /"/];
-/** Function words left out when judging how much a hint repeats a choice (accents already folded). */
+/**
+ * Words left out when judging how much a hint repeats a choice (accents already folded): function words,
+ * and the words every hint 3 is framed with ("Reread paragraph 2", "Vuelve a leer el texto 1").
+ */
 const STOP = new Set(
-  "that this with from have were when what they them their then than into only also more most some very does about which there would could should been will your just over after because while other each every para como pero porque cuando esta este esto estos estas todo todos toda todas cada desde hasta sobre entre donde quien tiene tienen sino tambien aunque solo otra otro otros otras ellos ellas puede pueden habia sido eran fueron hace mismo misma".split(" "),
+  "the and for are but not you all any can had her was one our out has his how its may who did get him she too use that this with from have were when what they them their then than into only also more most some very does about which there would could should been will your just over after because while other each every los las les del una uno unos unas por con sin que sus mas muy ese esa eso para como pero porque cuando esta este esto estos estas todo todos toda todas cada desde hasta sobre entre donde quien tiene tienen sino tambien aunque solo otra otro otros otras ellos ellas puede pueden habia sido eran fueron hace mismo misma reread paragraph stanza text texto vuelve leer parrafo estrofa".split(" "),
 );
-const contentWords = (s: string) => (s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().match(/\p{L}{4,}/gu) ?? []).filter((w) => !STOP.has(w));
-/** The share of a choice's content words that also appear in a hint. */
+/** Stems, so plurals and endings still match ("forests" and "forest", "sighed" and "sigh"): the first five letters of each word of three letters or more. */
+const stemsOf = (s: string) => (s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().match(/\p{L}{3,}/gu) ?? []).filter((w) => !STOP.has(w)).map((w) => w.slice(0, 5));
+/** The share of a choice's stems that also appear in a hint. */
 const share = (choice: string, hint: string) => {
-  const mine = new Set(contentWords(choice));
-  const there = new Set(contentWords(hint));
+  const mine = new Set(stemsOf(choice));
+  const there = new Set(stemsOf(hint));
   return mine.size ? [...mine].filter((w) => there.has(w)).length / mine.size : 0;
 };
 /** Where the key's length falls among the choices, as every rank a length-guesser could reach it from. */
@@ -298,6 +302,34 @@ function source(item: Item, l: L) {
   return { passage, question };
 }
 
+describe("grades 6–9 reading: hint 3 never reads out what the key restates", () => {
+  // Items an audit caught with hint 3 quoting the very lines the key paraphrases: by synonym ("switching"
+  // for "changing"), by plural ("forests"), by a short phrase ("take back", "cross the hallway"), or by
+  // repeating the quote the question already asks about.
+  const CASES: [skill: string, level: number, passage: string, ask: Ask][] = [
+    ["e.paired.texts", 1, "monarch-relay", "compare.agree"],
+    ["e.paired.texts", 2, "clock-debate", "compare.agree"],
+    ["e.theme.development", 1, "low-tide", "theme.develop"],
+    ["e.theme.development", 1, "second-chair", "theme.develop"],
+    ["e.inference.evidence", 1, "mill-letter", "infer.what"],
+    ["e.author.pov", 1, "library-saturdays", "pov.response"],
+    ["e.inference.evidence", 2, "comets-asteroids", "infer.what"],
+  ];
+  it.each(CASES)("%s L%i %s %s", (skill, level, id, ask) => {
+    const question = PASSAGES.find((p) => p.id === id)!.qs.find((x) => x.ask === ask)!;
+    for (const l of LOCALES) {
+      let built = 0;
+      for (const seed of SEEDS) {
+        const item = makeItem(skill, level, seed, l);
+        if (source(item, l).question !== question) continue;
+        built++;
+        for (const e of question[l][3]) expect(item.hints[2], `${id} ${l} seed ${seed}`).not.toContain(e.replace(/“/g, "‘").replace(/”/g, "’").replace(/[.,;:]$/, ""));
+      }
+      expect(built, `${id} ${l}: no seed lands on the question`).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe.each(ENGLISH_READING_6_9.map((s) => [s.id, s] as const))("%s items", (id, skill) => {
   it("show the whole passage, three hints that do not give the key away, a worked answer, tagged choices and a key that re-checks", () => {
     for (let level = 1; level <= skill.levels; level++) {
@@ -329,15 +361,24 @@ describe.each(ENGLISH_READING_6_9.map((s) => [s.id, s] as const))("%s items", (i
           // Spanish articles agree with the place named: "la estrofa", "el párrafo"; no doubled period after a quote,
           // and no doubled quote marks around dialogue.
           for (const t of [...item.hints, ...item.steps]) expect(t, `${where} "${t}"`).not.toMatch(/\bel estrofa|\bla párrafo|\.”\.|““|””/);
-          // Hint 3 must not read out the sentence the key restates: it may repeat at most half of the key's
-          // words, unless it repeats a wrong choice at least as much.
+          // Hint 3 must not read out the sentence the key restates: it may repeat less than a third of the
+          // key's stems, unless it repeats a wrong choice at least as much.
           const third = item.hints[2];
           const near = share(right, third);
-          expect(near < 0.5 || labels.some((c, i) => i !== index && share(c, third) >= near), `${where} hint 3 restates the key (${near.toFixed(2)}): ${third}`).toBe(true);
+          expect(near < 1 / 3 || labels.some((c, i) => i !== index && share(c, third) >= near), `${where} hint 3 restates the key (${near.toFixed(2)}): ${third}`).toBe(true);
           // The same seed asks the same question in both languages: same key position, same tags.
           const other = makeItem(id, level, seed, l === "en" ? "es" : "en");
           expect(other.answer, where).toEqual(item.answer);
           expect(other.choices!.map((c) => c.why), where).toEqual(item.choices!.map((c) => c.why));
+          // Both languages get the same kind of hint 3, and a rule-out never removes the key's swapped mirror
+          // (that would leave the key alone beside choices no one picks).
+          const rulesOut = (h: string) => /^(Rule out|Descarta) /.test(h);
+          expect(rulesOut(third), `${where} hint 3 kind differs between languages`).toBe(rulesOut(other.hints[2]));
+          if (rulesOut(third)) {
+            const gone = item.choices!.filter((c, i) => i !== index && third.includes(c.label.replace(/“/g, "‘").replace(/”/g, "’").replace(/\.$/, "")));
+            expect(gone.length, `${where} hint 3 rules out no choice: ${third}`).toBeGreaterThan(0);
+            for (const c of gone) expect(c.why, `${where} hint 3 rules out the mirror: ${third}`).not.toBe("swaps-texts");
+          }
           // Re-find the key from the prompt alone.
           const { passage, question } = source(item, l);
           expect(passage, `${where}: prompt does not show a whole passage`).toBeDefined();
