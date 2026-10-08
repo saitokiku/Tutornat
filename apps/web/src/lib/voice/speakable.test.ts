@@ -5,34 +5,34 @@ const say = (s: string, locale: "en" | "es" = "en", names?: string[]) => speakab
 
 describe("speakable text", () => {
   it("says fractions as words a child hears in class", () => {
-    expect(say("Shade 3/4 of the bar.")).toBe("Shade 3 fourths of the bar.");
-    expect(say("1/2 is the same as 2/4.")).toBe("one half is the same as 2 fourths.");
-    expect(say("Colorea 3/4 de la barra.", "es")).toBe("Colorea 3 cuartos de la barra.");
+    expect(say("Shade 3/4 of the bar.")).toBe("Shade three fourths of the bar.");
+    expect(say("1/2 is the same as 2/4.")).toBe("one half is the same as two fourths.");
+    expect(say("Colorea 3/4 de la barra.", "es")).toBe("Colorea tres cuartos de la barra.");
     expect(say("1/2 y 1/3", "es")).toBe("un medio y un tercio");
-    expect(fractionWords(5, 8, "en")).toBe("5 eighths");
-    expect(fractionWords(1, 13, "en")).toBeNull();
+    expect(fractionWords(5, 8, "en")).toBe("five eighths");
+    expect(fractionWords(1, 13, "en")).toBe("one thirteenth");
+    expect(fractionWords(1, 0, "en")).toBeNull();
   });
 
-  it("leaves things that are not small fractions alone", () => {
-    expect(say("Due 10/14.")).toBe("Due 10/14.");
+  it("leaves words with a slash alone", () => {
     expect(say("and/or")).toBe("and/or");
   });
 
   it("says math signs in words", () => {
-    expect(say("5 × 2 = 10")).toBe("5 times 2 equals 10");
-    expect(say("3×4=12")).toBe("3 times 4 equals 12");
-    expect(say("2×3×4")).toBe("2 times 3 times 4");
-    expect(say("12 ÷ 3 = 4")).toBe("12 divided by 3 equals 4");
-    expect(say("7 - 3 = 4")).toBe("7 minus 3 equals 4");
-    expect(say("7-3=4")).toBe("7 minus 3 equals 4");
-    expect(say("x^2 + 1")).toBe("x squared plus 1");
-    expect(say("3 < 5")).toBe("3 is less than 5");
-    expect(say("8 − 5 es 3", "es")).toBe("8 menos 5 es 3");
-    expect(say("6 × 7 = 42", "es")).toBe("6 por 7 es igual a 42");
+    expect(say("5 × 2 = 10")).toBe("five times two equals ten");
+    expect(say("3×4=12")).toBe("three times four equals twelve");
+    expect(say("2×3×4")).toBe("two times three times four");
+    expect(say("12 ÷ 3 = 4")).toBe("twelve divided by three equals four");
+    expect(say("7 - 3 = 4")).toBe("seven minus three equals four");
+    expect(say("7-3=4")).toBe("seven minus three equals four");
+    expect(say("x^2 + 1")).toBe("x squared plus one");
+    expect(say("3 < 5")).toBe("three is less than five");
+    expect(say("8 − 5 es 3", "es")).toBe("ocho menos cinco es tres");
+    expect(say("6 × 7 = 42", "es")).toBe("seis por siete es igual a cuarenta y dos");
   });
 
-  it("does not turn ranges and dashes into minus", () => {
-    expect(say("pages 3-5")).toBe("pages 3-5");
+  it("reads a hyphen between numbers as a range, and drops dashes", () => {
+    expect(say("pages 3-5")).toBe("pages three to five");
     expect(say("Wait — look again.")).toBe("Wait look again.");
   });
 
@@ -47,8 +47,8 @@ describe("speakable text", () => {
     expect(say("$\\frac{1}{2}$ of it")).toBe("one half of it");
   });
 
-  it("keeps money", () => {
-    expect(say("It costs $3.")).toBe("It costs $3.");
+  it("says money", () => {
+    expect(say("It costs $3.")).toBe("It costs three dollars.");
   });
 
   it("leaves the learner's name out and keeps the sentence ending", () => {
@@ -88,21 +88,25 @@ describe("speakable text", () => {
   });
 
   it("reads a date as a date, not a fraction", () => {
-    expect(say("Your test is on 10/12.")).toBe("Your test is on 10/12.");
-    expect(say("The project is due 3/4.")).toBe("The project is due 3/4.");
-    expect(say("See you Monday 3/4.")).toBe("See you Monday 3/4.");
-    expect(say("El examen es el 3/4.", "es")).toBe("El examen es el 3/4.");
+    expect(say("Your test is on 10/12.")).toBe("Your test is on October twelfth.");
+    expect(say("The project is due 3/4.")).toBe("The project is due March fourth.");
+    expect(say("See you Monday 3/4.")).toBe("See you Monday March fourth.");
+    // Spanish writes the day first.
+    expect(say("El examen es el 3/4.", "es")).toBe("El examen es el tres de abril.");
     // Without a calendar word, "on 2/3" is still a fraction.
-    expect(say("Work on 2/3 first.")).toBe("Work on 2 thirds first.");
+    expect(say("Work on 2/3 first.")).toBe("Work on two thirds first.");
   });
 
   it("maps every spoken word back to the written word it came from", () => {
     const sp = speakable("Shade 3/4 of it, **Ada**.", "en", ["Ada"]);
-    expect(sp.text).toBe("Shade 3 fourths of it.");
+    expect(sp.text).toBe("Shade three fourths of it.");
     expect(sp.words).toEqual([0, 1, 1, 2, 3]);
     const m = speakable("- 5 × 2", "en");
-    expect(m.text).toBe("5 times 2");
+    expect(m.text).toBe("five times two");
     expect(m.words).toEqual([1, 2, 3]);
+    const money = speakable("It is $2.50 now.", "en");
+    expect(money.text).toBe("It is two dollars and fifty cents now.");
+    expect(money.words).toEqual([0, 1, 2, 2, 2, 2, 2, 3]);
   });
 });
 

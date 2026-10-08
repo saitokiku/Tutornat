@@ -1,9 +1,11 @@
 import type { Locale } from "@/lib/types";
+import { fractionWords, letterWord, sayNumbers, unitWords } from "./numbers";
 
 // What a voice should actually say for a sentence written for the screen: no markdown marks, no links,
-// no emoji, math said in words ("3/4" → "three fourths", "5 × 2 = 10" → "5 times 2 equals 10"), and
-// the learner's name left out of anything sent to a vendor. Works word by word so every spoken word
-// knows which written word it came from — that is what lets the screen highlight along.
+// no emoji, math and every number said in words ("3/4" → "three fourths", "5 × 2 = 10" → "five
+// times two equals ten", "$2.50" → "two dollars and fifty cents"; see ./numbers), and the learner's
+// name left out of anything sent to a vendor. Works word by word so every spoken word knows which
+// written word it came from — that is what lets the screen highlight along.
 
 export type Speakable = {
   /** What to send to the voice. */
@@ -12,39 +14,28 @@ export type Speakable = {
   words: number[];
 };
 
-const FRACTIONS: Record<Locale, Record<number, [string, string]>> = {
-  en: {
-    2: ["half", "halves"], 3: ["third", "thirds"], 4: ["fourth", "fourths"], 5: ["fifth", "fifths"], 6: ["sixth", "sixths"],
-    7: ["seventh", "sevenths"], 8: ["eighth", "eighths"], 9: ["ninth", "ninths"], 10: ["tenth", "tenths"], 11: ["eleventh", "elevenths"],
-    12: ["twelfth", "twelfths"], 100: ["hundredth", "hundredths"],
-  },
-  es: {
-    2: ["medio", "medios"], 3: ["tercio", "tercios"], 4: ["cuarto", "cuartos"], 5: ["quinto", "quintos"], 6: ["sexto", "sextos"],
-    7: ["séptimo", "séptimos"], 8: ["octavo", "octavos"], 9: ["noveno", "novenos"], 10: ["décimo", "décimos"], 11: ["onceavo", "onceavos"],
-    12: ["doceavo", "doceavos"], 100: ["centésimo", "centésimos"],
-  },
-};
+export { fractionWords };
 
 const WORDS = {
-  en: { times: "times", div: "divided by", plus: "plus", minus: "minus", eq: "equals", lt: "is less than", gt: "is greater than", le: "is less than or equal to", ge: "is greater than or equal to", ne: "is not equal to", sq: "squared", cube: "cubed", pow: "to the power of", one: "one" },
-  es: { times: "por", div: "entre", plus: "más", minus: "menos", eq: "es igual a", lt: "es menor que", gt: "es mayor que", le: "es menor o igual que", ge: "es mayor o igual que", ne: "no es igual a", sq: "al cuadrado", cube: "al cubo", pow: "a la potencia", one: "un" },
+  en: { times: "times", div: "divided by", plus: "plus", minus: "minus", eq: "equals", lt: "is less than", gt: "is greater than", le: "is less than or equal to", ge: "is greater than or equal to", ne: "is not equal to", approx: "is about", pm: "plus or minus" },
+  es: { times: "por", div: "entre", plus: "más", minus: "menos", eq: "es igual a", lt: "es menor que", gt: "es mayor que", le: "es menor o igual que", ge: "es mayor o igual que", ne: "es distinto de", approx: "es aproximadamente", pm: "más o menos" },
 } as const;
 
-/** "1/2" → "one half", "3/4" → "3 fourths"; null for denominators a child wouldn't hear as a fraction. */
-export function fractionWords(n: number, d: number, locale: Locale): string | null {
-  const w = FRACTIONS[locale][d];
-  if (!w || n < 0 || n > 99) return null;
-  return n === 1 ? `${WORDS[locale].one} ${w[0]}` : `${n} ${w[1]}`;
-}
+const ABBREVIATIONS: Record<Locale, Record<string, string>> = {
+  en: { "e.g.": "for example", "i.e.": "that is", "etc.": "and so on", "vs.": "versus", "approx.": "about" },
+  es: { "e.g.": "por ejemplo", "i.e.": "es decir", "etc.": "etcétera", "vs.": "contra", "aprox.": "aproximadamente", "ej.": "ejemplo" },
+};
 
-const NUMERIC_END = /[\p{N})]$/u;
-const NUMERIC_START = /^[(\p{N}]/u;
+const NUMERIC_END = /[\p{N})²³]$/u;
+const NUMERIC_START = /^[(\p{N}√−-]/u;
 const VAR = /^[a-zA-Z]$/;
+const SIGN = /^[=+×÷·*<>≤≥≠±−–-]$/;
+const OPS: Record<string, keyof (typeof WORDS)["en"]> = { "<": "lt", ">": "gt", "≤": "le", "≥": "ge", "≠": "ne" };
 
 /** Replaces until nothing changes, so "2×3×4" converts both signs. */
-function all(s: string, re: RegExp, to: string): string {
+function all(s: string, re: RegExp, to: string | ((...m: string[]) => string)): string {
   for (let i = 0; i < 6; i++) {
-    const next = s.replace(re, to);
+    const next = s.replace(re, to as string);
     if (next === s) return s;
     s = next;
   }
@@ -63,6 +54,8 @@ const MONTH_NAMES = "january february march april may june july august september
 const DATE_BEFORE = new Set(`due ${DAYS} ${MONTH_NAMES}`.split(" "));
 const DATE_PREP = new Set("on by until till before after from el del para hasta antes desde".split(" "));
 const CALENDAR = new RegExp(`\\b(test|quiz|exam|due|homework|project|assignment|calendar|date|examen|prueba|tarea|entrega|proyecto|calendario|fecha|${DAYS.replace(/ /g, "|")}|${MONTH_NAMES.replace(/ /g, "|")})\\b`);
+// A sentence that gives a number to call or text: its long numbers are read digit by digit ("988").
+const PHONE = /\b(call|text|dial|phone|hotline|llama|llamar|marca|marcar|mensaje|telefono|linea)\b/;
 
 function looksLikeDate(n: number, d: number, prev: string | undefined, calendar: boolean): boolean {
   if (n > 12 || d > 31 || !prev) return false;
@@ -70,7 +63,24 @@ function looksLikeDate(n: number, d: number, prev: string | undefined, calendar:
   return DATE_BEFORE.has(p) || (calendar && DATE_PREP.has(p));
 }
 
-function sayToken(tok: string, prev: string | undefined, next: string | undefined, first: boolean, locale: Locale, calendar = false): string {
+const WHOLE = /^[−-]?\d+$/;
+/** "1/2", "3/4." — a fraction smaller than one, as the second half of "2 1/2". */
+const properFraction = (tok: string | undefined) => {
+  const m = /^(\d{1,3})\/(\d{1,4})[.,!?;:)]*$/.exec(tok ?? "");
+  return !!m && Number(m[1]) < Number(m[2]) && Number(m[2]) >= 2;
+};
+const TRAIL = /[.,!?;:)]+$/;
+/** "5 cm", "3 in by 4 in": a unit after a number. "in" counts only where it can't be the word "in". */
+function unitAfter(tok: string, prev: string | undefined, next: string | undefined, prev2?: string): boolean {
+  if (!prev || !/[\d²³]$/.test(prev.replace(/,$/, ""))) return false;
+  const u = tok.replace(TRAIL, "");
+  if (u === "in") return /^(by|x|×|long|wide|tall|high|deep|of)$/i.test(next ?? "") || /^(by|x|×|por)$/i.test(prev2 ?? "");
+  return /^(mm|cm|m|km|mg|g|kg|mL|ml|L|ft|yd|mi|lbs?|oz)(²|³)?$/.test(u);
+}
+
+type Ctx = { prev?: string; next?: string; prev2?: string; next2?: string; first: boolean; locale: Locale; calendar: boolean; phone: boolean };
+
+function sayToken(tok: string, { prev, next, prev2, next2, first, locale, calendar, phone }: Ctx): string {
   const W = WORDS[locale];
   let s = tok;
   if (/^[(<[]?(https?:\/\/|www\.)/i.test(s)) return "";
@@ -83,6 +93,8 @@ function sayToken(tok: string, prev: string | undefined, next: string | undefine
     .replace(/\\leq?/g, "≤")
     .replace(/\\geq?/g, "≥")
     .replace(/\\neq/g, "≠")
+    .replace(/\\sqrt\{([^}]*)\}/g, "√($1)")
+    .replace(/\\pi/g, "π")
     .replace(/\\[()[\]]/g, "");
   // Markdown
   s = s.replace(/\*\*|__|~~|`/g, "");
@@ -90,34 +102,62 @@ function sayToken(tok: string, prev: string | undefined, next: string | undefine
   s = s.replace(/^#{1,6}(?=\S)/, "").replace(/\]\([^)\s]*\)?/g, "").replace(/^\[/, "").replace(/\]$/, "");
   s = s.replace(/^[*_]+(?=\S)/, "").replace(/([^\s*_])[*_]+([.,!?;:]*)$/, "$1$2");
   s = s.replace(/[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}️‍]/gu, "");
+  // Arrows, bars and bullets carry no words; a table's pipes neither.
+  s = s.replace(/[→⇒←|•]+/g, " ").trim();
   if (!s) return "";
+  // Abbreviations a voice would spell out: e.g., i.e., etc., p. ej.
+  const abbr = /^(\(?)([a-zA-Z.]+\.)([,;:)]*)$/.exec(s);
+  if (abbr) {
+    const key = abbr[2].toLowerCase();
+    if (locale === "es" && key === "p." && /^ej\./i.test(next ?? "")) return `${abbr[1]}por`;
+    const said = key === "ej." && prev?.toLowerCase() !== "p." ? undefined : (ABBREVIATIONS[locale][key] ?? ABBREVIATIONS.en[key]);
+    if (said) return `${abbr[1]}${said}${key === "etc." && !abbr[3] ? "." : abbr[3]}`;
+  }
+  // Two sentences glued at a full stop ("that.Your") are said as two.
+  s = s.replace(/(\p{Ll}{2,})([.?!])(\p{Lu}\p{Ll})/gu, "$1$2 $3");
+  // A unit after a number: "5 cm", "1 kg"
+  if (unitAfter(s, prev, next, prev2)) {
+    const unit = unitWords(s.replace(TRAIL, ""), locale, /^[−-]?1$/.test(prev ?? ""));
+    if (unit) return unit.words + (TRAIL.exec(s)?.[0] ?? "");
+  }
   // A sign standing alone between two numbers (or a number and a letter like x).
-  const between = !!prev && !!next && (NUMERIC_END.test(prev) || VAR.test(prev)) && (NUMERIC_START.test(next) || VAR.test(next));
-  if (/^[×·*]$/.test(s)) return between ? W.times : "";
+  const between = !!prev && !!next && (NUMERIC_END.test(prev) || VAR.test(trimMarks(prev))) && (NUMERIC_START.test(next) || VAR.test(trimMarks(next)));
+  if (/^[×·*]$/.test(s) || (/^[xX]$/.test(s) && between && NUMERIC_END.test(prev!) && /^[(\p{N}]/u.test(next!))) return between ? W.times : "";
   if (/^[÷/]$/.test(s)) return between ? W.div : s === "/" ? "" : W.div;
   if (/^[−-]$/.test(s)) return between ? W.minus : "";
   if (/^[—–]$/.test(s)) return between && s === "–" ? W.minus : "";
   if (s === "+") return W.plus;
   if (s === "=") return W.eq;
-  if (s === "<") return W.lt;
-  if (s === ">") return W.gt;
-  if (s === "≤") return W.le;
-  if (s === "≥") return W.ge;
-  if (s === "≠") return W.ne;
-  // Signs inside one written word: 3×4=12, 7−2, x^2
+  if (OPS[s]) return W[OPS[s]];
+  if (s === "≈") return W.approx;
+  if (s === "±") return W.pm;
+  // Signs inside one written word: 3×4=12, 7−2, 3x4
+  const before = s;
   const hasEq = s.includes("=");
-  s = all(s, /([\p{N})a-z])[×·*]([(\p{N}a-z])/gu, `$1 ${W.times} $2`);
+  s = all(s, /([\p{N})a-z])[×·*]([(\p{N}a-z√])/gu, `$1 ${W.times} $2`);
+  s = all(s, /(\p{N})[xX](\p{N})/gu, `$1 ${W.times} $2`);
   s = all(s, /([\p{N})])÷([(\p{N}])/gu, `$1 ${W.div} $2`);
-  s = all(s, /([\p{N})a-z])\+([(\p{N}a-z])/gu, `$1 ${W.plus} $2`);
-  s = all(s, hasEq ? /([\p{N})a-z])[−-]([(\p{N}a-z])/gu : /([\p{N})])−([(\p{N}])/gu, `$1 ${W.minus} $2`);
-  s = all(s, /([^\s=<>])=([^\s=])/gu, `$1 ${W.eq} $2`);
-  s = s.replace(/\^2(?!\d)|²/g, ` ${W.sq}`).replace(/\^3(?!\d)|³/g, ` ${W.cube}`).replace(/\^\(?(\d+)\)?/g, ` ${W.pow} $1`);
-  s = s.replace(/(^|[^\p{N}/.])(\d{1,2})\/(\d{1,3})(?![\p{N}/])/gu, (m, pre: string, n: string, d: string) => {
-    if (looksLikeDate(Number(n), Number(d), prev, calendar)) return m;
-    const w = fractionWords(Number(n), Number(d), locale);
-    return w ? `${pre}${w}` : m;
-  });
-  return s;
+  s = all(s, /([\p{N})a-z²³])\+([(\p{N}a-z√])/gu, `$1 ${W.plus} $2`);
+  s = all(s, hasEq ? /([\p{N})a-z²³])[−-]([(\p{N}a-z√])/gu : /([\p{N})²³])−([(\p{N}√])/gu, `$1 ${W.minus} $2`);
+  s = all(s, /([^\s=<>≠])=([^\s=])/gu, `$1 ${W.eq} $2`);
+  s = all(s, /([\p{N})a-z])([<>≤≥≠])([(\p{N}a-z])/gu, (_m, a, op, b) => `${a} ${W[OPS[op]]} ${b}`);
+  // A letter standing for a number, said the language's way ("x" is "equis" in Spanish).
+  const math = s !== before || SIGN.test(prev ?? "") || SIGN.test(next ?? "");
+  if (locale === "es")
+    s = s
+      .split(" ")
+      .map((w) => {
+        const l = trimMarks(w);
+        return VAR.test(l) && (l.toLowerCase() === "x" || math) ? w.replace(l, letterWord(l, locale)) : w;
+      })
+      .join(" ");
+  // Every number: dates, fractions, mixed numbers, times, money, percent, ordinals, powers, units, phone numbers.
+  const dm = /^\(?(\d{1,2})\/(\d{1,2})(?![\d/])/.exec(s);
+  const date = !!dm && looksLikeDate(Number(dm[1]), Number(dm[2]), prev, calendar);
+  const nextUnit = next && unitAfter(next, s, next2, prev) ? unitWords(next.replace(TRAIL, ""), locale, /^[−-]?1$/.test(s))?.words : undefined;
+  const wholeOfMixed = WHOLE.test(s) && properFraction(next);
+  const mixed = properFraction(s) && WHOLE.test(prev ?? "");
+  return sayNumbers(s, locale, { prev, next: nextUnit ?? next, mixed, wholeOfMixed, phone, date });
 }
 
 // Names that are everyday words too ("Will you try?", "in June", "el mar"): taken out only where they
@@ -167,7 +207,8 @@ function addressing(toks: string[], i: number): boolean {
 export function speakable(sentence: string, locale: Locale, names: string[] = []): Speakable {
   const toks = sentence.split(/\s+/).filter(Boolean);
   const isName = nameMatcher(names);
-  const calendar = CALENDAR.test(fold(sentence));
+  const folded = fold(sentence);
+  const ctx = (i: number): Ctx => ({ prev: toks[i - 1], next: toks[i + 1], prev2: toks[i - 2], next2: toks[i + 2], first: i === 0, locale, calendar: CALENDAR.test(folded), phone: PHONE.test(folded) });
   const out: string[] = [];
   const words: number[] = [];
   const dropName = (tok: string) => {
@@ -190,10 +231,10 @@ export function speakable(sentence: string, locale: Locale, names: string[] = []
         const kept = parts.filter((p, k) => !(k % 2 === 0 && isName(p) && !COMMON_NAMES.has(fold(core(p))))).join("");
         const rest = kept.replace(/^[—–/-]+|[—–/-]+$/g, "");
         if (!/[\p{L}\p{N}]/u.test(rest)) return dropName(tok);
-        said = sayToken(rest, toks[i - 1], toks[i + 1], i === 0, locale, calendar);
+        said = sayToken(rest, ctx(i));
       }
     }
-    said ??= sayToken(tok, toks[i - 1], toks[i + 1], i === 0, locale, calendar);
+    said ??= sayToken(tok, ctx(i));
     for (const w of said.split(/\s+/).filter(Boolean)) {
       out.push(w);
       words.push(i);
