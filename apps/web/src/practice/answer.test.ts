@@ -106,6 +106,15 @@ describe("check", () => {
     expect(check({ kind: "choice", index: 2 }, "1").correct).toBe(false);
     expect(check({ kind: "choice", index: 2 }, "2.5").correct).toBe(false);
   });
+
+  it("a choice response is the chosen index, never its label (callers map a label to its index)", () => {
+    const answer: Answer = { kind: "choice", index: 1 };
+    const choices = [{ label: "5/12" }, { label: "5/6" }];
+    expect(answerText(answer, choices)).toBe("5/6");
+    expect(check(answer, answerText(answer, choices)).correct).toBe(false);
+    expect(check(answer, "1").correct).toBe(false);
+    expect(check(answer, choices.findIndex((c) => c.label === "5/6")).correct).toBe(true);
+  });
 });
 
 describe("expressions", () => {

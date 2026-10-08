@@ -63,6 +63,11 @@ export function normTime(raw: string): string | null {
   return `${h}:${m[2]}`;
 }
 
+/**
+ * For a choice answer the response must be the chosen index (a number). A label, or an index written
+ * as a string, is not correct: the checker never sees the labels, so every caller that holds a label
+ * (a recorded answer, the tutor's check_answer tool) maps it to its index first.
+ */
 export function check(answer: Answer, response: string | number): Verdict {
   // A choice is answered by its index; the index written as text ("2", what answerText gives) counts too.
   if (answer.kind === "choice") return { correct: (typeof response === "number" ? response : /^\s*\d+\s*$/.test(response) ? Number(response) : NaN) === answer.index };
@@ -141,7 +146,10 @@ const fracText = (n: number, d: number) => {
   return b === 1 ? String(a) : `${a}/${b}`;
 };
 
-/** The correct answer written the way a learner would type it (used for "show me" and in tests). */
+/**
+ * The correct answer written the way a learner would type it (used for "show me" and in tests). For a
+ * choice it is the label shown, which is for display: check() takes the choice's index, not this text.
+ */
 export function answerText(answer: Answer, choices?: { label: string }[]): string {
   switch (answer.kind) {
     case "number":
