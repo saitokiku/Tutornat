@@ -109,7 +109,7 @@ export type DeepgramOptions = {
   now?: () => number;
 };
 
-export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): void; dispose(): void; readonly model: "flux" | "nova" | null } {
+export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): () => void; dispose(): void; readonly model: "flux" | "nova" | null } {
   const f = o.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const WS = o.WebSocket ?? WebSocket;
   const capture = o.capture ?? micCapture;
@@ -402,11 +402,16 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): vo
     get listening() {
       return listening;
     },
-    /** A voice surface opened: fetch a token now and every 50 s, so the microphone opens without waiting for one. */
+    /** A voice surface opened: fetch a token now and every 50 s, so the microphone opens without waiting for one. Stop when it closes. */
     prepare() {
       if (!spare) prefetch();
       clearInterval(refresh);
-      refresh = setInterval(prefetch, TOKEN_REFRESH_MS);
+      const mine = setInterval(prefetch, TOKEN_REFRESH_MS);
+      refresh = mine;
+      return () => {
+        clearInterval(mine);
+        if (refresh === mine) refresh = undefined;
+      };
     },
     dispose() {
       clearInterval(refresh);

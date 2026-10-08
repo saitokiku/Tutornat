@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { deepgramSpeechIn, fluxSocketUrl, HEALTHY_MS, novaSocketUrl, SLOW_BYTES } from "./deepgram";
+import { deepgramSpeechIn, fluxSocketUrl, HEALTHY_MS, novaSocketUrl, SLOW_BYTES, TOKEN_REFRESH_MS } from "./deepgram";
 import { asWebSocket, FakeSocket } from "./fakes";
 import type { MicCapture } from "./mic";
 import { VoiceError, type Band, type TurnMeta } from "./types";
@@ -267,6 +267,25 @@ describe("Deepgram live listening", () => {
     const url = new URL(novaSocketUrl({ token: "t", expiresIn: 60, model: "nova-3", language: "es-419" }, "35"));
     expect(url.searchParams.get("language")).toBe("es-419");
     expect(url.searchParams.get("endpointing")).toBe("500");
+  });
+
+  it("prepare() fetches a token now and every 50 s while the voice surface is open, and stops when it closes", async () => {
+    const s = setup();
+    const stop = s.input.prepare();
+    await flush();
+    expect(s.fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(TOKEN_REFRESH_MS * 2 + 10);
+    expect(s.fetch).toHaveBeenCalledTimes(3);
+    // The token fetched ahead opens the stream without waiting for another (the next one is fetched ahead in turn).
+    const started = s.input.start({ turns: "auto" });
+    await flush();
+    expect(FakeSocket.last().protocols).toEqual(["bearer", "jwt3"]);
+    FakeSocket.last().open();
+    await started;
+    stop();
+    const n = s.fetch.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(TOKEN_REFRESH_MS * 3);
+    expect(s.fetch).toHaveBeenCalledTimes(n);
   });
 
   it("says when the upload falls behind, and when it catches up", async () => {

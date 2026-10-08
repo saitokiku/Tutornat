@@ -128,6 +128,10 @@ export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null)
     get listening() {
       return active.listening;
     },
+    get model() {
+      return active.model ?? null;
+    },
+    prepare: () => primary.prepare?.() ?? (() => {}),
     async start(opts) {
       if (active === primary && moveOn) switchTo();
       if (active !== primary) return active.start(opts);

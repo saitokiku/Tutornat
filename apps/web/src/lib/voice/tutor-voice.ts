@@ -235,7 +235,7 @@ export function useTutorVoice(opts: TutorVoiceOptions): TutorVoice {
         marks.current.firstChunk = t.firstChunkAt ?? undefined;
         marks.current.firstAudible = t.firstAudibleAt;
         const a = appRef.current;
-        const stt = (a.in as { model?: "flux" | "nova" | null } | null)?.model;
+        const stt = a.in?.model;
         const metric = metricOf(marks.current, {
           band: a.band,
           locale: a.learner?.locale ?? "en",
@@ -256,8 +256,9 @@ export function useTutorVoice(opts: TutorVoiceOptions): TutorVoice {
     document.addEventListener("visibilitychange", hidden);
     window.addEventListener("pagehide", pagehide);
     window.addEventListener("offline", offline);
-    (input as { prepare?: () => void } | null)?.prepare?.();
+    const unprepare = input?.prepare?.();
     return () => {
+      unprepare?.();
       c.dispose();
       talk.current = null;
       subs.forEach((u) => u?.());

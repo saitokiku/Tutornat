@@ -167,6 +167,10 @@ export interface SpeechIn {
   onSpeechStart(fn: () => void): Unsubscribe;
   /** The upload is falling behind (more than 32 KB waiting): show "The connection is slow." */
   onSlow(fn: (slow: boolean) => void): Unsubscribe;
+  /** A voice surface opened: fetch what listening needs ahead (a vendor token, refreshed) until the returned stop is called. */
+  prepare?(): () => void;
+  /** Which vendor model the last stream used ("flux" | "nova"), for the latency log. */
+  readonly model?: "flux" | "nova" | null;
   onError(fn: (e: VoiceError) => void): Unsubscribe;
 }
 
