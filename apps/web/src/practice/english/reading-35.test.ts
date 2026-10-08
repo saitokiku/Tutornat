@@ -168,10 +168,13 @@ describe("grades 3–5 reading: questions", () => {
         }
       }
       for (const [en, es] of [q.q, q.right, q.clue]) expect(en, where).not.toBe(es);
-      for (const [, , why] of q.wrong) {
-        expect(why, where).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-        expect(why.length, where).toBeLessThanOrEqual(40);
-        expect(TAGS[why], `${where} tag ${why}`).toBeDefined();
+      for (const [, , why, esWhy] of q.wrong) {
+        expect(esWhy, `${where}: a Spanish tag only when it differs`).not.toBe(why);
+        for (const tag of [why, ...(esWhy ? [esWhy] : [])]) {
+          expect(tag, where).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+          expect(tag.length, where).toBeLessThanOrEqual(40);
+          expect(TAGS[tag], `${where} tag ${tag}`).toBeDefined();
+        }
       }
     }
   });
@@ -286,6 +289,16 @@ describe.each(TABLE.map((t) => [t[0], t[4]] as const))("%s items", (id) => {
           expect(item.steps.length >= 2 && item.steps.length <= 4, where).toBe(true);
           expect(lc(item.steps.at(-1)!), `${where} last step`).toContain(lc(labels[index]));
           for (const t of [promptText(item), item.say, ...item.hints, ...item.steps, ...labels]) expect(t, where).not.toMatch(/[!¡]|\p{Extended_Pictographic}/u);
+          // Every quote that opens also closes, and a quote never opens inside another.
+          for (const t of [...item.hints, ...item.steps]) {
+            let depth = 0;
+            for (const ch of t) {
+              if (ch === "“") depth++;
+              if (ch === "”") depth--;
+              expect(depth >= 0 && depth <= 1, `${where}: ${t}`).toBe(true);
+            }
+            expect(depth, `${where}: ${t}`).toBe(0);
+          }
           expect(item.seconds >= 60 && item.seconds <= 300, `${where} ${item.seconds}s`).toBe(true);
           const located = /paragraph (\d+)|stanza (\d+)|section “([^”]+)”/.exec(item.hints[1]);
           if (located && l === "en") checkLocation(item, located);
@@ -302,7 +315,9 @@ describe.each(TABLE.map((t) => [t[0], t[4]] as const))("%s items", (id) => {
 function checkLocation(item: Item, m: RegExpExecArray) {
   const prompt = promptText(item);
   const p = PASSAGES.find((x) => prompt.startsWith(`${x.title[0]}\n\n${x.en[0]}`))!;
-  const ev = /^Reread: “([\s\S]*)”$/.exec(item.hints[2])?.[1] ?? /^Reread: (“[\s\S]*”[\s\S]*)$/.exec(item.hints[2])![1];
+  // Quotation marks inside a quote are shown as single ones; the passage has double ones.
+  const quoted = /^Reread: “([\s\S]*)”$/.exec(item.hints[2])?.[1] ?? /^Reread: (“[\s\S]*”[\s\S]*)$/.exec(item.hints[2])![1];
+  const ev = quoted.replace(/‘/g, "“").replace(/’/g, "”");
   const at = p.en.findIndex((b) => b.includes(ev));
   expect(at, `${p.id} evidence ${ev}`).toBeGreaterThanOrEqual(0);
   if (m[1]) expect(p.en.filter((b, i) => i <= at && (p.kind !== "info" || !heading(b))).length, `${p.id} paragraph`).toBe(Number(m[1]));
