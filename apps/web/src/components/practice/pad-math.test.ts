@@ -116,4 +116,17 @@ describe("clock arithmetic", () => {
     expect(responseOf("number-line", "")).toBe("");
     expect(responseOf("keypad", "7")).toBe("7");
   });
+
+  it("a fraction pad with an empty bottom box sends the whole number it shows", () => {
+    expect(responseOf("fraction", "135/")).toBe("135");
+    expect(responseOf("fraction", "-6/")).toBe("-6");
+    expect(responseOf("fraction", "2 /")).toBe("2");
+    expect(responseOf("fraction", "/")).toBe("");
+    expect(responseOf("fraction", "")).toBe("");
+    // A fraction still being written is sent as it is.
+    expect(responseOf("fraction", "3/4")).toBe("3/4");
+    expect(responseOf("fraction", "2 1/3")).toBe("2 1/3");
+    expect(responseOf("fraction", "2 1/")).toBe("2 1/");
+    expect(responseOf("fraction", "/4")).toBe("/4");
+  });
 });

@@ -99,9 +99,11 @@ export const CLOCK_START = clockText(12, 0);
 
 /**
  * What Check sends for a pad's current value. A clock always shows a time, so an untouched clock
- * answers with the time it shows; every other pad has nothing to send until the learner acts.
+ * answers with the time it shows; every other pad has nothing to send until the learner acts. A
+ * fraction pad with the bottom box empty holds a whole number ("135/" or "2 /"), so it sends "135".
  */
-export const responseOf = (input: Input, value: string) => value || (input === "clock" ? CLOCK_START : "");
+export const responseOf = (input: Input, value: string) =>
+  input === "fraction" ? value.replace(/^(-?\d*) ?\/$/, "$1") : value || (input === "clock" ? CLOCK_START : "");
 
 const turn = (deg: number) => ((deg % 360) + 360) % 360;
 

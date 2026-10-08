@@ -9,7 +9,7 @@ import { counterCell, layoutCounters, MarkCounters, type MarkableVisual } from "
 import { hourAt, responseOf } from "./pad-math";
 
 /** A pad in the Runner's shoes: it owns the value and shows what the checker would receive. */
-function Harness({ input, pad, onSubmit = () => {} }: { input: "number-line" | "fraction-bar" | "clock"; pad: Pad; onSubmit?: () => void }) {
+function Harness({ input, pad, onSubmit = () => {} }: { input: "number-line" | "fraction-bar" | "clock" | "fraction"; pad?: Pad; onSubmit?: () => void }) {
   const [value, setValue] = useState("");
   return (
     <>
@@ -196,6 +196,42 @@ describe("FractionBarPad", () => {
     expect(screen.getAllByRole("button", { name: /of 3$/ })).toHaveLength(3);
     await userEvent.keyboard("{End} ");
     expect(response()).toBe("1/3");
+  });
+});
+
+describe("FractionPad", () => {
+  it("a whole number in the top box, with the bottom box empty, is sent as that number", async () => {
+    render(<Harness input="fraction" />);
+    for (const k of ["1", "3", "5"]) await userEvent.click(screen.getByRole("button", { name: k }));
+    expect(screen.getByRole("button", { name: "Bottom number: empty" })).toBeInTheDocument();
+    expect(response()).toBe("135");
+    expect(check({ kind: "fraction", n: 135, d: 1, simplest: true }, response()!)).toEqual({ correct: true });
+    await userEvent.click(screen.getByRole("button", { name: "Minus" }));
+    expect(response()).toBe("-135");
+    expect(check({ kind: "fraction", n: -135, d: 1, simplest: true }, response()!)).toEqual({ correct: true });
+    // A bottom number makes it a fraction again; deleting it goes back to the whole number.
+    await userEvent.keyboard("/2");
+    expect(response()).toBe("-135/2");
+    await userEvent.keyboard("{Backspace}");
+    expect(response()).toBe("-135");
+  });
+
+  it("a mixed-number pad with only the whole box filled sends the whole number", async () => {
+    render(<Harness input="fraction" />);
+    await userEvent.click(screen.getByRole("button", { name: "Add a whole number" }));
+    await userEvent.keyboard("6");
+    expect(response()).toBe("6");
+    expect(check({ kind: "fraction", n: 6, d: 1, simplest: true }, response()!).correct).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "Top number: empty" }));
+    await userEvent.keyboard("1/3");
+    expect(response()).toBe("6 1/3");
+    expect(check({ kind: "fraction", n: 19, d: 3, simplest: true }, response()!).correct).toBe(true);
+  });
+
+  it("an emptied pad sends nothing", async () => {
+    render(<Harness input="fraction" />);
+    await userEvent.keyboard("4{Backspace}");
+    expect(response()).toBe("");
   });
 });
 
