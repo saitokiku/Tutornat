@@ -83,6 +83,27 @@ describe("browser read-aloud", () => {
     expect(online.s.queue.map((u) => u.text)).toEqual(["Muy bien."]);
   });
 
+  it("joins a chunk cut at a clause to the rest of its sentence, so its intonation doesn't restart at the comma", async () => {
+    const { s, out } = outSetup();
+    const feed = sentenceFeed({ mode: "voice" });
+    void out.speak(feed.sentences);
+    feed.write("Look at the bottom number of the fraction on the left side, and tell me what it says. Next");
+    await tick();
+    expect(s.queue.map((u) => u.text)).toEqual(["Look at the bottom number of the fraction on the left side, and tell me what it says."]);
+  });
+
+  it("a speculative reply waits for its turn to be committed before a word is spoken", async () => {
+    const { s, out, seen } = outSetup();
+    let commit!: () => void;
+    void out.speak("Seven is right.", { after: new Promise<void>((ok) => (commit = ok)) });
+    await tick();
+    expect(s.queue).toHaveLength(0);
+    commit();
+    await tick();
+    expect(s.queue.map((u) => u.text)).toEqual(["Seven is right."]);
+    expect(seen.ends).toEqual([]);
+  });
+
   it("dispose stops speaking", async () => {
     const { s, out } = outSetup();
     void out.speak("One. Two.");

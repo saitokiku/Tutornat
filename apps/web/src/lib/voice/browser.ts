@@ -1,6 +1,6 @@
 import type { Locale } from "@/lib/types";
 import { SENTENCE_PAUSE } from "./bands";
-import { sentencesFrom } from "./chunk";
+import { isClauseCut, sentencesFrom } from "./chunk";
 import { assertSpoken } from "./numbers";
 import { speakable, wordAt } from "./speakable";
 import { TURN_MANUAL, turnOptions, turnTracker, type TurnTracker } from "./turn";
@@ -104,6 +104,7 @@ export function browserSpeechOut({ locale, pick, band: ownBand = "69", names = [
       const queue: { text: string; offset: number; words: number[]; question: boolean; last: number }[] = [];
       let streamDone = false;
       let speaking = false;
+      let held = !!opts.after; // a speculative reply waits for its turn to be committed
       let gap: ReturnType<typeof setTimeout> | undefined;
       let firstSentenceAt: number | null = null;
       const me = {
@@ -128,7 +129,7 @@ export function browserSpeechOut({ locale, pick, band: ownBand = "69", names = [
 
       // One sentence at a time, with the band's pause between them (pace from pauses, not slow words).
       const next = () => {
-        if (finished || speaking) return;
+        if (finished || speaking || held) return;
         const item = queue.shift();
         if (!item) {
           if (streamDone) me.finish(false);
@@ -178,21 +179,42 @@ export function browserSpeechOut({ locale, pick, band: ownBand = "69", names = [
         synthesis.speak(u);
       };
 
+      opts.after?.then(
+        () => {
+          held = false;
+          next();
+        },
+        () => me.finish(true),
+      );
+
       void (async () => {
         let base = 0;
+        // A chunk cut at a clause waits for the rest of its sentence: a browser voice starts its
+        // intonation over with every utterance.
+        let part: { text: string; offset: number } | null = null;
+        const add = (sentence: string, offset: number) => {
+          const sp = speakable(sentence, locale, leaveOut);
+          if (!sp.text) return;
+          queue.push({ text: sp.text, offset, words: sp.words, question: /[?¿]/.test(sentence), last: offset + countWords(sentence) - 1 });
+          next();
+        };
         try {
           for await (const sentence of sentencesFrom(source)) {
             if (finished) return;
-            const sp = speakable(sentence, locale, leaveOut);
-            const offset = base;
+            const offset: number = part?.offset ?? base;
+            const text: string = part ? `${part.text} ${sentence}` : sentence;
             base += countWords(sentence);
-            if (!sp.text) continue;
-            queue.push({ text: sp.text, offset, words: sp.words, question: /[?¿]/.test(sentence), last: base - 1 });
-            next();
+            if (isClauseCut(sentence)) {
+              part = { text, offset };
+              continue;
+            }
+            part = null;
+            add(text, offset);
           }
         } catch {
           // The caller's stream failed: speak what arrived.
         }
+        if (part && !finished) add(part.text, part.offset);
         streamDone = true;
         if (!speaking && !queue.length) me.finish(false);
       })();

@@ -1,7 +1,7 @@
 import type { Locale } from "@/lib/types";
 import { playbackSession, resumeWithin, sharedAudio, unlockAudio } from "./audio";
 import { voiceSpeed } from "./bands";
-import { sentencesFrom } from "./chunk";
+import { isClauseCut, sentencesFrom } from "./chunk";
 import { assertSpoken } from "./numbers";
 import { createPlayer, type Alignment, type Player } from "./player";
 import { speakable } from "./speakable";
@@ -32,6 +32,11 @@ const CONNECT_TIMEOUT_MS = 5000;
 export const FIRST_AUDIO_DEADLINE_MS = 2000;
 /** The reply's text stopped coming (and everything sent has played): the run ends after this long. */
 export const FEED_IDLE_MS = 8000;
+/**
+ * The vendor went quiet mid-reply: text was sent that has no audio yet, the player has played
+ * everything it got, and nothing has arrived for this long. Retry from the first unheard sentence.
+ */
+export const DRY_MS = 1800;
 const TICK_MS = 25;
 
 export type TtsToken = {
@@ -111,7 +116,7 @@ export type ElevenLabsOptions = {
   now?: () => number;
 };
 
-type Sent = { written: string; spoken: string; base: number; words: number[]; question: boolean; on: WebSocket | null };
+type Sent = { written: string; spoken: string; base: number; words: number[]; question: boolean; clause: boolean; on: WebSocket | null };
 
 type Run = {
   id: number;
@@ -119,6 +124,7 @@ type Run = {
   done: boolean;
   resolve: () => void;
   player: Player | null;
+  ctx: AudioContext | null;
   ws: WebSocket | null;
   token: TtsToken | null;
   sent: Sent[];
@@ -126,6 +132,14 @@ type Run = {
   streamDone: boolean;
   closeSent: boolean;
   retried: boolean;
+  /** The one retry is connecting: a stall or a dry player now is the same failure, not a second one. */
+  retrying: boolean;
+  /** Nothing plays until the turn is committed (SpeakOptions.after). */
+  held: boolean;
+  /** The context stopped running (iOS interrupted it): waiting for it to resume or for a tap. */
+  suspended: boolean;
+  /** This socket has sent audio. */
+  socketAudio: boolean;
   connecting: Promise<boolean> | null;
   firstSentAt: number | null;
   firstChunkAt: number | null;
@@ -217,6 +231,7 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
   }
 
   function newPlayer(r: Run, ctx: AudioContext) {
+    r.ctx = ctx;
     r.player = createPlayer({
       ctx,
       sampleRate: TTS_SAMPLE_RATE,
@@ -232,8 +247,19 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
         ev.start.emit(r.id);
         timing(r);
       },
-      onStall: () => fail(r, new VoiceError("speak", "stalled")),
+      // The clock froze while the context says it runs: one retry, and a second freeze is the end.
+      onStall: () => {
+        if (!r.retrying) fail(r, new VoiceError("speak", "stalled"));
+      },
+      // Suspended or interrupted (a call, another app): a new socket can't fix that. Wait for it to
+      // resume, or for a tap ("Tap to hear"); the audio already here plays on from where it stopped.
+      onSuspended: () => {
+        if (!r.suspended) void ctx.resume().catch(() => {});
+        r.suspended = true;
+        setLocked(true);
+      },
     });
+    if (r.held) r.player.hold();
   }
 
   function tick(r: Run) {
@@ -241,8 +267,22 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
     r.player.tick();
     if (r.done) return;
     const t = now();
-    if (!r.player.started && r.firstSentAt != null && t - r.firstSentAt > FIRST_AUDIO_DEADLINE_MS && state !== "paused") return fail(r, new VoiceError("speak", "no first audio"));
+    if (r.suspended && (r.ctx?.state as string) === "running") {
+      r.suspended = false;
+      setLocked(false);
+      r.player.resetStall();
+    }
+    if (state === "paused" || r.retrying || r.suspended) return;
+    if (!r.socketAudio && r.firstSentAt != null && t - r.firstSentAt > FIRST_AUDIO_DEADLINE_MS) return fail(r, new VoiceError("speak", "no first audio"));
     if (r.player.drained()) return finish(r, false);
+    if (r.player.started && r.ws && r.player.starvedMs() >= DRY_MS) {
+      // The vendor went quiet mid-reply. On stream-input (auto_mode) every sentence sent is owed
+      // audio at once; the dialogue socket may hold unflushed text until the close.
+      const owing = r.token?.transport === "dialogue" ? r.closeSent : true;
+      if (owing && r.player.owed()) return fail(r, new VoiceError("speak", "audio stopped coming"));
+      // Everything sent has its audio but the end mark never came: don't wait for it forever.
+      if (r.closeSent && !r.player.ended) r.player.end();
+    }
     // The caller never ended the feed: once everything sent has played, stop after a while.
     if (!r.streamDone && r.player.started && r.player.heardUpTo() >= r.nextBase - 1 && t - r.lastTextAt > FEED_IDLE_MS) {
       r.streamDone = true;
@@ -260,7 +300,7 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
   function sendSentence(r: Run, s: Sent, first: boolean) {
     if (!r.ws || r.ws.readyState !== 1 || !r.token || !r.player || s.on === r.ws) return;
     s.on = r.ws;
-    r.player.addSentence(s.spoken, s.words, s.question);
+    r.player.addSentence(s.spoken, s.words, s.question, s.clause);
     assertSpoken(s.spoken, "ElevenLabs");
     r.ws.send(JSON.stringify(sentenceMessage(r.token, s.spoken, first)));
     r.firstSentAt ??= now();
@@ -276,18 +316,26 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
       return finish(r, true);
     }
     r.retried = true;
+    r.retrying = true;
     const k = r.player.firstIncomplete();
     r.player.truncateFrom(k);
+    r.player.resetStall();
     r.closeSent = false;
     r.firstSentAt = null; // the deadline runs again for the retry
     r.connecting = connect(r, true).then(
       (ok) => {
+        r.retrying = false;
         if (!ok || r.done) return false;
+        r.player?.resetStall(); // the stall and dry clocks start again with the new socket
         r.sent.slice(k).forEach((s, i) => sendSentence(r, s, i === 0 && k === 0));
         if (r.streamDone) sendClose(r);
         return true;
       },
-      (err) => (fail(r, err), false),
+      (err) => {
+        r.retrying = false;
+        fail(r, err);
+        return false;
+      },
     );
   }
 
@@ -302,6 +350,7 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
     if (m.error) return fail(r, new VoiceError("unavailable", m.error));
     if (m.audio) {
       r.firstChunkAt ??= now();
+      r.socketAudio = true;
       const { samples, carry } = pcm16ToFloat32(m.audio, r.carry);
       r.carry = carry;
       r.player.push(samples, m.alignment ?? null);
@@ -328,6 +377,7 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
     r.token = t;
     const ws = new WS(ttsSocketUrl(t));
     r.ws = ws;
+    r.socketAudio = false;
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new VoiceError("network", "connect timeout"));
@@ -362,7 +412,7 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
       for await (const sentence of sentencesFrom(source)) {
         if (r.done) return;
         const sp = speakable(sentence, o.locale, o.names);
-        const s: Sent = { written: sentence, spoken: sp.text, base: r.nextBase, words: sp.words.map((w) => r.nextBase + w), question: /[?¿]/.test(sentence), on: null };
+        const s: Sent = { written: sentence, spoken: sp.text, base: r.nextBase, words: sp.words.map((w) => r.nextBase + w), question: /[?¿]/.test(sentence), clause: isClauseCut(sentence), on: null };
         r.nextBase += countWords(sentence);
         r.lastTextAt = now();
         if (!sp.text) continue;
@@ -398,9 +448,9 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
       let resolve!: () => void;
       const done = new Promise<void>((ok) => (resolve = ok));
       const r: Run = {
-        id, band: opts.band ?? o.band ?? "69", done: false, resolve, player: null, ws: null, token: null, sent: [], nextBase: 0, streamDone: false,
-        closeSent: false, retried: false, connecting: null, firstSentAt: null, firstChunkAt: null, firstAudibleAt: null, lastTextAt: now(),
-        ticker: null, carry: null, started: false, unsubAbort: null,
+        id, band: opts.band ?? o.band ?? "69", done: false, resolve, player: null, ctx: null, ws: null, token: null, sent: [], nextBase: 0, streamDone: false,
+        closeSent: false, retried: false, retrying: false, held: !!opts.after, suspended: false, socketAudio: false, connecting: null, firstSentAt: null,
+        firstChunkAt: null, firstAudibleAt: null, lastTextAt: now(), ticker: null, carry: null, started: false, unsubAbort: null,
       };
       run = last = r;
       r.ticker = setInterval(() => tick(r), TICK_MS);
@@ -409,6 +459,14 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
         opts.signal.addEventListener("abort", onAbort, { once: true });
         r.unsubAbort = () => opts.signal?.removeEventListener("abort", onAbort);
       }
+      // A speculative reply: its socket opens and its audio comes in now, and it plays on commit.
+      opts.after?.then(
+        () => {
+          r.held = false;
+          r.player?.release();
+        },
+        () => finish(r, true, 0),
+      );
       void drive(r, source);
       return Object.assign(done, { id });
     },

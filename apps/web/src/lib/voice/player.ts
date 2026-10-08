@@ -22,7 +22,8 @@ export const STALL_MS = 500;
 
 export type Alignment = { chars?: string[] | null; charStartTimesMs?: number[] | null };
 
-type Sentence = { nsStart: number; nsEnd: number; question: boolean; sampleStart: number | null; paused: boolean };
+/** `clause`: the chunk was cut mid-sentence (chunk.ts isClauseCut), so no sentence pause follows it. */
+type Sentence = { nsStart: number; nsEnd: number; question: boolean; clause: boolean; sampleStart: number | null; paused: boolean };
 type WordStart = { ns: number; written: number; sentence: number; sample: number | null };
 type Segment = { a: number; b: number; at: number; src: AudioBufferSourceNode };
 /** A scheduled word: when it starts and ends on the audio clock, and its first sample. */
@@ -39,8 +40,10 @@ export type PlayerOptions = {
   onBoundary?: (word: number) => void;
   /** The first audio is scheduled; `audibleAt` is when it will be heard. */
   onStart?: (audibleAt: number) => void;
-  /** The audio clock stopped while audio was waiting to play (iOS "interrupted", a frozen context). */
+  /** The audio clock stopped advancing for STALL_MS while the context says it is running and audio is waiting to play. */
   onStall?: () => void;
+  /** The context isn't running (suspended, iOS "interrupted") while audio is waiting: a new socket can't help; wait for it to resume or for a tap. */
+  onSuspended?: () => void;
 };
 
 export type Player = ReturnType<typeof createPlayer>;
@@ -61,6 +64,8 @@ export function createPlayer(o: PlayerOptions) {
   let ended = false;
   let paused = false;
   let cancelled = false;
+  let held = false; // audio comes in but nothing plays yet (a speculative reply before its turn is committed)
+  let starvedSince: number | null = null;
   let unaligned = false; // some audio came without timings: nothing can be held back for words
   let firstChunkAt: number | null = null;
   let lastPushAt = 0;
@@ -144,7 +149,7 @@ export function createPlayer(o: PlayerOptions) {
   }
 
   function pump() {
-    if (cancelled || paused) return;
+    if (cancelled || paused || held) return;
     const safe = safePoint();
     if (safe <= scheduled) {
       if (started && !ended && ctx.currentTime >= nextStart) dryAt ??= now();
@@ -164,9 +169,11 @@ export function createPlayer(o: PlayerOptions) {
     while (scheduled < safe) {
       const k = sentences.findIndex((s, i) => i > 0 && s.sampleStart === scheduled && !s.paused);
       if (k > 0) {
-        // The band's pause after the last sentence; a sentence that arrived late has had its pause already.
+        // The band's pause after the last sentence; a sentence that arrived late has had its pause
+        // already, and the rest of a sentence cut at a clause gets none (the voice pauses at the comma).
         const p = SENTENCE_PAUSE[o.band];
-        nextStart = Math.max(nextStart + (p.after + (sentences[k].question ? p.beforeQuestion : 0)) / 1000, ctx.currentTime + LEAD_MS / 1000);
+        const pause = sentences[k - 1].clause ? 0 : p.after + (sentences[k].question ? p.beforeQuestion : 0);
+        nextStart = Math.max(nextStart + pause / 1000, ctx.currentTime + LEAD_MS / 1000);
         sentences[k].paused = true;
       }
       const cut = sentences.map((s) => s.sampleStart).filter((x): x is number => x != null && x > scheduled && x <= safe);
@@ -179,7 +186,7 @@ export function createPlayer(o: PlayerOptions) {
      * The next sentence is being sent: `spoken` is the exact text sent to the vendor, `written[k]` the
      * written word each of its spoken words came from.
      */
-    addSentence(spoken: string, written: number[], question: boolean) {
+    addSentence(spoken: string, written: number[], question: boolean, clause = false) {
       const nsStart = ns.length;
       const toks = spoken.split(/\s+/).filter(Boolean);
       toks.forEach((tok, k) => {
@@ -188,7 +195,25 @@ export function createPlayer(o: PlayerOptions) {
         wordAtNs.set(w.ns, w);
         for (const ch of tok) ns.push(ch);
       });
-      sentences.push({ nsStart, nsEnd: ns.length, question, sampleStart: null, paused: false });
+      sentences.push({ nsStart, nsEnd: ns.length, question, clause, sampleStart: null, paused: false });
+    },
+    /** Take audio in but play none of it until release() (a reply sent at the eager end of turn). */
+    hold() {
+      held = true;
+    },
+    release() {
+      if (!held) return;
+      held = false;
+      pump();
+    },
+    /** Some text that was sent has no audio yet (its character timings haven't come). */
+    owed: () => !unaligned && cursor < ns.length,
+    /** How long the player has had nothing left to play while a reply is under way, ms (0 while it plays). */
+    starvedMs: () => (starvedSince == null ? 0 : now() - Math.max(starvedSince, lastPushAt)),
+    /** Start the stall clock again (a retry just connected; the context just resumed). */
+    resetStall() {
+      lastClock = { t: ctx.currentTime, at: now() };
+      starvedSince = null;
     },
     /** A chunk of audio and the character timings that came with it (relative to the chunk). */
     push(pcm: Float32Array, al?: Alignment | null) {
@@ -230,7 +255,12 @@ export function createPlayer(o: PlayerOptions) {
       pump();
       const pending = started && !paused && nextStart > ctx.currentTime;
       if (ctx.currentTime !== lastClock.t) lastClock = { t: ctx.currentTime, at: now() };
-      if (pending && ((ctx.state as string) !== "running" || now() - lastClock.at >= STALL_MS)) o.onStall?.();
+      const running = (ctx.state as string) === "running";
+      if (pending && !running) o.onSuspended?.();
+      else if (pending && now() - lastClock.at >= STALL_MS) o.onStall?.();
+      // Ran dry mid-reply: the transport decides whether audio is owed (a vendor that went quiet).
+      if (started && !paused && !held && !ended && running && ctx.currentTime >= nextStart) starvedSince ??= now();
+      else starvedSince = null;
     },
     /** Every sample received has played (and nothing more is coming). */
     drained: () => ended && scheduled >= received && ctx.currentTime >= nextStart,

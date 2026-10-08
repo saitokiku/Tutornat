@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sentenceFeed } from "./chunk";
-import { closingMessage, elevenLabsSpeechOut, FEED_IDLE_MS, FIRST_AUDIO_DEADLINE_MS, openingMessage, pcm16ToFloat32, sentenceMessage, ttsSocketUrl, type TtsToken } from "./elevenlabs";
+import { closingMessage, DRY_MS, elevenLabsSpeechOut, FEED_IDLE_MS, FIRST_AUDIO_DEADLINE_MS, openingMessage, pcm16ToFloat32, sentenceMessage, ttsSocketUrl, type TtsToken } from "./elevenlabs";
 import { alignmentFor, asAudio, asWebSocket, FakeAudio, FakeSocket, pcmBase64 } from "./fakes";
 import type { Band } from "./types";
 
@@ -182,8 +182,8 @@ describe("ElevenLabs streaming read-aloud", () => {
     expect(FakeSocket.all).toHaveLength(2);
   });
 
-  it("retries when the audio clock stops (iOS interrupted the audio)", async () => {
-    const { audio, out, advance } = setup();
+  it("an interrupted context (a call, another app) waits to resume or for a tap: a new socket can't fix it", async () => {
+    const { audio, out, seen, advance } = setup();
     void out.speak("One two three four five.");
     await flush();
     const ws = FakeSocket.last();
@@ -192,8 +192,114 @@ describe("ElevenLabs streaming read-aloud", () => {
     say(ws, "One two three four five. ");
     await advance(100);
     audio.state = "interrupted";
-    await vi.advanceTimersByTimeAsync(50);
+    audio.resume = async () => {}; // iOS doesn't give it back yet
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(FakeSocket.all).toHaveLength(1);
+    expect(out.locked).toBe(true); // "Tap to hear"
+    expect(seen.errors).toEqual([]);
+    audio.state = "running";
+    await advance(50);
+    expect(out.locked).toBe(false);
+    await advance(3000);
+    expect(seen.errors).toEqual([]);
+    expect(seen.ends).toEqual([false]);
+  });
+
+  it("a frozen clock gets one retry, which the next tick doesn't use up; freezing again stops speaking", async () => {
+    const { out, seen, advance } = setup();
+    void out.speak("One two three four five. Six seven eight.");
+    await flush();
+    const ws = FakeSocket.last();
+    ws.open();
+    await flush();
+    say(ws, "One two three four five. ");
+    await advance(100);
+    await vi.advanceTimersByTimeAsync(550); // the context says running; its clock doesn't move
     expect(FakeSocket.all).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(200); // still frozen while the retry connects
+    expect(seen.errors).toEqual([]);
+    const second = FakeSocket.last();
+    second.open();
+    await flush();
+    expect(second.json().slice(1)).toEqual([{ text: "Six seven eight. " }, { text: "" }]);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(seen.errors).toEqual([]);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(seen.errors).toEqual(["speak"]);
+    expect(seen.ends).toEqual([true]);
+  });
+
+  it("the vendor going quiet mid-reply is caught: one retry from the first sentence not heard", async () => {
+    const { out, seen, advance } = setup();
+    void out.speak("One two. Three four. Five six.");
+    await flush();
+    const first = FakeSocket.last();
+    first.open();
+    await flush();
+    say(first, "One two. "); // then nothing more, and the socket stays open
+    await advance(600);
+    expect(FakeSocket.all).toHaveLength(1);
+    await advance(DRY_MS + 100);
+    expect(FakeSocket.all).toHaveLength(2);
+    const second = FakeSocket.last();
+    second.open();
+    await flush();
+    expect(second.json().slice(1)).toEqual([{ text: "Three four. " }, { text: "Five six. " }, { text: "" }]);
+    expect(seen.errors).toEqual([]);
+    // And if the retry goes quiet too, it stops and the words stay on screen.
+    say(second, "Three four. ");
+    await advance(600 + DRY_MS + 100);
+    expect(seen.errors).toEqual(["speak"]);
+    expect(out.state).toBe("idle");
+  });
+
+  it("all the audio came but the end mark never did: the run still ends once it has played", async () => {
+    const { out, seen, advance } = setup();
+    const done = out.speak("One two.");
+    await flush();
+    const ws = FakeSocket.last();
+    ws.open();
+    await flush();
+    say(ws, "One two. ");
+    await advance(500 + DRY_MS + 100);
+    await done;
+    expect(seen.ends).toEqual([false]);
+    expect(seen.errors).toEqual([]);
+  });
+
+  it("a speculative reply takes its audio in at once and plays only when its turn is committed", async () => {
+    const { audio, out, seen, advance } = setup();
+    let commit!: () => void;
+    const after = new Promise<void>((ok) => (commit = ok));
+    void out.speak("Seven is right.", { after });
+    await flush();
+    const ws = FakeSocket.last();
+    ws.open();
+    await flush();
+    say(ws, "Seven is right. ");
+    await advance(FIRST_AUDIO_DEADLINE_MS + 500);
+    expect(seen.starts).toBe(0);
+    expect(audio.sources).toHaveLength(0);
+    expect(FakeSocket.all).toHaveLength(1); // held is not stalled
+    commit();
+    await flush();
+    expect(seen.starts).toBe(1);
+    expect(audio.sources.length).toBeGreaterThan(0);
+  });
+
+  it("a speculative reply taken back plays nothing", async () => {
+    const { audio, out, seen } = setup();
+    void out.speak("Seven is right.", { after: new Promise(() => {}) });
+    await flush();
+    const ws = FakeSocket.last();
+    ws.open();
+    await flush();
+    say(ws, "Seven is right. ");
+    out.cancel({ fadeMs: 0 });
+    await flush();
+    expect(seen.starts).toBe(0);
+    expect(audio.sources).toHaveLength(0);
+    expect(seen.ends).toEqual([true]);
   });
 
   it("an aborted signal stops it with a fade", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createChunker, sentenceFeed, sentencesOf, splitSentences } from "./chunk";
+import { createChunker, isClauseCut, sentenceFeed, sentencesOf, splitSentences } from "./chunk";
 import { countWords } from "./types";
 
 /** Streams the text through the chunker in pieces of `size` characters. */
@@ -173,5 +173,16 @@ describe("sentence feed", () => {
     const got: string[] = [];
     for await (const s of sentencesOf(deltas())) got.push(s);
     expect(got).toEqual(["First.", "Second."]);
+  });
+});
+
+describe("clause cuts", () => {
+  it("knows a chunk cut mid-sentence from a whole sentence", () => {
+    const c = createChunker({ mode: "voice" });
+    const [first] = c.push("Look at the bottom number of the fraction on the left side, and tell me what it says. ");
+    expect(first).toBe("Look at the bottom number of the fraction on the left side,");
+    expect(isClauseCut(first)).toBe(true);
+    for (const s of ["Which part is tricky?", "Seven is right.", "That's it!", "Wait…"]) expect(isClauseCut(s), s).toBe(false);
+    for (const s of ["First this;", "Here is how:", "Look —", "and then,”"]) expect(isClauseCut(s), s).toBe(true);
   });
 });

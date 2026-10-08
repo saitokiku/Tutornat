@@ -14,7 +14,7 @@ function setup(band: Band = "69") {
   const ctx = new FakeAudio();
   let clock = 1000;
   const now = () => clock;
-  const seen = { scheduled: [] as [number, number][], boundaries: [] as number[], starts: [] as number[], stalls: 0 };
+  const seen = { scheduled: [] as [number, number][], boundaries: [] as number[], starts: [] as number[], stalls: 0, suspended: 0 };
   const player = createPlayer({
     ctx: ctx as unknown as AudioContext,
     sampleRate: SR,
@@ -24,6 +24,7 @@ function setup(band: Band = "69") {
     onBoundary: (w) => seen.boundaries.push(w),
     onStart: (at) => seen.starts.push(at),
     onStall: () => seen.stalls++,
+    onSuspended: () => seen.suspended++,
   });
   const advance = (ms: number) => {
     clock += ms;
@@ -230,14 +231,69 @@ describe("the player", () => {
     expect(resumed[0].at).toBeGreaterThanOrEqual(ctx.currentTime);
   });
 
-  it("says when the audio clock stops while audio waits to play", () => {
-    const { ctx, player, seen, advance } = setup();
+  it("tells a frozen clock (a stall) apart from a context that isn't running (wait for it)", () => {
+    const { ctx, player, seen, advance, setClock } = setup();
     const text = send(player, ["One two three four five six."]);
     for (const c of chunks(text, [])) player.push(c.pcm, c.al);
     advance(100);
     expect(seen.stalls).toBe(0);
     ctx.state = "interrupted";
     advance(25);
+    expect(seen.suspended).toBeGreaterThan(0);
+    expect(seen.stalls).toBe(0);
+    ctx.state = "running";
+    // Running, but the clock doesn't move for 500 ms.
+    let clock = 2000;
+    setClock(clock);
+    player.resetStall();
+    for (let i = 0; i < 21; i++) {
+      setClock((clock += 25));
+      player.tick();
+    }
     expect(seen.stalls).toBeGreaterThan(0);
+  });
+
+  it("knows when it has run dry while text still has no audio (the vendor went quiet)", () => {
+    const { player, advance } = setup();
+    const text = send(player, ["One two.", "Three four."]);
+    const [a] = chunks(text.slice(0, 9), []);
+    player.push(a.pcm, a.al); // only the first sentence's audio comes
+    advance(200);
+    expect(player.owed()).toBe(true);
+    expect(player.starvedMs()).toBe(0); // still playing
+    for (let i = 0; i < 80; i++) advance(25); // 2 s: the first sentence ends about 1.1 s in
+    expect(player.starvedMs()).toBeGreaterThanOrEqual(800);
+    player.resetStall();
+    expect(player.starvedMs()).toBe(0);
+  });
+
+  it("holds a speculative reply: audio comes in, nothing plays until release()", () => {
+    const { ctx, player, seen, advance } = setup();
+    player.hold();
+    const text = send(player, ["One two three."]);
+    for (const c of chunks(text, [])) player.push(c.pcm, c.al);
+    advance(400);
+    expect(seen.starts).toEqual([]);
+    expect(ctx.sources).toHaveLength(0);
+    player.release();
+    expect(seen.starts).toHaveLength(1);
+    expect(seen.scheduled.map(([w]) => w)).toEqual([0, 1, 2]);
+  });
+
+  it("no sentence pause after a chunk cut at a clause, nor before its question (K–2)", () => {
+    const { ctx, player } = setup("k2");
+    const parts = ["Look at the top number,", "and which one is bigger?"];
+    let base = 0;
+    let spoken = "";
+    for (const [i, s] of parts.entries()) {
+      const sp = speakable(s, "en");
+      player.addSentence(sp.text, sp.words.map((w) => base + w), /\?\s*$/.test(s), i === 0);
+      base += s.split(/\s+/).filter(Boolean).length;
+      spoken += `${sp.text} `;
+    }
+    for (const c of chunks(spoken, [])) player.push(c.pcm, c.al);
+    player.end();
+    const [first, second] = ctx.sources;
+    expect(second.at).toBeCloseTo(first.at + first.duration, 6); // straight on: no 400 + 300 ms gap
   });
 });

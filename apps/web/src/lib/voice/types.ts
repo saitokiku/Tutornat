@@ -47,6 +47,11 @@ export type SpeakOptions = {
   kind?: SpeakKind;
   /** Sets the pause after each sentence (K–2 longest). The voice's own band when left out. */
   band?: Band;
+  /**
+   * Play nothing until this settles: a reply sent at the eager end of turn opens its voice and takes
+   * its audio in at once, but is heard only once the turn is committed. Rejecting cancels the run.
+   */
+  after?: Promise<unknown>;
 };
 
 /** One speak() call: resolves when it finishes or is cancelled. Events carry its id, so callers ignore other runs. */

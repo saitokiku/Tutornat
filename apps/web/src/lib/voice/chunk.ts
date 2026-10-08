@@ -152,6 +152,13 @@ export function createChunker({ maxChars = 220, firstMaxChars, mode = "text" }: 
 
 export type Chunker = ReturnType<typeof createChunker>;
 
+/**
+ * A chunk cut mid-sentence (the voice mode's first cut, or a run-on cut at a clause mark): it ends at
+ * ",", ";", ":" or a dash, not at a full stop. Voices add no sentence pause after it, and a browser
+ * voice joins it to what follows so its intonation doesn't start over at the comma.
+ */
+export const isClauseCut = (chunk: string) => /[,;:—–]["'”’)\]»]*$/.test(chunk.trim());
+
 /** A whole text, as sentences. */
 export function splitSentences(text: string, opts?: ChunkOptions): string[] {
   const c = createChunker(opts);

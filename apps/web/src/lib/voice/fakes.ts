@@ -1,7 +1,7 @@
 // Test doubles for the voice adapters: a WebSocket the test plays the server for, an AudioContext
 // whose clock the test moves, and scripted SpeechOut / SpeechIn. Imported by tests only.
 import { sentencesFrom } from "./chunk";
-import { emitter, type HeardWord, type ListenOptions, type OutState, type OutTiming, type SpeakSource, type SpeechIn, type SpeechOut, type SpeechRun, type TurnMeta, type VoiceError } from "./types";
+import { emitter, type HeardWord, type ListenOptions, type OutState, type OutTiming, type SpeakOptions, type SpeakSource, type SpeechIn, type SpeechOut, type SpeechRun, type TurnMeta, type VoiceError } from "./types";
 
 type Handler = ((e: { code?: number; data?: unknown }) => void) | null;
 
@@ -214,7 +214,9 @@ export function fakeOut({ auto = true, kind = "browser" as SpeechOut["kind"], ti
     heardUpTo: () => out.heard,
     duck: (gain: number, ms: number) => void out.gains.push({ gain, ms }),
     unduck: (ms: number) => void out.gains.push({ gain: 1, ms }),
-    speak(source: SpeakSource): SpeechRun {
+    /** speak() calls whose audio is held until a commit (SpeakOptions.after), by run id. */
+    held: new Set<number>(),
+    speak(source: SpeakSource, opts?: SpeakOptions): SpeechRun {
       out.cancel();
       state = "waiting";
       out.heard = -1;
@@ -224,6 +226,11 @@ export function fakeOut({ auto = true, kind = "browser" as SpeechOut["kind"], ti
       const done = new Promise<void>((r) => {
         resolve = r;
         void (async () => {
+          if (opts?.after) {
+            out.held.add(id);
+            await opts.after.catch(() => {});
+            out.held.delete(id);
+          }
           for await (const s of sentencesFrom(source)) {
             if (run !== id) return;
             mine.push(s);
