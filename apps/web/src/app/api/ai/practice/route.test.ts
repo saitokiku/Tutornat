@@ -11,8 +11,8 @@ vi.mock("@/lib/ai/config", async (importOriginal) => {
 });
 
 let hosts = 0;
-const post = (topic: string, locale = "en") =>
-  POST(new Request("http://localhost/api/ai/practice", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `198.18.7.${++hosts}` }, body: JSON.stringify({ topic, grade: "5", locale }) }));
+const post = (topic: string, locale = "en", grade = "5") =>
+  POST(new Request("http://localhost/api/ai/practice", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `198.18.7.${++hosts}` }, body: JSON.stringify({ topic, grade, locale }) }));
 
 beforeEach(() => {
   vi.stubEnv("ANTHROPIC_API_KEY", "test-key-never-used");
@@ -32,5 +32,10 @@ describe("POST /api/ai/practice", () => {
     // An ordinary topic does reach the writer (which fails here on purpose).
     expect((await post("equivalent fractions")).status).toBe(502);
     expect(slot.writer!.doGenerateCalls.length).toBeGreaterThan(0);
+  });
+
+  it("takes a grade only from the app's own list: the writer's prompt reads it", async () => {
+    expect((await post("equivalent fractions", "en", "bomb")).status).toBe(400);
+    expect(slot.writer!.doGenerateCalls).toHaveLength(0);
   });
 });

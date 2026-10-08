@@ -124,11 +124,11 @@ async function* aiOutline(req: GenerationRequest, signal: AbortSignal): AsyncGen
       const line = buf.slice(0, nl).trim();
       buf = buf.slice(nl + 1);
       if (!line) continue;
-      const e = JSON.parse(line) as { type: string; step?: "planning" | "writing"; lesson?: Parameters<typeof withIds>[0]; title?: string; error?: string };
+      const e = JSON.parse(line) as { type: string; step?: "planning" | "writing"; lesson?: Parameters<typeof withIds>[0]; title?: string } & Partial<Omit<Extract<GenerationEvent, { type: "error" }>, "type">>;
       if (e.type === "step") yield { type: "step", step: e.step! };
       else if (e.type === "lesson") yield { type: "lesson", lesson: withIds(e.lesson!) };
       else if (e.type === "skipped") yield { type: "skipped", title: e.title! };
-      else if (e.type === "error") yield { type: "error", error: e.error ?? "model" };
+      else if (e.type === "error") yield { type: "error", error: e.error ?? "model", flag: e.flag, message: e.message };
       else if (e.type === "done") yield { type: "done" };
     }
   }

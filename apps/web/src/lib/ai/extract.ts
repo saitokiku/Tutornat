@@ -2,6 +2,7 @@ import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { fromLocalDate, isDay, localDate } from "@/planner/dates";
 import { getSkill, SKILLS } from "@/practice/skills";
+import { GRADES } from "../types";
 
 // The magic box's AI reader: what one typed request, photo or PDF is (homework, a test, practice…),
 // with its title, its day if it names one, and the skills it covers. It only suggests; the family sees
@@ -17,7 +18,7 @@ export const IntakeRequest = z.object({
   file: z.string().max(4_400_000).regex(FILE).optional(),
   today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   locale: z.enum(["en", "es"]),
-  grade: z.string().max(5),
+  grade: z.enum(GRADES as [string, ...string[]]),
 });
 export type IntakeRequest = z.infer<typeof IntakeRequest>;
 

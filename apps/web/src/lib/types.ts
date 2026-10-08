@@ -189,5 +189,6 @@ export type GenerationEvent =
   | { type: "mode"; ai: boolean }
   | { type: "lesson"; lesson: Lesson }
   | { type: "skipped"; title: string }
-  | { type: "error"; error: string }
+  /** error "safety": the server's screen stopped the request; `flag` and `message` are its kind and fixed reply. */
+  | { type: "error"; error: string; flag?: "crisis" | "abuse" | "offLimits"; message?: string }
   | { type: "done" };

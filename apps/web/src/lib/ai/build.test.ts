@@ -170,7 +170,7 @@ describe("the shared course cache", () => {
     const req: CourseRequest = { ...base, goal: "help me study for my test", length: "lesson" };
     await run(req, writer([outline("Study skills", 1), good]));
     expect(cachedCourse(req)).not.toBeNull();
-    const withFile = { ...req, sources: [{ name: "Unit 4 Photosynthesis study guide.pdf", kind: "pdf" }] };
+    const withFile: CourseRequest = { ...req, sources: [{ name: "Unit 4 Photosynthesis study guide.pdf", kind: "pdf" }] };
     // The same goal with a file attached is that family's own course: the cached one is not served.
     expect(cachedCourse(withFile)).toBeNull();
     const model = writer([outline("Photosynthesis", 1), good]);

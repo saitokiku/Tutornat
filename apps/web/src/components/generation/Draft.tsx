@@ -105,8 +105,9 @@ export function Draft({ fetchers = knowFetchers }: { fetchers?: Fetchers }) {
     setNote(null);
     setGates(false);
     try {
-      // The safety screen runs before anything leaves the device, whichever way the course is built.
-      const s = screen(course.goal, learner.locale);
+      // The safety screen runs before anything leaves the device, whichever way the course is built: on
+      // the goal and the attached files' names (the template and the writer both read them).
+      const s = screen([course.goal, ...course.sources.map((f) => f.name)].join("\n"), learner.locale);
       if (s.kind !== "ok") return stopForSafety(course, s);
       const avoid = namesOnAccount(read(), learner.accountId);
       // Real sources need a topic to look up; a request that is only attached files gets the template.
@@ -121,7 +122,9 @@ export function Draft({ fetchers = knowFetchers }: { fetchers?: Fetchers }) {
         length: course.length,
         locale: course.locale,
         sources: course.sources,
-        interests: learner.interests,
+        // A grown-up's interest the screen would stop ("vaping") is left out, not the whole course;
+        // the server screens what it gets as well and stops the request instead.
+        interests: learner.interests?.filter((i) => screen(i, learner.locale).kind === "ok"),
         working: recentSkills(read(), learner.id, Date.now()).slice(0, 6),
       };
       const got: Lesson[] = [];
@@ -139,6 +142,8 @@ export function Draft({ fetchers = knowFetchers }: { fetchers?: Fetchers }) {
           skippedAny = true;
           setSkipped((x) => [...x, e.title]);
         }
+        // The server's own screen stopped it (a request this page didn't screen): the same stop as above.
+        if (e.type === "error" && e.error === "safety" && e.flag && e.message) return stopForSafety(course, { kind: e.flag, reply: e.message });
         if (e.type === "error") error = e.error;
         if (e.type === "done") done = true;
       }

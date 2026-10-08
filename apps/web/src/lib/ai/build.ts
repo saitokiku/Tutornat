@@ -1,6 +1,7 @@
 import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { SKILLS, getSkill } from "@/practice/skills";
+import { GRADES } from "../types";
 import { band } from "./prompts";
 import { ExtractSchema, gateLesson, LessonSchema, OutlineSchema, PracticeSchema, WidgetSchema, type LessonOut } from "./schemas";
 import { VisualInput } from "./tools";
@@ -8,9 +9,12 @@ import { VisualInput } from "./tools";
 // Model-backed builders: lessons from the magic box, questions for open topics, reading school
 // documents, and the family note. Each takes a model so tests can pass a mock.
 
+/** A grade the app knows, never free text: every builder's prompt reads it. */
+const grade = z.enum(GRADES as [string, ...string[]]);
+
 export const CourseRequest = z.object({
   goal: z.string().min(2).max(500),
-  grade: z.string().max(5),
+  grade,
   subject: z.enum(["math", "science", "english", "other"]),
   length: z.enum(["lesson", "short", "full"]),
   locale: z.enum(["en", "es"]),
@@ -22,7 +26,7 @@ export const CourseRequest = z.object({
   // Photosynthesis study guide.pdf" with "help me study for my test"). A course written from them is
   // that family's own and is never cached or shared. (The course route passes the names on only
   // when the browser scrubbed them; see app/api/ai/course/route.ts.)
-  sources: z.array(z.object({ name: z.string().max(120), kind: z.string().max(10) })).max(30).optional(),
+  sources: z.array(z.object({ name: z.string().max(120), kind: z.enum(["pdf", "image", "doc", "text"]) })).max(30).optional(),
 });
 export type CourseRequest = z.infer<typeof CourseRequest>;
 
@@ -322,7 +326,7 @@ export async function* writeCourse(req: CourseRequest, model: LanguageModel, sig
   yield { type: "done" };
 }
 
-export const PracticeRequest = z.object({ topic: z.string().min(2).max(200), grade: z.string().max(5), locale: z.enum(["en", "es"]), count: z.number().int().min(3).max(10).default(8) });
+export const PracticeRequest = z.object({ topic: z.string().min(2).max(200), grade, locale: z.enum(["en", "es"]), count: z.number().int().min(3).max(10).default(8) });
 
 export async function writePractice(req: z.infer<typeof PracticeRequest>, model: LanguageModel) {
   const { output } = await generateText({
@@ -342,7 +346,7 @@ export const ExtractRequest = z.object({
   file: z.string().max(8_000_000).optional(),
   today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   locale: z.enum(["en", "es"]),
-  grade: z.string().max(5),
+  grade,
 });
 
 export async function readSchoolDocument(req: z.infer<typeof ExtractRequest>, model: LanguageModel) {

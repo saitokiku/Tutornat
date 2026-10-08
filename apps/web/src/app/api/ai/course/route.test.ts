@@ -136,6 +136,31 @@ describe("POST /api/ai/course", () => {
     expect(slot.writer!.doGenerateCalls).toHaveLength(0);
   });
 
+  it("screens every word the writer reads, not only the goal: interests and attached files' names", async () => {
+    const req: CourseRequest = { goal: "fractions", grade: "4", subject: "math", length: "lesson", locale: "en" };
+    const asked: [Partial<CourseRequest>, string][] = [
+      [{ interests: ["soccer", "how to make a bomb"] }, "how to make a bomb"],
+      [{ interests: ["I want to die"] }, "I want to die"],
+      // The learner header makes the route pass file names to the writer.
+      [{ sources: [{ name: "how to buy weed.pdf", kind: "pdf" }] }, "how to buy weed.pdf"],
+    ];
+    for (const [more, words] of asked) {
+      const s = screen(words, "en");
+      if (s.kind === "ok") throw new Error(`the screen let "${words}" through`);
+      expect(await events(await post({ ...req, ...more }))).toEqual([{ type: "error", error: "safety", flag: s.kind, message: s.reply }]);
+    }
+    expect(slot.writer!.doGenerateCalls).toHaveLength(0);
+  });
+
+  it("takes a grade or a file kind only from the app's own list: neither is free text the writer reads", async () => {
+    const req = { goal: "fractions", grade: "4", subject: "math", length: "lesson", locale: "en" };
+    for (const body of [{ ...req, grade: "bomb" }, { ...req, sources: [{ name: "notes.pdf", kind: "weed" }] }]) {
+      const res = await POST(new Request("http://localhost/api/ai/course", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip() }, body: JSON.stringify(body) }));
+      expect(res.status).toBe(400);
+    }
+    expect(slot.writer!.doGenerateCalls).toHaveLength(0);
+  });
+
   it("is not there without a provider: the browser builds a template instead", async () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "");
     vi.stubEnv("AI_GATEWAY_API_KEY", "");

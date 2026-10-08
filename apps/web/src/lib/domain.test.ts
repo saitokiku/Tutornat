@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { record, summarizeWeek, startOfWeek, courseProgress } from "./activity";
 import { signIn, signUp } from "./auth";
 import { addFromCatalogue, createDraft, getCourse } from "./courses";
@@ -101,6 +101,15 @@ describe("generateOutline", () => {
     const events = await run(req("full"), 4);
     expect(events).toHaveLength(4);
     expect(events.some((e) => e.type === "done")).toBe(false);
+  });
+
+  it("passes the server's safety stop on with its kind and fixed reply", async () => {
+    const stop = { type: "error", error: "safety", flag: "crisis", message: "Call or text 988." };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(`${JSON.stringify(stop)}\n`, { headers: { "content-type": "application/x-ndjson" } })));
+    const seen: GenerationEvent[] = [];
+    for await (const e of generateOutline(req("short"), new AbortController().signal, 0, true)) seen.push(e);
+    vi.unstubAllGlobals();
+    expect(seen.at(-1)).toEqual(stop);
   });
 
   it("guesses the subject", () => {

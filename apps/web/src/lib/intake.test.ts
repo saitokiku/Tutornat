@@ -400,6 +400,19 @@ describe("readIntake (server)", () => {
         expect(res.status).toBe(422);
         expect(await res.json()).toEqual({ error: "topic" });
       }
+      // Today an ordinary school document is stopped too when it lists a word on the screen's list
+      // (a health unit, a school's vaping policy). Whether school text gets an allowance, as
+      // SCHOOL_TERMS gives reproduction, is the owner's call; ImportPanel says plainly why it stopped.
+      const syllabus = "Grade 5 Health, Unit 4: alcohol, tobacco and vaping. Quiz Oct 21.\nSchool rules: no weapons on campus.";
+      expect((await post({ kind: "syllabus", text: syllabus, today: TODAY, locale: "en", grade: "5" })).status).toBe(422);
+      expect(doGenerate).not.toHaveBeenCalled();
+    });
+
+    it("takes a grade only from the app's own list, for every reader", async () => {
+      const doGenerate = vi.fn(async () => reply(out));
+      ai.model = new MockLanguageModelV4({ doGenerate }) as unknown as LanguageModel;
+      expect((await post({ ...intake, grade: "bomb" })).status).toBe(400);
+      expect((await post({ kind: "syllabus", text: "Quiz Oct 21", today: TODAY, locale: "en", grade: "bomb" })).status).toBe(400);
       expect(doGenerate).not.toHaveBeenCalled();
     });
 

@@ -20,11 +20,12 @@ vi.mock("next/navigation", () => ({
 }));
 const ai = vi.hoisted(() => ({ mode: "demo" as "demo" | "anthropic" }));
 vi.mock("@/lib/ai/client", () => ({ aiStatus: () => Promise.resolve(ai.mode) }));
-const writer = vi.hoisted(() => ({ events: [] as GenerationEvent[], asked: [] as boolean[] }));
+const writer = vi.hoisted(() => ({ events: [] as GenerationEvent[], asked: [] as boolean[], requests: [] as { interests?: string[] }[] }));
 vi.mock("@/lib/generate", async (orig) => ({
   ...(await orig<typeof import("@/lib/generate")>()),
-  generateOutline: async function* (_req: unknown, _signal: AbortSignal, _pace?: number, withAi = false) {
+  generateOutline: async function* (req: { interests?: string[] }, _signal: AbortSignal, _pace?: number, withAi = false) {
     writer.asked.push(withAi);
+    writer.requests.push(req);
     for (const e of writer.events) yield e;
   },
 }));
@@ -73,6 +74,7 @@ beforeEach(() => {
   ai.mode = "demo";
   writer.events = [];
   writer.asked = [];
+  writer.requests = [];
 });
 afterEach(() => (resetMemory(), nav.push.mockReset(), nav.replace.mockReset()));
 
@@ -267,5 +269,34 @@ describe("Draft: the safety screen", () => {
     expect(await screen.findByText(/call or text 988/)).toBeInTheDocument();
     expect(asked).toEqual([]);
     expect(read().notes).toEqual([expect.objectContaining({ profileId: "p1", from: "safety" })]);
+  });
+
+  it("screens the attached files' names too: a template or the writer would read them", async () => {
+    ai.mode = "anthropic";
+    const draft = createDraft({ goal: "", grade: "4", subject: "other", length: "short", locale: "en", sources: [{ id: "f1", name: "how to buy weed.pdf", size: 10, kind: "pdf" }] }, learner.id);
+    nav.params = { draftId: draft.id };
+    render(<Draft fetchers={sources().f} />);
+    expect(await screen.findByText("That's not something I can help with. Want to get back to what you're learning?")).toBeInTheDocument();
+    expect(writer.asked).toEqual([]);
+    expect(read().courses.some((c) => c.id === draft.id)).toBe(false);
+  });
+
+  it("leaves out an interest the screen would stop, and builds the course without it", async () => {
+    ai.mode = "anthropic";
+    writer.events = [{ type: "lesson", lesson: lesson("l1", "Fractions") }, { type: "done" }];
+    update((s) => void (s.profiles.find((p) => p.id === "p1")!.interests = ["soccer", "vaping"]));
+    open("fractions", sources().f);
+    expect(await screen.findByText("Written by AI")).toBeInTheDocument();
+    expect(writer.requests).toEqual([expect.objectContaining({ interests: ["soccer"] })]);
+  });
+
+  it("a request the server's screen stops gets the same stop: its fixed reply, a note for a crisis, no draft kept", async () => {
+    ai.mode = "anthropic";
+    writer.events = [{ type: "error", error: "safety", flag: "crisis", message: "You deserve real help. Call or text 988." }];
+    const id = open("fractions", sources().f);
+    expect(await screen.findByText("You deserve real help. Call or text 988.")).toBeInTheDocument();
+    expect(read().courses.some((c) => c.id === id)).toBe(false);
+    expect(read().notes).toEqual([expect.objectContaining({ profileId: "p1", from: "safety" })]);
+    expect(screen.queryByText(/The lesson writer couldn't finish/)).toBeNull();
   });
 });
