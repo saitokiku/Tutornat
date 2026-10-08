@@ -27,4 +27,16 @@ describe("resources", () => {
     expect(linkOf(es, "es")).toContain("/es/");
     expect(resourcesFor({ topic: "moon phases", grade: "5" }).map((r) => r.id)).toContain("nasa-moon-phases");
   });
+
+  it("say truthfully whether a source is in Spanish", () => {
+    for (const r of RESOURCES) {
+      if (r.urlEs) expect(r.languages, r.id).toContain("es");
+      if (r.about.es.includes("(en inglés)")) expect(r.languages.includes("es") || !!r.urlEs, `${r.id} has Spanish but says "en inglés"`).toBe(false);
+      if (r.note) expect(r.note.en && r.note.es, r.id).toBeTruthy();
+    }
+    // Illustrative Mathematics publishes every K–5 family page in Spanish under /k5_es/.
+    const imK5 = RESOURCES.filter((r) => r.url.startsWith("https://im.kendallhunt.com/k5/"));
+    expect(imK5.length).toBeGreaterThan(0);
+    for (const r of imK5) expect(linkOf(r, "es"), r.id).toBe(r.url.replace("/k5/", "/k5_es/"));
+  });
 });

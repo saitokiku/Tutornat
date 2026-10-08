@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Checks that every resource link (url and urlEs in src/resources/list.ts) still loads.
 // HEAD first, GET if HEAD fails; redirects are followed; a link passes only if it ends at a 2xx.
-// Exits 1 and lists each failing link. Usage (from apps/web): node --no-warnings scripts/check-links.mjs
+// Exits 1 and lists each failing link. Usage (from apps/web):
+//   node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-links.mjs
+// Those two flags quiet only Node's notices about loading a .ts file; every other warning still shows.
 import { readFile } from "node:fs/promises";
 
 const LIST = new URL("../src/resources/list.ts", import.meta.url);
@@ -13,21 +15,25 @@ const UA = "Mozilla/5.0 (compatible; KaizenEDU-link-check/1.0; +https://kaizened
 async function load() {
   try {
     const { RESOURCES } = await import(LIST.href);
+    console.log("Read the list by importing list.ts.");
     return RESOURCES.flatMap((r) => [[r.id, r.url], ...(r.urlEs ? [[`${r.id} (es)`, r.urlEs]] : [])]);
-  } catch {
+  } catch (e) {
+    console.warn(`Could not import list.ts (${e.code ?? e.message}); parsing its text instead.`);
     return parse(await readFile(LIST, "utf8"));
   }
 }
 
-// Fallback: url/urlEs string literals (labelled by the nearest id before them), plus helper calls such as
-// phet("slug", ...) whose url is a template of the helper's parameters.
+// Fallback: url/urlEs string literals (labelled by the helper they sit in, else the nearest id before them),
+// plus helper calls such as phet("slug", ...) whose url is a template of the helper's parameters.
 function parse(src) {
   const links = [];
+  const helpers = [...src.matchAll(/const (\w+) = \(([^)]*)\)[^=]*=> \(\{([\s\S]*?)\n\}\);/g)];
   for (const m of src.matchAll(/\burl(Es)?: "(https:[^"]+)"/g)) {
-    const id = src.slice(0, m.index).match(/[\s\S]*\bid: "([^"]+)"/)?.[1] ?? "?";
+    const helper = helpers.find((h) => m.index > h.index && m.index < h.index + h[0].length)?.[1];
+    const id = helper ?? src.slice(0, m.index).match(/[\s\S]*\bid: "([^"]+)"/)?.[1] ?? "?";
     links.push([m[1] ? `${id} (es)` : id, m[2]]);
   }
-  for (const [, name, params, body] of src.matchAll(/const (\w+) = \(([^)]*)\)[^=]*=> \(\{([\s\S]*?)\n\}\);/g)) {
+  for (const [, name, params, body] of helpers) {
     const names = params.split(",").map((p) => p.split(":")[0].trim());
     const templates = [...body.matchAll(/\burl(?:Es)?: `([^`]+)`/g)].map((m) => m[1]);
     for (const call of src.matchAll(new RegExp(`\\b${name}\\(((?:\\s*"[^"]*",?)+)`, "g"))) {
