@@ -6,19 +6,16 @@ import { bi, e, m, mx, type Bank } from "./shared";
 // ── s.natural.selection ─────────────────────────────────────────────────────────────────────────
 
 export const NATURAL_SELECTION: Bank = {
-  nudge: bi(
-    "Is the change happening to one organism during its life, or to a population over many generations?",
-    "¿El cambio le ocurre a un organismo durante su vida o a una población a lo largo de muchas generaciones?",
-  ),
+  nudge: bi("Was the trait already there before the change, or did the change create it?", "¿El rasgo ya existía antes del cambio, o el cambio lo creó?"),
   strategy: bi(
-    "Natural selection needs variation in a trait, a trait that is inherited, and more offspring than can survive. Individuals with helpful traits survive and reproduce more, so over generations those traits become more common. No individual changes its genes because it needs to.",
-    "La selección natural necesita variación en un rasgo, que el rasgo se herede y más crías de las que pueden sobrevivir. Los individuos con rasgos útiles sobreviven y se reproducen más, así que con las generaciones esos rasgos se vuelven más comunes. Ningún individuo cambia sus genes porque lo necesite.",
+    "Ask three things: did the trait vary, could it be inherited, and did some individuals leave more offspring than others? Then follow the trait from parents to their young.",
+    "Pregúntate tres cosas: ¿el rasgo variaba, se podía heredar y algunos individuos dejaron más crías que otros? Luego sigue el rasgo de los padres a sus crías.",
   ),
   seconds: 30,
   items: [
     e(
       bi("What does natural selection act on?", "¿Sobre qué actúa la selección natural?"),
-      bi("Differences in inherited traits among the individuals of a population", "Las diferencias en los rasgos heredados entre los individuos de una población"),
+      bi("Inherited differences among the individuals of a population", "Las diferencias heredadas entre los individuos de una población"),
       [
         m("thinks-individuals-adapt", "Changes an animal makes during its life because it needs them", "Los cambios que un animal hace durante su vida porque los necesita"),
         m("thinks-learned-traits-inherited", "Skills an animal learns from its parents", "Las habilidades que un animal aprende de sus padres"),
@@ -32,10 +29,10 @@ export const NATURAL_SELECTION: Bank = {
         "Before the 1800s, most peppered moths in England were light colored. After soot from factories darkened tree trunks, dark moths became much more common. Why?",
         "Antes del siglo XIX, la mayoría de las polillas moteadas de Inglaterra eran de color claro. Cuando el hollín de las fábricas oscureció los troncos, las polillas oscuras se volvieron mucho más comunes. ¿Por qué?",
       ),
-      bi("Birds spotted and ate more light moths on dark trunks, so dark moths survived to reproduce.", "Las aves veían y comían más polillas claras sobre los troncos oscuros, así que las oscuras sobrevivían para reproducirse."),
+      bi("Birds ate more light moths, which stood out on dark trunks.", "Las aves comían más polillas claras, que resaltaban sobre los troncos oscuros."),
       [
         m("thinks-individuals-adapt", "The light moths turned dark so they could hide.", "Las polillas claras se volvieron oscuras para esconderse."),
-        m("thinks-acquired-traits-inherited", "Soot stained the moths' wings, and their young were born stained.", "El hollín manchó las alas de las polillas y sus crías nacieron manchadas."),
+        m("thinks-acquired-traits-inherited", "Soot stained the moths' wings, so their young were born stained too.", "El hollín manchó las alas de las polillas, y por eso sus crías nacieron manchadas."),
         m("thinks-selection-has-a-goal", "The moths decided to have dark offspring.", "Las polillas decidieron tener crías oscuras."),
       ],
       bi("Both colors were already in the population. Think about which ones birds could see.", "Los dos colores ya existían en la población. Piensa en cuáles podían ver las aves."),
@@ -71,7 +68,7 @@ export const NATURAL_SELECTION: Bank = {
       bi("A cactus's thick stem that stores water", "El tallo grueso de un cactus que guarda agua"),
       [
         m("thinks-learned-traits-inherited", "A dog learning to sit on command", "Un perro que aprende a sentarse cuando se lo piden"),
-        m("thinks-acquired-traits-inherited", "A person getting a suntan in summer", "Una persona que se broncea en verano"),
+        m("thinks-acquired-traits-inherited", "A person getting a suntan after a summer at the beach", "Una persona que se broncea después de un verano en la playa"),
         m("confused-adaptation-with-change", "A tree losing a branch in a storm", "Un árbol que pierde una rama en una tormenta"),
       ],
       bi("An adaptation is an inherited trait that helps a species survive where it lives.", "Una adaptación es un rasgo heredado que ayuda a una especie a sobrevivir donde vive."),
@@ -93,24 +90,24 @@ export const NATURAL_SELECTION: Bank = {
     ),
     e(
       bi("How does natural selection explain the long necks of giraffes?", "¿Cómo explica la selección natural el cuello largo de las jirafas?"),
-      bi("Giraffes born with longer necks reached more food, survived, and had more young, so the trait spread.", "Las jirafas que nacían con el cuello más largo alcanzaban más alimento, sobrevivían y tenían más crías, así que el rasgo se extendió."),
+      bi("Giraffes born with longer necks reached more food and had more young.", "Las jirafas de cuello más largo alcanzaban más alimento y tenían más crías."),
       [
-        m("thinks-acquired-traits-inherited", "Each giraffe stretched its neck, and its young were born with longer necks.", "Cada jirafa estiró el cuello, y sus crías nacieron con el cuello más largo."),
+        m("thinks-acquired-traits-inherited", "Each giraffe stretched its neck, and its young were born with longer necks.", "Cada jirafa estiró el cuello, y por eso sus crías nacieron con el cuello más largo."),
         m("thinks-selection-has-a-goal", "Giraffes grew long necks because they wanted to reach high leaves.", "Las jirafas desarrollaron el cuello largo porque querían alcanzar las hojas altas."),
         m("thinks-individuals-adapt", "Short-necked giraffes grew long necks during their lives.", "Las jirafas de cuello corto desarrollaron el cuello largo durante su vida."),
       ],
-      bi("Stretching does not change the genes an animal passes on.", "Estirarse no cambia los genes que un animal hereda a sus crías."),
+      bi("Stretching does not change the genes an animal passes on.", "Estirarse no cambia los genes que un animal transmite a sus crías."),
       bi("Neck length already varied. Giraffes with longer necks left more offspring, so over many generations the average neck got longer.", "El largo del cuello ya variaba. Las jirafas con el cuello más largo dejaron más crías, así que con muchas generaciones el cuello promedio se alargó."),
     ),
     e(
       bi("In biology, what does it mean for an organism to be fit?", "En biología, ¿qué significa que un organismo sea apto?"),
       bi("It survives and has offspring that carry its genes.", "Sobrevive y tiene crías que llevan sus genes."),
       [
-        m("thinks-strongest-always-wins", "It is the strongest or the fastest.", "Es el más fuerte o el más rápido."),
+        m("thinks-strongest-always-wins", "It is the strongest or the fastest animal in its group.", "Es el más fuerte o el más rápido de su grupo."),
         m("thinks-acquired-traits-inherited", "It exercises often.", "Hace ejercicio con frecuencia."),
         m("confuses-lifespan-with-fitness", "It lives the longest.", "Es el que vive más tiempo."),
       ],
-      bi("In evolution, what counts is passing on genes.", "En la evolución, lo que cuenta es heredar los genes a la siguiente generación."),
+      bi("In evolution, what counts is passing on genes.", "En la evolución, lo que cuenta es transmitir los genes a la siguiente generación."),
       bi("Fitness means reproductive success. A small, slow animal that leaves many offspring is more fit than a strong one that leaves none.", "La aptitud significa éxito reproductivo. Un animal pequeño y lento que deja muchas crías es más apto que uno fuerte que no deja ninguna."),
     ),
     e(
@@ -129,9 +126,9 @@ export const NATURAL_SELECTION: Bank = {
         "On one Galápagos island, a long drought left mostly large, hard seeds. In the next generation, the finches' average beak was deeper. Why?",
         "En una isla de las Galápagos, una larga sequía dejó sobre todo semillas grandes y duras. En la siguiente generación, el pico promedio de los pinzones era más grueso. ¿Por qué?",
       ),
-      bi("Finches with deeper beaks could crack the hard seeds, survived, and passed on deep beaks.", "Los pinzones con el pico más grueso podían romper las semillas duras, sobrevivieron y heredaron el pico grueso."),
+      bi("Finches with deeper beaks cracked the hard seeds, survived, and passed deep beaks to their chicks.", "Los pinzones de pico grueso rompían las semillas duras, sobrevivieron y transmitieron ese pico a sus crías."),
       [
-        m("thinks-acquired-traits-inherited", "Each finch's beak grew from cracking hard seeds, and its chicks got the bigger beak.", "El pico de cada pinzón creció de tanto romper semillas duras, y sus polluelos heredaron el pico más grande."),
+        m("thinks-acquired-traits-inherited", "Each finch's beak grew from cracking hard seeds, and its chicks were born with that bigger beak.", "El pico de cada pinzón creció de tanto romper semillas duras, y sus polluelos nacieron con ese pico más grande."),
         m("thinks-mutations-are-caused-by-need", "The drought caused mutations for bigger beaks.", "La sequía causó mutaciones para tener picos más grandes."),
         m("thinks-individuals-adapt", "Small-beaked finches changed their beaks to fit the seeds.", "Los pinzones de pico pequeño cambiaron su pico para adaptarlo a las semillas."),
       ],
@@ -165,11 +162,11 @@ export const NATURAL_SELECTION: Bank = {
     ),
     e(
       bi("A farmer sprays the same insecticide every year, and each year it kills fewer insects. What is the best explanation?", "Un agricultor rocía el mismo insecticida cada año, y cada año mata menos insectos. ¿Cuál es la mejor explicación?"),
-      bi("Insects with resistance survived and passed it on, so resistant insects became common.", "Los insectos con resistencia sobrevivieron y la heredaron, así que los insectos resistentes se volvieron comunes."),
+      bi("Insects that resisted it survived and passed resistance to their young.", "Los insectos resistentes sobrevivieron y transmitieron la resistencia a sus crías."),
       [
         m("thinks-individuals-adapt", "Each insect got used to the poison during its life.", "Cada insecto se acostumbró al veneno durante su vida."),
         m("ignores-selection", "The insecticide got weaker while it sat in storage.", "El insecticida se debilitó mientras estaba guardado."),
-        m("thinks-learned-traits-inherited", "The insects learned to avoid the spray and taught their young.", "Los insectos aprendieron a evitar el rociado y les enseñaron a sus crías."),
+        m("thinks-learned-traits-inherited", "The insects learned to avoid the spray and then taught their young to avoid it too.", "Los insectos aprendieron a evitar el rociado y luego les enseñaron a sus crías a evitarlo."),
       ],
       bi("Each spraying removes the insects that cannot survive it.", "Cada rociado elimina a los insectos que no pueden sobrevivirlo."),
       bi("A few insects were resistant from the start. Spraying killed the others, so each year more of the population inherited resistance.", "Unos pocos insectos eran resistentes desde el principio. El rociado mató a los demás, así que cada año más de la población heredó la resistencia."),
@@ -179,7 +176,7 @@ export const NATURAL_SELECTION: Bank = {
         "In the deserts of the Southwest, rock pocket mice with dark fur are common on dark lava rock, while light-colored mice are common on light sand. What best explains this?",
         "En los desiertos del suroeste, los ratones de bolsillo de pelaje oscuro son comunes sobre la roca volcánica oscura, y los de pelaje claro son comunes sobre la arena clara. ¿Qué lo explica mejor?",
       ),
-      bi("On each kind of ground, mice that blend in are less likely to be caught by predators.", "En cada tipo de suelo, los ratones que se confunden con el fondo tienen menos probabilidad de que los atrapen los depredadores."),
+      bi("Mice that blend in with the ground are less likely to be caught.", "Los ratones que se confunden con el suelo tienen menos probabilidad de que los atrapen."),
       [
         m("thinks-acquired-traits-inherited", "Mice darken their fur by rolling in lava dust, and their young are born dark.", "Los ratones oscurecen su pelaje revolcándose en polvo volcánico, y sus crías nacen oscuras."),
         m("thinks-mutations-are-caused-by-need", "The dark rock causes mutations for dark fur.", "La roca oscura causa mutaciones para tener pelaje oscuro."),
@@ -196,8 +193,8 @@ export const NATURAL_SELECTION: Bank = {
 export const FOSSIL_EVIDENCE: Bank = {
   nudge: bi("What does this evidence show about how organisms are related or how life changed over time?", "¿Qué muestra esta evidencia sobre cómo se relacionan los organismos o cómo cambió la vida con el tiempo?"),
   strategy: bi(
-    "In undisturbed rock layers, lower layers are older. Similar bone structures, similar early embryos, and similar DNA point to a common ancestor. Fossils with features of two groups show changes in between.",
-    "En capas de roca sin alterar, las capas de abajo son más antiguas. Estructuras óseas parecidas, embriones tempranos parecidos y ADN parecido indican un ancestro común. Los fósiles con rasgos de dos grupos muestran cambios intermedios.",
+    "Ask what each kind of evidence can tell you. Rock layers give an order in time. Body parts, embryos, and DNA can show how closely groups are related. A fossil with a mix of features can show a change in progress.",
+    "Pregúntate qué puede decirte cada tipo de evidencia. Las capas de roca dan un orden en el tiempo. Las partes del cuerpo, los embriones y el ADN pueden mostrar qué tan emparentados están los grupos. Un fósil con una mezcla de rasgos puede mostrar un cambio en marcha.",
   ),
   seconds: 30,
   items: [
@@ -214,9 +211,9 @@ export const FOSSIL_EVIDENCE: Bank = {
     ),
     e(
       bi("What is the fossil record?", "¿Qué es el registro fósil?"),
-      bi("All the fossils found so far and what they show about life over time", "Todos los fósiles encontrados hasta ahora y lo que muestran sobre la vida a lo largo del tiempo"),
+      bi("All the fossils found so far, arranged by age", "Todos los fósiles encontrados hasta ahora, ordenados por edad"),
       [
-        m("thinks-record-complete", "A complete list of every species that ever lived", "Una lista completa de todas las especies que han existido"),
+        m("thinks-record-complete", "A complete list of every species that has ever lived on Earth", "Una lista completa de todas las especies que han existido en la Tierra"),
         m("too-narrow", "A single skeleton in a museum", "Un solo esqueleto en un museo"),
         m("too-narrow", "A record of dinosaurs only", "Un registro solo de dinosaurios"),
       ],
@@ -225,10 +222,10 @@ export const FOSSIL_EVIDENCE: Bank = {
     ),
     e(
       bi("Why is the fossil record incomplete?", "¿Por qué el registro fósil está incompleto?"),
-      bi("Most organisms decay or are eaten before they can be buried and fossilized.", "La mayoría de los organismos se descomponen o se los comen antes de quedar enterrados y fosilizarse."),
+      bi("Most organisms decay or are eaten before they can be buried and fossilized.", "Casi todos los organismos se pudren o se los comen antes de quedar enterrados."),
       [
         m("thinks-record-complete", "It is not incomplete; every layer of rock has been dug up.", "No está incompleto; ya se excavaron todas las capas de roca."),
-        m("wrong-fossil-conditions", "Only animals that lived in the last few thousand years can form fossils.", "Solo los animales que vivieron en los últimos miles de años pueden formar fósiles."),
+        m("wrong-fossil-conditions", "Only animals that lived in the last few thousand years can form any fossils.", "Solo los animales que vivieron en los últimos miles de años pueden formar fósiles."),
         m("misreads-evidence", "Scientists throw away fossils that do not fit.", "Los científicos tiran los fósiles que no encajan."),
       ],
       bi("Forming a fossil takes special conditions.", "Para que se forme un fósil se necesitan condiciones especiales."),
@@ -236,7 +233,7 @@ export const FOSSIL_EVIDENCE: Bank = {
     ),
     e(
       bi("Which organisms are most likely to become fossils?", "¿Qué organismos tienen más probabilidad de convertirse en fósiles?"),
-      bi("Ones with hard parts, like shells and bones, buried quickly in sediment", "Los que tienen partes duras, como conchas y huesos, enterrados rápido en sedimento"),
+      bi("Ones with shells or bones, buried quickly in mud", "Los de conchas o huesos que quedan enterrados rápido en lodo"),
       [
         m("wrong-fossil-conditions", "Soft jellyfish left on dry sand", "Medusas blandas que quedan sobre arena seca"),
         m("wrong-fossil-conditions", "Animals that died on a mountaintop in the open air", "Animales que murieron en la cima de una montaña al aire libre"),
@@ -277,7 +274,7 @@ export const FOSSIL_EVIDENCE: Bank = {
       bi("Whales have small hip bones that do not help them swim. What is the best explanation?", "Las ballenas tienen pequeños huesos de cadera que no les ayudan a nadar. ¿Cuál es la mejor explicación?"),
       bi("Whales evolved from ancestors that walked on land.", "Las ballenas evolucionaron de ancestros que caminaban en tierra."),
       [
-        m("thinks-selection-has-a-goal", "The hip bones will grow into legs in the future.", "Los huesos de la cadera se convertirán en patas en el futuro."),
+        m("thinks-selection-has-a-goal", "The hip bones will grow into legs again in the future.", "Los huesos de la cadera volverán a convertirse en patas en el futuro."),
         m("function-not-ancestry", "Whales use the bones to walk on the sea floor.", "Las ballenas usan esos huesos para caminar en el fondo del mar."),
         m("ignores-evidence", "The bones come from fish the whales ate.", "Los huesos vienen de los peces que comieron las ballenas."),
       ],
@@ -289,11 +286,11 @@ export const FOSSIL_EVIDENCE: Bank = {
         "Tiktaalik lived about 375 million years ago. It had gills and scales like a fish, but also a neck and sturdy fins with wrist-like bones. Why is this fossil important?",
         "Tiktaalik vivió hace unos 375 millones de años. Tenía branquias y escamas como un pez, pero también cuello y aletas fuertes con huesos parecidos a una muñeca. ¿Por qué es importante este fósil?",
       ),
-      bi("It shows features in between fish and four-legged land animals.", "Muestra rasgos intermedios entre los peces y los animales terrestres de cuatro patas."),
+      bi("It shows features in between fish and four-legged land animals.", "Tiene rasgos intermedios entre peces y animales terrestres de cuatro patas."),
       [
         m("misreads-evidence", "It proves fish never lived in water.", "Demuestra que los peces nunca vivieron en el agua."),
         m("misreads-evidence", "It was the first animal that ever lived.", "Fue el primer animal que existió."),
-        m("confuses-fossil-age", "It is a kind of fish that is common today.", "Es un tipo de pez común en la actualidad."),
+        m("confuses-fossil-age", "It is a kind of fish that is still common in rivers and lakes today.", "Es un tipo de pez que todavía es muy común hoy en los ríos y los lagos de agua dulce."),
       ],
       bi("Look at the mix of fish features and land-animal features.", "Fíjate en la mezcla de rasgos de pez y rasgos de animal terrestre."),
       bi("Tiktaalik is a transitional fossil: it combines fish traits with traits of the first four-legged animals.", "Tiktaalik es un fósil de transición: combina rasgos de pez con rasgos de los primeros animales de cuatro patas."),
@@ -335,7 +332,7 @@ export const FOSSIL_EVIDENCE: Bank = {
       [
         m("thinks-living-species-are-ancestors", "Humans evolved from modern chimpanzees.", "Los humanos evolucionaron de los chimpancés actuales."),
         m("ignores-evidence", "Mice are not related to humans at all.", "Los ratones no están emparentados con los humanos en absoluto."),
-        m("ignores-evidence", "DNA tells nothing about how species are related.", "El ADN no dice nada sobre cómo se relacionan las especies."),
+        m("ignores-evidence", "DNA tells us nothing about how closely species are related.", "El ADN no dice nada sobre qué tan cerca están emparentadas las especies."),
       ],
       bi("The more DNA two species share, the more recently their lines split.", "Cuanto más ADN comparten dos especies, más recientemente se separaron sus linajes."),
       bi("Humans and chimpanzees are cousins, not ancestor and descendant. Their lines split more recently than the line leading to mice.", "Los humanos y los chimpancés son primos, no ancestro y descendiente. Sus linajes se separaron más recientemente que el linaje de los ratones."),
@@ -348,7 +345,7 @@ export const FOSSIL_EVIDENCE: Bank = {
       bi("Life changed over time, from simpler forms to more varied ones.", "La vida cambió con el tiempo, de formas más simples a formas más variadas."),
       [
         m("ignores-superposition", "All of these organisms lived at the same time.", "Todos estos organismos vivieron al mismo tiempo."),
-        m("layer-order-reversed", "The land plants are older than the sea animals.", "Las plantas terrestres son más antiguas que los animales marinos."),
+        m("layer-order-reversed", "The land plants in the higher layers are older than the sea animals.", "Las plantas terrestres de las capas de arriba son más antiguas que los animales marinos."),
         m("ignores-evidence", "Fossils tell nothing about the past.", "Los fósiles no dicen nada sobre el pasado."),
       ],
       bi("Remember which layers are older.", "Recuerda qué capas son más antiguas."),
@@ -373,10 +370,10 @@ export const FOSSIL_EVIDENCE: Bank = {
         "Fossils show whale relatives with four legs, then later forms with smaller back legs, then whales with only tiny hip bones. What does this sequence show?",
         "Los fósiles muestran parientes de las ballenas con cuatro patas, luego formas más recientes con patas traseras más pequeñas y luego ballenas con solo pequeños huesos de cadera. ¿Qué muestra esta secuencia?",
       ),
-      bi("Whales changed gradually from land-dwelling ancestors over millions of years.", "Las ballenas cambiaron poco a poco a partir de ancestros terrestres a lo largo de millones de años."),
+      bi("Whales changed gradually from ancestors that lived on land.", "Las ballenas cambiaron poco a poco a partir de ancestros que vivían en tierra."),
       [
         m("layer-order-reversed", "Land animals evolved from whales.", "Los animales terrestres evolucionaron de las ballenas."),
-        m("thinks-individuals-adapt", "Each whale lost its legs during its lifetime.", "Cada ballena perdió sus patas durante su vida."),
+        m("thinks-individuals-adapt", "Each whale lost its legs during its own lifetime as it swam more.", "Cada ballena perdió sus patas durante su propia vida a medida que nadaba más."),
         m("ignores-superposition", "All of these animals lived at the same time.", "Todos estos animales vivieron al mismo tiempo."),
       ],
       bi("The fossils are in order from older to younger.", "Los fósiles están ordenados de más antiguos a más jóvenes."),
@@ -395,8 +392,8 @@ const PRECAMBRIAN = bi("Precambrian time", "El Precámbrico");
 export const GEOLOGIC_TIME: Bank = {
   nudge: bi("Is this about the order of events, or about how long ago something happened?", "¿Se trata del orden de los sucesos o de cuánto tiempo hace que ocurrió algo?"),
   strategy: bi(
-    "Earth is about 4.5 billion years old. Life began at least 3.5 billion years ago, dinosaurs died out about 66 million years ago, and our species appeared about 300,000 years ago. Lower rock layers are older, and radioactive elements give ages in years.",
-    "La Tierra tiene unos 4,500 millones de años. La vida empezó hace al menos 3,500 millones de años, los dinosaurios se extinguieron hace unos 66 millones de años y nuestra especie apareció hace unos 300,000 años. Las capas de roca de abajo son más antiguas, y los elementos radiactivos dan edades en años.",
+    "Put the events in order on one timeline before you choose, and check the size of each number by counting its zeros. For rock layers, ask which one had to form first.",
+    "Antes de elegir, ordena los sucesos en una línea del tiempo y revisa el tamaño de cada número contando sus ceros. En las capas de roca, pregúntate cuál tuvo que formarse primero.",
   ),
   seconds: 30,
   items: [
@@ -445,19 +442,19 @@ export const GEOLOGIC_TIME: Bank = {
     ),
     e(
       bi("Did people and non-bird dinosaurs ever live at the same time?", "¿Las personas y los dinosaurios no avianos vivieron alguna vez al mismo tiempo?"),
-      bi("No; the dinosaurs died out about 66 million years before people appeared.", "No; los dinosaurios se extinguieron unos 66 millones de años antes de que aparecieran las personas."),
+      bi("No; they died out about 66 million years before people appeared.", "No; se extinguieron unos 66 millones de años antes de que aparecieran las personas."),
       [
         m("humans-and-dinosaurs-together", "Yes; early people hunted dinosaurs.", "Sí; las primeras personas cazaban dinosaurios."),
-        m("humans-and-dinosaurs-together", "Yes, but only in a few places.", "Sí, pero solo en algunos lugares."),
+        m("humans-and-dinosaurs-together", "Yes, but only in a few places where both survived for a long time.", "Sí, pero solo en algunos lugares donde los dos lograron sobrevivir durante mucho tiempo."),
       ],
       bi("Compare 66 million years with about 300,000 years.", "Compara 66 millones de años con unos 300,000 años."),
       bi("Rock layers with dinosaur fossils are tens of millions of years older than any layers with human fossils.", "Las capas de roca con fósiles de dinosaurios son decenas de millones de años más antiguas que cualquier capa con fósiles humanos."),
     ),
     e(
       bi("Geologists divide Earth's history into eons, eras, periods, and epochs. What are these divisions mostly based on?", "Los geólogos dividen la historia de la Tierra en eones, eras, períodos y épocas. ¿En qué se basan sobre todo estas divisiones?"),
-      bi("Major changes in the rock and fossil record, such as mass extinctions", "Grandes cambios en el registro de las rocas y los fósiles, como las extinciones masivas"),
+      bi("Big changes in the fossil record, such as mass extinctions", "Grandes cambios en el registro fósil, como las extinciones masivas"),
       [
-        m("thinks-units-are-equal", "Equal blocks of exactly one million years", "Bloques iguales de exactamente un millón de años"),
+        m("thinks-units-are-equal", "Equal blocks of time, each exactly one million years long", "Bloques iguales de tiempo, cada uno de exactamente un millón de años"),
         m("confused-with-human-history", "The reigns of ancient kings", "Los reinados de reyes antiguos"),
         m("invented-cause", "Changes in the length of a year", "Cambios en la duración de un año"),
       ],
@@ -482,7 +479,7 @@ export const GEOLOGIC_TIME: Bank = {
       bi("For most of Earth's history, all life was single-celled. When did the first single-celled life appear?", "Durante la mayor parte de la historia de la Tierra, toda la vida fue unicelular. ¿Cuándo apareció la primera vida unicelular?"),
       bi("At least 3.5 billion years ago", "Hace al menos 3,500 millones de años"),
       [
-        m("confused-with-cambrian", "About 500 million years ago", "Hace unos 500 millones de años"),
+        m("confused-with-cambrian", "About 540 million years ago, in the Cambrian", "Hace unos 540 millones de años, en el Cámbrico"),
         m("thousand-million-mixup", "About 10,000 years ago", "Hace unos 10,000 años"),
         m("confused-with-dinosaur-extinction", "About 66 million years ago", "Hace unos 66 millones de años"),
       ],
@@ -491,10 +488,10 @@ export const GEOLOGIC_TIME: Bank = {
     ),
     e(
       bi("Why are index fossils useful to geologists?", "¿Por qué los fósiles guía son útiles para los geólogos?"),
-      bi("They lived for a short time over a wide area, so they help date and match rock layers.", "Vivieron poco tiempo en una zona amplia, así que ayudan a fechar y relacionar capas de roca."),
+      bi("They lived for a short time over a wide area.", "Vivieron poco tiempo en una zona amplia."),
       [
         m("misreads-evidence", "They are always the largest fossils.", "Siempre son los fósiles más grandes."),
-        m("index-fossil-mixup", "They are found in every layer of rock.", "Se encuentran en todas las capas de roca."),
+        m("index-fossil-mixup", "They are found in every layer of rock, old and young.", "Se encuentran en todas las capas de roca, antiguas y jóvenes."),
         m("misreads-evidence", "They show exactly how an animal died.", "Muestran exactamente cómo murió un animal."),
       ],
       bi("A fossil found everywhere but only for a short time works like a time stamp.", "Un fósil que está en todas partes pero solo durante poco tiempo funciona como un sello de fecha."),
@@ -504,7 +501,7 @@ export const GEOLOGIC_TIME: Bank = {
       bi("A band of igneous rock cuts straight up through several layers of sedimentary rock. Which is older?", "Una franja de roca ígnea atraviesa de abajo hacia arriba varias capas de roca sedimentaria. ¿Qué es más antiguo?"),
       bi("The sedimentary layers that were cut", "Las capas sedimentarias que fueron atravesadas"),
       [
-        m("cross-cutting-reversed", "The igneous rock that cuts through them", "La roca ígnea que las atraviesa"),
+        m("cross-cutting-reversed", "The igneous rock that cuts up through them", "La roca ígnea que las atraviesa de abajo hacia arriba"),
         m("ignores-cross-cutting", "They must be the same age", "Deben tener la misma edad"),
       ],
       bi("Something has to exist before it can be cut.", "Algo tiene que existir antes de que lo puedan atravesar."),
@@ -516,7 +513,7 @@ export const GEOLOGIC_TIME: Bank = {
       [
         m("invented-method", "By weighing the rocks", "Pesando las rocas"),
         m("invented-method", "By looking at the rocks' color", "Observando el color de las rocas"),
-        m("relative-absolute-mixup", "By checking whether the rock is above or below another layer", "Revisando si la roca está arriba o abajo de otra capa"),
+        m("relative-absolute-mixup", "By checking whether the rock is above or below another layer", "Revisando si la roca está arriba o abajo de otra capa de roca"),
       ],
       bi("Radioactive elements decay at a steady, known rate.", "Los elementos radiactivos se desintegran a un ritmo constante y conocido."),
       bi("Radiometric dating compares the amount of a radioactive element with the amount of what it decays into. Layer order gives only relative age.", "La datación radiométrica compara la cantidad de un elemento radiactivo con la cantidad de lo que produce al desintegrarse. El orden de las capas solo da la edad relativa."),
