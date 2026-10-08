@@ -9,8 +9,11 @@ import { POST as syncRoute } from "@/app/api/sync/route";
 import { answerText } from "@/practice/answer";
 import { makeItem } from "@/practice/skills";
 import { grantConsent, learnerHeaders, loadConsent, registerConsentFlow, revokeConsent, signIn, signOut, signOutNote, signUp, useConsent } from "./auth";
-import { addFromCatalogue } from "./courses";
-import { recordAnswer, startSet } from "./practice";
+import { attemptIdentity } from "@/learning/evidence";
+import { lessonAnswerId, record, sceneAttemptSource } from "./activity";
+import { addFromCatalogue, saveCourse } from "./courses";
+import { recordHelp } from "./evidence";
+import { practiceSource, recordAnswer, recordTutorHelp, startSet } from "./practice";
 import { addNote, createLearner, removeLearner, selectLearner, updateLearner } from "./profiles";
 import { readSession } from "./server/db/auth";
 import type { Db } from "./server/db/client";
@@ -275,6 +278,48 @@ describe("sync between devices", () => {
     expect(document.cookie).not.toContain("kz_acct");
     await signIn(email, PASS);
     expect(read().profiles.map((p) => p.nickname)).toEqual(["Leo"]);
+  });
+
+  it("a lesson answer in a generated course, every id a UUID, reaches the account", async () => {
+    const email = await newFamily("laptop");
+    const leo = learner();
+    const [courseId, lessonId, sceneId, questionId] = Array.from({ length: 4 }, () => crypto.randomUUID());
+    const quiz = { id: sceneId, kind: "quiz" as const, title: "Check", questions: [{ id: questionId, prompt: "What lights the Moon?", choices: ["The Sun", "Earth"], answer: 0, hint: "Think of daytime.", explain: "Sunlight." }] };
+    saveCourse({ id: courseId, profileId: leo.id, title: "The Moon", goal: "moon", subject: "science", grade: "3", locale: "en", origin: "generated", status: "ready", length: "short", sources: [], lessons: [{ id: lessonId, title: "Half is lit", summary: "", minutes: 5, scenes: [quiz] }], template: false, ai: true, createdAt: Date.now(), updatedAt: Date.now() });
+    // What the lesson stage records for a right answer (Stage onAnswer), with the help it had.
+    const checkId = `${sceneId}:${questionId}`;
+    const source = sceneAttemptSource(leo.id, courseId, lessonId, sceneId, checkId);
+    recordHelp(source, { kind: "hint" });
+    record({ profileId: leo.id, courseId, lessonId, type: "quiz_answered", sceneId: checkId, correct: true, assisted: true, attemptId: attemptIdentity(source), response: "The Sun", choice: 0 }, lessonAnswerId(source, true));
+    const answer = read().activity.find((e) => e.type === "quiz_answered")!;
+    expect(answer.id.length).toBeLessThanOrEqual(100);
+    expect(answer.id.length).toBeLessThanOrEqual(SYNC_LIMITS.idLength);
+    await syncNow();
+    expect(renderHook(() => useSyncState()).result.current).toMatchObject({ pending: 0, refused: 0 });
+    on("phone");
+    await signIn(email, PASS);
+    expect(read().activity.filter((e) => e.type === "quiz_answered")).toEqual([expect.objectContaining({ id: answer.id, correct: true, assisted: true, choice: 0 })]);
+  });
+
+  it("tutor help on a problem reaches the account; a hint on a problem left unanswered keeps the family here at sign-out", async () => {
+    const email = await newFamily("laptop");
+    const leo = learner();
+    const setId = startSet(read(), { profile: leo, kind: "pick", skillIds: ["m.add.10"], now: Date.now() })!;
+    const set = read().sets.find((x) => x.id === setId)!;
+    const item = makeItem(set.slots[0].skillId, 1, set.slots[0].seed, "en");
+    recordTutorHelp(leo.id, item.skillId, item.seed, 1, practiceSource(set, 0, 1));
+    recordHelp(practiceSource(set, 1, 1), { kind: "hint", key: "1" });
+    await syncNow();
+    on("phone");
+    await signIn(email, PASS);
+    // The phone knows about the tutor's help: the check clock agrees on both devices.
+    expect(read().attempts).toEqual([expect.objectContaining({ mode: "tutor", assisted: true, skillId: item.skillId })]);
+    on("laptop");
+    vi.stubGlobal("location", { assign: vi.fn() });
+    // The hint lives only on the laptop until help syncs (T12): signing out keeps the family here.
+    await signOut();
+    expect(signOutNote()).toMatchObject({ reason: "kept", kept: 1 });
+    expect(read().profiles.map((p) => p.id)).toEqual([leo.id]);
   });
 
   it("signed out elsewhere: this device stops, keeps its unsent work, and sends it after signing in", async () => {

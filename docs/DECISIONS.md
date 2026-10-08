@@ -4,6 +4,25 @@ What the owner actually said, in order, with the date. Newest wins when they con
 verbatim (typos kept). Sources: Hermes session history (`~/.hermes/state.db`, clarify answers and
 messages, 2026-09-30 → 10-04) and the Claude Code session of 2026-10-07.
 
+## 2026-10-07 (late) — learning evidence across reloads (recorded by Claude; not owner quotes)
+
+Finishing codex 02b84e3 (help and first answers kept across a reload). The mastery law's numbers
+(`RULES` in `apps/web/src/learning/engine.ts`) are unchanged.
+
+- **Behaviour change, same numbers:** after a skill is proved, each passed check restores only the
+  "needs a refresh" before it. A later run of review misses opens a new refresh (before, one early
+  restoration hid every later one). Test: `second_refresh_failure_requires_new_restoration`.
+- **Kept as today until the owner answers** (written in the engine.ts header):
+  - Opening the tutor beside a problem counts as help on it. Question for the owner: should it?
+  - A wrong first answer on its own is not help. It does not start the 48-hour help wait; the
+    answer after it on the same problem is recorded as helped. Question for the owner: should it?
+  - A hint on a problem left unanswered is still help. It is now saved, so a reload keeps it.
+  - A check answer that had any help stays a check answer, marked helped, so it doesn't count as
+    on the learner's own.
+- **Tutor drawer openings, from the review's fix list:** grades 3–9 open with "Which part is
+  tricky?"; K–2 open with the first vetted hint, saved as help before it shows (live-tutor spec
+  §2.5). That wording is still the spec's proposal for the owner to approve.
+
 ## 2026-10-07 (night) — the learning fabric (current)
 
 - "okay let focus on getting the tutor part and dashboard and academic integration and calendar organizations, basically at home kumon with on demand practice gernetor and kumon at home generate lessons catered to you. and also talks and teaches naturally. and ai works to interface, help grow, track shadow work etc and keep your growth aligned and happening. ready all the ai strategy docs, now feel free to diverge and have full creative freedom, use old stuff as refernce. not bad on the demo but farrrrrr from a complete product."

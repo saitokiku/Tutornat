@@ -104,9 +104,11 @@ for (const firstAction of ["hint", "miss"] as const) {
       return { attempts: s.attempts, responses: s.responseEvents, help: s.helpExposures, contexts: s.attemptContexts };
     }, STORE);
     expect(ledger.attempts).toEqual([expect.objectContaining({ correct: true, assisted: true, response: "1/4", provenance: "local-recorded" })]);
+    // The question's source once; the help or the first miss, pointing at it.
     expect(ledger.contexts).toHaveLength(1);
-    expect(ledger.responses).toEqual([expect.objectContaining({ correct: firstAction === "hint", response: firstAction === "hint" ? "1/4" : "2/4" })]);
+    expect(ledger.responses).toEqual(firstAction === "miss" ? [expect.objectContaining({ correct: false, response: "2/4" })] : []);
     expect(ledger.help).toHaveLength(firstAction === "hint" ? 1 : 0);
+    expect(Object.keys(await page.evaluate(() => ({ ...localStorage }))).filter((k) => k.startsWith("kaizenedu.evidence."))).toEqual([]);
     await noOverflow(page);
     expect(errors, errors.join("\n")).toEqual([]);
   });

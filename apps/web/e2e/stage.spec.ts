@@ -97,8 +97,9 @@ test("lesson help survives reload and a completed question resumes without dupli
     const s = JSON.parse(localStorage.getItem("kaizenedu.v1")!);
     return { answers: s.activity.filter((e: { type: string }) => e.type === "quiz_answered"), first: s.responseEvents, help: s.helpExposures };
   });
-  expect(ledger.answers).toEqual([expect.objectContaining({ correct: true, assisted: true, response: "The Sun" })]);
-  expect(ledger.first).toHaveLength(1);
+  expect(ledger.answers).toEqual([expect.objectContaining({ correct: true, assisted: true, response: "The Sun", choice: 0 })]);
+  // A right first answer is the answer itself: no separate first-response row.
+  expect(ledger.first).toEqual([]);
   expect(ledger.help).toHaveLength(1);
   await noOverflow(page);
   expect(errors, errors.join("\n")).toEqual([]);
