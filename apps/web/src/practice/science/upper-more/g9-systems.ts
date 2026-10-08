@@ -6,10 +6,10 @@ import { bi, e, m, type Bank } from "./shared";
 // ── s.dna.protein ───────────────────────────────────────────────────────────────────────────────
 
 export const DNA_PROTEIN: Bank = {
-  nudge: bi("Which step is this: storing the code, copying it into RNA, or building the protein?", "¿Qué paso es este: guardar el código, copiarlo en ARN o construir la proteína?"),
+  nudge: bi("Which molecule holds the code here, and which one is being built?", "¿Qué molécula guarda el código aquí y cuál se está construyendo?"),
   strategy: bi(
-    "DNA in the nucleus holds genes. In transcription, a gene is copied into messenger RNA. In translation, a ribosome reads the RNA three bases at a time (a codon) and links amino acids into a protein. Proteins do most of the cell's work and shape traits.",
-    "El ADN del núcleo guarda los genes. En la transcripción, un gen se copia en ARN mensajero. En la traducción, un ribosoma lee el ARN de tres en tres bases (un codón) y une aminoácidos para formar una proteína. Las proteínas hacen la mayor parte del trabajo de la célula y determinan los rasgos.",
+    "Use the pairing rules and the order of the steps: the code is copied before it is read, and the reading builds something new. Ask which molecule this step makes and where in the cell it happens.",
+    "Usa las reglas de apareamiento y el orden de los pasos: el código se copia antes de leerse, y la lectura construye algo nuevo. Pregúntate qué molécula produce este paso y en qué parte de la célula ocurre.",
   ),
   seconds: 25,
   items: [
@@ -46,11 +46,15 @@ export const DNA_PROTEIN: Bank = {
       bi("In DNA, A pairs with T and C pairs with G, so the two strands match each other.", "En el ADN, A se aparea con T y C con G, así que las dos cadenas encajan."),
     ),
     e(
-      bi("One strand of DNA reads A T G C. What does the matching strand read?", "Una cadena de ADN dice A T G C. ¿Qué dice la cadena que le corresponde?"),
-      bi("T A C G", "T A C G"),
-      [m("copied-not-paired", "A T G C", "A T G C"), m("base-pair-mixup", "G C A T", "G C A T"), m("dna-rna-mixup", "U A C G", "U A C G")],
-      bi("Pair each base in order: A with T, T with A, G with C, C with G.", "Aparea cada base en orden: A con T, T con A, G con C, C con G."),
-      bi("Each base is replaced by its partner: A→T, T→A, G→C, C→G.", "Cada base se cambia por su pareja: A→T, T→A, G→C, C→G."),
+      bi(
+        "One strand of DNA reads A T T G C. Reading in the same direction, what does the matching strand read?",
+        "Una cadena de ADN dice A T T G C. Leída en la misma dirección, ¿qué dice la cadena que le corresponde?",
+      ),
+      bi("T A A C G", "T A A C G"),
+      // G C C A T swaps A with G and T with C; it is not the partner strand read backward (G C A A T).
+      [m("copied-not-paired", "A T T G C", "A T T G C"), m("base-pair-mixup", "G C C A T", "G C C A T"), m("dna-rna-mixup", "U A A C G", "U A A C G")],
+      bi("A pairs with T and C pairs with G; pair each base in order.", "A se aparea con T y C con G; aparea cada base en orden."),
+      bi("Each base is replaced by its partner: A by T, T by A, G by C, and C by G. So A T T G C matches T A A C G.", "Cada base se cambia por su pareja: A por T, T por A, G por C y C por G. Así, A T T G C corresponde a T A A C G."),
     ),
     e(
       bi("What is transcription?", "¿Qué es la transcripción?"),
@@ -69,7 +73,7 @@ export const DNA_PROTEIN: Bank = {
       [
         m("transcription-translation-mixup", "Copying DNA into messenger RNA", "Copiar el ADN en ARN mensajero"),
         m("reversed-flow", "Turning a protein into DNA", "Convertir una proteína en ADN"),
-        m("confused-with-replication", "Copying DNA before a cell divides", "Copiar el ADN antes de que la célula se divida"),
+        m("confused-with-replication", "Copying all of the DNA before a cell divides in two", "Copiar todo el ADN antes de que la célula se divida en dos células"),
       ],
       bi("To translate means to change from one language to another: from bases to amino acids.", "Traducir significa pasar de un lenguaje a otro: de bases a aminoácidos."),
       bi("In translation, a ribosome reads each codon of the messenger RNA and adds the matching amino acid to a growing protein chain.", "En la traducción, un ribosoma lee cada codón del ARN mensajero y agrega el aminoácido que le corresponde a una cadena de proteína que va creciendo."),
@@ -119,7 +123,7 @@ export const DNA_PROTEIN: Bank = {
     ),
     e(
       bi("A mutation changes one base in a gene. What might happen?", "Una mutación cambia una base de un gen. ¿Qué podría pasar?"),
-      bi("One amino acid in the protein could change, which may change how the protein works.", "Podría cambiar un aminoácido de la proteína, lo que podría cambiar cómo funciona."),
+      bi("It could change one amino acid in the protein.", "Podría cambiar un aminoácido de la proteína."),
       [
         m("overstates-mutation", "The whole cell turns into a different kind of cell at once.", "Toda la célula se convierte de inmediato en otro tipo de célula."),
         m("understates-mutation", "Nothing at all, because one base never matters.", "Nada, porque una sola base nunca importa."),
@@ -134,7 +138,7 @@ export const DNA_PROTEIN: Bank = {
       [
         m("ignores-dna-trait-link", "Traits are not controlled by DNA.", "Los rasgos no los controla el ADN."),
         m("dna-protein-mixup", "Hemoglobin is made of DNA.", "La hemoglobina está hecha de ADN."),
-        m("understates-mutation", "Only large changes in DNA matter.", "Solo importan los cambios grandes en el ADN."),
+        m("understates-mutation", "Only large changes in DNA, like losing a whole gene, can matter.", "Solo importan los cambios grandes en el ADN, como perder un gen entero."),
       ],
       bi("The changed base swaps one amino acid in hemoglobin.", "La base cambiada sustituye un aminoácido en la hemoglobina."),
       bi("One base change puts valine in place of glutamic acid in hemoglobin. The altered protein makes red blood cells bend into a sickle shape.", "Un cambio de una base pone valina en lugar de ácido glutámico en la hemoglobina. La proteína alterada hace que los glóbulos rojos se doblen en forma de hoz."),
@@ -147,8 +151,8 @@ export const DNA_PROTEIN: Bank = {
 export const CARRYING_CAPACITY: Bank = {
   nudge: bi("What limits how big this population can get?", "¿Qué limita qué tan grande puede llegar a ser esta población?"),
   strategy: bi(
-    "With plenty of resources, a population grows faster and faster (a J-shaped curve). As food, water, space, or shelter run short, growth slows and the population levels off near the carrying capacity (an S-shaped curve). Crowding makes some limits, like disease and competition, stronger.",
-    "Con muchos recursos, una población crece cada vez más rápido (una curva en forma de J). Cuando escasean el alimento, el agua, el espacio o el refugio, el crecimiento se frena y la población se estabiliza cerca de la capacidad de carga (una curva en forma de S). El hacinamiento hace más fuertes algunos límites, como las enfermedades y la competencia.",
+    "List what the population needs, such as water, space, and shelter. Ask which need runs short first, and whether that limit gets stronger as the population gets more crowded. On a graph, look at where the line stops rising.",
+    "Haz una lista de lo que necesita la población, como agua, espacio y refugio. Pregúntate qué necesidad se acaba primero y si ese límite se hace más fuerte cuando la población está más hacinada. En una gráfica, fíjate dónde deja de subir la línea.",
   ),
   seconds: 30,
   items: [
@@ -156,7 +160,7 @@ export const CARRYING_CAPACITY: Bank = {
       bi("What is carrying capacity?", "¿Qué es la capacidad de carga?"),
       bi("The largest population an environment can support over time", "La población más grande que un ambiente puede sostener con el tiempo"),
       [
-        m("rate-vs-limit-mixup", "The fastest rate at which a population can grow", "La rapidez máxima con que puede crecer una población"),
+        m("rate-vs-limit-mixup", "The fastest rate at which a population can grow when food is plentiful", "La rapidez máxima con que puede crecer una población cuando sobra alimento"),
         m("literal-meaning", "The number of young an animal can carry", "El número de crías que puede cargar un animal"),
         m("population-community-mixup", "The total number of species in an area", "El número total de especies en una zona"),
       ],
@@ -180,7 +184,7 @@ export const CARRYING_CAPACITY: Bank = {
       [
         m("density-dependence-mixup", "A hurricane", "Un huracán"),
         m("density-dependence-mixup", "A wildfire", "Un incendio forestal"),
-        m("density-dependence-mixup", "An unusually cold winter", "Un invierno muy frío"),
+        m("density-dependence-mixup", "An unusually cold winter", "Un invierno mucho más frío de lo normal"),
       ],
       bi("Which one gets worse as more animals share the same space?", "¿Cuál empeora cuando más animales comparten el mismo espacio?"),
       bi("Competition, disease, and predation grow stronger as a population gets denser. Storms, fires, and cold strike whether the population is large or small.", "La competencia, las enfermedades y la depredación se hacen más fuertes cuando una población es más densa. Las tormentas, los incendios y el frío afectan igual a una población grande o pequeña."),
@@ -198,7 +202,7 @@ export const CARRYING_CAPACITY: Bank = {
     ),
     e(
       bi("What happens if a population grows above its environment's carrying capacity?", "¿Qué pasa si una población crece por encima de la capacidad de carga de su ambiente?"),
-      bi("Resources run short, so deaths rise or births fall until the population drops.", "Los recursos escasean, así que aumentan las muertes o bajan los nacimientos hasta que la población disminuye."),
+      bi("Resources run short, so the population drops back down.", "Los recursos escasean, así que la población vuelve a bajar."),
       [
         m("ignores-limits", "The population keeps growing forever.", "La población sigue creciendo para siempre."),
         m("thinks-resources-expand", "The environment grows more food to match.", "El ambiente produce más alimento para alcanzar."),
@@ -234,9 +238,9 @@ export const CARRYING_CAPACITY: Bank = {
         "In 1944, 29 reindeer were brought to St. Matthew Island in Alaska, which had no predators for them. By 1963 there were about 6,000. Then most of them died during the next winter. What is the best explanation?",
         "En 1944 se llevaron 29 renos a la isla St. Matthew, en Alaska, donde no tenían depredadores. Para 1963 había unos 6,000. Luego la mayoría murió durante el invierno siguiente. ¿Cuál es la mejor explicación?",
       ),
-      bi("They grew far past the carrying capacity and ate most of their food, so they starved in a harsh winter.", "Crecieron mucho más allá de la capacidad de carga y se comieron casi todo su alimento, así que murieron de hambre en un invierno duro."),
+      bi("They outgrew their food supply and starved in a harsh winter.", "Superaron su suministro de alimento y murieron de hambre en un invierno duro."),
       [
-        m("ignores-evidence", "Predators arrived and ate them.", "Llegaron depredadores y se los comieron."),
+        m("ignores-evidence", "Predators crossed the winter sea ice to the island and ate most of them.", "Llegaron depredadores a la isla cruzando el hielo del invierno y se comieron a la mayoría."),
         m("thinks-resources-expand", "The island grew more food as the herd grew.", "La isla produjo más alimento a medida que crecía la manada."),
         m("invented-reason", "Reindeer can live for only 19 years.", "Los renos solo pueden vivir 19 años."),
       ],
@@ -245,19 +249,19 @@ export const CARRYING_CAPACITY: Bank = {
     ),
     e(
       bi("Can the carrying capacity of an environment change?", "¿Puede cambiar la capacidad de carga de un ambiente?"),
-      bi("Yes; for example, a long drought can lower it by reducing food and water.", "Sí; por ejemplo, una sequía larga puede bajarla al reducir el alimento y el agua."),
+      bi("Yes; a long drought can lower it, for example.", "Sí; por ejemplo, una sequía larga puede bajarla."),
       [
         m("thinks-k-fixed", "No; it stays the same forever.", "No; se queda igual para siempre."),
-        m("thinks-individuals-adapt", "Only if the animals decide to change it.", "Solo si los animales deciden cambiarla."),
+        m("thinks-individuals-adapt", "Only if the animals all decide to change it together.", "Solo si los animales deciden cambiarla entre todos."),
       ],
       bi("Carrying capacity depends on the resources available.", "La capacidad de carga depende de los recursos disponibles."),
       bi("When resources change, so does carrying capacity. Droughts, fires, and new predators can lower it; a wet year can raise it.", "Cuando cambian los recursos, también cambia la capacidad de carga. Las sequías, los incendios y nuevos depredadores pueden bajarla; un año lluvioso puede subirla."),
     ),
     e(
       bi("When a snowshoe hare population rises, the lynx population usually rises a little later. Why?", "Cuando aumenta la población de liebres americanas, la población de linces suele aumentar un poco después. ¿Por qué?"),
-      bi("More hares means more food for lynx, so more lynx survive and raise young.", "Más liebres significa más alimento para los linces, así que más linces sobreviven y crían."),
+      bi("More hares means more food, so more lynx survive.", "Más liebres significa más alimento, así que sobreviven más linces."),
       [
-        m("cause-effect-reversed", "More lynx cause the hare population to grow.", "Más linces hacen que crezca la población de liebres."),
+        m("cause-effect-reversed", "More lynx cause the hare population to grow by scaring off other predators.", "Más linces hacen que crezca la población de liebres al ahuyentar a otros depredadores."),
         m("wrong-food-relationship", "Lynx and hares eat the same plants.", "Los linces y las liebres comen las mismas plantas."),
         m("invented-reason", "Lynx and hares are the same species.", "Los linces y las liebres son de la misma especie."),
       ],
@@ -269,7 +273,7 @@ export const CARRYING_CAPACITY: Bank = {
       bi("Building irrigation to grow more food", "Construir sistemas de riego para cultivar más alimento"),
       [
         m("trend-reversed", "Paving over farmland", "Pavimentar tierras de cultivo"),
-        m("trend-reversed", "Polluting the water supply", "Contaminar el suministro de agua"),
+        m("trend-reversed", "Polluting the river that supplies the town's water", "Contaminar el río que le da agua potable a todo el pueblo"),
       ],
       bi("Which choice adds resources?", "¿Qué opción agrega recursos?"),
       bi("Irrigation makes more food possible, so more people can be supported. Losing farmland or clean water lowers carrying capacity.", "El riego permite producir más alimento, así que se puede sostener a más personas. Perder tierras de cultivo o agua limpia baja la capacidad de carga."),
@@ -287,7 +291,7 @@ export const CARRYING_CAPACITY: Bank = {
       [
         m("cause-effect-reversed", "Predators make populations grow faster.", "Los depredadores hacen que las poblaciones crezcan más rápido."),
         m("ignores-evidence", "Mussels cannot live in fresh water.", "Los mejillones no pueden vivir en agua dulce."),
-        m("ignores-limits", "Every population grows this fast all the time.", "Todas las poblaciones crecen así de rápido todo el tiempo."),
+        m("ignores-limits", "Every population grows this fast all the time, in every kind of lake.", "Todas las poblaciones crecen así de rápido todo el tiempo, en cualquier lago."),
       ],
       bi("In their home waters, predators and competitors keep them in check.", "En sus aguas de origen, los depredadores y los competidores los mantienen bajo control."),
       bi("An invasive species that escapes its usual limits can grow explosively, crowding out native species.", "Una especie invasora que escapa de sus límites habituales puede crecer de forma explosiva y desplazar a las especies nativas."),
@@ -300,16 +304,16 @@ export const CARRYING_CAPACITY: Bank = {
 export const EARTH_ENERGY: Bank = {
   nudge: bi("Where does the heat come from, and how does it move through Earth?", "¿De dónde viene el calor y cómo se mueve por la Tierra?"),
   strategy: bi(
-    "Earth's interior is hot from heat left over from its formation and from the decay of radioactive elements. The solid inner core and liquid outer core are mostly iron. The mantle is hot solid rock that flows very slowly, carrying heat outward by convection and helping move the plates above it.",
-    "El interior de la Tierra está caliente por el calor que quedó de su formación y por la desintegración de elementos radiactivos. El núcleo interno sólido y el núcleo externo líquido son sobre todo de hierro. El manto es roca sólida caliente que fluye muy despacio, lleva el calor hacia afuera por convección y ayuda a mover las placas de encima.",
+    "Ask where the heat starts and how it moves outward. Use the clues about pressure, depth, and earthquake waves.",
+    "Pregúntate dónde empieza el calor y cómo se mueve hacia afuera. Usa las pistas sobre la presión, la profundidad y las ondas de los sismos.",
   ),
   seconds: 25,
   items: [
     e(
       bi("What are the two main sources of Earth's internal heat?", "¿Cuáles son las dos fuentes principales del calor interno de la Tierra?"),
-      bi("Heat left over from Earth's formation and heat from radioactive decay", "El calor que quedó de la formación de la Tierra y el calor de la desintegración radiactiva"),
+      bi("Leftover heat from Earth's formation and radioactive decay", "El calor que quedó de la formación de la Tierra y la desintegración radiactiva"),
       [
-        m("sun-heats-interior", "Sunlight soaking deep into the ground", "La luz del Sol que penetra en lo profundo del suelo"),
+        m("sun-heats-interior", "Sunlight that soaks deep into the ground over millions of years", "La luz del Sol que penetra hasta lo profundo del suelo durante millones de años"),
         m("invented-source", "Coal burning deep underground", "Carbón que arde en lo profundo"),
         m("invented-source", "Friction from ocean waves", "La fricción de las olas del mar"),
       ],
@@ -327,7 +331,7 @@ export const EARTH_ENERGY: Bank = {
       bi("The inner core is hotter than the outer core, yet it is solid. Why?", "El núcleo interno está más caliente que el núcleo externo y, aun así, es sólido. ¿Por qué?"),
       bi("The enormous pressure at the center keeps the metal solid.", "La enorme presión en el centro mantiene sólido el metal."),
       [
-        m("core-state-mixup", "It is actually colder than the outer core.", "En realidad es más frío que el núcleo externo."),
+        m("core-state-mixup", "It is actually colder than the outer core that surrounds it.", "En realidad es más frío que el núcleo externo que lo rodea."),
         m("composition-mixup", "It is made of rock instead of metal.", "Está hecho de roca en lugar de metal."),
         m("invented-source", "It is made of frozen water.", "Está hecho de agua congelada."),
       ],
@@ -336,10 +340,10 @@ export const EARTH_ENERGY: Bank = {
     ),
     e(
       bi("What is the mantle mostly like?", "¿Cómo es el manto en su mayor parte?"),
-      bi("Hot solid rock that can flow very slowly over long periods", "Roca sólida caliente que puede fluir muy despacio durante largos períodos"),
+      bi("Hot solid rock that flows very slowly", "Roca sólida caliente que fluye muy despacio"),
       [
         m("mantle-is-liquid", "An ocean of liquid lava", "Un océano de lava líquida"),
-        m("ignores-heat", "Cold, brittle rock like the crust", "Roca fría y quebradiza como la corteza"),
+        m("ignores-heat", "Cold, brittle rock like the crust above it", "Roca fría y quebradiza como la corteza de arriba"),
         m("core-state-mixup", "Liquid iron", "Hierro líquido"),
       ],
       bi("Earthquake S waves, which cannot cross liquids, pass through the mantle.", "Las ondas S de los sismos, que no atraviesan líquidos, sí pasan por el manto."),
@@ -347,9 +351,9 @@ export const EARTH_ENERGY: Bank = {
     ),
     e(
       bi("What drives the slow movement of tectonic plates?", "¿Qué impulsa el movimiento lento de las placas tectónicas?"),
-      bi("Heat from Earth's interior moving through the mantle, with dense plates sinking at trenches", "El calor del interior de la Tierra que se mueve por el manto, con placas densas que se hunden en las fosas"),
+      bi("Heat from Earth's interior moving through the mantle", "El calor del interior de la Tierra que se mueve por el manto"),
       [
-        m("surface-forces", "Winds blowing on the continents", "Los vientos que soplan sobre los continentes"),
+        m("surface-forces", "Strong winds blowing on the continents for millions of years", "Vientos fuertes que soplan sobre los continentes durante millones de años"),
         m("surface-forces", "Ocean tides pushing the plates", "Las mareas que empujan las placas"),
         m("magnetism-mixup", "Earth's magnetic field", "El campo magnético de la Tierra"),
       ],
@@ -360,7 +364,7 @@ export const EARTH_ENERGY: Bank = {
       bi("What evidence tells scientists that the outer core is liquid?", "¿Qué evidencia indica a los científicos que el núcleo externo es líquido?"),
       bi("Earthquake S waves do not pass through it.", "Las ondas S de los sismos no lo atraviesan."),
       [
-        m("lava-from-core", "Lava from volcanoes comes from the core.", "La lava de los volcanes viene del núcleo."),
+        m("lava-from-core", "Lava from volcanoes comes straight from the core.", "La lava de los volcanes viene directamente del núcleo."),
         m("thinks-drilled-to-core", "Scientists have drilled down to it.", "Los científicos han perforado hasta llegar a él."),
       ],
       bi("The deepest hole ever drilled is about 12 km deep; the core starts near 2,900 km.", "El pozo más profundo que se ha perforado mide unos 12 km; el núcleo empieza cerca de los 2,900 km."),
@@ -368,11 +372,11 @@ export const EARTH_ENERGY: Bank = {
     ),
     e(
       bi("Where does most magma come from?", "¿De dónde viene la mayor parte del magma?"),
-      bi("Rock melting in the upper mantle and lower crust", "Roca que se funde en el manto superior y en la parte baja de la corteza"),
+      bi("Rock melting in the upper mantle and lower crust", "Roca que se funde en el manto superior y en la corteza baja"),
       [
         m("lava-from-core", "The liquid outer core", "El núcleo externo líquido"),
         m("invented-source", "Melted ice under the crust", "Hielo derretido bajo la corteza"),
-        m("mantle-is-liquid", "A layer of liquid rock that covers the whole mantle", "Una capa de roca líquida que cubre todo el manto"),
+        m("mantle-is-liquid", "A layer of liquid rock that covers the whole mantle under the crust", "Una capa de roca líquida que cubre todo el manto por debajo de la corteza"),
       ],
       bi("Melting happens where pressure drops or water is added, such as at ridges and subduction zones.", "La fusión ocurre donde baja la presión o se agrega agua, como en las dorsales y las zonas de subducción."),
       bi("Magma forms when parts of the upper mantle or crust melt, for example where plates pull apart or one plate sinks under another.", "El magma se forma cuando se funden partes del manto superior o de la corteza, por ejemplo donde las placas se separan o donde una placa se hunde bajo otra."),
@@ -381,7 +385,7 @@ export const EARTH_ENERGY: Bank = {
       bi("What produces Earth's magnetic field?", "¿Qué produce el campo magnético de la Tierra?"),
       bi("Moving liquid iron in the outer core", "El hierro líquido en movimiento del núcleo externo"),
       [
-        m("magnetism-mixup", "A giant bar magnet buried in the crust", "Un imán de barra gigante enterrado en la corteza"),
+        m("magnetism-mixup", "A giant bar magnet buried in Earth's crust", "Un imán de barra gigante enterrado en la corteza terrestre"),
         m("invented-source", "The Moon's gravity", "La gravedad de la Luna"),
         m("sun-heats-interior", "Sunlight hitting the poles", "La luz del Sol que llega a los polos"),
       ],
@@ -397,9 +401,9 @@ export const EARTH_ENERGY: Bank = {
     ),
     e(
       bi("Why are hot springs and geysers common in Yellowstone National Park?", "¿Por qué son comunes las aguas termales y los géiseres en el Parque Nacional Yellowstone?"),
-      bi("Magma lies fairly close to the surface and heats underground water.", "Hay magma bastante cerca de la superficie que calienta el agua subterránea."),
+      bi("Magma close to the surface heats underground water.", "El magma cerca de la superficie calienta el agua subterránea."),
       [
-        m("sun-heats-interior", "The Sun heats the ground more strongly there.", "El Sol calienta el suelo con más fuerza ahí."),
+        m("sun-heats-interior", "The Sun heats the ground there more strongly than in other places.", "El Sol calienta el suelo ahí con más fuerza que en otros lugares."),
         m("invented-source", "Underground fires burn coal there.", "Ahí arden incendios de carbón bajo tierra."),
       ],
       bi("Yellowstone sits above a hot spot in the mantle.", "Yellowstone está sobre un punto caliente del manto."),
@@ -413,8 +417,8 @@ export const EARTH_ENERGY: Bank = {
       bi("Hot mantle rock rises, cools near the top, and sinks, forming convection currents that move a few centimeters a year.", "La roca caliente del manto sube, se enfría cerca de arriba y baja, formando corrientes de convección que se mueven unos centímetros al año."),
     ),
     e(
-      bi("The crust and the top part of the mantle together make up which layer?", "La corteza y la parte de arriba del manto juntas forman ¿qué capa?"),
-      bi("The lithosphere, which is broken into plates", "La litosfera, que está dividida en placas"),
+      bi("The crust and the top part of the mantle together make up which layer?", "¿Qué capa forman juntas la corteza y la parte superior del manto?"),
+      bi("The lithosphere", "La litosfera"),
       [
         m("layer-name-mixup", "The asthenosphere", "La astenosfera"),
         m("layer-name-mixup", "The outer core", "El núcleo externo"),
@@ -427,7 +431,7 @@ export const EARTH_ENERGY: Bank = {
       bi("The decay of which elements helps heat Earth's interior?", "¿La desintegración de qué elementos ayuda a calentar el interior de la Tierra?"),
       bi("Uranium, thorium, and potassium", "Uranio, torio y potasio"),
       [
-        m("wrong-elements", "Oxygen, nitrogen, and carbon", "Oxígeno, nitrógeno y carbono"),
+        m("wrong-elements", "Oxygen, nitrogen, carbon, and hydrogen", "Oxígeno, nitrógeno, carbono e hidrógeno"),
         m("wrong-elements", "Helium and neon", "Helio y neón"),
         m("composition-mixup", "Iron and nickel", "Hierro y níquel"),
       ],
@@ -448,8 +452,8 @@ const join = (a: { en: string; es: string }, en: string, es: string) => bi(`${a.
 export const CLAIM_EVIDENCE: Bank = {
   nudge: bi("Is this part answering the question, giving data, or explaining why the data matter?", "¿Esta parte responde la pregunta, da datos o explica por qué importan los datos?"),
   strategy: bi(
-    "A claim answers the question. Evidence is data from observations or measurements that support the claim. Reasoning uses a science idea to explain why the evidence supports the claim. Strong evidence comes from many trials, a fair test, and measurements.",
-    "Una afirmación responde la pregunta. La evidencia son datos de observaciones o mediciones que apoyan la afirmación. El razonamiento usa una idea científica para explicar por qué la evidencia apoya la afirmación. La evidencia sólida viene de muchas pruebas, una prueba justa y mediciones.",
+    "Sort each statement by its job in the argument: the main point, the data behind it, or the science idea that links them. For data, check how many trials there were and whether the test was fair.",
+    "Clasifica cada enunciado por su función en el argumento: la idea principal, los datos que la apoyan o la idea científica que los une. Para los datos, revisa cuántas pruebas hubo y si la prueba fue justa.",
   ),
   seconds: 40,
   items: [
@@ -457,7 +461,7 @@ export const CLAIM_EVIDENCE: Bank = {
       join(LIGHT, "Which part is her evidence?", "¿Cuál es su evidencia?"),
       bi("The average heights of 4, 9, and 15 cm with more hours of light", "Las alturas promedio de 4, 9 y 15 cm con más horas de luz"),
       [
-        m("reasoning-as-evidence", "Plants use light energy to make their food.", "Las plantas usan la energía de la luz para producir su alimento."),
+        m("reasoning-as-evidence", "Plants use light energy to make the food they need to grow taller.", "Las plantas usan la energía de la luz para producir el alimento que necesitan para crecer."),
         m("claim-as-evidence", "More light makes bean plants grow taller.", "Más luz hace crecer más a las plantas de frijol."),
         m("irrelevant-evidence", "Bean plants are easy to grow.", "Las plantas de frijol son fáciles de cultivar."),
       ],
@@ -466,9 +470,9 @@ export const CLAIM_EVIDENCE: Bank = {
     ),
     e(
       join(LIGHT, "Which statement is the best reasoning?", "¿Qué enunciado es el mejor razonamiento?"),
-      bi("Plants use light energy to make food for growth, so more light lets them grow more.", "Las plantas usan la energía de la luz para producir alimento para crecer, así que con más luz crecen más."),
+      bi("Plants make food from light, so more light means more growth.", "Las plantas producen alimento con la luz, así que más luz significa más crecimiento."),
       [
-        m("evidence-as-reasoning", "The heights were 4 cm, 9 cm, and 15 cm.", "Las alturas fueron 4 cm, 9 cm y 15 cm."),
+        m("evidence-as-reasoning", "The heights were 4 cm, 9 cm, and 15 cm after the two weeks of growth.", "Las alturas fueron de 4 cm, 9 cm y 15 cm al final de las dos semanas de crecimiento."),
         m("claim-as-reasoning", "More light makes bean plants grow taller.", "Más luz hace crecer más a las plantas de frijol."),
         m("irrelevant-evidence", "She used three groups of plants.", "Usó tres grupos de plantas."),
       ],
@@ -488,9 +492,9 @@ export const CLAIM_EVIDENCE: Bank = {
     ),
     e(
       bi("Which evidence best supports the claim that exercise raises heart rate?", "¿Qué evidencia apoya mejor la afirmación de que el ejercicio aumenta el ritmo cardíaco?"),
-      bi("Heart rates of 20 students measured before and after 5 minutes of jumping jacks, all higher after", "El ritmo cardíaco de 20 estudiantes medido antes y después de 5 minutos de saltos de tijera, todos más altos después"),
+      bi("Heart rates of 20 students measured before and after exercise, all higher after", "Ritmos cardíacos de 20 estudiantes medidos antes y después del ejercicio, todos más altos después"),
       [
-        m("weak-evidence", "One student said she felt her heart beating faster.", "Una estudiante dijo que sintió que su corazón latía más rápido."),
+        m("weak-evidence", "One student said that she could feel her heart beating faster after she exercised.", "Una estudiante dijo que podía sentir que su corazón latía más rápido después de hacer ejercicio."),
         m("irrelevant-evidence", "A website says exercise is healthy.", "Una página web dice que el ejercicio es saludable."),
         m("reasoning-as-evidence", "The heart is a muscle.", "El corazón es un músculo."),
       ],
@@ -499,11 +503,11 @@ export const CLAIM_EVIDENCE: Bank = {
     ),
     e(
       bi("Why is testing 30 plants better than testing just 1?", "¿Por qué es mejor probar 30 plantas que solo 1?"),
-      bi("Results from more trials are more reliable, because one unusual result counts for less.", "Los resultados de más pruebas son más confiables, porque un resultado raro cuenta menos."),
+      bi("One unusual plant counts for less, so the results are more reliable.", "Una planta rara cuenta menos, así que los resultados son más confiables."),
       [
         m("invented-reason", "It makes the experiment finish faster.", "Hace que el experimento termine más rápido."),
         m("overclaims", "It proves the hypothesis is correct.", "Demuestra que la hipótesis es correcta."),
-        m("ignores-control", "It means no control group is needed.", "Significa que no se necesita un grupo de control."),
+        m("ignores-control", "It means the experiment no longer needs a control group to compare with.", "Significa que el experimento ya no necesita un grupo de control para comparar."),
       ],
       bi("One plant might be unusual for reasons that have nothing to do with the test.", "Una planta podría ser rara por razones que no tienen nada que ver con la prueba."),
       bi("A larger sample averages out chance differences, so the results are more trustworthy. It still cannot prove a hypothesis for certain.", "Una muestra más grande compensa las diferencias por casualidad, así que los resultados son más confiables. Aun así, no puede demostrar una hipótesis con certeza."),
@@ -513,9 +517,9 @@ export const CLAIM_EVIDENCE: Bank = {
         "Data show that on days when more ice cream is sold, more people get sunburned. A student claims that eating ice cream causes sunburn. What is the best response?",
         "Los datos muestran que los días en que se vende más helado, más personas se queman con el sol. Un estudiante afirma que comer helado causa quemaduras de sol. ¿Cuál es la mejor respuesta?",
       ),
-      bi("Both go up on hot, sunny days; the data show a link, not that one causes the other.", "Los dos aumentan en los días calurosos y soleados; los datos muestran una relación, no que uno cause el otro."),
+      bi("Hot, sunny days raise both; a link does not prove a cause.", "Los días calurosos y soleados aumentan los dos; una relación no prueba una causa."),
       [
-        m("correlation-as-causation", "The claim is proven, because the two numbers rise together.", "La afirmación está demostrada, porque los dos números suben juntos."),
+        m("correlation-as-causation", "The claim is proven, because the two numbers rise together.", "La afirmación está demostrada, porque los dos números suben juntos todos los días."),
         m("irrelevant-reasoning", "The claim is wrong, because ice cream is cold.", "La afirmación es falsa, porque el helado está frío."),
       ],
       bi("Is there a third thing that could make both numbers go up?", "¿Hay una tercera cosa que podría hacer que los dos números suban?"),
@@ -525,7 +529,7 @@ export const CLAIM_EVIDENCE: Bank = {
       bi("A ball dropped from 1 m bounces up 60 cm. Dropped from 2 m, it bounces 120 cm. Dropped from 3 m, it bounces 180 cm. Which claim do these data support?", "Una pelota que cae desde 1 m rebota 60 cm. Desde 2 m, rebota 120 cm. Desde 3 m, rebota 180 cm. ¿Qué afirmación apoyan estos datos?"),
       bi("The ball bounces back to about 60% of the height it is dropped from.", "La pelota rebota hasta cerca del 60% de la altura desde la que cae."),
       [
-        m("misreads-data", "The ball bounces higher than the height it is dropped from.", "La pelota rebota más alto que la altura desde la que cae."),
+        m("misreads-data", "The ball bounces higher than the height it is dropped from each time.", "La pelota rebota cada vez más alto que la altura desde la que la dejan caer."),
         m("misreads-data", "Drop height does not affect bounce height.", "La altura de caída no afecta la altura del rebote."),
         m("misreads-data", "The ball always bounces 60 cm.", "La pelota siempre rebota 60 cm."),
       ],
@@ -548,7 +552,7 @@ export const CLAIM_EVIDENCE: Bank = {
       bi("Plants given the same water and light but no fertilizer", "Plantas con la misma agua y luz, pero sin fertilizante"),
       [
         m("ignores-control", "Plants given the most fertilizer", "Plantas con la mayor cantidad de fertilizante"),
-        m("changes-two-variables", "Plants given fertilizer and extra light", "Plantas con fertilizante y luz extra"),
+        m("changes-two-variables", "Plants given fertilizer and also extra hours of light each day", "Plantas con fertilizante y además más horas de luz cada día"),
         m("irrelevant-evidence", "Plants that died during the test", "Plantas que murieron durante la prueba"),
       ],
       bi("The control shows what happens without the thing being tested.", "El grupo de control muestra qué pasa sin lo que se está probando."),
@@ -559,7 +563,7 @@ export const CLAIM_EVIDENCE: Bank = {
       bi("Revise the claim so it fits all of the evidence.", "Revisar la afirmación para que concuerde con toda la evidencia."),
       [
         m("ignores-evidence", "Ignore the new measurements.", "Ignorar las nuevas mediciones."),
-        m("overclaims", "Keep the claim because she made it first.", "Mantener la afirmación porque ella la hizo primero."),
+        m("overclaims", "Keep the claim because she was the first one to make it.", "Mantener la afirmación porque ella fue la primera persona en hacerla."),
         m("overreacts", "Throw out all of her earlier data.", "Tirar todos sus datos anteriores."),
       ],
       bi("Science changes when the evidence calls for it.", "La ciencia cambia cuando la evidencia lo pide."),
@@ -595,9 +599,9 @@ export const CLAIM_EVIDENCE: Bank = {
         "Claim: Ice melts faster on a metal tray than on a plastic tray. Evidence: ice on metal melted in 4 minutes, and ice on plastic in 11 minutes. Which reasoning best connects them?",
         "Afirmación: el hielo se derrite más rápido sobre una bandeja de metal que sobre una de plástico. Evidencia: el hielo sobre metal se derritió en 4 minutos, y sobre plástico en 11 minutos. ¿Qué razonamiento las conecta mejor?",
       ),
-      bi("Metal conducts heat better than plastic, so energy from the room reached the ice faster through the metal.", "El metal conduce el calor mejor que el plástico, así que la energía del cuarto llegó al hielo más rápido a través del metal."),
+      bi("Metal conducts heat better than plastic, so energy reached the ice faster.", "El metal conduce el calor mejor que el plástico, así que la energía llegó más rápido al hielo."),
       [
-        m("misreads-heat", "Metal is colder than plastic, so it melts ice faster.", "El metal está más frío que el plástico, así que derrite el hielo más rápido."),
+        m("misreads-heat", "Metal is colder than plastic, so it pulls the cold out of the ice and melts it faster.", "El metal está más frío que el plástico, así que le saca el frío al hielo y lo derrite más rápido."),
         m("evidence-as-reasoning", "4 minutes is less than 11 minutes.", "4 minutos es menos que 11 minutos."),
       ],
       bi("Which science idea explains how energy moved into the ice?", "¿Qué idea científica explica cómo entró la energía al hielo?"),
