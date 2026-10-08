@@ -20,6 +20,8 @@ const rhymesSyllables: CatalogueEntry = {
           title: "Rhyming words",
           blocks: [
             { type: "text", text: "Say cat. Now say hat." },
+            { type: "visual", visual: { kind: "dots", groups: [1, 1] }, alt: "Two dots side by side. One is for cat, one for hat." },
+            { type: "text", text: "Touch a dot as you say each word." },
             { type: "text", text: "They sound the same at the end. Cat and hat rhyme." },
             {
               type: "points",
@@ -64,8 +66,8 @@ const rhymesSyllables: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Which word rhymes with bee?",
-              choices: ["tree", "bus", "cake"],
-              answer: 0,
+              choices: ["bus", "cake", "tree"],
+              answer: 2,
               hint: "Say bee. Then say each word. Listen to the end.",
               explain: "Bee and tree sound the same at the end. They rhyme.",
             },
@@ -115,6 +117,8 @@ const rhymesSyllables: CatalogueEntry = {
           blocks: [
             { type: "text", text: "Start with bug." },
             { type: "text", text: "Change the first sound. Bug becomes hug, mug or rug." },
+            { type: "visual", visual: { kind: "dots", groups: [1, 1, 1, 1] }, alt: "Four dots in a row. One each for bug, hug, mug and rug." },
+            { type: "text", text: "Touch each dot and say its word." },
             { type: "text", text: "The end stays the same, so they all rhyme." },
             { type: "points", items: ["bug, hug, mug, rug", "pig, wig, dig, big"] },
           ],
@@ -155,16 +159,16 @@ const rhymesSyllables: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Which word rhymes with bug?",
-              choices: ["hug", "bag", "big"],
-              answer: 0,
+              choices: ["bag", "hug", "big"],
+              answer: 1,
               hint: "Say bug slowly. Listen to the end.",
               explain: "Hug rhymes with bug. Bag and big start like bug, but end differently.",
             },
             {
               id: "q2",
               prompt: "The mouse ran up the ___. Which word rhymes with dock?",
-              choices: ["clock", "chair", "tree"],
-              answer: 0,
+              choices: ["chair", "tree", "clock"],
+              answer: 2,
               hint: "Say dock. Then try each word after it.",
               explain: "Clock rhymes with dock. That is the word in the old rhyme.",
             },
@@ -206,8 +210,8 @@ const rhymesSyllables: CatalogueEntry = {
           blocks: [
             { type: "text", text: "Say dog. Clap once as you say it." },
             { type: "visual", visual: { kind: "dots", groups: [1] }, alt: "One dot. Dog has one clap." },
-            { type: "text", text: "Say ta-ble. Clap twice: ta, ble." },
-            { type: "visual", visual: { kind: "dots", groups: [1, 1] }, alt: "Two dots, one for ta and one for ble. Table has two claps." },
+            { type: "text", text: "Say table. Clap twice, once for each part." },
+            { type: "visual", visual: { kind: "dots", groups: [1, 1] }, alt: "Two dots, one for each part of table. Table has two claps." },
             { type: "text", text: "Each clap is one syllable." },
           ],
         },
@@ -216,10 +220,10 @@ const rhymesSyllables: CatalogueEntry = {
           kind: "slide",
           title: "More claps",
           blocks: [
-            { type: "text", text: "But-ter-fly has three claps." },
-            { type: "visual", visual: { kind: "dots", groups: [1, 1, 1] }, alt: "Three dots, for but, ter and fly." },
-            { type: "text", text: "Wa-ter-mel-on has four claps." },
-            { type: "visual", visual: { kind: "dots", groups: [1, 1, 1, 1] }, alt: "Four dots, for wa, ter, mel and on." },
+            { type: "text", text: "Say butterfly slowly. It has three claps." },
+            { type: "visual", visual: { kind: "dots", groups: [1, 1, 1] }, alt: "Three dots, one for each clap in butterfly." },
+            { type: "text", text: "Say watermelon slowly. It has four claps." },
+            { type: "visual", visual: { kind: "dots", groups: [1, 1, 1, 1] }, alt: "Four dots, one for each clap in watermelon." },
           ],
         },
         {
@@ -257,23 +261,23 @@ const rhymesSyllables: CatalogueEntry = {
               prompt: "How many claps in pizza?",
               choices: ["1", "2", "3"],
               answer: 1,
-              hint: "Say piz-za. Clap for each part.",
+              hint: "Say pizza and clap each part. Count your claps.",
               explain: "Piz-za has two parts. That is 2 claps.",
             },
             {
               id: "q2",
               prompt: "Which word has just one clap?",
-              choices: ["cat", "kitten", "caterpillar"],
-              answer: 0,
+              choices: ["kitten", "caterpillar", "cat"],
+              answer: 2,
               hint: "Clap each word. Which one is done fastest?",
               explain: "Cat has 1 clap. Kit-ten has 2. Cat-er-pil-lar has 4.",
             },
             {
               id: "q3",
               prompt: "Put a hand under your chin. Say tiger. How many times does your chin drop?",
-              choices: ["1", "2", "3"],
-              answer: 1,
-              hint: "Say ti-ger slowly. Feel your chin move.",
+              choices: ["2", "3", "4"],
+              answer: 0,
+              hint: "Say tiger slowly. Count each time your chin drops.",
               explain: "Ti-ger has two syllables. Your chin drops once for each one.",
             },
           ],
@@ -360,8 +364,8 @@ const rhymesSyllables: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Which pair rhymes?",
-              choices: ["hop and stop", "hop and hat", "dog and duck"],
-              answer: 0,
+              choices: ["hop and hat", "dog and duck", "hop and stop"],
+              answer: 2,
               hint: "Rhymes match at the end, not the start.",
               explain: "Hop and stop sound the same at the end. The other pairs only match at the start.",
             },
@@ -370,7 +374,7 @@ const rhymesSyllables: CatalogueEntry = {
               prompt: "How many claps in rainbow?",
               choices: ["1", "2", "3"],
               answer: 1,
-              hint: "Say rain-bow. Clap for each part.",
+              hint: "Say rainbow and clap each part. Count your claps.",
               explain: "Rain-bow has two parts. That is 2 claps.",
             },
           ],
@@ -393,10 +397,10 @@ const rhymesSyllables: CatalogueEntry = {
   ],
 };
 
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). Not linked from the lesson screen yet. */
 export const practice: Record<string, string[]> = {
   "what-rhymes": ["e.rhyme"],
-  "make-rhymes": ["e.rhyme"],
+  "make-rhymes": ["e.rhyme", "e.word.families"],
   "clap-syllables": ["e.syllables"],
   "rhyme-and-beat": ["e.rhyme", "e.syllables"],
 };
