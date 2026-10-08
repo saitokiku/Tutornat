@@ -5,10 +5,10 @@ import { bi, e, m, mx, type Bank } from "./shared";
 // ── s.organelles ────────────────────────────────────────────────────────────────────────────────
 
 export const ORG_THEORY: Bank = {
-  nudge: bi("Is the question about what all living things share, or about one kind of cell?", "¿La pregunta trata de lo que comparten todos los seres vivos o de un tipo de célula?"),
+  nudge: bi("Is the question about the theory itself, the scientists behind it, or one kind of living thing?", "¿La pregunta trata de la teoría, de los científicos que la formaron o de un tipo de ser vivo?"),
   strategy: bi(
-    "The cell theory has three ideas: living things are made of cells, the cell is the basic unit of life, and new cells come only from existing cells. Prokaryotic cells have no nucleus; eukaryotic cells do.",
-    "La teoría celular tiene tres ideas: los seres vivos están formados por células, la célula es la unidad básica de la vida y las células nuevas solo vienen de células que ya existen. Las células procariotas no tienen núcleo; las eucariotas sí.",
+    "For an idea of the theory, test each choice: is it true of every living thing, from bacteria to trees? For a kind of organism, ask what it is built from and whether it has a nucleus.",
+    "Para una idea de la teoría, prueba cada opción: ¿es cierta para todos los seres vivos, desde las bacterias hasta los árboles? Para un tipo de organismo, pregúntate de qué está hecho y si tiene núcleo.",
   ),
   seconds: 25,
   items: [
@@ -17,7 +17,7 @@ export const ORG_THEORY: Bank = {
       bi("All living things are made of one or more cells.", "Todos los seres vivos están formados por una o más células."),
       [
         m("overgeneralized-plant-cells", "All cells have a cell wall.", "Todas las células tienen pared celular."),
-        m("spontaneous-generation", "Cells can form from nonliving matter.", "Las células pueden formarse a partir de materia sin vida."),
+        m("spontaneous-generation", "Cells can form on their own from nonliving matter such as mud.", "Las células pueden formarse solas a partir de materia sin vida, como el lodo."),
         m("only-some-living-things", "Only animals are made of cells.", "Solo los animales están formados por células."),
       ],
       bi("The idea covers every living thing, from bacteria to trees.", "La idea abarca a todos los seres vivos, desde las bacterias hasta los árboles."),
@@ -49,7 +49,7 @@ export const ORG_THEORY: Bank = {
       bi("In 1665, Robert Hooke looked at a thin slice of cork under a microscope. What did he see and name?", "En 1665, Robert Hooke observó una lámina delgada de corcho con un microscopio. ¿Qué vio y nombró?"),
       bi("Tiny box-like spaces he called cells", "Pequeños espacios en forma de caja que llamó células"),
       [
-        m("confused-hooke-leeuwenhoek", "Bacteria swimming in a drop of water", "Bacterias nadando en una gota de agua"),
+        m("confused-hooke-leeuwenhoek", "Bacteria swimming in a drop of pond water", "Bacterias vivas que nadaban en una gota de agua de estanque"),
         m("thinks-nucleus-seen-first", "The nucleus inside each cell", "El núcleo dentro de cada célula"),
         m("confused-atom-and-cell", "Atoms packed together", "Átomos apretados unos con otros"),
       ],
@@ -102,11 +102,11 @@ export const ORG_THEORY: Bank = {
     ),
     e(
       bi("Where is the DNA in a prokaryotic cell such as a bacterium?", "¿Dónde está el ADN en una célula procariota, como una bacteria?"),
-      bi("Loose in the cytoplasm, not inside a nucleus", "Suelto en el citoplasma, no dentro de un núcleo"),
+      bi("Loose in the cytoplasm", "Suelto en el citoplasma"),
       [
         m("confused-prokaryote-eukaryote", "Inside a nucleus", "Dentro de un núcleo"),
         m("dna-in-wrong-part", "Inside the cell wall", "Dentro de la pared celular"),
-        m("thinks-bacteria-lack-dna", "Bacteria have no DNA", "Las bacterias no tienen ADN"),
+        m("thinks-bacteria-lack-dna", "Bacteria have no DNA at all", "Las bacterias no tienen ADN"),
       ],
       bi("Every cell needs DNA, but not every cell has a nucleus to keep it in.", "Toda célula necesita ADN, pero no toda célula tiene un núcleo donde guardarlo."),
       bi("Prokaryotic cells have DNA, but it sits in a region of the cytoplasm because there is no nucleus.", "Las células procariotas tienen ADN, pero está en una zona del citoplasma porque no hay núcleo."),
@@ -135,9 +135,9 @@ export const ORG_THEORY: Bank = {
     ),
     e(
       bi("Why does the cell theory not count a virus as a cell?", "¿Por qué la teoría celular no considera que un virus sea una célula?"),
-      bi("It is not made of a cell and can copy itself only inside a living cell.", "No está formado por una célula y solo puede copiarse dentro de una célula viva."),
+      bi("It is not a cell and can copy itself only inside a living cell.", "No es una célula y solo puede copiarse dentro de una célula viva."),
       [
-        m("size-means-nonliving", "It is too small to see with a light microscope.", "Es demasiado pequeño para verlo con un microscopio óptico."),
+        m("size-means-nonliving", "It is too small to see with the light microscopes used in a school lab.", "Es demasiado pequeño para verlo con los microscopios ópticos de un laboratorio escolar."),
         m("thinks-viruses-lack-genes", "It has no DNA or RNA.", "No tiene ADN ni ARN."),
         m("virus-as-bacterium", "It is a kind of bacterium.", "Es un tipo de bacteria."),
       ],
@@ -157,14 +157,14 @@ export const ORG_THEORY: Bank = {
     ),
     e(
       bi("Which organism is multicellular?", "¿Qué organismo es pluricelular?"),
-      bi("A mushroom", "Un hongo de sombrero"),
+      bi("A mushroom", "Un champiñón"),
       [
         m("confused-unicellular-multicellular", "A bacterium", "Una bacteria"),
         m("confused-unicellular-multicellular", "A yeast cell", "Una levadura"),
         m("confused-unicellular-multicellular", "An amoeba", "Una ameba"),
       ],
-      bi("Yeast and mushrooms are both fungi, but only one is built from many cells.", "La levadura y el hongo de sombrero son hongos, pero solo uno está formado por muchas células."),
-      bi("A mushroom is made of many cells working together. Bacteria, yeast, and amoebas each live as a single cell.", "Un hongo de sombrero está formado por muchas células que trabajan juntas. Las bacterias, las levaduras y las amebas viven como una sola célula."),
+      bi("Yeast and mushrooms are both fungi, but only one is built from many cells.", "La levadura y el champiñón son hongos, pero solo uno está formado por muchas células."),
+      bi("A mushroom is made of many cells working together. Bacteria, yeast, and amoebas each live as a single cell.", "Un champiñón está formado por muchas células que trabajan juntas. Las bacterias, las levaduras y las amebas viven como una sola célula."),
     ),
   ],
 };
@@ -187,8 +187,8 @@ const MEMBRANE = bi("Cell membrane", "Membrana celular");
 export const ORG_PARTS: Bank = {
   nudge: bi("Name the job first, then find the part that does it.", "Primero nombra la función y luego busca la parte que la realiza."),
   strategy: bi(
-    "Follow a protein: ribosomes build it, the rough ER carries it, the Golgi apparatus packs it, and a vesicle ships it. Lysosomes break things down, and mitochondria release energy.",
-    "Sigue a una proteína: los ribosomas la fabrican, el retículo endoplasmático rugoso la transporta, el aparato de Golgi la empaca y una vesícula la envía. Los lisosomas descomponen cosas y las mitocondrias liberan energía.",
+    "Picture the cell as a factory: some parts follow instructions to build products, some carry, pack, and ship them, and others break down waste or supply power. Decide which of those roles the question describes.",
+    "Imagina la célula como una fábrica: algunas partes siguen instrucciones para fabricar productos, otras los transportan, empacan y envían, y otras descomponen desechos o dan energía. Decide cuál de esos papeles describe la pregunta.",
   ),
   seconds: 25,
   items: [
@@ -251,7 +251,7 @@ export const ORG_PARTS: Bank = {
     e(
       bi("What are the small membrane sacs that carry materials from one part of the cell to another?", "¿Cómo se llaman los sacos pequeños de membrana que llevan sustancias de una parte de la célula a otra?"),
       VESICLE,
-      [mx("ribosome-golgi-mixup", RIBO), mx("golgi-vacuole-mixup", VACUOLE), mx("cytoplasm-nucleus-mixup", NUCLEOLUS)],
+      [mx("ribosome-golgi-mixup", RIBO), mx("golgi-vacuole-mixup", VACUOLE), mx("nucleolus-vesicle-mixup", NUCLEOLUS)],
       bi("Think of delivery trucks that bud off the Golgi apparatus.", "Piensa en camiones de reparto que se separan del aparato de Golgi."),
       bi("Vesicles pinch off from the ER and Golgi and carry materials to where they are needed, including the cell membrane.", "Las vesículas se desprenden del retículo y del aparato de Golgi y llevan sustancias a donde se necesitan, incluida la membrana celular."),
     ),
@@ -266,7 +266,7 @@ export const ORG_PARTS: Bank = {
       bi("A cell makes a protein that it will send outside the cell. Which path does the protein most likely follow?", "Una célula fabrica una proteína que enviará fuera de la célula. ¿Qué camino sigue con mayor probabilidad la proteína?"),
       bi("Ribosome on the rough ER, then Golgi apparatus, then vesicle, then cell membrane", "Ribosoma en el retículo rugoso, luego aparato de Golgi, luego vesícula y luego membrana celular"),
       [
-        m("pathway-out-of-order", "Golgi apparatus, then ribosome, then nucleus, then cell membrane", "Aparato de Golgi, luego ribosoma, luego núcleo y luego membrana celular"),
+        m("pathway-out-of-order", "Golgi apparatus, then a ribosome on the rough ER, then vesicle, then cell membrane", "Aparato de Golgi, luego ribosoma en el retículo rugoso, luego vesícula y luego membrana celular"),
         m("ribosome-mitochondria-mixup", "Mitochondrion, then lysosome, then cell membrane", "Mitocondria, luego lisosoma y luego membrana celular"),
         m("golgi-vacuole-mixup", "Nucleus, then vacuole, then cell wall", "Núcleo, luego vacuola y luego pared celular"),
       ],
@@ -325,8 +325,8 @@ const SKIN = bi("Integumentary system (skin)", "Sistema tegumentario (piel)");
 export const BODY_JOBS: Bank = {
   nudge: bi("What does the body need done here: moving, breathing, eating, signaling, cleaning, or defending?", "¿Qué necesita hacer el cuerpo aquí: moverse, respirar, alimentarse, enviar señales, limpiar o defenderse?"),
   strategy: bi(
-    "Match the job to the system: circulatory carries, respiratory exchanges gases, digestive breaks down food, nervous sends signals, endocrine sends hormones, excretory filters blood, immune defends.",
-    "Relaciona la función con el sistema: el circulatorio transporta, el respiratorio intercambia gases, el digestivo descompone el alimento, el nervioso envía señales, el endocrino envía hormonas, el excretor filtra la sangre y el inmunitario defiende.",
+    "Find the job word in the question, such as carry, take in, break down, signal, filter, or defend. Then think of the organs that do that job; the answer is the system they belong to.",
+    "Busca la palabra de la función en la pregunta, como transportar, tomar, descomponer, enviar señales, filtrar o defender. Luego piensa en los órganos que hacen ese trabajo; la respuesta es el sistema al que pertenecen.",
   ),
   seconds: 20,
   items: [
@@ -396,7 +396,7 @@ export const BODY_JOBS: Bank = {
       [
         m("wrong-organ-job", "Pump blood through the body", "Bombean sangre por el cuerpo"),
         m("wrong-system-job", "Break down food", "Descomponen el alimento"),
-        m("skeletal-muscular-mixup", "Contract to make the body move", "Se contraen para mover el cuerpo"),
+        m("skeletal-muscular-mixup", "Contract to make the arms and legs move", "Se contraen para que se muevan los brazos y las piernas"),
       ],
       bi("Think of the skull and the soft marrow inside some bones.", "Piensa en el cráneo y en la médula blanda dentro de algunos huesos."),
       bi("Bones protect organs, like the skull around the brain, and marrow inside bones makes blood cells. Muscles, not bones, contract.", "Los huesos protegen órganos, como el cráneo al cerebro, y la médula de los huesos produce células de la sangre. Los músculos, no los huesos, se contraen."),
@@ -437,7 +437,7 @@ export const BODY_JOBS: Bank = {
       bi("Inside the lungs, where does oxygen pass into the blood?", "Dentro de los pulmones, ¿dónde pasa el oxígeno a la sangre?"),
       bi("Tiny air sacs called alveoli", "Pequeños sacos de aire llamados alvéolos"),
       [
-        m("airway-mixup", "The trachea (windpipe)", "La tráquea"),
+        m("airway-mixup", "The trachea, the tube that carries air down", "La tráquea, el tubo que lleva el aire hacia abajo"),
         m("respiratory-circulatory-mixup", "The heart", "El corazón"),
         m("airway-food-pipe-mixup", "The esophagus", "El esófago"),
       ],
@@ -457,9 +457,9 @@ export const BODY_TOGETHER: Bank = {
   items: [
     e(
       bi("When you run, your breathing and your heart rate both speed up. Why?", "Cuando corres, tu respiración y tu ritmo cardíaco se aceleran. ¿Por qué?"),
-      bi("Your muscles need more oxygen and must get rid of more carbon dioxide.", "Tus músculos necesitan más oxígeno y deben eliminar más dióxido de carbono."),
+      bi("Your muscles need more oxygen and make more carbon dioxide.", "Tus músculos necesitan más oxígeno y producen más dióxido de carbono."),
       [
-        m("respiratory-circulatory-mixup", "Your lungs start pumping blood faster.", "Tus pulmones empiezan a bombear sangre más rápido."),
+        m("respiratory-circulatory-mixup", "Your lungs start pumping blood faster so your muscles stay cool.", "Tus pulmones empiezan a bombear sangre más rápido para enfriar tus músculos."),
         m("reversed-cause", "Your muscles stop using oxygen while you run.", "Tus músculos dejan de usar oxígeno mientras corres."),
         m("wrong-system-job", "Your stomach needs extra air to digest food.", "Tu estómago necesita aire extra para digerir."),
       ],
@@ -468,10 +468,10 @@ export const BODY_TOGETHER: Bank = {
     ),
     e(
       bi("After a meal, how do nutrients reach your muscle cells?", "Después de comer, ¿cómo llegan los nutrientes a las células de tus músculos?"),
-      bi("The digestive system absorbs them into the blood, and the circulatory system carries them.", "El sistema digestivo los absorbe hacia la sangre y el sistema circulatorio los transporta."),
+      bi("Digestion moves them into the blood, and the blood carries them.", "La digestión los pasa a la sangre, y la sangre los transporta."),
       [
         m("wrong-system-job", "The respiratory system breathes them into the muscles.", "El sistema respiratorio los inhala hacia los músculos."),
-        m("nervous-carries-materials", "The nervous system carries them along the nerves.", "El sistema nervioso los lleva por los nervios."),
+        m("nervous-carries-materials", "The nervous system carries them along the nerves to each muscle cell.", "El sistema nervioso los lleva por los nervios hasta cada célula muscular."),
         m("thinks-stomach-absorbs-most", "They wait in the stomach until a muscle needs them.", "Esperan en el estómago hasta que un músculo los necesita."),
       ],
       bi("Nutrients enter the blood through the walls of the small intestine.", "Los nutrientes entran a la sangre por las paredes del intestino delgado."),
@@ -501,9 +501,9 @@ export const BODY_TOGETHER: Bank = {
     ),
     e(
       bi("Your biceps contracts to bend your elbow. What straightens the arm again?", "Tu bíceps se contrae para doblar el codo. ¿Qué vuelve a estirar el brazo?"),
-      bi("The triceps on the back of the arm contracts and pulls the other way.", "El tríceps, en la parte de atrás del brazo, se contrae y jala en sentido contrario."),
+      bi("The triceps contracts and pulls the other way.", "El tríceps se contrae y jala en sentido contrario."),
       [
-        m("thinks-muscles-push", "The biceps pushes the arm straight.", "El bíceps empuja el brazo para estirarlo."),
+        m("thinks-muscles-push", "The biceps pushes on the bones to straighten the arm.", "El bíceps empuja los huesos para estirar el brazo."),
         m("skeletal-muscular-mixup", "The bones straighten themselves.", "Los huesos se estiran solos."),
         m("thinks-nerves-move-bones", "The nerves in the elbow push it open.", "Los nervios del codo lo empujan para abrirlo."),
       ],
@@ -521,9 +521,9 @@ export const BODY_TOGETHER: Bank = {
       bi("Air enters through your nose. Which path does the oxygen follow to reach your blood?", "El aire entra por tu nariz. ¿Qué camino sigue el oxígeno para llegar a tu sangre?"),
       bi("Nose, trachea, bronchi, alveoli in the lungs, then blood", "Nariz, tráquea, bronquios, alvéolos de los pulmones y luego la sangre"),
       [
-        m("airway-food-pipe-mixup", "Nose, esophagus, stomach, then blood", "Nariz, esófago, estómago y luego la sangre"),
+        m("airway-food-pipe-mixup", "Nose, esophagus, stomach, small intestine, then blood", "Nariz, esófago, estómago, intestino delgado y luego la sangre"),
         m("respiratory-circulatory-mixup", "Nose, heart, lungs, then blood", "Nariz, corazón, pulmones y luego la sangre"),
-        m("airway-mixup", "Nose, bronchi, trachea, then blood", "Nariz, bronquios, tráquea y luego la sangre"),
+        m("airway-mixup", "Nose, bronchi, trachea, alveoli in the lungs, then blood", "Nariz, bronquios, tráquea, alvéolos de los pulmones y luego la sangre"),
       ],
       bi("The windpipe splits into two branches, one for each lung.", "La tráquea se divide en dos ramas, una para cada pulmón."),
       bi("Air goes down the trachea, into the bronchi, and on to the alveoli, where oxygen crosses into the capillaries.", "El aire baja por la tráquea, entra a los bronquios y llega a los alvéolos, donde el oxígeno pasa a los capilares."),
@@ -560,16 +560,16 @@ export const BODY_TOGETHER: Bank = {
     e(
       bi("Where are new red blood cells made?", "¿Dónde se producen los glóbulos rojos nuevos?"),
       bi("In the marrow inside bones", "En la médula, dentro de los huesos"),
-      [m("wrong-organ-job", "In the heart", "En el corazón"), m("wrong-organ-job", "In the lungs", "En los pulmones"), m("wrong-organ-job", "In the stomach", "En el estómago")],
+      [m("wrong-organ-job", "In the heart", "En el corazón"), m("wrong-organ-job", "In the lungs", "En los pulmones"), m("wrong-organ-job", "In the walls of the stomach and intestines", "En las paredes del estómago y del intestino")],
       bi("This is one way the skeletal system helps the circulatory system.", "Esta es una forma en que el sistema óseo ayuda al circulatorio."),
       bi("Red marrow inside bones makes red blood cells, which then travel in the blood.", "La médula roja dentro de los huesos produce los glóbulos rojos, que luego viajan en la sangre."),
     ),
     e(
       bi("A disease damages the alveoli in a person's lungs. Why might the person feel tired after a short walk?", "Una enfermedad daña los alvéolos de los pulmones de una persona. ¿Por qué podría cansarse después de caminar un poco?"),
-      bi("Less oxygen reaches the blood, so muscle cells release less energy.", "Llega menos oxígeno a la sangre, así que las células musculares liberan menos energía."),
+      bi("Less oxygen reaches the blood, so muscles get less energy.", "Llega menos oxígeno a la sangre, así que los músculos obtienen menos energía."),
       [
         m("wrong-system-job", "The stomach can no longer digest food.", "El estómago ya no puede digerir el alimento."),
-        m("skeletal-muscular-mixup", "The bones become too weak to hold the muscles.", "Los huesos se vuelven demasiado débiles para sostener los músculos."),
+        m("skeletal-muscular-mixup", "The bones become too weak to hold up the muscles during a walk.", "Los huesos se vuelven demasiado débiles para sostener los músculos al caminar."),
         m("overstates-effect", "The heart stops pumping blood.", "El corazón deja de bombear sangre."),
       ],
       bi("Muscle cells need oxygen to release energy from sugar.", "Las células musculares necesitan oxígeno para liberar energía del azúcar."),
