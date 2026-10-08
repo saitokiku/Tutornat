@@ -142,9 +142,10 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     if (young && itemSay) speakText(itemSay, learner.locale);
     requestAnimationFrame(() => {
       const problem = document.getElementById("problem");
-      // A reading passage sits above its question: focus the question but keep the passage's start in view.
+      // A reading passage sits above its question: focus the question, but show the page from the top so
+      // the passage starts in view below the sticky header.
       problem?.focus({ preventScroll: reading });
-      if (reading) problem?.closest("section")?.scrollIntoView?.({ block: "start" });
+      if (reading && document.scrollingElement) document.scrollingElement.scrollTop = 0;
     });
   }, [itemId, itemSay, young, learner.locale, reading]);
 
