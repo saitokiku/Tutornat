@@ -3,7 +3,7 @@ import type { CatalogueEntry } from "./types";
 const decimals: CatalogueEntry = {
   id: "math-decimals",
   title: "Decimals and place value",
-  summary: "Read and compare decimals to thousandths, and round them to tenths and whole numbers. Multiply and divide by 10, 100 and 1,000, and add and subtract decimals.",
+  summary: "Read and compare decimals to thousandths, and round them to whole numbers, tenths and hundredths. Multiply and divide by 10, 100 and 1,000, and add and subtract decimals.",
   subject: "math",
   grade: "5",
   locale: "en",
@@ -78,7 +78,7 @@ const decimals: CatalogueEntry = {
               prompt: "Which decimal means 7 tenths?",
               choices: ["0.07", "0.7", "7.0"],
               answer: 1,
-              hint: "Picture a bar cut into 10 equal parts with 7 shaded. Is that more or less than 1 whole?",
+              hint: "On the tenths number line, each jump is 0.1. Where do 7 jumps from 0 land?",
               explain: "7 tenths is 0.7. 0.07 is 7 hundredths, and 7.0 is 7 wholes.",
             },
             {
@@ -158,7 +158,7 @@ const decimals: CatalogueEntry = {
         {
           id: "s4",
           kind: "slide",
-          title: "Round to the nearest tenth",
+          title: "Round decimals",
           blocks: [
             {
               type: "visual",
@@ -173,6 +173,7 @@ const decimals: CatalogueEntry = {
                 "Look at the digit just to the right of the place you are rounding to.",
                 "If it is 5 or more, round up. If it is less than 5, round down.",
                 "To the nearest whole number, 3.47 rounds to 3, because its tenths digit is 4.",
+                "To the nearest hundredth, 2.358 rounds to 2.36, because its thousandths digit is 8.",
               ],
             },
           ],
@@ -269,13 +270,10 @@ const decimals: CatalogueEntry = {
           title: "Times 10: digits move left",
           blocks: [
             { type: "text", text: "Multiplying by 10 makes each digit worth 10 times as much. So each digit moves one place to the left." },
-            {
-              type: "visual",
-              visual: { kind: "base-ten", tens: 4, ones: 0 },
-              alt: "In this model, the big square is 1 whole and a rod is 1 tenth. 4 rods show 0.4.",
-            },
+            { type: "text", text: "Use the blocks: a big square is 1 whole, and a rod is 1 tenth of it. 4 rods show 0.4." },
+            { type: "text", text: "Times 10, each rod grows to the size of a whole square. The 4 rods become 4 squares:" },
             { type: "visual", visual: { kind: "base-ten", hundreds: 4, tens: 0, ones: 0 }, alt: "4 big squares. Each one is 1 whole, so they show 4." },
-            { type: "text", text: "Times 10, each rod grows to the size of a whole square. 4 tenths become 4 ones, so 0.4 × 10 = 4." },
+            { type: "text", text: "4 tenths become 4 ones, so 0.4 × 10 = 4." },
             { type: "points", items: ["0.4 × 10 = 4", "0.4 × 100 = 40", "0.4 × 1,000 = 400"] },
             { type: "text", text: "Fill any empty places before the decimal point with 0." },
             { type: "text", text: "You may hear this called moving the decimal point to the right. It gives the same answer." },
