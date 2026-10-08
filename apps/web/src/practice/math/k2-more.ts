@@ -514,6 +514,14 @@ const SHARE_CTX: readonly Ctx[] = [
 /** A count of the same addend: "4 + 4 + 4". */
 const repeat = (k: number, v: number) => Array<number>(k).fill(v).join(" + ");
 const plusWords = (s: string, locale: Locale) => s.replace(/ \+ /g, tr(locale, " plus ", " más "));
+/** Prompt pieces with neighbouring strings joined and empty ones dropped. */
+const glue = (parts: MathPart[]) =>
+  parts.reduce<MathPart[]>((out, p) => {
+    const last = out[out.length - 1];
+    if (p === "") return out;
+    if (typeof p === "string" && typeof last === "string") return [...out.slice(0, -1), last + p];
+    return [...out, p];
+  }, []);
 const dots = (groups: number[], crossed = 0): Visual => (crossed ? { kind: "dots", groups, crossed } : { kind: "dots", groups });
 
 /**
@@ -582,7 +590,8 @@ export const MATH_K_2_MORE: Skill[] = [
         hints: tens
           ? [
               tr(locale, "Each number is 10 more than the one before.", "Cada número es 10 más que el anterior."),
-              tr(locale, "Count by tens out loud, starting at 10.", "Cuenta de diez en diez en voz alta, desde el 10."),
+              // From the first number shown: a fixed "starting at 10" is the answer to "0, ▢, 20, 30".
+              tr(locale, `Count by tens out loud, starting at ${seq[0]}.`, `Cuenta de diez en diez en voz alta, desde el ${seq[0]}.`),
               tr(locale, `${prev} and 10 more.`, `${prev} y 10 más.`),
             ]
           : [
@@ -630,7 +639,7 @@ export const MATH_K_2_MORE: Skill[] = [
           hints: [
             tr(locale, "Say the number out loud.", "Di el número en voz alta."),
             teen
-              ? tr(locale, "Numbers from 11 to 19 are 10 and some more.", "Los números del 11 al 19 son 10 y algunos más.")
+              ? tr(locale, "Numbers between 10 and 20 are 10 and some more.", "Los números entre 10 y 20 son 10 y algunos más.")
               : n === 20
                 ? tr(locale, "Twenty is two tens.", "Veinte son dos decenas.")
                 : n === 0
@@ -679,7 +688,12 @@ export const MATH_K_2_MORE: Skill[] = [
               : [
                   tr(locale, "Touch each dot once as you count.", "Toca cada punto una vez mientras cuentas."),
                   n > 5 ? tr(locale, "Count the top row, then the next row.", "Cuenta la fila de arriba y luego la siguiente.") : tr(locale, "There is only one row. Count it.", "Hay una sola fila. Cuéntala."),
-                  n > 5 ? tr(locale, "The top row is full: 5. Count on from 5.", "La fila de arriba está llena: 5. Sigue contando desde 5.") : tr(locale, "Start at the left: 1, 2…", "Empieza por la izquierda: 1, 2…"),
+                  n > 5
+                    ? tr(locale, "The top row is full: 5. Count on from 5.", "La fila de arriba está llena: 5. Sigue contando desde 5.")
+                    : n > 3
+                      ? tr(locale, "Start at the left: 1, 2…", "Empieza por la izquierda: 1, 2…")
+                      : // "1, 2…" would be the answer for 2 dots and count past a single dot.
+                        tr(locale, "Start at the left dot. Say one number for each dot.", "Empieza por el punto de la izquierda. Di un número por cada punto."),
                 ],
             steps: two
               ? [
@@ -847,18 +861,23 @@ export const MATH_K_2_MORE: Skill[] = [
               ? tr(locale, `${n} dots in all. 1 is in the first group.`, `${n} puntos en total. 1 está en el primer grupo.`)
               : tr(locale, `${n} dots in all. ${a} are in the first group.`, `${n} puntos en total. ${a} están en el primer grupo.`),
             tr(locale, `Count on from ${a} until you reach ${n}.`, `Cuenta desde ${a} hasta llegar a ${n}.`),
-            tr(locale, `Say ${a}. Then count on: ${a + 1}, …`, `Di ${a}. Luego sigue contando: ${a + 1}, …`),
+            // No count-on number printed: "Say 3. Then count on: 4, …" shows the answer when it is 4.
+            tr(locale, `Say ${a}. Then keep counting until you say ${n}.`, `Di ${a}. Luego sigue contando hasta decir ${n}.`),
           ],
           steps: [`${a} + ${b} = ${n}`, tr(locale, `So ${n} = ${a} + ${b}.`, `Entonces, ${n} = ${a} + ${b}.`)],
           seconds: 8,
         };
       }
-      const n = r.int(4, 10), a = r.int(1, n - 1), b = n - a;
+      const n = r.int(4, 10);
+      // Half the items show one way to break n apart and ask for another (K.OA.A.3: "in more than one way").
+      const shownWay = r.bool() ? r.int(1, n - 1) : 0;
+      const a = shownWay ? r.pick(Array.from({ length: n - 1 }, (_, i) => i + 1).filter((c) => c !== shownWay && c !== n - shownWay)) : r.int(1, n - 1), b = n - a;
       const pair = (x: number, y: number, why?: string): Choice => ({ label: `${x} + ${y}`, say: tr(locale, `${x} and ${y}`, `${x} y ${y}`), ...(why ? { why } : {}) });
       const cands: [number, number, string][] = [[a, b + 1, "sum-too-big"], b > 1 ? [a, b - 1, "sum-too-small"] : [a - 1, b, "sum-too-small"], [n, 1, "used-the-total-as-a-part"], [a + 1, b + 1, "sum-too-big"], [a + 1, b, "sum-too-big"]];
       // "1 + 10" and "10 + 1" are the same pair to a child who knows order does not matter: keep one.
+      // The way already shown is never offered, in either order.
       const pairKey = (x: number, y: number) => [x, y].sort((p, q) => p - q).join("+");
-      const used = new Set([pairKey(a, b)]);
+      const used = new Set([pairKey(a, b), ...(shownWay ? [pairKey(shownWay, n - shownWay)] : [])]);
       const wrong = cands
         .filter(([x, y]) => {
           if (x < 1 || y < 1 || used.has(pairKey(x, y))) return false;
@@ -867,9 +886,12 @@ export const MATH_K_2_MORE: Skill[] = [
         })
         .slice(0, 3);
       const [wx, wy] = wrong[0];
+      const shown = shownWay ? `${n} = ${shownWay} + ${n - shownWay}. ` : "";
+      const shownSay = shownWay ? tr(locale, `${n} is ${shownWay} and ${n - shownWay}. `, `${n} es ${shownWay} y ${n - shownWay}. `) : "";
+      const ask = shownWay ? tr(locale, `Which is another way to make ${n}?`, `¿Qué otra pareja de números forma ${n}?`) : tr(locale, `Which two numbers make ${n}?`, `¿Qué dos números forman ${n}?`);
       return {
-        prompt: [tr(locale, `Which two numbers make ${n}?`, `¿Qué dos números forman ${n}?`)],
-        say: tr(locale, `Which two numbers make ${n}?`, `¿Qué dos números forman ${n}?`),
+        prompt: [shown + ask],
+        say: shownSay + ask,
         visual: dots([n]),
         alt: tr(locale, "A group of dots in rows of five", "Un grupo de puntos en filas de cinco"),
         markable: true,
@@ -879,7 +901,7 @@ export const MATH_K_2_MORE: Skill[] = [
           tr(locale, `Add each pair. Find the one that makes ${n}.`, `Suma cada pareja. Busca la que forma ${n}.`),
           tr(locale, `${wx} + ${wy} = ${wx + wy}, not ${n}.`, `${wx} + ${wy} = ${wx + wy}, no ${n}.`),
         ],
-        steps: [`${a} + ${b} = ${n}`],
+        steps: shownWay ? [`${a} + ${b} = ${n}`, tr(locale, `So ${n} is ${shownWay} and ${n - shownWay}, or ${a} and ${b}.`, `Entonces ${n} es ${shownWay} y ${n - shownWay}, o ${a} y ${b}.`)] : [`${a} + ${b} = ${n}`],
         seconds: 12,
       };
     },
@@ -1051,7 +1073,8 @@ export const MATH_K_2_MORE: Skill[] = [
         hints = [
           tr(locale, `Think: ${b} plus what makes ${a}?`, `Piensa: ¿${b} más cuánto hacen ${a}?`),
           tr(locale, `Count up from ${b} to ${a}.`, `Cuenta desde ${b} hasta ${a}.`),
-          `${b}… ${b + 1}…`,
+          // No counted numbers printed: "1… 2…" for 3 − 1 would show the answer.
+          tr(locale, `Say ${b}, then count up to ${a}. Count your fingers.`, `Di ${b} y cuenta hasta ${a}. Cuenta tus dedos.`),
         ];
         steps = [`${b} + ${key} = ${a}`, `${a} − ${b} = ${key}`];
         wrong = [[a + b, "added-instead-of-subtracted"], [key + 1, "off-by-one"], [key - 1, "off-by-one"]];
@@ -1207,7 +1230,10 @@ export const MATH_K_2_MORE: Skill[] = [
           hints: [
             tr(locale, "Each block is one unit long.", "Cada bloque mide una unidad."),
             tr(locale, "Count the blocks from one end to the other.", "Cuenta los bloques de un extremo al otro."),
-            tr(locale, "Point to each block as you count: 1, 2, 3…", "Señala cada bloque mientras cuentas: 1, 2, 3…"),
+            // "1, 2, 3…" ends on the answer for a 3-block thing.
+            n > 3
+              ? tr(locale, "Point to each block as you count: 1, 2, 3…", "Señala cada bloque mientras cuentas: 1, 2, 3…")
+              : tr(locale, "Point to each block once as you count.", "Señala cada bloque una vez mientras cuentas."),
           ],
           steps: [tr(locale, `There are ${n} blocks from end to end.`, `Hay ${n} bloques de un extremo al otro.`), tr(locale, `The ${o.en} is ${n} blocks long.`, `${cap(el(o))} ${o.es} mide ${n} bloques.`)],
           seconds: 12,
@@ -1729,7 +1755,8 @@ export const MATH_K_2_MORE: Skill[] = [
     levels: 3,
     generate(r, level, locale) {
       if (level === 1) {
-        const h = r.int(1, 4), t = r.int(0, 7), o = r.int(0, 9), n = h * 100 + t * 10 + o;
+        // Never only flats: for 300 the hints "3 flats make 300" and "each flat is 100" are the answer.
+        const h = r.int(1, 4), t = r.int(0, 7), o = t === 0 ? r.int(1, 9) : r.int(0, 9), n = h * 100 + t * 10 + o;
         return {
           prompt: [tr(locale, "What number do the blocks show?", "¿Qué número muestran los bloques?")],
           say: tr(locale, "What number do the blocks show?", "¿Qué número muestran los bloques?"),
@@ -1748,27 +1775,6 @@ export const MATH_K_2_MORE: Skill[] = [
         };
       }
       if (level === 2) {
-        if (r.bool()) {
-          const h = r.int(1, 9), t = r.bool(0.2) ? 0 : r.int(0, 9), o = r.bool(0.2) ? 0 : r.int(0, 9), n = h * 100 + t * 10 + o;
-          let parts = [h * 100, t * 10, o].filter((v) => v > 0);
-          const shuffled = r.bool(0.4);
-          if (shuffled) parts = r.shuffle(parts);
-          const leading = Number(parts.map((p) => String(p)[0]).join(""));
-          return {
-            prompt: [`${parts.join(" + ")} = `, blank],
-            say: plusWords(parts.join(" + "), locale),
-            input: "keypad",
-            answer: { kind: "number", value: n },
-            wrong: misses(n, [[Number(parts.join("")), "wrote-the-parts-side-by-side"], t === 0 || o === 0 ? [leading, "dropped-the-zero"] : null, shuffled ? [leading, "kept-the-shown-order"] : null]),
-            hints: [
-              tr(locale, "Each part is hundreds, tens or ones.", "Cada parte son centenas, decenas o unidades."),
-              tr(locale, "Put each digit in its place.", "Pon cada cifra en su lugar."),
-              tr(locale, `The hundreds digit is ${h}.`, `La cifra de las centenas es ${h}.`),
-            ],
-            steps: [`${cap(place(h, t, o, locale))}.`, `${parts.join(" + ")} = ${n}`],
-            seconds: 10,
-          };
-        }
         const h = r.int(1, 9);
         let t = r.int(0, 9);
         while (t === h) t = r.int(0, 9);
@@ -1794,6 +1800,110 @@ export const MATH_K_2_MORE: Skill[] = [
           seconds: 10,
         };
       }
+      // Level 3: a number told in hundreds, tens and ones with one count missing; or tens bundled
+      // into hundreds (2.NBT.A.1a: ten tens make a hundred).
+      if (r.bool(0.7)) {
+        const h = r.int(1, 9), t = r.bool(0.15) ? 0 : r.int(0, 9), o = r.bool(0.15) ? 0 : r.int(0, 9), n = h * 100 + t * 10 + o;
+        const digits = [h, t, o], pos = r.int(0, 2), key = digits[pos];
+        const W = ["hundred", "ten", "one"] as const;
+        const unit = [tr(locale, "hundreds", "centenas"), tr(locale, "tens", "decenas"), tr(locale, "ones", "unidades")][pos];
+        const and = ` ${tr(locale, "and", "y")} `;
+        const parts = (gap: MathPart) => [0, 1, 2].flatMap((p): MathPart[] => [p === 1 ? ", " : p === 2 ? and : "", ...(p === pos ? [gap, ` ${unit}`] : [many(digits[p], W[p], locale)])]);
+        const spoken = parts(tr(locale, "blank", "espacio")).join("");
+        const ask = tr(locale, `How many ${unit}?`, `¿Cuántas ${unit}?`);
+        return {
+          prompt: glue([`${n} = `, ...parts(blank)]),
+          say: `${n} ${tr(locale, "is", "es")} ${spoken}. ${ask}`,
+          input: "keypad",
+          answer: { kind: "number", value: key },
+          wrong: misses(key, [
+            pos < 2 ? [key * [100, 10][pos], "gave-the-value"] : null,
+            pos === 1 ? [Math.floor(n / 10), "counted-the-hundreds-as-tens"] : null,
+            ...digits.map((d, p): Tag | null => (p === pos ? null : [d, "read-another-place"])),
+          ]),
+          hints: [
+            tr(locale, "Each digit tells how many of its place.", "Cada cifra dice cuántas hay de su lugar."),
+            tr(locale, "Read the digits: hundreds, then tens, then ones.", "Lee las cifras: centenas, decenas y unidades."),
+            tr(locale, `The ${unit} digit is the ${["first", "middle", "last"][pos]} digit.`, `La cifra de las ${unit} es la ${["primera", "del medio", "última"][pos]}.`),
+          ],
+          steps: [`${n} = ${h * 100} + ${t * 10} + ${o}`, `${cap(place(h, t, o, locale))}.`],
+          seconds: 12,
+        };
+      }
+      if (r.bool()) {
+        const h = r.int(1, 9);
+        const tens = tr(locale, "tens", "decenas");
+        return {
+          prompt: [`${many(h, "hundred", locale)} = `, blank, ` ${tens}`],
+          say: tr(locale, `${many(h, "hundred", "en")} is how many tens?`, `¿${many(h, "hundred", "es")} ${h === 1 ? "es" : "son"} cuántas decenas?`),
+          input: "keypad",
+          answer: { kind: "number", value: h * 10 },
+          wrong: misses(h * 10, [[h, "gave-the-hundreds"], [h * 100, "gave-the-number"], [h * 10 + 10, "counted-one-ten-too-many"]]),
+          hints: [
+            tr(locale, "1 hundred is 10 tens.", "1 centena son 10 decenas."),
+            tr(locale, "Each hundred gives 10 more tens.", "Cada centena da 10 decenas más."),
+            h === 1 ? tr(locale, "Think of 100 as a bundle of tens.", "Piensa en 100 como un grupo de decenas.") : tr(locale, `${many(h, "hundred", "en")} is ${h * 100}.`, `${many(h, "hundred", "es")} son ${h * 100}.`),
+          ],
+          steps: [tr(locale, `${h * 100} is ${h * 10} tens.`, `${h * 100} son ${h * 10} decenas.`)],
+          seconds: 12,
+        };
+      }
+      const k = r.int(10, 20);
+      return {
+        prompt: [`${many(k, "ten", locale)} = `, blank],
+        say: tr(locale, `${k} tens make what number?`, `¿Qué número forman ${k} decenas?`),
+        input: "keypad",
+        answer: { kind: "number", value: k * 10 },
+        wrong: misses(k * 10, [[k, "counted-tens-as-ones"], [k * 100, "used-hundreds-for-tens"], [k * 10 + 10, "counted-one-ten-too-many"]]),
+        hints:
+          k === 10
+            ? [
+                tr(locale, "Count by tens, one ten at a time.", "Cuenta de diez en diez, una decena cada vez."),
+                tr(locale, "Keep one finger up for each ten.", "Levanta un dedo por cada decena."),
+                tr(locale, "Ten tens make one hundred.", "Diez decenas forman una centena."),
+              ]
+            : [
+                tr(locale, "10 tens make 1 hundred.", "10 decenas forman 1 centena."),
+                tr(locale, `${k} tens is 10 tens and ${many(k - 10, "ten", "en")} more.`, `${k} decenas son 10 decenas y ${many(k - 10, "ten", "es")} más.`),
+                tr(locale, `10 tens is 100. ${cap(many(k - 10, "ten", "en"))} is ${(k - 10) * 10}.`, `10 decenas son 100. ${cap(many(k - 10, "ten", "es"))} ${k === 11 ? "es" : "son"} ${(k - 10) * 10}.`),
+              ],
+        steps: k === 10 ? [tr(locale, "10 tens make 100.", "10 decenas forman 100.")] : [`100 + ${(k - 10) * 10} = ${k * 10}`],
+        seconds: 12,
+      };
+    },
+  },
+  {
+    id: "m.read.1000",
+    subject: "math",
+    grade: "2",
+    title: { en: "Read and write numbers to 1000", es: "Leer y escribir números hasta 1000" },
+    standard: "2.NBT.A.3",
+    prereqs: ["m.place.1000"],
+    content: "computed",
+    levels: 3,
+    generate(r, level, locale) {
+      if (level === 1) {
+        // Expanded form to the numeral, the parts sometimes out of order.
+        const h = r.int(1, 9), t = r.bool(0.2) ? 0 : r.int(0, 9), o = r.bool(0.2) ? 0 : r.int(0, 9), n = h * 100 + t * 10 + o;
+        let parts = [h * 100, t * 10, o].filter((v) => v > 0);
+        const shuffled = r.bool(0.4);
+        if (shuffled) parts = r.shuffle(parts);
+        const leading = Number(parts.map((p) => String(p)[0]).join(""));
+        return {
+          prompt: [`${parts.join(" + ")} = `, blank],
+          say: plusWords(parts.join(" + "), locale),
+          input: "keypad",
+          answer: { kind: "number", value: n },
+          wrong: misses(n, [[Number(parts.join("")), "wrote-the-parts-side-by-side"], t === 0 || o === 0 ? [leading, "dropped-the-zero"] : null, shuffled ? [leading, "kept-the-shown-order"] : null]),
+          hints: [
+            tr(locale, "Each part is hundreds, tens or ones.", "Cada parte son centenas, decenas o unidades."),
+            tr(locale, "Put each digit in its place.", "Pon cada cifra en su lugar."),
+            tr(locale, `The hundreds digit is ${h}.`, `La cifra de las centenas es ${h}.`),
+          ],
+          steps: [`${cap(place(h, t, o, locale))}.`, `${parts.join(" + ")} = ${n}`],
+          seconds: 10,
+        };
+      }
       const h = r.int(1, 9);
       let t: number, o: number;
       if (r.bool()) {
@@ -1809,7 +1919,7 @@ export const MATH_K_2_MORE: Skill[] = [
         o = r.int(1, 9);
       }
       const n = h * 100 + t * 10 + o, rest = t * 10 + o;
-      if (r.bool()) {
+      if (level === 2) {
         const w = words(n, locale);
         return {
           prompt: [tr(locale, `Write the number ${w}.`, `Escribe el número ${w}.`)],
@@ -1823,6 +1933,28 @@ export const MATH_K_2_MORE: Skill[] = [
             tr(locale, `${cap(enWords(h * 100))} is ${h * 100}.`, `${cap(esWords(h * 100))} es ${h * 100}.`),
           ],
           steps: [`${cap(place(h, t, o, locale))}.`, tr(locale, `We write ${n}.`, `Se escribe ${n}.`)],
+          seconds: 12,
+        };
+      }
+      if (r.bool()) {
+        // The numeral back to expanded form, one part missing: "647 = 600 + ▢ + 7".
+        const parts = [h * 100, t * 10, o].filter((v) => v > 0);
+        const pos = r.int(0, parts.length - 1), key = parts[pos], digit = Number(String(key)[0]);
+        const line = (gap: string) => parts.map((v, i) => (i === pos ? gap : String(v))).join(" + ");
+        const [before, after] = line("?").split("?");
+        const w = key >= 100 ? "hundred" : key >= 10 ? "ten" : "one";
+        return {
+          prompt: glue([`${n} = ${before}`, blank, after]),
+          say: `${n} ${tr(locale, "is", "es")} ${plusWords(line(tr(locale, "blank", "espacio")), locale)}. ${tr(locale, "What number goes in the blank?", "¿Qué número va en el espacio?")}`,
+          input: "keypad",
+          answer: { kind: "number", value: key },
+          wrong: misses(key, [[digit, "gave-the-digit"], key * 10 <= 900 ? [key * 10, "wrong-place"] : null, key >= 10 ? [key / 10, "wrong-place"] : null]),
+          hints: [
+            tr(locale, "Expanded form adds the value of each digit.", "La forma desarrollada suma el valor de cada cifra."),
+            tr(locale, "Find the digit for the missing part.", "Busca la cifra de la parte que falta."),
+            tr(locale, `${n} has ${many(digit, w, "en")}.`, `${n} tiene ${many(digit, w, "es")}.`),
+          ],
+          steps: [`${cap(place(h, t, o, locale))}.`, `${n} = ${parts.join(" + ")}`],
           seconds: 12,
         };
       }
@@ -1974,7 +2106,25 @@ export const MATH_K_2_MORE: Skill[] = [
       const ODD: Choice = { label: tr(locale, "Odd", "Impar"), say: tr(locale, "Odd", "Impar") };
       const misleads = (v: number) => (v % 10 === 0 ? "thought-zero-is-odd" : v >= 10 && Math.floor(v / 10) % 2 !== v % 2 ? "looked-at-the-tens-digit" : null);
       if (level === 3) {
-        if (r.bool()) {
+        const kind = r.pick(["double", "double-and-one", "pick"] as const);
+        if (kind === "double-and-one") {
+          // An odd number is a double and 1 more (2.OA.C.3 writes it as an equation).
+          const k = r.int(2, 9), n = 2 * k + 1;
+          const trio = (x: number, y: number, why?: string): Choice => ({ label: `${x} + ${y} + 1`, say: tr(locale, `${x} plus ${y} plus 1`, `${x} más ${y} más 1`), ...(why ? { why } : {}) });
+          return {
+            prompt: [tr(locale, `${n} is odd. Which double and 1 more make ${n}?`, `${n} es impar. ¿Qué doble y 1 más forman ${n}?`)],
+            say: tr(locale, `${n} is odd. Which double and 1 more make ${n}?`, `${n} es impar. ¿Qué doble y 1 más forman ${n}?`),
+            ...choose(r, trio(k, k), [trio(k - 1, k + 1, "not-a-double"), trio(k + 1, k + 1, "double-off-by-one"), trio(k - 1, k - 1, "double-off-by-one")]),
+            hints: [
+              tr(locale, "Odd means one is left over after pairing.", "Impar quiere decir que sobra uno al hacer parejas."),
+              tr(locale, `Take 1 away from ${n}. Split the rest into two equal parts.`, `Quita 1 a ${n}. Separa el resto en dos partes iguales.`),
+              tr(locale, `${k - 1} + ${k + 1} + 1 = ${n}, but that is no double.`, `${k - 1} + ${k + 1} + 1 = ${n}, pero eso no es un doble.`),
+            ],
+            steps: [`${k} + ${k} + 1 = ${n}`],
+            seconds: 12,
+          };
+        }
+        if (kind === "double") {
           const k = r.int(2, 10), n = 2 * k;
           const pair = (x: number, y: number, why?: string): Choice => ({ label: `${x} + ${y}`, say: tr(locale, `${x} plus ${y}`, `${x} más ${y}`), ...(why ? { why } : {}) });
           return {

@@ -31,6 +31,7 @@ const PLAN = [
   ["m.shares.halves", "1", "1.G.A.3", ["m.shapes.name"], 3, "computed"],
   ["m.story.100", "2", "2.OA.A.1", ["m.add.2digit", "m.sub.2digit"], 3, "computed"],
   ["m.place.1000", "2", "2.NBT.A.1", ["m.place.tens"], 3, "computed"],
+  ["m.read.1000", "2", "2.NBT.A.3", ["m.place.1000"], 3, "computed"],
   ["m.compare.1000", "2", "2.NBT.A.4", ["m.compare.100", "m.place.1000"], 3, "computed"],
   ["m.odd.even", "2", "2.OA.C.3", ["m.skip.count"], 3, "computed"],
   ["m.array.add", "2", "2.OA.C.4", ["m.skip.count", "m.add.three"], 3, "computed"],
@@ -77,6 +78,10 @@ const EQUATION = /(?<![\d.\/:?+−]\s*)(\d+(?:\s*[+−]\s*\d+)*)\s*=\s*(\d+(?:\s
 function equations(line: string) {
   return [...line.matchAll(EQUATION)].map((m) => [m[1], m[2]] as const);
 }
+/** A run of counted numbers ending in an ellipsis: "1, 2, 3…", "4, …", "1… 2…". */
+const COUNT_RUN = /\d+(?:(?:,\s*|…\s*)\d+)*(?:,\s*)?…/g;
+/** The number a count starts from: "starting at 10", "Start at 3", "Count up from 4", "desde el 10". */
+const STARTS_AT = /(?:starting at|start at|from|desde el|desde|empieza en) (\d+)/gi;
 /** Worked comparisons in words: "7 is more than 4", "5 hundreds is less than 9 hundreds", "5 centenas son más que 3 centenas". */
 const COMPARISON = /\b(\d+)(?: [a-z]+)? (?:is|es|son) (more|less|mayor|menor|más|menos) (?:than|que) (\d+)\b/g;
 const sentences = (s: string) => s.split(/[.?!:;\n]+/).map((x) => x.trim()).filter(Boolean);
@@ -162,8 +167,10 @@ describe("K–2 math: every item", () => {
           expect(es.visual, `${where} visual differs by language`).toEqual(en.visual);
           expect([es.input, es.pad, es.markable, es.picture, es.wrong], `${where} pad differs by language`).toEqual([en.input, en.pad, en.markable, en.picture, en.wrong]);
           expect(es.choices?.map((c) => [c.why, c.picture]), `${where} choices differ by language`).toEqual(en.choices?.map((c) => [c.why, c.picture]));
-          variety.add(JSON.stringify([en.prompt, en.visual, en.picture, en.choices?.map((c) => c.label).sort()]));
-          varietyEs.add(JSON.stringify([es.prompt, es.visual, es.picture, es.choices?.map((c) => c.label).sort()]));
+          // The task is what the child is shown: words and pictures. Choices do not count, so a level
+          // with few questions cannot pass on its wrong answers alone.
+          variety.add(JSON.stringify([en.prompt, en.visual, en.picture]));
+          varietyEs.add(JSON.stringify([es.prompt, es.visual, es.picture]));
           for (const it of [en, es]) {
             const at = `${where} ${it === en ? "en" : "es"}`;
             expect(it.hints.length, `${at} hints`).toBe(3);
@@ -187,7 +194,12 @@ describe("K–2 math: every item", () => {
             // A hint's arithmetic never hands over the answer, unless the prompt already shows that number.
             const keyText = answerText(it.answer, it.choices);
             if (!ints(strings).includes(Number(keyText)))
-              for (const h of it.hints) for (const [l, r] of equations(h)) expect([...ints(l), ...ints(r)].map(String), `${at} hint "${h}" shows the answer`).not.toContain(keyText);
+              for (const h of it.hints) {
+                for (const [l, r] of equations(h)) expect([...ints(l), ...ints(r)].map(String), `${at} hint "${h}" shows the answer`).not.toContain(keyText);
+                // Nor does a counted run ("count on: 4, …", "1, 2, 3…", "1… 2…") or the number a count starts from.
+                for (const m of h.matchAll(COUNT_RUN)) expect(ints(m[0]).map(String), `${at} hint "${h}" counts to the answer`).not.toContain(keyText);
+                for (const m of h.matchAll(STARTS_AT)) expect(m[1], `${at} hint "${h}" starts from the answer`).not.toBe(keyText);
+              }
             for (const line of [...it.hints, ...it.steps]) {
               for (const [l, r] of equations(line)) expect(sumLine(l), `${at} false equation "${line}"`).toBe(sumLine(r));
               for (const m of line.matchAll(COMPARISON)) {
@@ -239,7 +251,7 @@ describe("K–2 math: every item", () => {
             }
           }
         }
-        // The brief's floor: 12 distinct items per level (choice order does not count), so a set is not memorized.
+        // The brief's floor: 12 distinct items per level, so a set is not memorized.
         expect(variety.size, `${skill.id} L${level} variety`).toBeGreaterThanOrEqual(12);
         expect(varietyEs.size, `${skill.id} L${level} Spanish variety`).toBeGreaterThanOrEqual(12);
       }
@@ -420,6 +432,12 @@ describe("m.decompose.10", () => {
         // "1 + 10" and "10 + 1" are one choice to a child who knows order does not matter.
         const pairs = it.choices!.map((c) => terms(c.label).sort((a, b) => a - b).join("+"));
         expect(new Set(pairs).size, `swapped pair in ${it.choices!.map((c) => c.label)}`).toBe(pairs.length);
+        // "Another way": the way on screen is never offered again, in either order.
+        const shownWay = /^\d+ = (\d+) \+ (\d+)\./.exec(text(it));
+        if (shownWay) {
+          expect(Number(shownWay[1]) + Number(shownWay[2])).toBe(n);
+          expect(pairs, text(it)).not.toContain([Number(shownWay[1]), Number(shownWay[2])].sort((a, b) => a - b).join("+"));
+        }
       }
   });
 });
@@ -886,7 +904,9 @@ describe("m.story.100", () => {
 });
 
 describe("m.place.1000", () => {
-  it("blocks are counted one by one; expanded form is evaluated; a digit's value comes from its position; number words are read back", () => {
+  // Place words, kept here apart from the generator: what one of each is worth.
+  const WORTH: Record<string, number> = { hundred: 100, hundreds: 100, ten: 10, tens: 10, one: 1, ones: 1, centena: 100, centenas: 100, decena: 10, decenas: 10, unidad: 1, unidades: 1 };
+  it("blocks are counted one by one; a digit's value comes from its position; the missing count or bundle makes the number", () => {
     for (const it of items("m.place.1000", 1)) {
       const v = it.visual!;
       if (v.kind !== "base-ten") throw new Error("expected blocks");
@@ -895,30 +915,70 @@ describe("m.place.1000", () => {
       for (let k = 0; k < v.tens; k++) total += 10;
       for (let k = 0; k < v.ones; k++) total += 1;
       expect(num(it.answer)).toBe(total);
+      // Never flats alone, where "3 flats make 300" would be the answer.
+      expect(v.tens + v.ones).toBeGreaterThan(0);
     }
     for (const it of items("m.place.1000", 2)) {
-      const t = text(it);
-      const m = /value of the (\d) in (\d+)/.exec(t);
-      if (m) {
-        const digits = m[2].split("");
-        expect(digits.filter((d) => d === m[1]).length).toBe(1);
-        const pos = digits.indexOf(m[1]);
-        expect(keyLabel(it)).toBe(m[1] + "0".repeat(digits.length - 1 - pos));
-      } else expect(shown(t.split("=")[0])).toBe(num(it.answer));
+      const m = /value of the (\d) in (\d+)/.exec(text(it))!;
+      const digits = m[2].split("");
+      expect(digits.filter((d) => d === m[1]).length).toBe(1);
+      const pos = digits.indexOf(m[1]);
+      expect(keyLabel(it)).toBe(m[1] + "0".repeat(digits.length - 1 - pos));
     }
-    for (const [en, es] of both("m.place.1000", 3))
+    const kinds = new Set<string>();
+    for (const locale of LOCALES)
+      for (const it of items("m.place.1000", 3, locale)) {
+        const key = num(it.answer);
+        // Put the key in the blank and add up every "count place" pair on the right of the "=".
+        const [left, right] = text(it).replace("▢", String(key)).split(" = ");
+        const pairs = [...right.matchAll(/(\d+) (\p{L}+)/gu)].map((m) => Number(m[1]) * WORTH[m[2]]);
+        const valueOf = (s: string) => {
+          const named = [...s.matchAll(/(\d+) (\p{L}+)/gu)];
+          return named.length ? named.reduce((t, m) => t + Number(m[1]) * WORTH[m[2]], 0) : Number(s);
+        };
+        if (/^\d+$/.test(left)) {
+          expect(pairs.length, text(it)).toBe(3);
+          expect(pairs.reduce((a, b) => a + b, 0), text(it)).toBe(Number(left));
+          expect(key).toBeLessThanOrEqual(9);
+          kinds.add("units");
+        } else {
+          expect(valueOf(left), text(it)).toBe(valueOf(right));
+          kinds.add(/hundred|centena/.test(left) ? "hundreds-as-tens" : "tens");
+        }
+        expect(it.say).toMatch(/blank|espacio|how many|cuántas|what number|qué número/i);
+      }
+    expect([...kinds].sort()).toEqual(["hundreds-as-tens", "tens", "units"]);
+  });
+});
+
+describe("m.read.1000", () => {
+  it("expanded form is evaluated; number words are read back; the missing expanded part makes the number", () => {
+    for (const it of items("m.read.1000", 1)) expect(shown(text(it).split("=")[0])).toBe(num(it.answer));
+    for (const [en, es] of both("m.read.1000", 2))
+      for (const it of [en, es]) {
+        const w = /(?:number|número) (.+)\.$/.exec(text(it))!;
+        expect(readWords(w[1], it === en ? "en" : "es")).toBe(num(it.answer));
+      }
+    const kinds = new Set<string>();
+    for (const [en, es] of both("m.read.1000", 3))
       for (const it of [en, es]) {
         const locale: Locale = it === en ? "en" : "es";
         const t = text(it);
-        const w = /(?:number|número) (.+)\.$/.exec(t);
-        if (w) expect(readWords(w[1], locale)).toBe(num(it.answer));
-        else {
+        if (it.input === "choices") {
           const n = ints(t)[0];
           expect(readWords(keyLabel(it), locale)).toBe(n);
           for (const lab of wrongLabels(it)) expect(readWords(lab, locale)).not.toBe(n);
           expect(it.choices!.length, `${n}: a guess between two`).toBeGreaterThanOrEqual(3);
+          kinds.add("words");
+        } else {
+          const [n, sum] = t.replace("▢", String(num(it.answer))).split(" = ");
+          expect(shown(sum)).toBe(Number(n));
+          // Expanded form: each part is one digit followed by zeros.
+          for (const p of sum.split(" + ")) expect(p, t).toMatch(/^[1-9]0*$/);
+          kinds.add("expanded");
         }
       }
+    expect([...kinds].sort()).toEqual(["expanded", "words"]);
   });
 });
 
@@ -954,7 +1014,16 @@ describe("m.odd.even", () => {
     for (const it of items("m.odd.even", 2)) expect(keyLabel(it)).toBe(parity(ints(text(it))[0]));
     for (const it of items("m.odd.even", 3)) {
       const t = text(it);
-      if (/double/.test(t)) {
+      if (/double and 1 more/.test(t)) {
+        // An odd number: the key is a double plus 1, and no wrong choice is one.
+        const n = ints(t)[0];
+        const [p, q, one] = terms(keyLabel(it));
+        expect([p, one, p + q + one, parity(n)]).toEqual([q, 1, n, "Odd"]);
+        for (const w of wrongLabels(it)) {
+          const [x, y, z] = terms(w);
+          expect(x === y && x + y + z === n, `${w} is also a double and 1 for ${n}`).toBe(false);
+        }
+      } else if (/double/.test(t)) {
         const n = ints(t)[0];
         const [p, q] = terms(keyLabel(it));
         expect([p, p + q]).toEqual([q, n]);
