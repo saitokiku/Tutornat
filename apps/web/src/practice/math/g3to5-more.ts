@@ -2383,7 +2383,7 @@ export const MATH_3_5_MORE: Skill[] = [
     id: "m.bargraph.scaled",
     subject: "math",
     grade: "3",
-    title: { en: "Scaled picture graphs and bar graph problems", es: "Pictogramas con escala y problemas con gráficas de barras" },
+    title: { en: "Scaled picture graphs and bar graph word problems", es: "Pictogramas con escala y problemas escritos sobre gráficas de barras" },
     standard: "3.MD.B.3",
     prereqs: ["m.mult.facts", "m.addsub.3digit"],
     content: "computed",
