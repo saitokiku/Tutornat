@@ -16,14 +16,24 @@ export function bandOf(grade: Grade): Band {
   return n <= 2 ? "k2" : n <= 5 ? "35" : n <= 8 ? "68" : "9";
 }
 
-/** Entries for a learner: their band first, their language preferred when both exist. */
+/**
+ * Entries for a learner: their band first, their language preferred when both exist. Inside the band the
+ * subjects take turns, each starting from its course nearest the learner's grade, so the first picks
+ * (the home page suggests the first one) are one of each subject and at the learner's own grade when
+ * one is written, not every grade-6 math course before any science.
+ */
 export function catalogueFor(grade: Grade, locale: Locale): CatalogueEntry[] {
   const band = bandOf(grade);
   const sameLang = CATALOGUE.filter((c) => c.locale === locale);
   const otherLang = CATALOGUE.filter((c) => c.locale !== locale && !sameLang.some((s) => sameTopic(s, c)));
-  const pool = [...sameLang, ...otherLang];
-  const rank = (c: CatalogueEntry) => (bandOf(c.grade) === band ? 0 : 1);
-  return pool.sort((a, b) => rank(a) - rank(b));
+  const away = (c: CatalogueEntry) => Math.abs(N(c.grade) - N(grade));
+  const turns = (list: CatalogueEntry[]) => {
+    const bySubject = SUBJECT_ORDER.map((s) => list.filter((c) => c.subject === s && bandOf(c.grade) === band).sort((a, b) => away(a) - away(b)));
+    const rounds = Array.from({ length: Math.max(...bySubject.map((l) => l.length)) }, (_, k) => bySubject.flatMap((l) => l[k] ?? []));
+    return rounds.flatMap((round) => round.sort((a, b) => away(a) - away(b)));
+  };
+  const rest = [...sameLang, ...otherLang].filter((c) => bandOf(c.grade) !== band);
+  return [...turns(sameLang), ...turns(otherLang), ...rest];
 }
 
 // Translations share an id prefix: "math-fractions" and "math-fractions-es".

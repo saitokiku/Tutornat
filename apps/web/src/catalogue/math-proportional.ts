@@ -4,7 +4,7 @@ const proportional: CatalogueEntry = {
   id: "math-proportional",
   title: "Proportional relationships",
   summary:
-    "Spot proportional relationships in tables, graphs and equations, find the constant of proportionality, solve proportions, and work with scale drawings.",
+    "Spot proportional relationships in tables and graphs, find the constant of proportionality k in y = kx, solve proportions, and work with scale drawings.",
   subject: "math",
   grade: "7",
   locale: "en",

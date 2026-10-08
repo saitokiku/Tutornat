@@ -50,7 +50,23 @@ describe("catalogue", () => {
     for (const grade of ["K", "4", "7", "9"] as const) {
       const band = catalogueFor(grade, "en").filter((c) => bandOf(c.grade) === bandOf(grade));
       expect([...new Set(band.map((c) => c.subject))].sort(), grade).toEqual(["english", "math", "science"]);
+      // The first picks take turns by subject, so a learner isn't offered three math courses in a row.
+      expect(band.slice(0, 3).map((c) => c.subject).sort(), grade).toEqual(["english", "math", "science"]);
     }
+  });
+
+  it("puts a course at the learner's own grade first, in their language first", () => {
+    const grades = ["K", "1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+    for (const locale of ["en", "es"] as const)
+      for (const grade of grades) {
+        const band = catalogueFor(grade, locale).filter((c) => bandOf(c.grade) === bandOf(grade));
+        const where = `${grade}/${locale}`;
+        // The home page suggests band[0]: a grade-8 learner gets a grade-8 course, not grade 6.
+        if (band.some((c) => c.locale === locale && c.grade === grade)) expect(band[0].grade, where).toBe(grade);
+        const firstOther = band.findIndex((c) => c.locale !== locale);
+        if (firstOther >= 0) expect(band.slice(firstOther).every((c) => c.locale !== locale), where).toBe(true);
+      }
+    expect(catalogueFor("3", "es")[0].id).toBe("math-fractions-es");
   });
 
   it("prefers the learner's language for translated courses", () => {
@@ -71,5 +87,11 @@ describe("catalogue", () => {
     expect(matchEntry("I want to learn fractions", "3", "en")?.id).toBe("math-fractions");
     expect(matchEntry("why does the moon change shape", "5", "en")?.id).toBe("science-moon");
     expect(matchEntry("knitting socks", "5", "en")).toBeNull();
+    // "Equations" means the equations course, not the proportions one that also mentions y = kx.
+    for (const grade of ["6", "7", "8"] as const) {
+      for (const goal of ["equations", "help with equations", "solve equations", "I need to solve equations for a test"])
+        expect(matchEntry(goal, grade, "en")?.id, `${grade}: ${goal}`).toBe("math-equations");
+      for (const goal of ["proportions", "constant of proportionality", "scale drawings"]) expect(matchEntry(goal, grade, "en")?.id, `${grade}: ${goal}`).toBe("math-proportional");
+    }
   });
 });
