@@ -1,5 +1,6 @@
 import { model } from "@/lib/ai/config";
 import { cachedCourse, CourseRequest, writeCourse, type CourseEvent } from "@/lib/ai/build";
+import { screen } from "@/lib/ai/safety";
 import { capMessage, meter, overSpend, spendGate } from "@/lib/server/budget";
 import { limited } from "@/lib/server/rate";
 
@@ -26,12 +27,17 @@ function ndjson(events: AsyncIterable<CourseEvent> | Iterable<CourseEvent>, sign
 // A course another family already got for the same request comes straight from the cache: no model
 // call and nothing counted against the spend caps. Over a cap, the stream is one error event with the
 // family's message (error "budget"); a course that reaches a cost cap partway stops the same way.
+// A goal the safety screen stops is one error event (error "safety") with the tutor's fixed reply.
 export async function POST(req: Request) {
   const m = await model("build", meter(req));
   if (!m) return Response.json({ error: "demo" }, { status: 503 });
   if (limited(req, "course", 6)) return Response.json({ error: "rate" }, { status: 429 });
   const parsed = CourseRequest.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "bad_request" }, { status: 400 });
+  // The safety screen reads the learner's goal before anything else, as in the tutor: no model call,
+  // no shared course and nothing counted against the caps. The browser screens it too (Draft.tsx).
+  const said = screen(parsed.data.goal, parsed.data.locale);
+  if (said.kind !== "ok") return ndjson([{ type: "error", error: "safety", flag: said.kind, message: said.reply }], req.signal);
   const hit = cachedCourse(parsed.data);
   if (hit) return ndjson(hit, req.signal);
   const capped = await spendGate(req, "course", parsed.data.locale);

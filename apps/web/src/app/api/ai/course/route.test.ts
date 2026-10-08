@@ -2,6 +2,7 @@
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeCourse, type CourseRequest } from "@/lib/ai/build";
+import { screen } from "@/lib/ai/safety";
 import type { LessonOut } from "@/lib/ai/schemas";
 import { capMessage, meter } from "@/lib/server/budget";
 import { POST } from "./route";
@@ -114,6 +115,25 @@ describe("POST /api/ai/course", () => {
     expect(got.map((e) => e.type)).toEqual(["step", "outline", "step", "error"]);
     expect(got.at(-1)).toMatchObject({ error: "budget", message: capMessage("course", "day", "en") });
     expect(slot.writer.doGenerateCalls).toHaveLength(1);
+  });
+
+  it("screens the goal before any model call: the tutor's fixed reply, no writer, even over the cap", async () => {
+    const asked = [
+      ["I want to die", "en"],
+      ["mi papá me pega", "es"],
+      ["how to make a bomb", "en"],
+    ] as const;
+    for (const [goal, locale] of asked) {
+      const s = screen(goal, locale);
+      if (s.kind === "ok") throw new Error(`the screen let "${goal}" through`);
+      expect(await events(await post({ goal, grade: "5", subject: "science", length: "short", locale }))).toEqual([{ type: "error", error: "safety", flag: s.kind, message: s.reply }]);
+    }
+    // A family over its cap still gets the referral, not the cap's message.
+    vi.stubEnv("KAIZEN_AI_DAILY_TURNS", "1");
+    const learner = "9".repeat(32);
+    spendDay(learner);
+    expect(await events(await post({ goal: "I want to die", grade: "5", subject: "science", length: "short", locale: "en" }, learner))).toEqual([expect.objectContaining({ error: "safety", flag: "crisis" })]);
+    expect(slot.writer!.doGenerateCalls).toHaveLength(0);
   });
 
   it("is not there without a provider: the browser builds a template instead", async () => {

@@ -257,8 +257,11 @@ export type CourseEvent =
   | { type: "outline"; title: string; count: number }
   | { type: "lesson"; lesson: LessonOut & { id: string } }
   | { type: "skipped"; title: string; reason: string }
-  /** `message` is said to the family as it stands (a spend cap reached: error "budget"). */
-  | { type: "error"; error: string; scope?: "day" | "month"; message?: string }
+  /**
+   * `message` is said to the family as it stands (a spend cap reached: error "budget"; the safety
+   * screen's fixed reply: error "safety", with the screen's `flag` as the tutor sends it).
+   */
+  | { type: "error"; error: string; scope?: "day" | "month"; message?: string; flag?: "crisis" | "abuse" | "offLimits" }
   | { type: "done" };
 
 /** A spend cap reached partway, and the family's message for it (lib/server/budget.ts). */
