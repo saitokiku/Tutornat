@@ -194,7 +194,8 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
     if (r.ticker) clearInterval(r.ticker);
     r.ticker = null;
     r.unsubAbort?.();
-    if (cancelled) r.player?.cancel(fadeMs);
+    // Cancelled: fade out. Finished: everything has played; let go of the run's gain node.
+    r.player?.cancel(cancelled ? fadeMs : 0);
     closeSocket(r);
     if (run === r) {
       run = null;

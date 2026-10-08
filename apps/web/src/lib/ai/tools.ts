@@ -42,11 +42,15 @@ export const VisualInput = z.discriminatedUnion("kind", [
  */
 export function hintsGiven(messages: UIMessage[]): number {
   let n = 0;
-  for (const m of messages)
+  for (const m of messages) {
+    // A spoken answer's vetted hint, given in the prompt by the precheck (lib/ai/tutor.ts), not by a tool call.
+    const meta = m.role === "assistant" ? (m.metadata as { hintGiven?: unknown } | undefined) : undefined;
+    if (meta?.hintGiven === 1) n++;
     for (const p of m.parts ?? []) {
       const part = p as { type: string; state?: string; output?: { hint?: unknown } };
       if (part.type === "tool-next_hint" && part.state === "output-available" && typeof part.output?.hint === "string") n++;
     }
+  }
   return n;
 }
 

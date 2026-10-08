@@ -161,6 +161,12 @@ describe("speaking and barge-in", () => {
     expect(run([{ type: "duck", on: false, at: 3300 }], r.s).s.ducked).toBe(false);
   });
 
+  it("tapping the mic while the tutor talks interrupts it and opens the mic", () => {
+    const r = run([{ type: "mic", at: 2500 }], speaking());
+    expect(r.s.phase).toBe("listening");
+    expect(r.types).toEqual(["stop-voice", "stop-reply", "open-mic"]);
+  });
+
   it("Stop stops the voice only; in conversation mode the mic stays open", () => {
     expect(run([{ type: "stop-voice", at: 2500 }], speaking())).toMatchObject({ s: { phase: "idle" }, types: ["stop-voice", "stop-reply"] });
     expect(run([{ type: "stop-voice", at: 2500 }], speaking({ band: "k2", conversationAllowed: true })).s.phase).toBe("listening");

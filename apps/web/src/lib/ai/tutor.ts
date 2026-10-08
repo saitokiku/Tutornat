@@ -217,5 +217,6 @@ export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promi
     stopWhen: [isStepCount(5), afterBoardOnly],
     maxOutputTokens: voice ? 300 : 700,
   });
-  return createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) });
+  // A vetted hint given through the precheck is marked on the reply, so the next turn's ladder continues after it.
+  return createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream, messageMetadata: ({ part }) => (gaveHint && part.type === "start" ? { hintGiven: 1 } : undefined) }) });
 }

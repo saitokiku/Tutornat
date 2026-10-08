@@ -259,6 +259,8 @@ export function convStep(s: ConvState, e: ConvEvent): Out {
 
     case "speaking":
       if (e.type === "barge") return { state: { ...s, phase: "hearing", ducked: false, turn: null }, effects: [{ type: "stop-reply" }] };
+      // Tapping the mic while the tutor talks interrupts it: the voice stops, the mic opens.
+      if (e.type === "mic") return listen({ ...s, ducked: false, turn: null }, e.at, [{ type: "stop-voice", fadeMs: 120 }, { type: "stop-reply" }]);
       if (e.type === "stop-voice")
         return s.mode === "conversation" && !s.halfDuplex
           ? { state: { ...s, phase: "listening", ducked: false, turn: null }, effects: [{ type: "stop-voice", fadeMs: 120 }, { type: "stop-reply" }] }

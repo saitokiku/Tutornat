@@ -78,6 +78,17 @@ describe("a spoken answer is checked in code before the model call", () => {
     expect(body).toContain(JSON.stringify(item.hints[1]).slice(1, -1));
   });
 
+  it("the hint the precheck gave is counted on the next turn, so the ladder doesn't repeat it", async () => {
+    const item = makeItem(ITEM.skillId, ITEM.level, ITEM.seed, "en");
+    const first = model();
+    const body = await (await tutorTurn({ messages: [said("three")], context: voiceCtx }, first.m)).text();
+    expect(body).toContain('"messageMetadata":{"hintGiven":1}');
+    const reply: UIMessage = { id: "a1", role: "assistant", metadata: { hintGiven: 1 }, parts: [{ type: "text", text: "Not yet. Count again." }] };
+    const second = model();
+    await (await tutorTurn({ messages: [said("three"), reply, { ...said("four"), id: "u2" }], context: voiceCtx }, second.m)).text();
+    expect(systemText(second.calls[0])).toContain(`use this vetted hint: "${item.hints[1]}"`);
+  });
+
   it("when it can't tell what was said, it asks again and never calls it wrong", async () => {
     const { m, calls } = model();
     await (await tutorTurn({ messages: [said("banana")], context: voiceCtx }, m)).text();
