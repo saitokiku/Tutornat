@@ -408,7 +408,11 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
             )}
             <div className="flex items-start justify-center gap-3">
               <h1 id="problem" tabIndex={-1} className={`text-center font-brand font-semibold text-ink outline-none ${young ? "text-t1 sm:text-d3" : "text-t2 sm:text-t1"}`}>
-                <span className="sr-only">{t("practice.problemN", { n: index + 1, total: liveSet.slots.length })}. </span>
+                <span className="sr-only">
+                  {t("practice.problemN", { n: index + 1, total: liveSet.slots.length })}.{" "}
+                  {/* Focus lands here, after the passage: say there is a text to read above. */}
+                  {item.passage && `${t(item.passage.length > 1 ? "practice.readBothAbove" : "practice.readAbove")} `}
+                </span>
                 <MathText center parts={item.prompt} blank={holding ? <span className="font-opmono text-good">{typeof picked === "number" ? item.choices?.[picked]?.label : value}</span> : undefined} />
               </h1>
               <Hear text={item.say} className={`mt-1 ${hear}`} />
