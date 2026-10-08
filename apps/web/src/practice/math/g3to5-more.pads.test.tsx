@@ -108,7 +108,8 @@ describe("grades 3–5 (more): touch pads in the Runner", () => {
   });
 
   it("m.frac.asdiv L3: a ÷ b placed at a b-ths answers right, and a tick-counting miss is diagnosed", async () => {
-    const seed = seedWhere("m.frac.asdiv", 3, (it) => it.answer.kind === "fraction" && it.answer.n > 1);
+    // Only where the tick-counting value is listed: when (a − 1)/b equals the whole number a ÷ b drops to, that tap is "dropped-the-remainder".
+    const seed = seedWhere("m.frac.asdiv", 3, (it) => it.answer.kind === "fraction" && it.answer.n > 1 && !!it.wrong?.some((w) => w.why === "counted-ticks-not-jumps"));
     const item = makeItem("m.frac.asdiv", 3, seed, "en");
     if (item.answer.kind !== "fraction") throw new Error("shape");
     const { n, d } = item.answer;

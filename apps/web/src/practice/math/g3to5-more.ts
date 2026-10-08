@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/types";
-import { check, parseNumber } from "../answer";
+import { check, misconceptionOf, parseNumber } from "../answer";
 import { gcd, type Rng } from "../rng";
 import { sayFrac, tr } from "../text";
 import type { Answer, Choice, ItemBody, MathPart, Pad, Skill } from "../types";
@@ -81,7 +81,10 @@ const say2 = (locale: Locale, pair: Pair) => tr(locale, pair[0], pair[1]);
 
 /** A likely wrong typed answer and the misconception it shows; null or false entries are skipped. */
 type Miss = readonly [value: number | string, why: string] | null | false;
-/** Tagged wrong values, minus repeats, negatives and anything the checker would accept as right. */
+/**
+ * Tagged wrong values, minus negatives, anything the checker would accept as right, and repeats: a value
+ * equal to an earlier one (6/6 after 1) is skipped, since the earlier tag would claim that answer anyway.
+ */
 function misses(answer: Answer, list: Miss[]): { value: string; why: string }[] {
   const out: { value: string; why: string }[] = [];
   for (const m of list) {
@@ -89,7 +92,7 @@ function misses(answer: Answer, list: Miss[]): { value: string; why: string }[] 
     const [v, why] = m;
     if (typeof v === "number" && !(Number.isFinite(v) && v >= 0)) continue;
     const value = String(v);
-    if (!out.some((o) => o.value === value) && !check(answer, value).correct) out.push({ value, why });
+    if (!check(answer, value).correct && !misconceptionOf({ answer, wrong: out }, value)) out.push({ value, why });
   }
   return out;
 }
@@ -1066,6 +1069,18 @@ const AREA_STORIES: AreaStory[] = [
     thin: 2 / 3,
   },
 ];
+
+/** The first step of l × w: rows to picture for a width up to 10, a partial product past that (22 × 20, then one more row). */
+function areaStart(l: number, w: number, locale: Locale) {
+  if (w <= 10) return tr(locale, `Think of ${w} rows with ${l} squares in each row.`, `Piensa en ${w} filas con ${l} cuadrados en cada fila.`);
+  const ones = w % 10, tens = w - ones;
+  if (ones === 0) return tr(locale, `${l} × ${tens / 10} = ${l * (tens / 10)}. Now multiply that by 10.`, `${l} × ${tens / 10} = ${l * (tens / 10)}. Ahora multiplica eso por 10.`);
+  return tr(
+    locale,
+    `${l} × ${tens} = ${group(l * tens)}. Now add ${ones === 1 ? "one more row" : `${ones} more rows`} of ${l}.`,
+    `${l} × ${tens} = ${group(l * tens)}. Ahora suma ${ones === 1 ? "una fila más" : `${ones} filas más`} de ${l}.`,
+  );
+}
 
 // ---------- grade 4 symmetry (draft bank) ----------
 
@@ -3101,7 +3116,7 @@ export const MATH_3_5_MORE: Skill[] = [
           hints: [
             t("Is the question about the distance around the edge, or the space inside?", "¿La pregunta es sobre la distancia alrededor del borde o sobre el espacio de adentro?"),
             area ? t("The space inside is the area: length × width.", "El espacio de adentro es el área: largo × ancho.") : t("The distance around is the perimeter: add all four sides.", "La distancia alrededor es el perímetro: suma los cuatro lados."),
-            area ? t(`Think of ${w} rows with ${l} squares in each row.`, `Piensa en ${w} filas con ${l} cuadrados en cada fila.`) : `${l} + ${w} = ${l + w}.`,
+            area ? areaStart(l, w, locale) : `${l} + ${w} = ${l + w}.`,
           ],
           steps: area
             ? [`${l} × ${w} = ${group(value)}`, t(`The area is ${group(value)} ${sq}.`, `El área es de ${group(value)} ${sq}.`)]
@@ -4054,7 +4069,10 @@ export const MATH_3_5_MORE: Skill[] = [
       const t = (en: string, es: string) => tr(locale, en, es);
       const ctx = r.pick(COMPOSITES), [u, box] = r.pick(ctx.sizes), ab = say2(locale, u.ab), cu = say2(locale, u.cu);
       const part = () => box.map(([lo, hi]) => r.int(lo, hi));
-      const [a, b, c] = part(), [d, e, f] = part();
+      const [a, b, c] = part();
+      let [d, e, f] = part();
+      // Level 2 divides by the hidden part's length × width: keep that a two-digit divisor (5.NBT.B.6).
+      while (level === 2 && d * e > 99) [d, e, f] = part();
       const V1 = a * b * c, V2 = d * e * f, V = V1 + V2;
       const [g1, g2, gV] = [V1, V2, V].map(group);
       if (level === 1) {

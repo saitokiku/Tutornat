@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { linePoints } from "@/components/practice/pad-math";
-import { answerText, check } from "../answer";
+import { answerText, check, misconceptionOf } from "../answer";
 import { evaluate, parse } from "../expr";
 import { makeItem } from "../skills";
 import type { Answer, Item } from "../types";
@@ -127,6 +127,8 @@ describe.each(MATH_3_5_MORE.map((s) => [s.id, s] as const))("%s: every item", (_
               for (const w of it.wrong!) {
                 expect(w.why, where).toMatch(KEBAB);
                 expect(check(it.answer, w.value).correct, `${where} wrong value ${w.value} is accepted`).toBe(false);
+                // Equal values (1 and 6/6) are one answer: each listed value must get its own tag, never an earlier one's.
+                expect(misconceptionOf(it, w.value), `${where} wrong value ${w.value} is diagnosed by another tag`).toBe(w.why);
               }
             }
             if (/[/(]/.test(answerText(it.answer))) expect(it.alt ?? "", `${where} alt gives the answer`).not.toContain(answerText(it.answer));
@@ -806,6 +808,15 @@ describe("m.area.word", () => {
         for (let r = 0; r < w; r++) for (let c = 0; c < l; c++) squares++;
         const isArea = locale === "en" ? /square|area/.test(text(it)) : /cuadrad|área/.test(text(it));
         expect(numberOf(it.answer)).toBe(isArea ? squares : l + w + l + w);
+        // A width past 10 starts with a partial product (22 × 20), never 21 rows of 22 to picture.
+        if (isArea && w > 10) {
+          const m = /^(\d+) × (\d+) = ([\d,]+)\./.exec(it.hints[2]);
+          expect(m, `${it.hints[2]}`).not.toBeNull();
+          const [a, b, c] = m!.slice(1).map((x) => Number(x.replace(/,/g, "")));
+          expect(a).toBe(l);
+          expect(b % 10 === 0 ? b : b * 10).toBe(w - (w % 10));
+          expect(c).toBeLessThan(numberOf(it.answer));
+        }
       }
   });
   it("level 2: the missing width multiplies or walks back to what was given", () => {
@@ -1139,6 +1150,8 @@ describe("m.volume.composite", () => {
     for (const it of items("m.volume.composite", 2)) {
       const [V, a, b, c, d, e] = nums(text(it));
       expect(a * b * c + d * e * numberOf(it.answer)).toBe(V);
+      // Grade 5 divides by two-digit numbers at most (5.NBT.B.6).
+      expect(d * e).toBeLessThanOrEqual(99);
     }
   });
 });
