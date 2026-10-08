@@ -54,7 +54,7 @@ export function weatherChart(r: Rng, level: number, locale: Locale): ItemBody {
       ]),
       hints: [
         tr(locale, "Count the dots in each group.", "Cuenta los puntos de cada grupo."),
-        tr(locale, "The group with more dots shows the weather that happened more.", "El grupo con más puntos muestra el tiempo que hubo más."),
+        tr(locale, "The group with more dots shows the weather that happened more.", "El grupo con más puntos muestra el tiempo que hubo más veces."),
         tr(locale, `The first group has ${a} dots.`, `El primer grupo tiene ${a} puntos.`),
       ],
       steps: [

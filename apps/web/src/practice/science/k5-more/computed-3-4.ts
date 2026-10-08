@@ -306,21 +306,24 @@ function fullCycles(r: Rng, locale: Locale): ItemBody {
 // ── Waves: amplitude and wavelength (grade 4) ────────────────────────────────────────────────
 // The wave is drawn as a zigzag through its crests, rest line and troughs, a crest at distance 0.
 // Every crest lands on a labeled whole number and the height axis counts by ones (heights ≤ 6).
-// Waves travel along ropes and springs, never water: water waves this steep would break.
+// Waves travel along ropes and springs, never water: water waves this steep would break. A rope
+// shaken by hand makes a wave at most a quarter as high as it is long (1 foot high and 4 or 5 feet
+// long, or 2 feet high and 8 to 10 feet long), and its troughs stay off the ground; only the toy
+// spring, measured in inches, makes the steeper shapes.
 
-type WaveCtx = { en: (name: string) => string; es: (name: string) => string; unit: [string, string, string, string]; restEn: string; restEs: string };
+type WaveCtx = { en: (name: string) => string; es: (name: string) => string; unit: [string, string, string, string]; restEn: string; restEs: string; steep: boolean };
 const WAVES: WaveCtx[] = [
-  { en: (n) => `${n} shakes one end of a long rope.`, es: (n) => `${n} sacude la punta de una cuerda larga.`, unit: ["foot", "feet", "pie", "pies"], restEn: "the rope", restEs: "la cuerda" },
-  { en: () => "A wave moves along a long toy spring.", es: () => "Una onda recorre un resorte largo de juguete.", unit: ["inch", "inches", "pulgada", "pulgadas"], restEn: "the spring", restEs: "el resorte" },
-  { en: (n) => `${n} wiggles one end of a long jump rope tied to a fence.`, es: (n) => `${n} mueve la punta de una cuerda de saltar larga atada a una cerca.`, unit: ["foot", "feet", "pie", "pies"], restEn: "the jump rope", restEs: "la cuerda" },
+  { en: (n) => `${n} shakes one end of a long rope.`, es: (n) => `${n} sacude la punta de una cuerda larga.`, unit: ["foot", "feet", "pie", "pies"], restEn: "the rope", restEs: "la cuerda", steep: false },
+  { en: () => "A wave moves along a long toy spring.", es: () => "Una onda recorre un resorte largo de juguete.", unit: ["inch", "inches", "pulgada", "pulgadas"], restEn: "the spring", restEs: "el resorte", steep: true },
+  { en: (n) => `${n} wiggles one end of a long jump rope tied to a fence.`, es: (n) => `${n} mueve la punta de una cuerda de saltar larga atada a una cerca.`, unit: ["foot", "feet", "pie", "pies"], restEn: "the jump rope", restEs: "la cuerda", steep: false },
 ];
 
 export function waveShape(r: Rng, level: number, locale: Locale): ItemBody {
   if (level === 3) return compareWaves(r, locale);
   const ctx = r.pick(WAVES);
   const c = r.pick([3, 4]);
-  const amp = r.int(1, c === 3 ? 3 : 2);
-  const wl = r.int(2, 5);
+  const amp = r.int(1, ctx.steep && c === 3 ? 3 : 2);
+  const wl = ctx.steep ? r.int(2, 5) : r.int(4 * amp, 5 * amp);
   const n = Math.floor(10 / wl);
   const points: [number, number][] = Array.from({ length: 4 * n + 1 }, (_, i) => [(i * wl) / 4, c + amp * [1, 0, -1, 0][i % 4]]);
   const units = (v: number) => tr(locale, v === 1 ? ctx.unit[0] : ctx.unit[1], v === 1 ? ctx.unit[2] : ctx.unit[3]);

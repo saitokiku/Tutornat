@@ -572,6 +572,11 @@ describe("s.wave.shape", () => {
       expect(top, `${where} height axis counts by ones`).toBeLessThanOrEqual(6);
       const rest = Number(/rests at a height of (\d+)/.exec(text)![1]);
       expect(rest * 2, `${where} rest line is midway`).toBe(top + bottom);
+      // A hand-shaken rope makes a wave at most a quarter as high as it is long, its troughs off the ground.
+      if (/rope/.test(text)) {
+        expect(4 * (top - rest), `${where} rope wave too steep`).toBeLessThanOrEqual(gaps[0]);
+        expect(bottom, `${where} rope trough on the ground`).toBeGreaterThan(0);
+      }
       expect(Number(keyLabel(en)), where).toBe(level === 1 ? top - rest : gaps[0]);
     });
   });
@@ -655,10 +660,16 @@ describe("s.matter.mass", () => {
         const [p, q] = [PROPS[key], PROPS[c.label]];
         const measurable = (["magnet", "conducts", "dissolves", "solution", "floats"] as const).some((t) => p[t] !== q[t]);
         if (measurable) expect(why.some((t) => t !== "look"), `${where} ${c.label} ruled out by looks only: ${text}`).toBe(true);
+        // A choice a reported measurement rules out is tagged with a measurement, never with its looks.
+        if (why.some((t) => t !== "look")) expect(c.why, `${where} ${c.label} tagged by looks: ${text}`).not.toBe("ignored-how-it-looks");
       }
       // Hint 3 rules out a wrong choice that is shown, and never names the key.
       const wrongNames = en.choices!.filter((c) => c.label !== key).map((c) => c.label.toLowerCase());
       expect(wrongNames.some((n) => en.hints[2].toLowerCase().includes(n)), `${where} hint 3: ${en.hints[2]}`).toBe(true);
+      // It rules the choice out by its looks only when no reported measurement does.
+      const named = en.choices!.find((c) => c.label !== key && en.hints[2].toLowerCase().includes(c.label.toLowerCase()))!;
+      if (/does not look like this/.test(en.hints[2])) expect(misfits(named.label, seen), `${where} hint 3 uses looks: ${en.hints[2]} | ${text}`).toEqual(["look"]);
+      expect(/no se ve así/.test(es.hints[2]), `${where} hint 3 differs between languages`).toBe(/does not look like this/.test(en.hints[2]));
       expect(en.hints[2].toLowerCase(), where).not.toContain(key.toLowerCase());
       expect(es.hints[2].toLowerCase(), where).not.toContain(keyLabel(es).toLowerCase());
       prompts.en.add(text);
@@ -733,6 +744,8 @@ describe("s.earth.water", () => {
         expect(parts.reduce((s, [v]) => s + v, 0), where).toBe(total);
         for (const [v, desc] of parts) expect(Math.abs((100 * v) / total - USGS[shareOf(desc)]), `${where} ${desc}`).toBeLessThan(0.5);
         expect(new Set(parts.map(([, d]) => shareOf(d))).size, where).toBe(3);
+        // The part asked about is named the same way whatever its size, so the wording never tells the count.
+        expect(promptText(es), where).toMatch(/\. El resto estaría [^.]+\. ¿Cuántas \w+ son\?$/);
       } else {
         const total = num(/water as ([\d,]+) drops/.exec(text)![1]);
         const [, share, verb, desc] = /about (\d+) out of every 100 drops (is|are) ([^.]+)\./.exec(text)!;

@@ -230,8 +230,9 @@ function identifyMaterial(r: Rng, locale: Locale): ItemBody {
   };
   const q = [tr(locale, "A mystery solid is tested in class.", "En clase se prueba un sólido misterioso."), ...tests.map(result), tr(locale, "Which material is it most likely to be?", "¿Qué material es, probablemente?")].join(" ");
   const label = (m: Material) => tr(locale, m.en, m.es);
-  /** The first reported test that rules `m` out. */
-  const ruledBy = (m: Material) => tests.find((t) => !same(t, key, m))!;
+  /** The reported test that rules `m` out: a measurement when one does, how it looks only when none does. */
+  const measuredFirst = [...tests.filter((t) => t !== "look"), ...tests.filter((t) => t === "look")];
+  const ruledBy = (m: Material) => measuredFirst.find((t) => !same(t, key, m))!;
   // Hint 3 rules out one wrong choice with that test, saying what that material would do.
   const [d] = others;
   const by = ruledBy(d);
@@ -328,7 +329,7 @@ export function earthWater(r: Rng, level: number, locale: Locale): ItemBody {
     const q = tr(
       locale,
       `Imagine all of Earth's fresh water in ${fmt(fresh)} ${many}. About ${fmt(part(a))} would be ${desc(a)}. About ${fmt(part(b))} would be ${desc(b)}. The rest would be ${desc(ask)}. How many ${many} is that?`,
-      `Imagina toda el agua dulce de la Tierra en ${fmt(fresh)} ${many}. ${unasEs(part(a))} ${desc(a)}. ${unasEs(part(b))} ${desc(b)}. ${key === 1 ? "La que queda estaría" : "Las demás estarían"} ${desc(ask)}. ¿Cuántas ${many} son?`,
+      `Imagina toda el agua dulce de la Tierra en ${fmt(fresh)} ${many}. ${unasEs(part(a))} ${desc(a)}. ${unasEs(part(b))} ${desc(b)}. El resto estaría ${desc(ask)}. ¿Cuántas ${many} son?`,
     );
     return {
       prompt: [q],
