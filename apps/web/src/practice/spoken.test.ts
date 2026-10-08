@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { check } from "./answer";
 import { makeItem, SKILLS } from "./skills";
-import { readSpoken, voiceAnswerable } from "./spoken";
+import { readSpoken, spokenIntent, voiceAnswerable } from "./spoken";
 import type { Answer, ItemBody } from "./types";
 
 // Spoken answers to the pad's responses, in English and Spanish. Each row: what the recognizer wrote,
@@ -186,6 +186,39 @@ const ES: Row[] = [
   ["es", "creo que es", num(12), null],
   ["es", "doce o trece", num(12), null],
 ];
+
+describe("answer or talk", () => {
+  const sun = choice(["the sun", "the moon"], 0);
+  it.each([
+    // tries at an answer, read or not
+    ["en", "seven", num(7), "answer"],
+    ["en", "I think it's banana", num(7), "answer"],
+    ["en", "is it the bottom one?", num(7), "answer"],
+    ["en", "the second one", sun, "answer"],
+    ["en", "moon", sun, "answer"],
+    ["en", "B", sun, "answer"],
+    ["es", "creo que es plátano", num(7), "answer"],
+    ["es", "siete", num(7), "answer"],
+    // "I don't know"
+    ["en", "I don't know", num(7), "dont-know"],
+    ["en", "um I dunno", num(7), "dont-know"],
+    ["en", "idk", num(7), "dont-know"],
+    ["es", "no sé", num(7), "dont-know"],
+    ["es", "ni idea", num(7), "dont-know"],
+    // questions, requests, talk
+    ["en", "what does plus mean?", num(7), "other"],
+    ["en", "can you say it again", num(7), "other"],
+    ["en", "help me", num(7), "other"],
+    ["en", "why", num(7), "other"],
+    ["en", "banana", num(7), "other"],
+    ["en", "ok", num(7), "other"],
+    ["es", "¿qué significa más?", num(7), "other"],
+    ["es", "repítelo por favor", num(7), "other"],
+    ["es", "¿puedes ayudarme?", num(7), "other"],
+  ] as [("en" | "es"), string, Item, string][])("%s: %s → %s", (locale, said, item, intent) => {
+    expect(spokenIntent(said, item, locale)).toBe(intent);
+  });
+});
 
 describe("spoken answers", () => {
   it("has at least 80 rows across English and Spanish", () => {

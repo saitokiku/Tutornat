@@ -8,6 +8,7 @@ import type { Grade } from "@/lib/types";
 import { check } from "@/practice/answer";
 import { randomSeed } from "@/practice/rng";
 import { getSkill, makeItem } from "@/practice/skills";
+import { readSpoken } from "@/practice/spoken";
 import { matchSkills, sameWord } from "@/planner/skillmatch";
 import { linkOf, resourcesFor } from "@/resources";
 import type { TutorContext } from "./context";
@@ -47,8 +48,9 @@ export function hintsGiven(messages: UIMessage[]): number {
     const meta = m.role === "assistant" ? (m.metadata as { hintGiven?: unknown } | undefined) : undefined;
     if (meta?.hintGiven === 1) n++;
     for (const p of m.parts ?? []) {
-      const part = p as { type: string; state?: string; output?: { hint?: unknown } };
-      if (part.type === "tool-next_hint" && part.state === "output-available" && typeof part.output?.hint === "string") n++;
+      const part = p as { type: string; state?: string; output?: { hint?: unknown; repeat?: unknown } };
+      // A repeat is the precheck's hint handed back (already counted by hintGiven).
+      if (part.type === "tool-next_hint" && part.state === "output-available" && typeof part.output?.hint === "string" && part.output.repeat !== true) n++;
     }
   }
   return n;
@@ -59,11 +61,16 @@ export function hintsGiven(messages: UIMessage[]): number {
  * what the learner typed (so a worked example never has the numbers of their own problem), and the
  * learner's today (so a date offered for the calendar is never in the past or a year off).
  */
-export type TurnFacts = { hintsGiven?: number; typed?: string[]; today?: string };
+/**
+ * `supplied`: the vetted hint a spoken turn's precheck already put in the prompt (and counted). A
+ * next_hint call on that turn hands back the same hint, so the ladder never skips a rung.
+ */
+export type TurnFacts = { hintsGiven?: number; typed?: string[]; today?: string; supplied?: string };
 
 export function tutorTools(ctx: TutorContext, history: TurnFacts = {}) {
   const current = () => (ctx.item && getSkill(ctx.item.skillId) ? makeItem(ctx.item.skillId, ctx.item.level, ctx.item.seed, ctx.locale) : null);
   let hintsGiven = history.hintsGiven ?? 0;
+  let supplied = history.supplied;
   return {
     next_hint: tool({
       description: "The next vetted hint for the learner's current problem, smallest first. Using it counts as help.",
@@ -71,6 +78,11 @@ export function tutorTools(ctx: TutorContext, history: TurnFacts = {}) {
       execute: async () => {
         const item = current();
         if (!item) return { hint: null, note: "No current problem." };
+        if (supplied) {
+          const hint = supplied;
+          supplied = undefined;
+          return { hint, last: hintsGiven >= item.hints.length, repeat: true, note: "This turn's vetted hint, already in your instructions." };
+        }
         const hint = item.hints[Math.min(hintsGiven, item.hints.length - 1)];
         const last = hintsGiven >= item.hints.length - 1;
         hintsGiven++;
@@ -83,8 +95,11 @@ export function tutorTools(ctx: TutorContext, history: TurnFacts = {}) {
       execute: async ({ answer }) => {
         const item = current();
         if (!item) return { correct: null, note: "No current problem to check against." };
+        // Said the way people say it ("three fourths", "the second one", "half past three"): read in
+        // code the same way the spoken precheck does, so the two can never disagree.
+        const spoken = readSpoken(answer, item, ctx.locale);
         const index = item.choices?.findIndex((c) => c.label.trim().toLowerCase() === answer.trim().toLowerCase()) ?? -1;
-        const verdict = check(item.answer, item.answer.kind === "choice" ? index : answer);
+        const verdict = check(item.answer, spoken ? spoken.response : item.answer.kind === "choice" ? index : answer);
         return { correct: verdict.correct, form: verdict.form ?? null };
       },
     }),

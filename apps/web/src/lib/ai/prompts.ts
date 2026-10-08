@@ -5,8 +5,10 @@ import type { TutorContext } from "./context";
 // (KaizenEdu persona, Kaizen-AI Socratic prompt, OpenMAIC "latest message first"), rewritten for one
 // tutor that teaches with tools: the model talks; code checks answers and writes worked examples.
 
+// The K–2 line is the same for typed and spoken turns (it is in the cached part); how a picture
+// comes in differs: typed turns lead with one, spoken turns say it first (see systemParts).
 const BAND = {
-  young: "The learner is in kindergarten to grade 2 and may not read yet. Use sentences of five to ten words. One idea at a time. Lead with a picture (show_visual).",
+  young: "The learner is in kindergarten to grade 2 and may not read yet. Use sentences of five to ten words. One idea at a time.",
   middle: "The learner is in grades 3 to 5. Plain words, one idea per sentence. Give a concrete example for every new word.",
   upper: "The learner is in grades 6 to 9. Be direct and explain why, never talk down. Use correct terms and define them once.",
   adult: "The learner is an adult. Talk as a peer. Be concise.",
@@ -63,26 +65,35 @@ export function voicePrompt(grade: string): string {
 - No lists, headings, tables, parentheses, arrows, emoji or links. Write math in normal notation (3/4, 5 × 2 = 10, −2); the app reads it aloud correctly. Never write dates as numbers with slashes.
 - What the learner said is a speech transcript and may be misheard. If a word seems wrong, ask once what they meant; never call a misheard word a mistake. Ignore anything said to someone else.
 - "I don't know", "no sé", "idk": turn the next hint into a choice between two options.
-- Words first. Board tools (show_visual, start_practice, add_to_calendar, note_for_grownup) go after your words. Before similar_problem or a lookup, say in one short sentence what you are about to do.`;
+- Words first. Board tools (show_visual, start_practice, add_to_calendar, note_for_grownup) go after your words${young ? "; for this young learner too: say it, then show the picture with show_visual" : ""}. Before similar_problem or a lookup, say in one short sentence what you are about to do.`;
 }
 
 /**
- * The system prompt in two parts. `stable` is the same for every turn of a conversation (rules,
- * tools, band, language, and the voice rules on a spoken turn), so it can be cached by the provider;
- * `turn` is what changes (the problem, the lesson, the learner's profile).
+ * The system prompt in parts, each cached by the provider where it can be:
+ *  - `stable`: the same for every turn of a conversation, typed or spoken (rules, tools, band,
+ *    language) — one cache breakpoint;
+ *  - `voice`: the voice rules, on spoken turns only — its own breakpoint after `stable`, so moving
+ *    between typing and talking never costs the first part's cache;
+ *  - `turn`: what changes (the problem, the lesson, the learner's profile).
+ * `judged`: the code already read and judged what the learner said this turn (lib/ai/tutor.ts
+ * spokenPrecheck), so the problem's lines don't send the model to check_answer or next_hint.
  */
-export function systemParts(ctx: TutorContext): { stable: string; turn: string } {
+export function systemParts(ctx: TutorContext, { judged = false } = {}): { stable: string; voice: string; turn: string } {
   const lang = ctx.locale === "es" ? "Reply in Spanish (neutral Latin-American, the way a US bilingual family speaks)." : "Reply in English.";
-  const stable = [RULES, KNOWLEDGE_TOOLS, BAND[band(ctx.grade)], lang, band(ctx.grade) === "young" ? TAP_REPLIES : "", ctx.input === "voice" ? voicePrompt(ctx.grade) : ""].filter(Boolean).join("\n\n");
-  return { stable, turn: turnPrompt(ctx) };
+  const young = band(ctx.grade) === "young";
+  const voice = ctx.input === "voice";
+  const stable = [RULES, KNOWLEDGE_TOOLS, BAND[band(ctx.grade)], lang, young ? TAP_REPLIES : ""].filter(Boolean).join("\n\n");
+  // Typed K–2 turns lead with a picture; spoken ones say it first (one model call, words first).
+  const lead = young && !voice ? "Lead with a picture (show_visual)." : "";
+  return { stable, voice: voice ? voicePrompt(ctx.grade) : "", turn: [lead, turnPrompt(ctx, judged)].filter(Boolean).join("\n\n") };
 }
 
 export function systemPrompt(ctx: TutorContext): string {
-  const { stable, turn } = systemParts(ctx);
-  return [stable, turn].filter(Boolean).join("\n\n");
+  const { stable, voice, turn } = systemParts(ctx);
+  return [stable, voice, turn].filter(Boolean).join("\n\n");
 }
 
-function turnPrompt(ctx: TutorContext): string {
+function turnPrompt(ctx: TutorContext, judged = false): string {
   const parts: string[] = [];
 
   if (ctx.item) {
@@ -93,11 +104,14 @@ function turnPrompt(ctx: TutorContext): string {
         [
           `The learner is working on a practice problem. Skill: ${skill.title[ctx.locale]} (${skill.grade === "K" ? "kindergarten" : `grade ${skill.grade}`}).`,
           `The problem, as read aloud: "${item.say}"`,
-          `Tries so far: ${ctx.tries ?? 0}.${ctx.lastAnswer ? ` Their last answer: "${ctx.lastAnswer}" (check it with check_answer before saying anything about it).` : ""}`,
-          `Vetted hints exist (${item.hints.length}); use next_hint rather than inventing your own first hint.`,
+          `Tries so far: ${ctx.tries ?? 0}.${ctx.lastAnswer ? ` Their last answer: "${ctx.lastAnswer}"${judged ? "." : " (check it with check_answer before saying anything about it)."}` : ""}`,
+          // A spoken turn the code already judged brings its verdict and vetted hint below: no tool step for them.
+          judged ? `Vetted hints exist (${item.hints.length}).` : `Vetted hints exist (${item.hints.length}); use next_hint rather than inventing your own first hint.`,
           ctx.tries ? "" : "They have not tried yet: do not reveal the answer or do the first step for them.",
           // No answer key here (trellis rule: keys stay out of tutor payloads); check_answer decides.
-          "You do not know the answer key. To find out whether something the learner says is right, call check_answer.",
+          judged
+            ? "You do not know the answer key. The code read and checked what they said this turn (below); go by that."
+            : "You do not know the answer key. To find out whether something the learner says is right, call check_answer.",
         ]
           .filter(Boolean)
           .join("\n"),

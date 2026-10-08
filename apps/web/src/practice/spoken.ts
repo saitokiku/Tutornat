@@ -420,3 +420,33 @@ export function readSpoken(transcript: string, item: Pick<ItemBody, "answer" | "
       return null;
   }
 }
+
+// ---- answer or talk?
+
+const DONT_KNOW = /^(?:(?:um|uh|hmm|este|pues) )*(?:i (?:dont|do not) know|i dunno|dunno|idk|no idea|i have no idea|i am not sure|im not sure|not sure|no se|no lo se|ni idea|no estoy segur[oa])\b/;
+// A question or a request, not a try: "what does plus mean?", "can you say it again", "help".
+const TALK = /^(?:(?:um|uh|hmm|so|well|este|pues|oye) )*(?:what|whats|why|how|can|could|would|will|do|does|did|should|please|help|repeat|say it|again|tell|explain|show|wait|hold on|que|por que|porque|como|cual|cuando|donde|puedes|podrias|me ayudas|ayuda|ayudame|repite|repitelo|otra vez|explica|explicame|dime|muestrame|espera)\b/;
+const ANSWER_WORD = new Set(
+  [...Object.keys(EN_UNITS), ...Object.keys(EN_TENS), ...Object.keys(ES_UNITS), ...Object.keys(ES_TENS), ...Object.keys(ES_HUNDREDS), ...Object.keys(EN_ORDINAL), ...Object.keys(ES_DENOM), ...Object.keys(EN_POSITION), ...Object.keys(ES_POSITION)].concat(
+    "hundred thousand million mil half halves quarter quarters medio media cuarto cuartos oclock past till point punto coma over sobre negative minus menos".split(" "),
+  ),
+);
+
+/**
+ * What a spoken turn is, when a problem waits: "answer" (a try: a number, a time, a choice or its
+ * words, an answer lead-in), "dont-know" ("I don't know", "no sé"), or "other" (a question, a
+ * request, talk). Only a try the reader can't read gets "say it again"; "I don't know" gets the next
+ * hint as a choice; anything else is answered as talk, never judged.
+ */
+export function spokenIntent(transcript: string, item: Pick<ItemBody, "choices">, locale: Locale): "answer" | "dont-know" | "other" {
+  const said = words(transcript);
+  if (!said) return "other";
+  if (DONT_KNOW.test(said)) return "dont-know";
+  if (TALK.test(said)) return "other";
+  const t = stripLeadIns(tokens(lastAnswer(transcript)), locale);
+  if (t.length < tokens(transcript).length) return "answer"; // "I think it's …", "creo que es …"
+  if (t.some((w) => /\d/.test(w) || ANSWER_WORD.has(w))) return "answer";
+  const labels = (item.choices ?? []).flatMap((c) => tokens(c.label));
+  if (t.length <= 4 && (t.some((w) => labels.includes(w)) || /^(?:letter |option |la |el )?[a-e]$/.test(t.join(" ")))) return "answer";
+  return "other";
+}

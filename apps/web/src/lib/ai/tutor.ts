@@ -11,7 +11,7 @@ import {
 } from "ai";
 import { check } from "@/practice/answer";
 import { getSkill, makeItem } from "@/practice/skills";
-import { readSpoken, voiceAnswerable } from "@/practice/spoken";
+import { readSpoken, spokenIntent, voiceAnswerable } from "@/practice/spoken";
 import { daysBetween, fromLocalDate, localDate } from "@/planner/dates";
 import { TutorContext } from "./context";
 import { systemParts } from "./prompts";
@@ -129,9 +129,10 @@ export const afterBoardOnly: StopCondition<TutorTools> = ({ steps }) => {
 
 /**
  * A judgment that may decline (live tutor spec §2.5, models spec): "abstain" (couldn't tell what was
- * said) and "unavailable" (this can't be judged by voice at all) are never turned into "wrong" or "right".
+ * said, or it wasn't an answer) and "unavailable" (this can't be judged by voice at all) are never
+ * turned into "wrong" or "right".
  */
-export type JudgmentResult<T> = { status: "ok"; value: T } | { status: "abstain" | "unavailable"; reason: string };
+export type JudgmentResult<T> = { status: "ok"; value: T } | { status: "abstain" | "unavailable"; reason: string; hint?: string | null };
 
 export type SpokenVerdict = {
   transcript: string;
@@ -143,33 +144,51 @@ export type SpokenVerdict = {
 };
 
 /**
- * The spoken answer to the problem on screen, checked by code: rebuilt from (skill, level, seed), read
+ * The spoken turn on the problem on screen, checked by code: rebuilt from (skill, level, seed), read
  * by practice/spoken.ts, decided by practice/answer.ts check(). `given`: hints already given.
+ *  - ok: an answer, with the verdict (and the next vetted hint when it isn't right);
+ *  - abstain "unparsed": a try at an answer that couldn't be read (say it again, never "wrong");
+ *  - abstain "dont-know": "I don't know", "no sé": the next vetted hint, to be turned into a choice;
+ *  - abstain "talk": a question or a request ("what does plus mean?"): no verdict at all;
+ *  - unavailable: no problem, or one voice can't answer ("type-it").
  */
 export function spokenPrecheck(ctx: TutorContext, said: string, given: number): JudgmentResult<SpokenVerdict> {
   if (!ctx.item || !getSkill(ctx.item.skillId)) return { status: "unavailable", reason: "no-item" };
   const item = makeItem(ctx.item.skillId, ctx.item.level, ctx.item.seed, ctx.locale);
   if (!voiceAnswerable(ctx.item.skillId, item)) return { status: "unavailable", reason: "type-it" };
+  const next = item.hints[Math.min(given, item.hints.length - 1)] ?? null;
   const r = readSpoken(said, item, ctx.locale);
-  if (!r) return { status: "abstain", reason: "unparsed" };
+  if (!r) {
+    const intent = spokenIntent(said, item, ctx.locale);
+    if (intent === "dont-know") return { status: "abstain", reason: "dont-know", hint: next };
+    return { status: "abstain", reason: intent === "answer" ? "unparsed" : "talk" };
+  }
   const v = check(item.answer, r.response);
   const verdict = v.correct ? "correct" : v.form ? "form" : "not-yet";
-  return { status: "ok", value: { transcript: said, reading: r.reading, verdict, hint: verdict === "correct" ? null : (item.hints[Math.min(given, item.hints.length - 1)] ?? null) } };
+  return { status: "ok", value: { transcript: said, reading: r.reading, verdict, hint: verdict === "correct" ? null : next } };
 }
 
+/** The vetted hint the precheck put in the prompt this turn (counted as given), or null. */
+export const precheckHint = (p: JudgmentResult<SpokenVerdict> | null) => (!p ? null : p.status === "ok" ? p.value.hint : p.reason === "dont-know" ? (p.hint ?? null) : null);
+
+/** The precheck read and judged what was said (or said it can't be), so the model has nothing to check or look up for it. */
+export const judgedAnswer = (p: JudgmentResult<SpokenVerdict> | null) => !!p && (p.status === "ok" || p.reason === "unparsed" || p.reason === "dont-know" || p.reason === "type-it");
+
 const VERDICT = { correct: "correct", "not-yet": "not yet", form: "right value, not in simplest form" } as const;
+const quote = (s: string) => s.replace(/["\r\n]+/g, " ").trim().slice(0, 200);
 
 /** The lines a precheck adds to the system prompt. */
 export function precheckPrompt(p: JudgmentResult<SpokenVerdict>): string {
   if (p.status !== "ok") {
-    if (p.status === "abstain") return "You couldn't tell what they said as an answer. Ask them to say it again or tap it in. Never call it wrong.";
+    if (p.reason === "unparsed") return "You couldn't tell what they said as an answer. Ask them to say it again or tap it in. Never call it wrong.";
+    if (p.reason === "dont-know")
+      return p.hint ? `They said they don't know. Turn this vetted hint into a choice between two options, and point at the part it is about (don't call next_hint this turn): "${quote(p.hint)}"` : "They said they don't know. Offer a choice between two options about the problem.";
     return p.reason === "type-it" ? "This problem can't be answered out loud: spelling, capitals and punctuation need the pad. Ask them to tap or type the answer. Don't judge what they said." : "";
   }
   const { transcript, reading, verdict, hint } = p.value;
-  const said = transcript.replace(/["\r\n]+/g, " ").trim().slice(0, 200);
   return [
-    `The learner answered by voice: "${said}". Read as ${reading}. The checker says: ${VERDICT[verdict]}. Do not call check_answer for this answer.`,
-    hint ? `If they need a hint, use this vetted hint: "${hint}"` : "",
+    `The learner answered by voice: "${quote(transcript)}". Read as ${reading}. The checker says: ${VERDICT[verdict]}. This is final: do not call check_answer for this answer.`,
+    hint ? `If they need a hint, use this vetted hint (don't call next_hint this turn): "${quote(hint)}"` : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -195,25 +214,31 @@ export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promi
   const given = (ctx.item ? hintCount(body.hintsSeen) : 0) + hintsGiven(messages);
   // A spoken answer is checked here, after the safety screen and before the model.
   const pre = voice && ctx.item && last?.role === "user" ? spokenPrecheck(ctx, lastText(last), given) : null;
-  const gaveHint = pre?.status === "ok" && pre.value.hint ? 1 : 0;
-  // Judged in code (right, not yet, couldn't tell, or "type it"): the model has no check_answer to call.
-  const judged = !!pre && !(pre.status === "unavailable" && pre.reason === "no-item");
-  const { stable, turn } = systemParts(ctx);
+  const supplied = precheckHint(pre);
+  const gaveHint = supplied ? 1 : 0;
+  // Judged in code (right, not yet, couldn't tell, "I don't know", "type it"): the prompt no longer
+  // invites a check_answer or next_hint step, so the reply is one model call.
+  const { stable, voice: voiceBlock, turn } = systemParts(ctx, { judged: judgedAnswer(pre) });
   const perTurn = [turn, todayLine(today), photos.hasPhoto ? PHOTO_RULES : "", pre ? precheckPrompt(pre) : ""].filter(Boolean).join("\n\n");
   // Everything the learner typed, message by message: a worked example never has the numbers of one.
   const typed = messages.filter((m) => m.role === "user").map((m) => lastText(m).slice(0, LIMITS.chars)).filter(Boolean);
-  const tools = tutorTools(ctx, { hintsGiven: given + gaveHint, typed, today });
+  // The same tools every turn, typed or spoken, so the provider's cached prefix (tools, then the
+  // system parts) holds across turns. A stray check_answer still checks in code (and reads spoken
+  // forms); a stray next_hint on a turn whose hint is already in the prompt gives that same hint.
+  const tools = tutorTools(ctx, { hintsGiven: given + gaveHint, typed, today, supplied: supplied ?? undefined });
+  const cache = { anthropic: { cacheControl: { type: "ephemeral" as const } } };
   const result = streamText({
     model,
-    // The rules, tools, band and language are the same every turn: cached by the provider.
+    // The rules, tools, band and language are the same every turn: cached by the provider. The voice
+    // rules have their own breakpoint after them, so switching between typing and talking keeps the
+    // first part's cache.
     system: [
-      { role: "system", content: stable, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
+      { role: "system", content: stable, providerOptions: cache },
+      ...(voiceBlock ? [{ role: "system" as const, content: voiceBlock, providerOptions: cache }] : []),
       { role: "system", content: perTurn },
     ],
     messages: await convertToModelMessages(photos.messages),
     tools,
-    // The code already judged a spoken answer: no check_answer step to wait for.
-    activeTools: judged ? (Object.keys(tools) as (keyof TutorTools)[]).filter((k) => k !== "check_answer") : undefined,
     stopWhen: [isStepCount(5), afterBoardOnly],
     maxOutputTokens: voice ? 300 : 700,
   });

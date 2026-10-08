@@ -57,25 +57,43 @@ const voiceCtx: TutorContext = { locale: "en", grade: "1", surface: "practice", 
 const right = answerText(makeItem(ITEM.skillId, ITEM.level, ITEM.seed, "en").answer);
 
 describe("a spoken answer is checked in code before the model call", () => {
-  it("puts the verdict in the prompt and makes one model call with no check_answer to call", async () => {
+  it("puts the verdict in the prompt and makes one model call; nothing in the prompt sends it to check_answer or next_hint", async () => {
     expect(right).toBe("2");
     const { m, calls } = model();
     await (await tutorTurn({ messages: [said("It's two.")], context: voiceCtx }, m)).text();
     expect(calls).toHaveLength(1);
-    expect(systemText(calls[0])).toContain('The learner answered by voice: "It\'s two.". Read as 2. The checker says: correct. Do not call check_answer for this answer.');
-    expect(calls[0].tools.map((t) => t.name)).not.toContain("check_answer");
-    expect(calls[0].tools.map((t) => t.name)).toContain("next_hint");
+    const sys = systemText(calls[0]);
+    expect(sys).toContain('The learner answered by voice: "It\'s two.". Read as 2. The checker says: correct. This is final: do not call check_answer for this answer.');
+    expect(sys).not.toContain("use next_hint rather than inventing");
+    expect(sys).not.toContain("call check_answer.");
+    expect(sys).toContain("The code read and checked what they said this turn");
   });
 
-  it("not yet: the verdict and the next vetted hint, and next_hint continues after it", async () => {
+  it("the tools are the same for typed and spoken turns, so the cached prefix holds", async () => {
+    const spoken = model();
+    await (await tutorTurn({ messages: [said("three")], context: voiceCtx }, spoken.m)).text();
+    const typed = model();
+    await (await tutorTurn({ messages: [said("3")], context: { ...voiceCtx, input: "text" } }, typed.m)).text();
+    expect(spoken.calls[0].tools.map((t) => t.name)).toEqual(typed.calls[0].tools.map((t) => t.name));
+    expect(spoken.calls[0].tools.map((t) => t.name)).toEqual(expect.arrayContaining(["check_answer", "next_hint"]));
+  });
+
+  it("not yet: the verdict and the next vetted hint; a stray next_hint gives that same hint, never skips a rung", async () => {
     const item = makeItem(ITEM.skillId, ITEM.level, ITEM.seed, "en");
     const { m, calls } = model([{ tool: "next_hint", input: {} }, { text: "Try again." }]);
     const res = await tutorTurn({ messages: [said("three")], context: voiceCtx }, m);
     const body = await res.text();
     expect(systemText(calls[0])).toContain("The checker says: not yet.");
-    expect(systemText(calls[0])).toContain(`use this vetted hint: "${item.hints[0]}"`);
-    // The model asked for another hint: it gets the second one, not the first again.
-    expect(body).toContain(JSON.stringify(item.hints[1]).slice(1, -1));
+    expect(systemText(calls[0])).toContain(`use this vetted hint (don't call next_hint this turn): "${item.hints[0]}"`);
+    expect(body).toContain(JSON.stringify(item.hints[0]).slice(1, -1));
+    expect(body).not.toContain(JSON.stringify(item.hints[1]).slice(1, -1));
+    expect(body).toContain('"repeat":true');
+  });
+
+  it("a stray check_answer reads the spoken form in code, so it can't disagree with the precheck", async () => {
+    const { m } = model([{ tool: "check_answer", input: { answer: "It's two." } }, { text: "Yes." }]);
+    const body = await (await tutorTurn({ messages: [said("It's two.")], context: voiceCtx }, m)).text();
+    expect(body).toContain('"correct":true');
   });
 
   it("the hint the precheck gave is counted on the next turn, so the ladder doesn't repeat it", async () => {
@@ -86,15 +104,38 @@ describe("a spoken answer is checked in code before the model call", () => {
     const reply: UIMessage = { id: "a1", role: "assistant", metadata: { hintGiven: 1 }, parts: [{ type: "text", text: "Not yet. Count again." }] };
     const second = model();
     await (await tutorTurn({ messages: [said("three"), reply, { ...said("four"), id: "u2" }], context: voiceCtx }, second.m)).text();
-    expect(systemText(second.calls[0])).toContain(`use this vetted hint: "${item.hints[1]}"`);
+    expect(systemText(second.calls[0])).toContain(`use this vetted hint (don't call next_hint this turn): "${item.hints[1]}"`);
   });
 
-  it("when it can't tell what was said, it asks again and never calls it wrong", async () => {
+  it("a try it can't read: asks again and never calls it wrong", async () => {
     const { m, calls } = model();
-    await (await tutorTurn({ messages: [said("banana")], context: voiceCtx }, m)).text();
+    await (await tutorTurn({ messages: [said("I think it's banana")], context: voiceCtx }, m)).text();
     expect(systemText(calls[0])).toContain("You couldn't tell what they said as an answer. Ask them to say it again or tap it in. Never call it wrong.");
     expect(systemText(calls[0])).not.toContain("The checker says");
-    expect(calls[0].tools.map((t) => t.name)).not.toContain("check_answer");
+  });
+
+  it("'I don't know' gets the next vetted hint as a choice, in one call, counted as given", async () => {
+    const item = makeItem(ITEM.skillId, ITEM.level, ITEM.seed, "en");
+    const { m, calls } = model();
+    const body = await (await tutorTurn({ messages: [said("I don't know")], context: voiceCtx }, m)).text();
+    expect(systemText(calls[0])).toContain(`They said they don't know. Turn this vetted hint into a choice between two options`);
+    expect(systemText(calls[0])).toContain(item.hints[0]);
+    expect(systemText(calls[0])).not.toContain("say it again");
+    expect(body).toContain('"messageMetadata":{"hintGiven":1}');
+    const es = model();
+    await (await tutorTurn({ messages: [said("no sé")], context: { ...voiceCtx, locale: "es" } }, es.m)).text();
+    expect(systemText(es.calls[0])).toContain("They said they don't know.");
+  });
+
+  it("a question or a request is talk: no verdict, no 'say it again', and the problem's tools are offered as usual", async () => {
+    for (const text of ["what does plus mean?", "can you say it again", "help me", "¿qué significa más?"]) {
+      const { m, calls } = model();
+      await (await tutorTurn({ messages: [said(text)], context: { ...voiceCtx, locale: text.startsWith("¿") ? "es" : "en" } }, m)).text();
+      const sys = systemText(calls[0]);
+      expect(sys, text).not.toContain("The checker says");
+      expect(sys, text).not.toContain("say it again or tap it in");
+      expect(sys, text).toContain("use next_hint rather than inventing");
+    }
   });
 
   it("a skill voice can't answer (spelling-like) asks them to tap or type", () => {
@@ -110,7 +151,7 @@ describe("a spoken answer is checked in code before the model call", () => {
     expect(spokenPrecheck({ ...voiceCtx, item: { skillId: "no.such.skill", level: 1, seed: 1 } }, "two", 0)).toEqual({ status: "unavailable", reason: "no-item" });
   });
 
-  it("typed turns are unchanged: check_answer is there and there is no verdict", async () => {
+  it("typed turns: check_answer is there, there is no verdict, and the prompt still sends it to check_answer", async () => {
     const { m, calls } = model();
     await (await tutorTurn({ messages: [said("2")], context: { ...voiceCtx, input: "text" } }, m)).text();
     expect(calls[0].tools.map((t) => t.name)).toContain("check_answer");
@@ -127,22 +168,41 @@ describe("a spoken answer is checked in code before the model call", () => {
 });
 
 describe("the spoken turn's prompt", () => {
-  it("adds the voice rules, caps the reply at 300 tokens, and caches the stable half", async () => {
+  it("adds the voice rules behind their own cache breakpoint, caps the reply at 300 tokens, and caches the stable part", async () => {
     const { m, calls } = model();
     await (await tutorTurn({ messages: [said("what is a fraction")], context: { locale: "en", grade: "4", surface: "talk", input: "voice" } }, m)).text();
-    const [stable, turn] = calls[0].prompt.filter((p) => p.role === "system");
-    expect(stable.providerOptions).toEqual({ anthropic: { cacheControl: { type: "ephemeral" } } });
-    expect(String(stable.content)).toContain("The learner is talking with you out loud");
-    expect(String(stable.content)).toContain("First sentence at most 10 words. Other sentences at most 16 words.");
+    const [stable, voice, turn] = calls[0].prompt.filter((p) => p.role === "system");
+    const cache = { anthropic: { cacheControl: { type: "ephemeral" } } };
+    expect(stable.providerOptions).toEqual(cache);
+    expect(String(stable.content)).not.toContain("talking with you out loud");
+    expect(voice.providerOptions).toEqual(cache);
+    expect(String(voice.content)).toContain("The learner is talking with you out loud");
+    expect(String(voice.content)).toContain("First sentence at most 10 words. Other sentences at most 16 words.");
     expect(turn.providerOptions).toBeUndefined();
     expect(String(turn.content)).toContain("Today is");
     expect(calls[0].maxOutputTokens).toBe(300);
   });
 
+  it("the stable part is the same typed or spoken, so switching between them keeps its cache", () => {
+    const ctx: TutorContext = { locale: "en", grade: "4", surface: "talk" };
+    expect(systemParts({ ...ctx, input: "voice" }).stable).toBe(systemParts({ ...ctx, input: "text" }).stable);
+    const young: TutorContext = { locale: "en", grade: "1", surface: "talk" };
+    expect(systemParts({ ...young, input: "voice" }).stable).toBe(systemParts({ ...young, input: "text" }).stable);
+  });
+
+  it("K–2: typed turns lead with a picture; spoken turns say it first, then show it (one model call)", () => {
+    const typed = systemParts({ locale: "en", grade: "1", surface: "talk", input: "text" });
+    const spoken = systemParts({ locale: "en", grade: "1", surface: "talk", input: "voice" });
+    expect(typed.turn).toContain("Lead with a picture (show_visual).");
+    expect(spoken.turn).not.toContain("Lead with a picture");
+    expect(spoken.stable).not.toContain("Lead with a picture");
+    expect(spoken.voice).toContain("say it, then show the picture with show_visual");
+  });
+
   it("K–2 sentences are 10 words at most; the old 'numbers as words' lines are gone", () => {
-    const young = systemParts({ locale: "en", grade: "K", surface: "talk", input: "voice" }).stable;
-    expect(young).toContain("Other sentences at most 10 words.");
-    expect(young).not.toMatch(/say numbers as words|say numbers the way you would say them aloud/);
+    const young = systemParts({ locale: "en", grade: "K", surface: "talk", input: "voice" });
+    expect(young.voice).toContain("Other sentences at most 10 words.");
+    expect(`${young.stable}${young.voice}`).not.toMatch(/say numbers as words|say numbers the way you would say them aloud/);
   });
 
   it("the stable half doesn't change with the problem, so the cache holds across turns", () => {
