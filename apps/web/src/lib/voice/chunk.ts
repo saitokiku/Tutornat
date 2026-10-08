@@ -21,10 +21,16 @@ const ABBREV = new Set([
 const BEFORE_NUMBER_ONLY = new Set(["no", "nos", "p", "pp", "fig", "vol", "ch", "núm", "pág", "págs", "cap", ...MONTHS]);
 
 export type ChunkOptions = {
-  /** Split a run-on sentence at a clause (or, failing that, a space) once it grows past this. */
+  /** Split a run-on sentence at a clause mark once it grows past this. Never at a bare space. */
   maxChars?: number;
   /** The first sentence splits earlier, at a clause, so the first audio starts sooner. */
   firstMaxChars?: number;
+  /**
+   * "voice": a spoken reply — the first sentence is cut only past 60 characters, and only at ";", ":",
+   * " — " or ", and / but / so / because" (y, pero, así que, porque). "narration": whole-text reading,
+   * no early first cut. "text" (default): as before, at any clause mark.
+   */
+  mode?: "voice" | "narration" | "text";
 };
 
 type Decision = "split" | "no" | "wait";
@@ -49,18 +55,25 @@ function decide(buf: string, i: number, j: number, final: boolean): Decision {
   return "split";
 }
 
-/** Where to cut a segment that ran past `limit`: after a clause mark, else (unless clauseOnly) at a space. */
-function forcedCut(buf: string, limit: number, clauseOnly: boolean): number {
+/** Where to cut a segment that ran past `limit`: after the last clause mark inside it; never at a bare space. */
+function forcedCut(buf: string, limit: number): number {
   const head = buf.slice(0, limit);
   let cut = -1;
   for (const m of head.matchAll(/[,;:—–](?=\s)/g)) if (m.index >= 30) cut = m.index + 1;
-  if (cut > 0) return cut;
-  if (clauseOnly) return -1;
-  const space = head.search(/\s\S*$/);
-  return space > 0 ? space : -1;
+  return cut;
 }
 
-export function createChunker({ maxChars = 220, firstMaxChars = 120 }: ChunkOptions = {}) {
+// A spoken first sentence is cut only where a speaker would breathe.
+const VOICE_CLAUSE = /[;:](?=\s)|\s[—–](?=\s)|,(?=\s+(?:and|but|so|because|y|pero|así que|porque)\b)/giu;
+
+/** The voice mode's first cut: the first clause mark 20 or more characters in. */
+function voiceCut(buf: string): number {
+  for (const m of buf.matchAll(VOICE_CLAUSE)) if (m.index >= 20) return m.index + m[0].length;
+  return -1;
+}
+
+export function createChunker({ maxChars = 220, firstMaxChars, mode = "text" }: ChunkOptions = {}) {
+  const firstLimit = firstMaxChars ?? (mode === "voice" ? 60 : mode === "narration" ? Infinity : 120);
   let buf = "";
   let first = true;
   let out: string[] = [];
@@ -104,10 +117,10 @@ export function createChunker({ maxChars = 220, firstMaxChars = 120 }: ChunkOpti
     for (;;) {
       const text = buf.trimStart();
       const lead = buf.length - text.length;
-      const limit = first ? firstMaxChars : maxChars;
+      const limit = first ? firstLimit : maxChars;
       if (text.length <= limit) return;
-      let cut = forcedCut(text, limit, first && text.length <= maxChars);
-      if (cut < 0 && first && text.length > maxChars) cut = forcedCut(text, maxChars, false);
+      let cut = first && mode === "voice" ? voiceCut(text) : forcedCut(text, limit);
+      if (cut < 0 && text.length > maxChars) cut = forcedCut(text, maxChars);
       if (cut < 0) return;
       emit(text.slice(0, cut));
       buf = buf.slice(lead + cut);
@@ -180,18 +193,34 @@ export function asyncQueue<T>() {
   };
 }
 
+export type FeedOptions = ChunkOptions & {
+  /**
+   * The sentence-release point: each sentence passes here, in order, before it is spoken (index from
+   * 0). Return it (or a replacement) to speak it, null to hold it back. Output admission and the
+   * latency log ("first sentence released") hook in here.
+   */
+  release?: (sentence: string, index: number) => string | null;
+};
+
 /**
  * Feeds a reply as it streams and hands out sentences as they complete, for `speechOut.speak(feed.sentences)`.
- * write() takes new text; set() takes the whole reply so far (it speaks only what was added).
+ * write() takes new text; set() takes the whole reply so far (it speaks only what was added);
+ * partDone() says a text part of the reply is finished, so its last sentence is spoken at once.
  */
-export function sentenceFeed(opts?: ChunkOptions) {
+export function sentenceFeed(opts?: FeedOptions) {
   const chunker = createChunker(opts);
   const q = asyncQueue<string>();
   let seen = "";
+  let released = 0;
+  const push = (s: string) => {
+    const out = opts?.release ? opts.release(s, released) : s;
+    released++;
+    if (out?.trim()) q.push(out);
+  };
   const write = (delta: string) => {
     if (q.ended || !delta) return;
     seen += delta;
-    for (const s of chunker.push(delta)) q.push(s);
+    for (const s of chunker.push(delta)) push(s);
   };
   return {
     sentences: q as AsyncIterable<string>,
@@ -199,10 +228,14 @@ export function sentenceFeed(opts?: ChunkOptions) {
     set(full: string) {
       if (full.startsWith(seen)) write(full.slice(seen.length));
     },
+    /** A text part of the reply is done (a tool call follows): its last sentence goes now, and the next part never glues onto it. */
+    partDone() {
+      write("\n");
+    },
     /** The reply is complete: the rest is spoken. */
     end() {
       if (q.ended) return;
-      for (const s of chunker.end()) q.push(s);
+      for (const s of chunker.end()) push(s);
       q.end();
     },
     /** Stop feeding without speaking what's left. */

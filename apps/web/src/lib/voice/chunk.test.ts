@@ -78,12 +78,35 @@ describe("sentence chunker", () => {
     expect(parts.join(" ")).toBe(text);
   });
 
-  it("cuts a run-on sentence at a space when there is no clause mark", () => {
+  it("never cuts at a bare space, however long the sentence runs", () => {
     const text = `${"word ".repeat(60)}end.`;
-    const parts = splitSentences(text, { maxChars: 100, firstMaxChars: 100 });
-    expect(parts.length).toBeGreaterThan(2);
-    for (const p of parts) expect(p.length).toBeLessThanOrEqual(100);
-    expect(parts.join(" ")).toBe(text);
+    expect(splitSentences(text, { maxChars: 100, firstMaxChars: 100 })).toEqual([text]);
+    const c = createChunker({ maxChars: 100 });
+    expect(c.push("word ".repeat(60))).toEqual([]);
+  });
+
+  it("voice mode: the first sentence is cut only past 60 characters, and only at ; : — or ', and / but / so / because'", () => {
+    const voice = (t: string) => {
+      const c = createChunker({ mode: "voice" });
+      return [...c.push(t), ...c.end()];
+    };
+    // Short: no cut, even with a comma.
+    expect(voice("Look at it, then count the dots.")).toEqual(["Look at it, then count the dots."]);
+    // Long, but its only comma isn't a breathing point: no cut.
+    const plain = "When you add fractions with the same bottom number, you keep the bottom number the same.";
+    expect(voice(plain)).toEqual([plain]);
+    // Long, with ", and": cut there.
+    expect(voice("The bottom number tells how many equal parts there are, and the top number tells how many we count.")).toEqual([
+      "The bottom number tells how many equal parts there are,",
+      "and the top number tells how many we count.",
+    ]);
+    expect(voice("Mira bien el número de abajo de la fracción que tenemos aquí, porque dice cuántas partes hay.")[0]).toBe("Mira bien el número de abajo de la fracción que tenemos aquí,");
+    expect(voice("There is one thing to remember about these two fractions today: the bottoms match.")[0]).toBe("There is one thing to remember about these two fractions today:");
+  });
+
+  it("whole-text narration has no early first cut", () => {
+    const text = "When you add fractions with the same bottom number, you keep the bottom number the same and add only the top numbers together, which is the part that changes.";
+    expect(splitSentences(text, { mode: "narration" })).toEqual([text]);
   });
 });
 
@@ -98,6 +121,28 @@ describe("sentence feed", () => {
     const got: string[] = [];
     for await (const s of feed.sentences) got.push(s);
     expect(got).toEqual(["Let's look at it.", "What do you see?", "Tell me."]);
+  });
+
+  it("a finished text part is spoken at once and never glues to the next part", async () => {
+    const feed = sentenceFeed();
+    const it = feed.sentences[Symbol.asyncIterator]();
+    feed.write("Let me check that");
+    feed.partDone();
+    expect((await it.next()).value).toBe("Let me check that");
+    feed.write("Your answer is close.");
+    feed.end();
+    expect((await it.next()).value).toBe("Your answer is close.");
+  });
+
+  it("each sentence passes the release point in order; it may be replaced or held back", async () => {
+    const seen: [string, number][] = [];
+    const feed = sentenceFeed({ release: (s, i) => (seen.push([s, i]), s.includes("secret") ? null : s.toUpperCase()) });
+    feed.write("One. The secret is out. Three.");
+    feed.end();
+    const got: string[] = [];
+    for await (const s of feed.sentences) got.push(s);
+    expect(seen).toEqual([["One.", 0], ["The secret is out.", 1], ["Three.", 2]]);
+    expect(got).toEqual(["ONE.", "THREE."]);
   });
 
   it("hands out sentences before the reply ends", async () => {
