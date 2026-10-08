@@ -51,21 +51,21 @@ export const L1_PAIRED: Passage[] = [
         [
           "How do the two writers disagree?",
           "Text 1 wants phones locked away all day; Text 2 wants them off only during class.",
-          ["Text 1 wants phones off only during class; Text 2 wants them locked away all day.", "They do not disagree; both want phones locked in pouches from the first bell to the last.", "Text 1 wants phones banned only at lunch; Text 2 wants them banned only on the bus."],
+          ["Text 1 wants phones off only in class; Text 2 wants them locked up all day.", "They do not disagree; both want phones locked in pouches from the first bell to the last.", "Text 1 wants phones banned only at lunchtime; Text 2 wants them banned only while riding the bus."],
           ["Our school should require students to lock their phones in pouches from the first bell to the last.", "Keep phones off during class."],
           "Text 1 asks for pouches “from the first bell to the last.” Text 2 agrees that phones should be off in class but says a full-day ban “goes too far.”",
         ],
         [
           "¿En qué no están de acuerdo los dos autores?",
           "El texto 1 quiere los teléfonos guardados todo el día; el texto 2, solo apagados durante la clase.",
-          ["El texto 1 quiere los teléfonos apagados solo durante la clase; el texto 2, guardados todo el día.", "No hay desacuerdo: los dos quieren los teléfonos en fundas con candado desde el primer timbre hasta el último.", "El texto 1 quiere prohibirlos solo en el almuerzo; el texto 2, solo en el autobús."],
+          ["El texto 1 los quiere apagados solo en clase; el texto 2, guardados todo el día.", "No hay desacuerdo: los dos quieren los teléfonos en fundas con candado desde el primer timbre hasta el último.", "El texto 1 quiere prohibirlos solo a la hora del almuerzo; el texto 2, solo mientras viajan en el autobús."],
           ["desde el primer timbre hasta el último", "Que los teléfonos estén apagados en clase."],
           "El texto 1 pide fundas “desde el primer timbre hasta el último”. El texto 2 acepta que los teléfonos estén apagados en clase, pero dice que guardarlos todo el día “es demasiado”.",
         ],
       ),
       q(
         "compare.agree",
-        ["one-text-only", "same-not-different", "not-in-text"],
+        ["one-text-only", "one-text-only", "not-in-text"],
         [
           "On which point do both writers agree?",
           "Phones distract students during class.",
@@ -83,18 +83,18 @@ export const L1_PAIRED: Passage[] = [
       ),
       q(
         "compare.approach",
-        ["swaps-texts", "same-not-different", "not-in-text"],
+        ["not-in-text", "same-not-different", "not-in-text"],
         [
           "How do the writers support their positions differently?",
           "Text 1 uses counts and a survey; Text 2 uses a personal story and a reason about the future.",
-          ["Text 1 uses a personal story and a reason about the future; Text 2 uses counts and a survey.", "Both writers rely mainly on numbers from surveys they gave to their classmates.", "Text 1 quotes a doctor; Text 2 quotes a school principal."],
+          ["Text 1 uses counts and a survey; Text 2 uses a survey of its own classmates.", "Both writers rely mainly on numbers from surveys they gave to their classmates.", "Text 1 quotes a doctor; Text 2 quotes a school principal."],
           ["nineteen of twenty-six students admitted", "Last month my aunt's car broke down"],
           "Text 1 counts students at lunch and reports a homeroom survey. Text 2 tells what happened when the writer's aunt's car broke down and argues that students need practice for later.",
         ],
         [
           "¿En qué se diferencia la manera en que cada autor apoya su postura?",
           "El texto 1 usa conteos y una encuesta; el texto 2, una historia personal y una razón sobre el futuro.",
-          ["El texto 1 usa una historia personal y una razón sobre el futuro; el texto 2, conteos y una encuesta.", "Los dos se apoyan sobre todo en números de encuestas que hicieron a sus compañeros.", "El texto 1 cita a un médico; el texto 2 cita al director de la escuela."],
+          ["El texto 1 usa conteos y una encuesta; el texto 2, otra encuesta a sus compañeros.", "Los dos se apoyan sobre todo en números de encuestas que hicieron a sus compañeros.", "El texto 1 cita a un médico; el texto 2 cita al director de la escuela."],
           ["diecinueve de veintiséis estudiantes admitieron", "el carro de mi tía se descompuso"],
           "El texto 1 cuenta a los estudiantes en el almuerzo y da una encuesta de su grupo. El texto 2 cuenta lo que pasó cuando se descompuso el carro de su tía y dice que los estudiantes necesitan practicar para después.",
         ],
@@ -145,7 +145,7 @@ export const L1_PAIRED: Passage[] = [
       {
         title: "To a Monarch on the Milkweed",
         paras: [
-          "You were born last week behind our fence,\na striped caterpillar on a milkweed leaf,\nand now you open and close your wings\nlike a letter in orange ink, still drying.",
+          "Last month you hatched behind our fence,\na striped caterpillar on a milkweed leaf,\nand now you open and close your wings\nlike a letter in orange ink, still drying.",
           "Tomorrow, they say, you will start south\nto a mountain forest you have never seen,\nthree thousand miles of wind and highway,\nwith no one to follow and no map to read.",
           "How do you know the way?\nThe last of your family to see those firs\nlived three or four lifetimes ago\nand never came back to teach you.",
           "Maybe the sun is your map.\nMaybe the way is folded up inside you\nthe way a flower is folded in a seed.\nGo on, then. I will watch the sky.",
@@ -165,7 +165,7 @@ export const L1_PAIRED: Passage[] = [
       {
         title: "A una monarca en el algodoncillo",
         paras: [
-          "Naciste la semana pasada detrás de la cerca,\nuna oruga a rayas sobre una hoja de algodoncillo,\ny ahora abres y cierras las alas\ncomo una carta en tinta naranja, todavía fresca.",
+          "El mes pasado naciste detrás de la cerca,\nuna oruga a rayas sobre una hoja de algodoncillo,\ny ahora abres y cierras las alas\ncomo una carta en tinta naranja, todavía fresca.",
           "Dicen que mañana empiezas el viaje al sur,\nhacia un bosque en la montaña que nunca has visto,\ntres mil millas de viento y de carretera,\nsin nadie a quien seguir y sin un mapa que leer.",
           "¿Cómo sabes el camino?\nLa última de tu familia que vio esos oyameles\nvivió hace tres o cuatro vidas\ny nunca volvió para enseñarte.",
           "Tal vez el sol sea tu mapa.\nTal vez el camino viene doblado dentro de ti\ncomo una flor viene doblada en una semilla.\nAnda, pues. Yo me quedo mirando el cielo.",
@@ -184,18 +184,18 @@ export const L1_PAIRED: Passage[] = [
     qs: [
       q(
         "compare.differ",
-        ["swaps-texts", "same-not-different", "not-in-text"],
+        ["one-text-only", "same-not-different", "not-in-text"],
         [
           "How is the purpose of the poem different from the purpose of the article?",
           "The poem expresses wonder at one butterfly's trip; the article explains how the migration works.",
-          ["The poem explains how the migration works; the article expresses wonder at one butterfly's trip.", "Both texts mainly try to persuade readers to plant milkweed in their backyards.", "The poem warns that monarchs are disappearing; the article tells the story of a family's trip to Mexico."],
+          ["Both texts mainly aim to explain the monarch's life cycle and how long each generation lives.", "Both texts mainly try to persuade readers to plant milkweed in their backyards.", "The poem warns that monarchs are disappearing; the article tells the story of a family's trip to Mexico."],
           ["How do you know the way?", "How first-time travelers find the forests is still being studied."],
           "The poem speaks to one monarch and asks how it knows the way, which shows wonder. The article gives facts about the life cycle and the research, which explains.",
         ],
         [
           "¿En qué se diferencia el propósito del poema del propósito del artículo?",
           "El poema expresa asombro por el viaje de una mariposa; el artículo explica cómo funciona la migración.",
-          ["El poema explica cómo funciona la migración; el artículo expresa asombro por el viaje de una mariposa.", "Los dos textos buscan sobre todo convencer a los lectores de sembrar algodoncillo en su patio.", "El poema advierte que las monarcas están desapareciendo; el artículo cuenta el viaje de una familia a México."],
+          ["Los dos textos buscan sobre todo explicar el ciclo de vida de las monarcas y cuánto viven.", "Los dos textos buscan sobre todo convencer a los lectores de sembrar algodoncillo en su patio.", "El poema advierte que las monarcas están desapareciendo; el artículo cuenta el viaje de una familia a México."],
           ["¿Cómo sabes el camino?", "Cómo encuentran el bosque las que viajan por primera vez todavía se estudia."],
           "El poema le habla a una monarca y le pregunta cómo sabe el camino, lo que muestra asombro. El artículo da datos sobre el ciclo de vida y las investigaciones, lo que explica.",
         ],
@@ -224,14 +224,14 @@ export const L1_PAIRED: Passage[] = [
         [
           "How does the article's way of presenting the migration differ from the poem's?",
           "The article uses numbers and research; the poem uses images and questions.",
-          ["The article uses images and questions; the poem uses numbers and research.", "Both texts rely only on images and questions and never give a single fact.", "The article tells the story through the butterfly's own eyes."],
+          ["The article uses images and questions; the poem, numbers and research.", "Both texts use only images and questions, never facts.", "The article tells the story through the butterfly's own eyes."],
           ["as far as 3,000 miles", "like a letter in orange ink, still drying"],
           "The article gives distances, life spans, and what scientists have found. The poem compares wings to a letter in orange ink and asks the butterfly how it knows the way.",
         ],
         [
           "¿En qué se diferencia la manera de presentar la migración en el artículo y en el poema?",
           "El artículo usa cifras e investigaciones; el poema usa imágenes y preguntas.",
-          ["El artículo usa imágenes y preguntas; el poema usa cifras e investigaciones.", "Los dos textos usan solo imágenes y preguntas, y nunca dan un solo dato.", "El artículo cuenta la historia desde los ojos de la mariposa."],
+          ["El artículo usa imágenes y preguntas; el poema, cifras e investigaciones.", "Los dos textos usan solo imágenes y preguntas, nunca datos.", "El artículo cuenta la historia desde los ojos de la mariposa."],
           ["hasta 3,000 millas", "como una carta en tinta naranja, todavía fresca"],
           "El artículo da distancias, cuánto viven las mariposas y lo que han descubierto los científicos. El poema compara las alas con una carta en tinta naranja y le pregunta a la mariposa cómo sabe el camino.",
         ],
@@ -242,14 +242,14 @@ export const L1_PAIRED: Passage[] = [
         [
           "Why does the author of Text 2 explain that summer monarchs live only a few weeks?",
           "To show why the trip south needs a special generation that lives much longer.",
-          ["To persuade readers to keep monarchs as pets so that they live longer.", "To prove that the monarchs born in early summer are the ones that fly to Mexico.", "To describe what milkweed plants look like in early summer."],
+          ["To persuade readers to keep monarchs as pets at home so that they live longer.", "To prove that the monarchs born in early summer are the ones that fly to Mexico.", "To describe what milkweed plants look like in early summer."],
           ["But the monarchs born in late summer are different."],
           "A few weeks is far too short for a trip of thousands of miles. Explaining that first makes it clear why the late-summer monarchs, which live up to eight months, are the ones that fly south.",
         ],
         [
           "¿Por qué el autor del texto 2 explica que las monarcas del verano viven solo unas semanas?",
           "Para mostrar por qué el viaje al sur necesita una generación especial que vive mucho más.",
-          ["Para convencer a los lectores de tener monarcas como mascotas para que vivan más.", "Para probar que las monarcas que nacen a principios del verano son las que vuelan a México.", "Para describir cómo se ven las plantas de algodoncillo a principios del verano."],
+          ["Para convencer a los lectores de tener monarcas como mascotas en casa para que vivan más tiempo.", "Para probar que las monarcas que nacen a principios del verano son las que vuelan a México.", "Para describir cómo se ven las plantas de algodoncillo a principios del verano."],
           ["Pero las monarcas que nacen a fines del verano son distintas."],
           "Unas semanas son muy poco para un viaje de miles de millas. Explicarlo primero deja claro por qué las monarcas de fines del verano, que viven hasta ocho meses, son las que vuelan al sur.",
         ],
@@ -259,7 +259,7 @@ export const L1_PAIRED: Passage[] = [
         ["too-literal", "contradicts-text", "not-in-text"],
         [
           "In Text 1, the speaker says the way may be folded inside the butterfly “the way a flower is folded in a seed.” What does this comparison suggest?",
-          "The monarch is born already carrying what it needs to know.",
+          "The monarch is born already knowing the way.",
           ["The monarch hides seeds inside its wings for the long trip.", "The monarch must first learn the route from older butterflies.", "The monarch will stop to plant flowers all along its route."],
           ["Maybe the way is folded up inside you"],
           "A seed already holds the whole flower before it grows. The speaker imagines the route stored inside the monarch from birth, since no one is there to teach it.",
@@ -321,18 +321,18 @@ export const L1_PAIRED: Passage[] = [
     qs: [
       q(
         "compare.differ",
-        ["swaps-texts", "same-not-different", "not-in-text"],
+        ["not-in-text", "same-not-different", "not-in-text"],
         [
           "How is Text 1's account of the science fair different from Text 2's?",
           "Text 1 shares one student's feelings; Text 2 reports facts about the whole fair.",
-          ["Text 1 reports facts about the whole fair; Text 2 shares one student's feelings.", "Both texts focus on the robot that won first place and explain how it was built.", "Text 1 says Priya won first place, but Text 2 says she did not place at all."],
+          ["Text 1 tells how Priya felt; Text 2 tells how the judges and the winners felt.", "Both texts focus on the robot that won and how it was built.", "Text 1 says Priya won first place, but Text 2 says she did not place at all."],
           ["my hands were shaking so badly that I kept them in my pockets", "Sixty-two projects filled the Jefferson Middle School gym on Thursday"],
           "Text 1 is full of Priya's thoughts and nerves. Text 2 gives the number of projects, all three winners, and a judge's comments, without anyone's private feelings.",
         ],
         [
           "¿En qué se diferencia el relato de la feria del texto 1 del relato del texto 2?",
           "El texto 1 cuenta lo que sintió una estudiante; el texto 2 informa datos de toda la feria.",
-          ["El texto 1 informa datos de toda la feria; el texto 2 cuenta lo que sintió una estudiante.", "Los dos textos se centran en el robot que ganó el primer lugar y explican cómo se construyó.", "El texto 1 dice que Priya ganó el primer lugar, pero el texto 2 dice que no ganó nada."],
+          ["El texto 1 cuenta lo que sintió Priya; el texto 2, lo que sintieron jueces y ganadores.", "Los dos textos se centran en el robot ganador y en cómo se construyó.", "El texto 1 dice que Priya ganó el primer lugar, pero el texto 2 dice que no ganó nada."],
           ["me temblaban tanto las manos que las metí en los bolsillos", "Sesenta y dos proyectos llenaron el gimnasio de la Escuela Intermedia Jefferson el jueves"],
           "El texto 1 está lleno de los pensamientos y los nervios de Priya. El texto 2 da el número de proyectos, los tres ganadores y lo que dijo una jueza, sin los sentimientos de nadie.",
         ],
@@ -343,14 +343,14 @@ export const L1_PAIRED: Passage[] = [
         [
           "Which detail do both texts include?",
           "Priya's plants traded places every morning to get equal light.",
-          ["Priya's hands shook so much during judging that she hid them in her pockets.", "The plants that heard music grew about ten centimeters taller.", "The judges gave Priya's project a special prize for its poster."],
+          ["Priya's hands shook so much during judging that she hid them in her pockets.", "The plants that heard music grew about ten centimeters taller than the others.", "The judges gave Priya a prize for her poster."],
           ["I switched the trays' places every morning", "the plants traded places every morning"],
           "Text 1 says Priya switched the trays every morning, and the judge in Text 2 points to the same detail. The shaking hands appear only in Text 1.",
         ],
         [
           "¿Qué detalle aparece en los dos textos?",
           "Las plantas de Priya cambiaban de lugar cada mañana para recibir la misma luz.",
-          ["A Priya le temblaban tanto las manos durante la evaluación que las escondió en los bolsillos.", "Las plantas que escuchaban música crecieron unos diez centímetros más.", "Los jueces le dieron al proyecto de Priya un premio especial por su cartel."],
+          ["A Priya le temblaban tanto las manos durante la evaluación que las escondió en los bolsillos.", "Las plantas que escuchaban música crecieron unos diez centímetros más que las otras.", "Los jueces le dieron a Priya un premio por su cartel."],
           ["cada mañana cambiaba las bandejas de lugar", "las plantas cambiaban de lugar cada mañana"],
           "El texto 1 dice que Priya cambiaba las bandejas cada mañana, y la jueza del texto 2 señala el mismo detalle. Lo de las manos temblorosas aparece solo en el texto 1.",
         ],
@@ -361,14 +361,14 @@ export const L1_PAIRED: Passage[] = [
         [
           "Text 1 is told in the first person, and Text 2 in the third person. How does this change what readers learn?",
           "Readers learn Priya's private thoughts from Text 1, and the other winners from Text 2.",
-          ["Readers learn Priya's private thoughts from Text 2, and the other winners from Text 1.", "Both texts let readers know what every student at the fair was thinking.", "Text 2 lets readers hear what Priya was thinking as the judges walked toward her table."],
+          ["Readers learn Priya's thoughts from Text 2, and the other winners from Text 1.", "Both texts let readers know what every student at the fair was thinking.", "Text 2 lets readers hear what Priya was thinking as the judges slowly walked toward her table."],
           ["I had hoped for a giant difference", "Third place went to seventh graders Grace Liu and Omar Siddiqui"],
           "Only Priya can tell us that she “hoped for a giant difference.” A reporter cannot see inside her head, but can name all three winners and quote a judge.",
         ],
         [
           "El texto 1 está contado en primera persona y el texto 2 en tercera persona. ¿Cómo cambia eso lo que aprenden los lectores?",
           "Por el texto 1 conocemos lo que Priya pensaba, y por el texto 2, a los demás ganadores.",
-          ["Por el texto 2 conocemos lo que Priya pensaba, y por el texto 1, a los demás ganadores.", "Los dos textos dejan saber lo que pensaba cada estudiante de la feria.", "El texto 2 deja oír lo que Priya pensaba mientras los jueces se acercaban a su mesa."],
+          ["Por el texto 2 sabemos lo que pensaba Priya, y por el texto 1, quiénes más ganaron.", "Los dos textos dejan saber lo que pensaba cada estudiante de la feria.", "El texto 2 deja oír lo que Priya pensaba mientras los jueces se acercaban poco a poco a su mesa."],
           ["Yo esperaba una diferencia enorme", "El tercer lugar fue para Grace Liu y Omar Siddiqui"],
           "Solo Priya puede contarnos que “esperaba una diferencia enorme”. Un periodista no puede ver dentro de su cabeza, pero sí nombrar a los tres ganadores y citar a una jueza.",
         ],
@@ -379,16 +379,16 @@ export const L1_PAIRED: Passage[] = [
         [
           "Which sentence from Text 1 best reveals how Priya felt about her results before the fair?",
           "I had hoped for a giant difference, and I almost didn't bring my poster at all.",
-          ["The music group was taller, but only by about a centimeter.", "On the morning of the fair, I measured every plant one last time.", "My question was simple: would music make the plants grow faster?"],
+          ["When the judges reached me, my hands were shaking so badly that I kept them in my pockets.", "Twenty of them listened to music for an hour every night through an old speaker.", "I told her I switched the trays' places every morning so both got the same sunlight."],
           ["I almost didn't bring my poster at all"],
-          "Almost leaving the poster at home shows that Priya was disappointed and doubted her project. The other sentences report facts without showing a feeling.",
+          "Almost leaving the poster at home shows that Priya was disappointed and doubted her project. Her shaking hands show nerves during the judging, not how she felt about her results before the fair, and the other sentences report facts.",
         ],
         [
           "¿Qué oración del texto 1 revela mejor cómo se sentía Priya con sus resultados antes de la feria?",
           "Yo esperaba una diferencia enorme, y casi no llevé mi cartel.",
-          ["El grupo con música era más alto, pero solo por un centímetro, más o menos.", "La mañana de la feria, medí cada planta por última vez.", "Mi pregunta era sencilla: ¿la música haría que las plantas crecieran más rápido?"],
+          ["Cuando los jueces llegaron, me temblaban tanto las manos que las metí en los bolsillos.", "Veinte escuchaban música una hora cada noche por una bocina vieja.", "Le dije que cada mañana cambiaba las bandejas de lugar para que las dos recibieran la misma luz."],
           ["casi no llevé mi cartel"],
-          "Casi dejar el cartel en casa muestra que Priya estaba decepcionada y dudaba de su proyecto. Las otras oraciones cuentan datos sin mostrar un sentimiento.",
+          "Casi dejar el cartel en casa muestra que Priya estaba decepcionada y dudaba de su proyecto. Sus manos temblorosas muestran nervios durante la evaluación, no lo que sentía por sus resultados antes de la feria, y las otras oraciones cuentan datos.",
         ],
       ),
       q(
@@ -396,15 +396,15 @@ export const L1_PAIRED: Passage[] = [
         ["contradicts-text", "not-in-text", "overgeneralizes"],
         [
           "Why does Priya laugh out loud when her name is read?",
-          "She is surprised and relieved, since she had doubted her small result.",
-          ["She thinks the judges made a mistake and should have picked the volcano instead.", "She is laughing at a joke the announcer told about bean plants.", "Everyone laughs out loud when they win a prize."],
+          "She is surprised and relieved after doubting her result.",
+          ["She thinks the judges made a mistake and should have picked the volcano instead.", "She is laughing at a joke the announcer told about bean plants.", "Everyone laughs out loud when they hear their name read for a prize."],
           ["Then I remembered that a centimeter is still a difference."],
           "Priya almost left her poster at home because the difference was small. Laughing in the middle of the announcement shows surprise, and her last thought shows she now sees that her result had value.",
         ],
         [
           "¿Por qué Priya suelta una carcajada cuando leen su nombre?",
-          "Está sorprendida y aliviada, porque había dudado de su resultado tan pequeño.",
-          ["Cree que los jueces se equivocaron y que debieron elegir el volcán.", "Se ríe de un chiste sobre frijoles que contó el presentador.", "Todo el mundo suelta una carcajada cuando gana un premio."],
+          "Está sorprendida y aliviada tras dudar de su resultado.",
+          ["Cree que los jueces se equivocaron y que debieron elegir el volcán.", "Se ríe de un chiste sobre las matas de frijol que contó el presentador.", "Todo el mundo suelta una carcajada cuando oye su nombre en una premiación."],
           ["Luego me acordé de que un centímetro también es una diferencia."],
           "Priya casi deja su cartel en casa porque la diferencia era pequeña. Reírse en plena ceremonia muestra sorpresa, y su último pensamiento muestra que ahora ve que su resultado sí valía.",
         ],
@@ -458,14 +458,14 @@ export const L1_PAIRED: Passage[] = [
         [
           "How do the two reviewers disagree?",
           "Text 1 finds the story moving; Text 2 finds it predictable.",
-          ["Text 1 finds the story predictable; Text 2 finds it moving.", "They do not disagree; both think the story is the weakest part and the animation the strongest.", "Text 1 dislikes the animation; Text 2 dislikes the songs."],
+          ["Text 1 finds the story predictable; Text 2, moving.", "They do not disagree; both think the story is the weakest part and the animation the strongest.", "Text 1 dislikes the animation; Text 2 dislikes the songs."],
           ["their final scene together is moving", "By the second scene, I had guessed how the movie would end"],
           "The first reviewer calls the friendship's final scene moving. The second guessed the ending by the second scene. They agree about the pictures but not about the story.",
         ],
         [
           "¿En qué no están de acuerdo los dos críticos?",
           "Para el texto 1, la historia es conmovedora; para el texto 2, es predecible.",
-          ["Para el texto 1, la historia es predecible; para el texto 2, es conmovedora.", "No hay desacuerdo: los dos piensan que la historia es lo más débil y la animación lo más fuerte.", "Al texto 1 no le gusta la animación; al texto 2 no le gustan las canciones."],
+          ["Para el texto 1, la historia es predecible; para el 2, conmovedora.", "No hay desacuerdo: los dos piensan que la historia es lo más débil y la animación lo más fuerte.", "Al texto 1 no le gusta la animación; al texto 2 no le gustan las canciones."],
           ["su última escena juntos es conmovedora", "Para la segunda escena ya había adivinado cómo terminaría la película"],
           "El primer crítico dice que la última escena de los amigos es conmovedora. El segundo adivinó el final desde la segunda escena. Coinciden en las imágenes, pero no en la historia.",
         ],
@@ -490,18 +490,18 @@ export const L1_PAIRED: Passage[] = [
       ),
       q(
         "compare.approach",
-        ["swaps-texts", "same-not-different", "not-in-text"],
+        ["one-text-only", "same-not-different", "not-in-text"],
         [
           "How do the reviewers support their opinions differently?",
           "Text 1 describes how the audience reacted; Text 2 compares the plot to other films.",
-          ["Text 1 compares the plot to other films; Text 2 describes how the audience reacted.", "Both reviewers support their opinions mainly by quoting the people who made the movie.", "Text 1 gives ticket sales; Text 2 quotes other critics."],
+          ["Both reviewers describe how the audience in the theater reacted during the storm scenes.", "Both reviewers support their opinions mainly by quoting the people who made the movie.", "Text 1 gives ticket sales; Text 2 quotes other critics."],
           ["the theater went completely silent", "It follows the same path as nearly every animated adventure"],
           "Text 1 reports laughter and a silent theater at the showing. Text 2 lists the familiar pattern the story follows, which many animated adventures share.",
         ],
         [
           "¿En qué se diferencia la manera en que cada crítico apoya su opinión?",
           "El texto 1 describe cómo reaccionó el público; el texto 2 compara la trama con otras películas.",
-          ["El texto 1 compara la trama con otras películas; el texto 2 describe cómo reaccionó el público.", "Los dos críticos apoyan su opinión sobre todo con citas de quienes hicieron la película.", "El texto 1 da cifras de taquilla; el texto 2 cita a otros críticos."],
+          ["Los dos críticos cuentan cómo reaccionó el público en la sala durante las escenas de la tormenta.", "Los dos críticos apoyan su opinión sobre todo con citas de las personas que hicieron la película.", "El texto 1 da cifras de taquilla; el texto 2 cita a otros críticos."],
           ["el cine quedó en completo silencio", "Sigue el mismo camino que casi todas las aventuras animadas"],
           "El texto 1 cuenta las risas y el silencio del cine durante la función. El texto 2 enumera el patrón conocido que sigue la historia, el mismo de muchas aventuras animadas.",
         ],
@@ -512,14 +512,14 @@ export const L1_PAIRED: Passage[] = [
         [
           "What is the second reviewer's overall view of the movie?",
           "It is worth seeing for the art, but its story is too familiar.",
-          ["It is the worst animated movie ever made, with nothing worth seeing.", "It is a perfect movie that everyone should see more than once.", "It is a movie for the whole family, with a moving friendship at its heart."],
+          ["It is the worst animated movie ever made, with nothing worth seeing.", "It is a perfect movie everyone should see twice.", "It is a movie for the whole family, with a moving friendship at its heart."],
           ["If you love animation, see it once for the art."],
           "The second reviewer praises the animation, says the story follows a familiar path, and recommends seeing it once for the art. The view is mixed, not all bad.",
         ],
         [
           "¿Cuál es la opinión general del segundo crítico sobre la película?",
           "Vale la pena verla por el arte, pero su historia es demasiado conocida.",
-          ["Es la peor película animada de la historia y no tiene nada que valga la pena.", "Es una película perfecta que todos deberían ver más de una vez.", "Es una película para toda la familia, con una amistad conmovedora en el centro."],
+          ["Es la peor película animada de la historia y no tiene nada que valga la pena.", "Es una película perfecta que todos deberían ver dos veces.", "Es una película para toda la familia, con una amistad conmovedora en el centro."],
           ["Si te encanta la animación, ve a verla una vez por el arte."],
           "El segundo crítico elogia la animación, dice que la historia sigue un camino conocido y recomienda verla una vez por el arte. Su opinión es mixta, no del todo mala.",
         ],

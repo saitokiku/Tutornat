@@ -35,18 +35,18 @@ export const L1_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "plot-not-theme", "not-in-text"],
+        ["contradicts-text", "too-narrow", "not-in-text"],
         [
           "Which statement best expresses a theme of the story?",
           "Embarrassment about your family can turn into pride once you see the value of what they do.",
-          ["Night markets", "Mei hides behind her grandmother's steamer at the night market until a classmate from math class buys six dumplings.", "Selling food at a market is harder work than going to school."],
+          ["Hiding what makes your family different is the safest way to fit in with the kids at your school.", "Good cooking can win over a new customer.", "Kids can learn more at a market stall than in a math class."],
           ["That night, Mei pushed her hood back."],
           "Mei starts out hiding her face and ends up working proudly beside her grandmother. That change carries the story's message.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "La vergüenza por la propia familia puede volverse orgullo cuando uno ve el valor de lo que hace.",
-          ["Los mercados nocturnos", "Mei se esconde detrás de la vaporera de su abuela en el mercado nocturno hasta que un compañero de matemáticas le compra seis empanadillas.", "Vender comida en un mercado es más difícil que ir a la escuela."],
+          ["Esconder lo que hace diferente a tu familia es la forma más segura de encajar con los chicos de tu escuela.", "La buena comida puede conquistar a un cliente nuevo.", "Se puede aprender más en un puesto del mercado que en una clase de matemáticas."],
           ["Esa noche, Mei se bajó la capucha."],
           "Al principio Mei esconde la cara y al final trabaja con orgullo junto a su abuela. Ese cambio lleva el mensaje del cuento.",
         ],
@@ -62,7 +62,7 @@ export const L1_STORIES: Passage[] = [
           "At first Mei hid and would not look at customers. Now she shows her face and speaks up for the stall, which shows pride instead of embarrassment.",
         ],
         [
-          "¿Cómo muestra la autora que los sentimientos de Mei cambiaron al final?",
+          "¿Cómo muestra el autor que los sentimientos de Mei cambiaron al final?",
           "Se baja la capucha y le contesta ella misma a un cliente.",
           ["Se deja la capucha puesta y cuenta el cambio sin mirar a nadie.", "Darius dice que las empanadillas están mejores que las de su tío.", "Las luces del mercado se apagan a las once."],
           ["contestó antes que Nai Nai"],
@@ -82,7 +82,7 @@ export const L1_STORIES: Passage[] = [
         [
           "¿Por qué Nai Nai levanta una ceja y luego asiente al final del párrafo 5?",
           "Está sorprendida y contenta de que Mei hable por el puesto.",
-          ["Está molesta porque Mei casi le revela el ingrediente secreto a un desconocido.", "Quiere que Mei arme las cajas más despacio.", "Pone a prueba a todas las personas que ayudan en el puesto."],
+          ["Está molesta porque Mei casi le revela el ingrediente secreto a un desconocido.", "Quiere que Mei arme las cajas más despacio.", "Pone a prueba a toda persona que ayuda en el puesto."],
           ["como si Mei hubiera pasado una prueba que no sabía que estaba presentando"],
           "Levantar una ceja muestra sorpresa, y el gesto de asentir y la prueba que Mei “pasó” muestran aprobación.",
         ],
@@ -100,7 +100,7 @@ export const L1_STORIES: Passage[] = [
         [
           "En el párrafo 3, el narrador dice: “Mei se quedó helada”. ¿Qué significa “se quedó helada” aquí?",
           "De pronto estaba tan nerviosa que no podía moverse.",
-          ["Tenía mucho frío por el aire de la noche.", "Estaba enojada porque Darius leyó en voz alta el letrero.", "Se apuró a atenderlo antes que a nadie."],
+          ["Tenía mucho frío por el aire de la noche.", "Estaba enojada porque Darius leyó en voz alta el letrero.", "Se apuró a atenderlo antes que a cualquier otro cliente."],
           ["Mei se quedó helada."],
           "Aquí “se quedó helada” no tiene que ver con el frío. Mei se paralizó de nervios porque un compañero la había visto.",
         ],
@@ -110,14 +110,14 @@ export const L1_STORIES: Passage[] = [
         ["adds-opinion", "misses-key-point", "contradicts-text"],
         [
           "Which is the best objective summary of the story?",
-          "Mei hides at her grandmother's dumpling stall until a classmate loves the food and brings friends. Then she works openly beside her grandmother.",
+          "Mei hides at her grandmother's dumpling stall until a classmate loves the food and comes back with his cousins. Then she works openly beside her grandmother.",
           ["Mei's grandmother makes the best dumplings at the market, and Mei was silly to feel embarrassed about them.", "Mei goes to a night market that smells like grilled corn and frying dough, sees a hand-painted sign with crooked letters, and carries an empty steamer to the car at eleven.", "Mei quits working at the stall after a classmate laughs at the crooked letters on the sign."],
           ["Darius came back twenty minutes later with his cousins."],
           "A good summary tells the main events and the change in Mei, and it leaves out the reader's own opinions.",
         ],
         [
           "¿Cuál es el mejor resumen objetivo del cuento?",
-          "Mei se esconde en el puesto de su abuela hasta que a un compañero le encanta la comida y trae amigos. Después trabaja sin esconderse junto a su abuela.",
+          "Mei se esconde en el puesto de su abuela hasta que a un compañero le encanta la comida y vuelve con sus primos. Después trabaja sin esconderse junto a su abuela.",
           ["La abuela de Mei hace las mejores empanadillas del mercado, y fue una tontería que Mei sintiera vergüenza.", "Mei va a un mercado nocturno que huele a elote asado y a masa frita, ve un letrero pintado a mano con letras chuecas y a las once lleva una vaporera vacía al carro.", "Mei deja de trabajar en el puesto después de que un compañero se ríe de las letras chuecas del letrero."],
           ["Darius volvió veinte minutos después con sus primos."],
           "Un buen resumen cuenta los hechos principales y el cambio de Mei, sin las opiniones de quien lee.",
@@ -148,7 +148,7 @@ export const L1_STORIES: Passage[] = [
       {
         title: "Segunda silla",
         paras: [
-          "Durante un año entero, Mateo se había sentado en la primera silla de la sección de trompetas, el asiento más cerca de la directora y el que tocaba los solos. Luego, en enero, una estudiante nueva llamada Amara entró a la banda. En las audiciones de primavera tocó el pasaje más difícil sin una sola nota quebrada, y la maestra Lindqvist la pasó a la primera silla. Mateo se movió un asiento a la derecha.",
+          "Durante un año entero, Mateo se había sentado en la primera silla de la sección de trompetas, el asiento más cerca de la directora y el que tocaba los solos. Luego, en enero, una estudiante nueva llamada Amara entró a la banda. En las audiciones de primavera tocó el pasaje más difícil sin un solo gallo, y la maestra Lindqvist la pasó a la primera silla. Mateo se movió un asiento a la derecha.",
           "Era solo un asiento, pero se sentía como un kilómetro. Durante dos semanas casi no le habló a Amara. Cuando ella preguntó en qué página empezaban, él señaló en lugar de contestar. En casa practicaba de todos modos el solo del concierto de primavera, una y otra vez, como si alguien pudiera cambiar de opinión.",
           "La noche del concierto, la banda calentaba en el pasillo ruidoso detrás del escenario. Mateo notó que Amara apretaba el tercer pistón de su trompeta una y otra vez. Se estaba trabando. Ella no tenía aceite para pistones, y se había puesto pálida.",
           "El frasco de aceite de Mateo estaba en su bolsillo. Por un momento se quedó quieto, sintiendo el plástico frío entre los dedos. Si la trompeta de Amara fallaba, lo más probable era que el solo volviera a él. Lo pensó exactamente lo que tardó en cruzar el pasillo.",
@@ -162,18 +162,18 @@ export const L1_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "plot-not-theme", "not-in-text"],
+        ["contradicts-text", "plot-not-theme", "too-narrow"],
         [
           "Which statement best expresses a theme of the story?",
           "Another person's success does not have to be your loss.",
-          ["Competition", "Mateo loses first chair to Amara but lends her his valve oil before the concert.", "The student who practices the most always earns the best seat."],
+          ["Losing your place to someone new means you were never good enough.", "Mateo loses first chair to Amara but lends her his valve oil before the concert.", "A newcomer can earn respect by playing well."],
           ["the clapping felt partly like his"],
           "Mateo helps the person who took his seat, and her success ends up feeling partly like his own. Losing the seat did not mean losing everything.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "El éxito de otra persona no tiene por qué ser una pérdida para ti.",
-          ["La competencia", "Mateo pierde la primera silla ante Amara, pero le presta su aceite antes del concierto.", "Quien más practica siempre se gana el mejor asiento."],
+          ["Perder tu lugar ante alguien nuevo significa que nunca fuiste lo bastante bueno.", "Mateo pierde la primera silla ante Amara, pero le presta su aceite antes del concierto.", "Quien llega nuevo puede ganarse el respeto si toca bien."],
           ["los aplausos eran, en parte, también suyos"],
           "Mateo ayuda a quien le quitó el asiento, y el éxito de ella termina sintiéndose en parte como suyo. Perder el asiento no significó perderlo todo.",
         ],
@@ -191,7 +191,7 @@ export const L1_STORIES: Passage[] = [
         [
           "¿Qué momento marca el cambio en cómo trata Mateo a Amara?",
           "Cruza el pasillo y le ofrece su aceite para pistones.",
-          ["Señala el número de página en lugar de contestarle.", "El público aplaude antes de que termine la canción.", "Amara le dice que más le vale estar listo para la próxima audición."],
+          ["Le señala el número de página en lugar de contestarle.", "El público aplaude antes de que termine la canción.", "Amara le dice que más le vale estar listo para la próxima audición."],
           ["Lo pensó exactamente lo que tardó en cruzar el pasillo."],
           "Hasta ese momento, Mateo evita a Amara. Cuando decide ayudarla aunque el fracaso de ella podría beneficiarlo, cambia su manera de tratarla.",
         ],
@@ -226,7 +226,7 @@ export const L1_STORIES: Passage[] = [
         ],
         [
           "¿Qué sugiere la última línea sobre cómo ve Mateo ahora a Amara?",
-          "La ve como una rival amistosa, no como una enemiga.",
+          "La ve como una rival amistosa, no como enemiga.",
           ["Sigue enojado porque ella le quitó el asiento.", "Piensa dejar la banda antes de la próxima audición.", "Decidió que competir siempre arruina las amistades."],
           ["lo dijo sin rencor"],
           "Mateo todavía quiere competir por la primera silla, pero lo dice “sin rencor”. Ya no trata a Amara como enemiga.",
@@ -265,7 +265,7 @@ export const L1_STORIES: Passage[] = [
           "Rosa watched from her window for an hour. Finally she went down. “Why are you doing this?” she asked. “The city owns it. They'll never let you keep it.”",
           "Mr. Haddad shrugged. “Maybe not. But today it will have less glass in it.” He handed her a pair of gloves that were much too big.",
           "The next Saturday, Rosa's little brother came too. The Saturday after that, Mrs. Obi from the laundromat brought tomato seedlings in coffee cans, and two teenagers dragged the shopping cart to the curb. By June, someone had painted a sign that said FOURTH STREET GARDEN in uneven green letters, and the city had agreed to let the neighbors use the land for a dollar a year.",
-          "In August, Rosa picked the first ripe tomato and carried it up three flights of stairs to Mr. Haddad's apartment. He held it up to the light as if it were a jewel.",
+          "In August, Rosa picked the first ripe tomato and carried it up two flights of stairs to Mr. Haddad's apartment. He held it up to the light as if it were a jewel.",
           "“You see?” he said. “Less glass.”",
         ],
       },
@@ -279,7 +279,7 @@ export const L1_STORIES: Passage[] = [
           "Rosa lo miró desde su ventana durante una hora. Por fin bajó. —¿Por qué hace esto? —le preguntó—. El terreno es de la ciudad. Nunca se lo van a dejar.",
           "El señor Haddad se encogió de hombros. —Tal vez no. Pero hoy va a tener menos vidrio. —Le dio un par de guantes que le quedaban enormes.",
           "El sábado siguiente, el hermanito de Rosa también fue. El sábado después, la señora Obi, de la lavandería, llevó plantitas de tomate en latas de café, y dos adolescentes arrastraron el carrito hasta la banqueta. Para junio, alguien había pintado un letrero que decía HUERTO DE LA CALLE CUARTA con letras verdes disparejas, y la ciudad había aceptado que los vecinos usaran el terreno por un dólar al año.",
-          "En agosto, Rosa cortó el primer tomate maduro y lo subió tres pisos hasta el apartamento del señor Haddad. Él lo levantó hacia la luz como si fuera una joya.",
+          "En agosto, Rosa cortó el primer tomate maduro y lo subió dos pisos hasta el apartamento del señor Haddad. Él lo levantó hacia la luz como si fuera una joya.",
           "—¿Ves? —dijo—. Menos vidrio.",
         ],
       },
@@ -287,18 +287,18 @@ export const L1_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "plot-not-theme", "not-in-text"],
+        ["topic-not-theme", "contradicts-text", "not-in-text"],
         [
           "Which statement best expresses a theme of the story?",
           "One person's small, steady effort can inspire others to join in.",
-          ["Gardening", "Mr. Haddad cleans an empty lot, and later the neighbors plant tomatoes there.", "Cities should give every empty lot to the people who live nearby."],
+          ["Gardening", "It is pointless to work hard on something you may never get to keep.", "Older neighbors can teach young people how to grow their own food."],
           ["The next Saturday, Rosa's little brother came too."],
           "Mr. Haddad starts alone and works slowly, and one by one other people join him. The story shows how a small effort can spread.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "El esfuerzo pequeño y constante de una persona puede animar a otras a unirse.",
-          ["La jardinería", "El señor Haddad limpia un terreno vacío y después los vecinos siembran tomates.", "Las ciudades deberían regalar todos los terrenos vacíos a los vecinos."],
+          ["La jardinería", "No tiene sentido esforzarse por algo que tal vez nunca te van a dejar conservar.", "Los vecinos mayores pueden enseñarles a los jóvenes a cultivar su propia comida."],
           ["El sábado siguiente, el hermanito de Rosa también fue."],
           "El señor Haddad empieza solo y trabaja despacio, y poco a poco otras personas se le unen. El cuento muestra cómo un esfuerzo pequeño se contagia.",
         ],
@@ -309,7 +309,7 @@ export const L1_STORIES: Passage[] = [
         [
           "What can you infer from Mr. Haddad's answer, “Maybe not. But today it will have less glass in it”?",
           "A small improvement today is worth it to him, even with no promise.",
-          ["He expects the city to let him keep the lot as soon as it is clean.", "He is cleaning the lot because he hopes to find something valuable buried there.", "He believes that no one should ever make plans."],
+          ["He expects the city to let him keep the lot once it is clean.", "He is cleaning the lot because he hopes to find something valuable buried there.", "He believes that no one should ever make plans."],
           ["Maybe not. But today it will have less glass in it."],
           "He admits the city may never let them keep the lot, but he works anyway, because each bag of trash makes the lot better today.",
         ],
@@ -327,14 +327,14 @@ export const L1_STORIES: Passage[] = [
         [
           "In paragraph 1, the shopping cart is lying on its side “like a tired animal.” What does this comparison suggest about the lot?",
           "The lot looks neglected and worn out, as if it has given up.",
-          ["Animals have made their home among the weeds and broken glass in the lot.", "The lot is a lively place where children like to play.", "The cart belongs to someone who is resting nearby."],
+          ["Animals have made their home among the weeds and broken glass in the lot.", "The lot is a lively, cheerful place where children like to play.", "The cart belongs to someone who is resting nearby."],
           ["one shopping cart lying on its side like a tired animal"],
           "A tired animal lying on its side looks worn out. The comparison makes the whole lot feel abandoned.",
         ],
         [
           "En el párrafo 1, el carrito está tirado de lado “como un animal cansado”. ¿Qué sugiere esta comparación sobre el terreno?",
           "El terreno se ve descuidado y gastado, como si se hubiera rendido.",
-          ["Algunos animales viven entre la hierba alta y los vidrios rotos del terreno.", "El terreno es un lugar lleno de vida donde a los niños les gusta jugar.", "El carrito es de alguien que está descansando cerca."],
+          ["Algunos animales viven entre la hierba alta y los vidrios rotos del terreno.", "El terreno es un lugar alegre y lleno de vida donde a los niños les gusta jugar.", "El carrito es de alguien que está descansando cerca."],
           ["un carrito de supermercado tirado de lado como un animal cansado"],
           "Un animal cansado tirado de lado se ve agotado. La comparación hace que todo el terreno se sienta abandonado.",
         ],
@@ -363,14 +363,14 @@ export const L1_STORIES: Passage[] = [
         [
           "Which is the best objective summary of the story?",
           "Mr. Haddad begins cleaning an empty lot by himself. Rosa and other neighbors join him, and by August the lot has become a community garden.",
-          ["Mr. Haddad is the kindest neighbor on Fourth Street, and everyone in the city should learn from him and start cleaning up the empty lots in their own neighborhoods.", "Rosa watches from her window, puts on gloves that are too big, and carries a tomato up three flights of stairs.", "The city cleans up the empty lot and builds a garden as a gift for the neighbors."],
+          ["Mr. Haddad is the kindest neighbor on Fourth Street, and everyone in the city should learn from him and start cleaning up the empty lots in their own neighborhoods.", "Rosa watches from her window, puts on gloves that are too big, and carries a tomato up two flights of stairs.", "The city cleans up the empty lot and builds a garden as a gift for the neighbors."],
           ["By June, someone had painted a sign that said FOURTH STREET GARDEN"],
           "A good summary covers how the garden began, who joined, and how it turned out, without opinions.",
         ],
         [
           "¿Cuál es el mejor resumen objetivo del cuento?",
           "El señor Haddad empieza a limpiar solo un terreno vacío. Rosa y otros vecinos se le unen, y para agosto el terreno es un huerto comunitario.",
-          ["El señor Haddad es el vecino más bondadoso de la calle Cuarta, y todos en la ciudad deberían aprender de él y ponerse a limpiar los terrenos vacíos de sus propios vecindarios.", "Rosa mira desde su ventana, se pone unos guantes enormes y sube un tomate tres pisos.", "La ciudad limpia el terreno vacío y construye un huerto como regalo para los vecinos."],
+          ["El señor Haddad es el vecino más bondadoso de la calle Cuarta, y todos en la ciudad deberían aprender de él y ponerse a limpiar los terrenos vacíos de sus propios vecindarios.", "Rosa mira desde su ventana, se pone unos guantes enormes y sube un tomate dos pisos.", "La ciudad limpia el terreno vacío y construye un huerto como regalo para los vecinos."],
           ["Para junio, alguien había pintado un letrero que decía HUERTO DE LA CALLE CUARTA"],
           "Un buen resumen cuenta cómo empezó el huerto, quiénes se unieron y cómo terminó, sin opiniones.",
         ],
@@ -414,18 +414,18 @@ export const L1_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "plot-not-theme", "not-in-text"],
+        ["contradicts-text", "wrong-character", "too-narrow"],
         [
           "Which statement best expresses a theme of the story?",
           "Slowing down for someone else can help you notice things you would have missed.",
-          ["Tide pools", "Jun and Hana explore the first tide pool near the sand instead of reaching the far ones.", "Older siblings should always do whatever younger siblings want."],
+          ["Reaching your goal matters more than waiting for someone who is slowing you down.", "Being brave means crossing the slippery rocks even when you are scared.", "Tide pools hold more living things than most people expect."],
           ["he had seen more in one small pool than he usually saw on the whole point"],
           "Jun gives up his race to the far pools to stay with Hana, and he ends up seeing more than ever. The story's message comes from that surprise.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "Ir más despacio por otra persona puede ayudarte a notar cosas que te habrías perdido.",
-          ["La marea baja", "Jun y Hana exploran la primera poza junto a la arena en lugar de llegar a las lejanas.", "Los hermanos mayores siempre deben hacer lo que quieren los menores."],
+          ["Llegar a tu meta importa más que esperar a alguien que te está haciendo ir más despacio.", "Ser valiente es cruzar las rocas resbalosas aunque tengas miedo.", "Las pozas de marea tienen más seres vivos de lo que casi todos creen."],
           ["había visto más en una pequeña poza que lo que solía ver en toda la punta"],
           "Jun deja su carrera hacia las pozas lejanas para quedarse con Hana, y termina viendo más que nunca. El mensaje del cuento sale de esa sorpresa.",
         ],
@@ -450,7 +450,7 @@ export const L1_STORIES: Passage[] = [
       ),
       q(
         "words.connotation",
-        ["contradicts-text", "not-in-text", "wrong-context-meaning"],
+        ["contradicts-text", "not-in-text", "not-in-text"],
         [
           "Jun calls the first pool “the boring one.” Why does the author use that word here?",
           "It sets up a surprise: the pool Jun expects nothing from is full of life.",
@@ -479,7 +479,7 @@ export const L1_STORIES: Passage[] = [
         [
           "¿Qué puedes inferir del hecho de que Jun “suspiró lo bastante fuerte para que ella lo oyera”?",
           "Quiere que Hana sepa que está impaciente con ella.",
-          ["Le falta el aire de tanto saltar sobre las rocas.", "Quiere que Hana se sienta orgullosa de lo valiente que es.", "Se enoja con su hermana por todo."],
+          ["Se quedó sin aliento de tanto saltar sobre las rocas.", "Quiere que Hana se sienta orgullosa de lo valiente que es.", "Se enoja con su hermana por todo."],
           ["Jun suspiró lo bastante fuerte para que ella lo oyera."],
           "Suspirar para que alguien lo oiga es una manera de mostrar impaciencia. Jun está frustrado porque Hana lo retrasa.",
         ],
@@ -537,18 +537,18 @@ export const L1_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "plot-not-theme", "not-in-text"],
+        ["topic-not-theme", "too-narrow", "contradicts-text"],
         [
           "Which statement best expresses a theme of the story?",
           "A new place starts to feel like home as you get to know the people in it.",
-          ["Moving", "Kofi draws a map of his new neighborhood in Duluth and fills it in over the winter.", "It is better to live in a warm city than in a cold one."],
+          ["Moving", "Making a map can help you learn your way around a new city.", "You can only feel at home in the place where you grew up."],
           ["Almost every mark on the map had a person attached to it."],
           "Kofi's map fills up with places tied to the people he meets, and by the end the city no longer feels lonely. The people are what make it home.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "Un lugar nuevo empieza a sentirse como un hogar cuando conoces a la gente que vive ahí.",
-          ["La mudanza", "Kofi dibuja un mapa de su nuevo vecindario en Duluth y lo va llenando durante el invierno.", "Es mejor vivir en una ciudad cálida que en una fría."],
+          ["La mudanza", "Hacer un mapa puede ayudarte a orientarte en una ciudad nueva.", "Solo puedes sentirte en casa en el lugar donde creciste."],
           ["Casi cada marca del mapa tenía una persona detrás."],
           "El mapa de Kofi se llena de lugares unidos a las personas que conoce, y al final la ciudad ya no se siente solitaria. La gente es lo que la vuelve un hogar.",
         ],
@@ -577,14 +577,14 @@ export const L1_STORIES: Passage[] = [
         [
           "How does the change in Kofi's map help develop the theme?",
           "It goes from a few buildings to places tied to people, showing that people make the city home.",
-          ["The first version shows only the bus stop and the school, showing that Kofi cares only about getting places.", "The paper gets soft from folding, showing that Kofi is careless with his things.", "His mother says he needs more paper, showing that she wants him to stop drawing."],
+          ["The first map shows only a bus stop and a school, so Kofi cares only about getting places.", "The paper gets soft from folding, showing that Kofi is careless with his things.", "His mother says he needs more paper, showing that she wants him to stop drawing."],
           ["He saw Ingrid's shortcut, Mr. K's rolls, and the pigeon lady's bench."],
           "At first the map holds only buildings. By March it is full of people's places, which shows how Kofi's connections turn the city into home.",
         ],
         [
           "¿Cómo ayuda el cambio en el mapa de Kofi a desarrollar el mensaje?",
           "Pasa de tener unos cuantos edificios a tener lugares unidos a personas, y muestra que la gente vuelve la ciudad un hogar.",
-          ["La primera versión solo muestra la parada del autobús y la escuela, y eso muestra que a Kofi solo le importa llegar a los lugares.", "El papel se pone suave de tanto doblarlo, y eso muestra que Kofi descuida sus cosas.", "Su mamá dice que le hace falta más papel, y eso muestra que quiere que deje de dibujar."],
+          ["El primer mapa solo tiene la parada y la escuela, así que a Kofi solo le importa llegar a los lugares.", "El papel se pone suave de tanto doblarlo, y eso muestra que Kofi descuida sus cosas.", "Su mamá dice que le hace falta más papel, y eso muestra que quiere que deje de dibujar."],
           ["Veía el atajo de Ingrid, los panes del Sr. K y la banca de la señora de las palomas."],
           "Al principio el mapa solo tiene edificios. Para marzo está lleno de lugares de personas, lo que muestra cómo los lazos de Kofi vuelven la ciudad un hogar.",
         ],
@@ -595,7 +595,7 @@ export const L1_STORIES: Passage[] = [
         [
           "What can you infer about how Kofi felt during his first week in Duluth?",
           "He felt lost and lonely in a place where nothing was familiar.",
-          ["He was excited to go sledding right away.", "He was glad to leave everything about his old life in Houston behind him.", "Everyone who moves to a cold city feels lonely forever."],
+          ["He was excited to go sledding right away.", "He was glad to leave everything about his old life in Houston behind him.", "Everyone who moves to a cold, snowy city stays lonely there forever."],
           ["Here he didn't even know which way the lake was."],
           "Kofi compares how well he knew Houston with how little he knows Duluth. Not even knowing where the lake is shows he felt lost.",
         ],
@@ -613,14 +613,14 @@ export const L1_STORIES: Passage[] = [
         [
           "Which is the best objective summary of the story?",
           "After moving to Duluth, Kofi draws a map. As he meets people and adds the places tied to them, the city starts to feel like home.",
-          ["Kofi's map is a clever idea, and every kid who moves to a new city should make one just like it.", "Kofi tapes four sheets of paper together and draws a bus stop, a school, and a laundromat.", "Kofi gets lost in the snow during his first week, gives up on his map, and decides that his family should move back to Houston for good."],
+          ["Kofi's map is a clever idea, and every kid who moves to a new city should make one just like it.", "Kofi tapes four sheets of paper together and draws a bus stop, a school, and a laundromat.", "Kofi gets lost in the snow his first week, gives up on his map, and wants his family to move back to Houston."],
           ["Over the next few weeks the map filled up"],
           "The summary needs the move, the map, the people who fill it, and how Kofi's feelings change, without opinions.",
         ],
         [
           "¿Cuál es el mejor resumen objetivo del cuento?",
           "Tras mudarse a Duluth, Kofi dibuja un mapa. Al conocer gente y agregar los lugares unidos a ella, la ciudad empieza a sentirse como un hogar.",
-          ["El mapa de Kofi es una idea ingeniosa, y todos los niños que se mudan deberían hacer uno igual.", "Kofi pega cuatro hojas con cinta y dibuja una parada de autobús, una escuela y una lavandería.", "Kofi se pierde en la nieve en su primera semana, abandona su mapa a medio hacer y decide que su familia tiene que volver a Houston para siempre."],
+          ["El mapa de Kofi es una idea ingeniosa, y todos los niños que se mudan deberían hacer uno igual.", "Kofi pega cuatro hojas con cinta y dibuja una parada de autobús, una escuela y una lavandería.", "Kofi se pierde en la nieve su primera semana, abandona su mapa y quiere que su familia vuelva a Houston."],
           ["En las semanas siguientes, el mapa se fue llenando"],
           "El resumen necesita la mudanza, el mapa, las personas que lo llenan y cómo cambian los sentimientos de Kofi, sin opiniones.",
         ],
