@@ -41,7 +41,7 @@ const es: Record<Key, string> = {
 
   "subject.math": "Matemáticas",
   "subject.science": "Ciencias",
-  "subject.english": "Inglés",
+  "subject.english": "Lengua",
   "subject.other": "Otro",
 
   "lang.en": "English",
