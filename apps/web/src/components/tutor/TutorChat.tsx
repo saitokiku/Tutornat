@@ -123,7 +123,15 @@ function AiChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; to
         }),
       }),
   );
-  const [initial] = useState<UIMessage[]>(() => [{ id: "open", role: "assistant", parts: [{ type: "text", text: opening(setup, t, titles(topics, setup)) }] }]);
+  // K–2 beside a problem: the opening is the next vetted hint, built here with no model call, and help
+  // like any reply (saved before it shows). The hint ladder then continues after it.
+  const [openHint] = useState(() => (setup.item && youngGrade(learner) ? setup.item.hints[Math.max(0, setup.hintsSeen ?? 0)] : undefined));
+  const hintsSeen = (setup.hintsSeen ?? 0) + (openHint ? 1 : 0);
+  const [initial] = useState<UIMessage[]>(() => [
+    openHint
+      ? { id: "open-hint", role: "assistant", parts: [{ type: "text", text: openHint }] }
+      : { id: "open", role: "assistant", parts: [{ type: "text", text: opening(setup, t, titles(topics, setup)) }] },
+  ]);
   const { messages, sendMessage, setMessages, status, error, stop } = useChat({ transport, messages: initial });
   const failure = error?.message ?? "";
   const photoRefused = /photo_too_big|bad_photo/.test(failure);
@@ -152,7 +160,7 @@ function AiChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; to
       entries={entries}
       busy={status === "submitted" || status === "streaming"}
       error={error ? t(/photo_too_big/.test(failure) ? "tut.photo.tooBig" : /bad_photo/.test(failure) ? "tut.photo.unreadable" : "tutor.error") : null}
-      onSend={(text, photo) => sendMessage({ text, files: photo ? [{ type: "file", mediaType: photo.mediaType, url: photo.url, filename: "problem.jpg" }] : undefined }, { body: { context, hintsSeen: setup.hintsSeen, today: localDate(Date.now()) } })}
+      onSend={(text, photo) => sendMessage({ text, files: photo ? [{ type: "file", mediaType: photo.mediaType, url: photo.url, filename: "problem.jpg" }] : undefined }, { body: { context, hintsSeen, today: localDate(Date.now()) } })}
       onStop={stop}
       label={t("tut.label.ai")}
       readsPhotos

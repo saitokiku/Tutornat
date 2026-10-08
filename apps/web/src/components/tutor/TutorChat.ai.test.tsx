@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { read, resetMemory, update } from "@/lib/store";
 import { localDate } from "@/planner/dates";
 import type { Profile } from "@/lib/types";
+import { makeItem } from "@/practice/skills";
 import { TutorChat } from "./TutorChat";
 
 // The AI tutor in the browser, against a stubbed /api/tutor: a photo goes as a file part with the text,
@@ -147,6 +148,18 @@ describe("what the AI tutor is sent", () => {
     await user.type(screen.getByRole("textbox"), "can you help with number 4{Enter}");
     await screen.findByText("What have you tried on the first one?");
     expect(bodies[1].messages.flatMap((m) => m.parts).some((p) => p.type === "file")).toBe(false);
+  });
+
+  it("beside a K–2 problem the opening is the next vetted hint, saved as help before it shows, and the ladder continues after it", async () => {
+    const item = makeItem("m.add.5", 1, 7, "en");
+    const beforeHelp = vi.fn((): true => true);
+    const user = userEvent.setup();
+    render(<TutorChat setup={{ learner: { ...learner, grade: "1" }, surface: "practice", item, hintsSeen: 1, tries: 0, title: "Adding", beforeHelp }} />);
+    expect(await screen.findByText(item.hints[1])).toBeInTheDocument();
+    expect(beforeHelp).toHaveBeenCalledWith("open-hint");
+    await user.click(screen.getByRole("button", { name: "Give me a hint" }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect((bodies[0] as unknown as { hintsSeen: number }).hintsSeen).toBe(2);
   });
 
   it("a young learner taps one of the answers the tutor offers instead of typing", async () => {
