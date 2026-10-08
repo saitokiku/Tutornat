@@ -1618,5 +1618,461 @@
     "fix": "Have a teacher choose the codes, or list both the RL and RI codes for these skills."
    }
   ]
+ },
+ "res-ela-sci": {
+  "verdict": "PASS with minor fixes. There are no blockers or major findings. All 72 added links (50 url and 22 urlEs) return 200 with no redirects. Each lands on the page its title promises. All are free with no sign-up and come from reputable sources. Every urlEs page is really in Spanish, and so are the three Spanish-only books. All 50 entries' skill fits exist on the skill map, and the resources tests, eslint and tsc are clean. The commit counts check out: 25+25 entries, \"10 with Spanish\" (7 urlEs plus 3 Spanish-only books) and \"16 with Spanish\" (15 urlEs plus the NPS Spanish booklet). These commits add links only, no answer keys. What is left is small: one legacy Java sim that repeats a sim already listed, one third-party Spanish page with a number mistranslation, two descriptions that overstate or need a caution, Spanish-only books showing for English learners on topic searches, nine fits that never match on practice pages, and two edition or grade-band tweaks. Process note: the session's working directory was the main checkout on branch foundation, not a dedicated worktree. So I did not run `git reset --hard` there. I audited from a detached worktree at 584ecbf in the scratchpad and removed it afterwards, along with all my scratch files. Nothing was committed, and the main repo is untouched (HEAD d8d8166, clean).",
+  "sampled": "I checked all 72 added URLs with a browser user agent, using both GET and HEAD. The 72 are 50 url, 14 explicit urlEs, and 8 Spanish PhET links built by the phet() helper. All GET requests returned 200 with no redirects. HEAD on read.gov/aesop/001.html failed once and returned 200 on retry. For every page I pulled the title, the html lang and the visible text, and checked each English and Spanish description against it. Gutenberg: author, language and edition for 8 records. LibriVox: language, readers and author dates for 6 pages. Standard Ebooks: the read-online links. PhET: HTML5 or legacy for each sim, and that the Spanish build file exists for the 7 HTML5 sims. Global Storybooks: counted 40 stories in 5 levels; audio present in English and Spanish on 5 sampled stories; checked the N\u00e1huatl (huasteca) and Maya lists. NASA's /sp/ pages: the bodies are Spanish even though their titles are English. USGS: both pages read in full. NPS: both booklet PDFs (English 38 MB, Spanish 64.7 MB). OpenStax: worked examples, Punnett squares and F = ma in each section. Also checked the Zoo listing (221 animals) and one Zoo fact page, the Ask A Biologist cell viewer, NOAA's food-web and cloud text, and the LOC Kids/Teens/Adults lists. Code checks: every fits id against the skill map (134 skills); duplicate URLs; resourcesFor top 3 for all 59 English and science skills in both locales; 9 topic searches in both locales. The two resources tests pass, and eslint and tsc are clean. This commit adds no check-links script. One exists only on the res-math branch (commits a434a3e/6538903), so I did not run it.",
+  "findings": [
+   {
+    "severity": "minor",
+    "where": "apps/web/src/resources/list.ts, entry phet-forces-and-motion (line 797), science block of 584ecbf",
+    "problem": "This is PhET's legacy Java sim, run in the browser through CheerpJ. Its page metadata says legacyType \"java,cheerpj\", it has only .jar downloads, and there is no sims/html build. The other 7 new PhET sims are HTML5. The list already has the HTML5 phet-forces-and-motion-basics, which covers the same skills. Practice pages show only 2 resources (Runner and practice/page use max=2). So for s.speed, s.newton and s.newton.laws, both slots become nearly the same push-a-box sim in both locales, which crowds out Khan Academy and OpenStax. The Java version is also slow to start and less reliable on tablets.",
+    "fix": "Remove the entry; Forces and Motion: Basics already covers these skills. If you keep it, drop the s.speed, s.newton and s.newton.laws fits so it stops taking the second slot. Also add note: { en: \"An older sim that runs Java in the browser; slow to start and may not work on every tablet.\", es: \"Una simulaci\u00f3n antigua que usa Java en el navegador; tarda en abrir y puede no funcionar en todas las tabletas.\" }."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/resources/list.ts, entry usgs-water-cycle-kids, urlEs https://www.usgs.gov/water-science-school/science/el-ciclo-del-agua-water-cycle-schools-spanish (locale es)",
+    "problem": "The linked Spanish page tells children \"El ciclo del agua ha estado ocurriendo por billones de a\u00f1os\". In Spanish \"billones\" means trillions (10^12), a false friend for English \"billions\". Earth is about 4.5 billion years old, so this is a wrong fact. It is USGS's text, not ours. Separately, urlEs points to the general \"for Schools\" article. The English url points to the kids diagram image page. The matching Spanish page is /media/images/el-ciclo-del-agua-para-ninos-water-cycle-schools-spanish (200, \"El Ciclo del Agua Para Ni\u00f1os\"), but it carries the same \"billones\" sentence.",
+    "fix": "Switch urlEs to https://www.usgs.gov/media/images/el-ciclo-del-agua-para-ninos-water-cycle-schools-spanish so it matches the English kids-diagram page. Report the \"billones de a\u00f1os\" \u2192 \"miles de millones de a\u00f1os\" fix to USGS Water Science School. Never repeat that number in our own Spanish text or tutor lines."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/resources/list.ts, entry global-storybooks-mexico, about.en and about.es",
+    "problem": "The description says each story has text and audio in English, Spanish and Indigenous languages of Mexico. That overstates it. English and Spanish do have all 40 stories, with audio on every story I sampled (5 of 5 in each language). Indigenous coverage varies by language. N\u00e1huatl de la huasteca veracruzana has 1 story and no audio; Maya has 40 stories with audio. Also, the English url page has Spanish menus (Inicio, Cambiar nivel, Nivel 1), which the description doesn't mention for English families.",
+    "fix": "about.en: \"Forty illustrated stories in five reading levels, with text and audio in English and Spanish, and some in Indigenous languages of Mexico. The site's menus are in Spanish.\" about.es: \"Cuarenta cuentos ilustrados en cinco niveles de lectura, con texto y audio en espa\u00f1ol e ingl\u00e9s, y algunos en lenguas ind\u00edgenas de M\u00e9xico.\""
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/resources/list.ts, entry loc-classic-books (grades K-6)",
+    "problem": "read.gov/books/ is one page listing Kids [51], Teens [6] and Adults [6]. The Kids section itself includes Dracula, Moby Dick, A Study in Scarlet and an Uncle Remus tale (minstrel-era dialect). The description, \"Old illustrated children's books\", and the K-6 band suggest a picture-book shelf. A kindergartner or first grader sent there can land on these.",
+    "fix": "Raise grades to [\"2\",\"8\"] or similar. Add note: { en: \"Old books; some show the attitudes of their time. Choose together.\", es: \"Libros antiguos; algunos muestran ideas de su \u00e9poca. Elijan juntos.\" }."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/resources/index.ts resourcesFor, with the new Spanish-only entries librivox-samaniego-fabulas, gutenberg-edad-de-oro, gutenberg-platero-y-yo (locale en)",
+    "problem": "These are the first entries in the list with languages [\"es\"] and no English link. resourcesFor gives the learner's language only a +1 bonus and never filters. Topic searches from TutorChat (top 3) and Stage therefore put them in front of English learners. Grade 4 \"fables\" in en returns loc-aesop, Quiroga, then Samaniego (Spanish only). Grade 6 \"poems\" in en returns lit2go, Iriarte, then La Edad de Oro (Spanish only). Grade 8 \"prose poems\" in en ranks Platero y yo first. Skill pages are fine; the English-language entries outrank them there.",
+    "fix": "In resourcesFor, skip a resource when q.locale === \"en\" and !r.languages.includes(\"en\"); an English-only family cannot use a Spanish-only book. Keep the current behaviour for es learners, who are deliberately shown English sources marked \"(en ingl\u00e9s)\". Add a test: resourcesFor({ topic: \"fables\", grade: \"4\", locale: \"en\" }) never contains librivox-samaniego-fabulas."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/resources/list.ts fits: owl-subject-verb, gutenberg-elements-of-style, standardebooks-treasure-island, gutenberg-iriarte-fables, phet-forces-and-motion, spaceplace-seasons, noaa-jetstream-clouds, usgs-this-dynamic-earth, nps-rocks-and-minerals",
+    "problem": "Nine fits can never match on the practice pages. Runner and the practice page pass only a skillId, so the grade filter uses the skill's own grade, and these skills fall outside the resource's grade band \u00b11. The nine: owl-subject-verb e.nouns.verbs (grade 2, band 4-adult); gutenberg-elements-of-style e.commas (4, band 8-adult); standardebooks-treasure-island e.figurative (4, band 6-9); gutenberg-iriarte-fables e.figurative (4, band 6-9); phet-forces-and-motion s.forces (3, band 5-9); spaceplace-seasons s.weather (K, band 2-6); noaa-jetstream-clouds s.weather (K, band 5-9); usgs-this-dynamic-earth s.rocks (4, band 6-adult); nps-rocks-and-minerals s.materials (2, band 4-9). They can only match through the AI tool, when the learner's grade differs from the skill's. The existing test does not catch this.",
+    "fix": "Remove those ids from fits, or widen the bands where the source suits that grade. Add to resources.test.ts: for each exact-id fit, assert gi(skill.grade) is within [gi(grades[0])-1, gi(grades[1])+1]."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/resources/list.ts, entry gutenberg-wizard-of-oz, url https://www.gutenberg.org/ebooks/55",
+    "problem": "Project Gutenberg's own page for #55 says \"There is an improved edition of this title, eBook #43936\". #43936 is the illustrated edition (it lists an illustrator; Denslow drew the original pictures). It loads with 200. For grades 3-5 the illustrated edition is the better link.",
+    "fix": "Set url to https://www.gutenberg.org/ebooks/43936."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/resources/list.ts, entries owl-commas and owl-subject-verb (grades [\"4\",\"adult\"])",
+    "problem": "Purdue OWL is written for college writers. The OWL entries already in the list start at grade 6 or 7 (owl-grammar 6, owl-arguments 6, owl-fallacies 7, owl-rhetoric 7). The new ones were dropped to grade 4 to reach the grade-4 comma and subject-verb skills. That reading level is a stretch for a 9-year-old reading alone.",
+    "fix": "Set grades to [\"5\",\"adult\"]; that still matches grade-4 skills through the \u00b11 window. Add note: { en: \"Written for older students; read it together.\", es: \"Escrito para estudiantes mayores; l\u00e9anlo juntos.\" }."
+   }
+  ]
+ },
+ "sci-69": {
+  "verdict": "The computed answer keys are sound, but the strand should not ship as is. 1 blocker and 12 major issues remain. I re-derived every computed key from the prompt text alone, with my own parsers, for 10 computed skills \u00d7 2 levels \u00d7 400 seeds. Methods: atom balancing by brute force and a separate parser, exact BigInt decimals for scientific notation, my own unit table, and two astronomy models for the Moon (Meeus ch.49 true phases, accurate to under 1 minute on the 2024\u201326 eclipses, and low-precision lunar longitudes). I found no wrong keys, and English and Spanish always show the same numbers. All 34 USNO moon references are real and fall between 11:00 and 23:00 UT. 8,000 moon items were in the keyed 45\u00b0 phase sector at every US local noon. The checker accepts every key and rejects every wrong choice and every listed wrong value. The blocker is a bank question whose marked-wrong choice is the literally correct answer (heat.transfer, identical shirts). The major issues: a computed item that says an object \"moves at 0 m/s\"; hints that lead to the wrong number or state false facts (balancing); level-wide hint 2 that states the answer for about 45 bank entries; a test-wise length cue (the right answer is the longest choice in 51% of bank entries vs about 27% by chance); one DNA distractor that is accidentally right; Spanish agreement errors in generated templates; and two Spanish wordings that change the science. Nothing was committed; the scratch audit files are deleted.",
+  "sampled": "Setup: git reset --hard 4c36ba71a (HEAD 4c36ba7), node_modules cloned, the author's upper-more.test.ts passes (82 tests). I wrote throwaway vitest audit files (since deleted) that import SCIENCE_6_9_MORE and SCIENCE_6_9_MORE_BANKS. (1) Generic checks: all 34 skills \u00d7 every level \u00d7 400 seeds \u00d7 en/es. I checked: check() accepts the key and rejects every wrong index and every listed wrong value; typed variants (commas, unicode minus) are accepted; choices are distinct; the right choice appears once with no why tag; every wrong choice has a kebab-case why; hints and alt text vs the answer; say notation (^, digit/digit, braces, plus arrows and subscripts); Spanish present and different from English; same key in both languages; English words leaking into Spanish and the reverse; template leaks; \"1 + plural\"; at least 12 distinct items per level (smallest: 13 for banks, 40 for wave.speed L2). (2) Independent recomputation of every computed key from the prompt text: graph.rates, population.growth, energy.ke.pe, sci.notation, wave.speed, ohms.law, momentum, half.life, balance.equations, percent.composition. 400 seeds \u00d7 2 levels each, plus a check that en and es carry the same numbers. (3) Moon: Meeus ch.49 phases cross-checked against a low-precision elongation model (worst gap 0.25\u00b0) and 5 known eclipse instants; all 34 MOON_EVENTS verified; 8,000 items checked across every US local hour of the target date. (4) Balancing hint text checked against the full equation for 6,000 seeds per level. Length-cue and answer-position statistics for all 358 bank entries. A 3,000-seed Spanish grep for agreement slips. (5) Read as a teacher and a native Spanish speaker: every bank entry in all 7 bank files (358 entries, both languages, about 4,000 lines), all of moon/data/notation/physics/chem.ts, and a 25-seed en+es dump per computed skill per level.",
+  "findings": [
+   {
+    "severity": "blocker",
+    "where": "apps/web/src/practice/science/upper-more/g6-earth.ts:410, HEAT_TRANSFER, s.heat.transfer L1, en+es",
+    "problem": "The stem reads \"Two identical shirts lie in direct sunlight. Which one warms up faster?\" (es: \"Dos camisetas iguales...\"), but nowhere says one is black and one is white. Taken literally, two identical shirts warm at the same rate. That is exactly the choice marked wrong (\"Both warm up at the same rate\", tag ignores-surface-color), while the key is \"The black shirt\". A careful reader gets marked wrong.",
+    "fix": "Give the colours in the stem: \"Two shirts, the same except that one is black and one is white, lie in direct sunlight. Which one warms up faster?\" / \"Dos camisetas iguales, salvo que una es negra y otra blanca, est\u00e1n al sol directo...\"."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/physics.ts:371, momentumItem, s.momentum L1 (lab cart)",
+    "problem": "If the cart mass has tenths (1.5, 2.5, 3.5, 4.5 kg) and v10 is drawn as 5\u20139, then `v10 -= v10 % 10` rounds the speed to 0. The item then reads \"A lab cart with a mass of 4.5 kg moves at 0 m/s. What is the momentum?\" with key 0. Seen at seeds 104578, 455185 and 1051832 (about 1.4% of L1 items). Separately, p = 1 renders as \"1 kilograms metro por segundo\" / \"1 kilogram meters per second\".",
+    "fix": "Round up instead (`v10 += 10 - v10 % 10`), or set the lab cart's v10 range to [10, 30]. Add a test that every speed and momentum shown is > 0. Use the singular unit when p === 1."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/chem.ts:288, balanceItem hint 3, s.balance.equations L1",
+    "problem": "Hint 3 gives the other side's atom count and leaves out atoms of the same element already on this side, so it points to a wrong number. Cases found: 6 CO\u2082 + 6 H\u2082O \u2192 C\u2086H\u2081\u2082O\u2086 + __ O\u2082 (hint: 18 O on the left, each O\u2082 has 2, suggests 9, key 6); the reverse respiration equation (9 vs 6); C\u2082H\u2085OH + __ O\u2082 (3.5 vs 3); 2 H\u2082O\u2082 \u2192 2 H\u2082O + __ O\u2082 (2 vs 1); 2 SO\u2082 + __ O\u2082 (3 vs 1); 2 NO + __ O\u2082 (2 vs 1); Ca or Na + H\u2082O \u2192 \u2026 + __ H\u2082 (2 vs 1); 2 NaHCO\u2083 \u2192 \u2026 + __ CO\u2082 (3 vs 1).",
+    "fix": "When sameRest > 0, say it: \"The left side has 18 O atoms; 6 are already in C\u2086H\u2081\u2082O\u2086 on the right, so O\u2082 must supply 12. Each O\u2082 has 2.\" (the steps already compute this). Or prefer an element whose sameRest is 0 when one exists."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/chem.ts:289, balanceItem hint 3, s.balance.equations L2",
+    "problem": "Hint 3 says \"Start with an element that appears in only one substance on each side, such as O\", which is false in at least 16 equation and formula cases. Examples: CH\u2084/C\u2082H\u2086/C\u2083H\u2088/C\u2082H\u2085OH/glucose combustion (O is in CO\u2082 and H\u2082O), photosynthesis, 2 SO\u2082 + O\u2082 \u2192 2 SO\u2083, 2 NO + O\u2082 \u2192 2 NO\u2082, Fe\u2082O\u2083 + 3 CO, Ca or Na + H\u2082O (H is in two products), NaHCO\u2083, CaCO\u2083 + HCl. A hint that states a false fact teaches the wrong strategy.",
+    "fix": "Choose el only from elements that really appear in exactly one substance on each side (if none exists, say to balance the others first and leave this one for last), or drop the claim and keep \"Each F has n X atoms\"."
+   },
+   {
+    "severity": "major",
+    "where": "Bank `strategy` (hint 2, shared by every entry of a level): g6-life.ts ORG_THEORY/ORG_PARTS/BODY_JOBS, g6-earth.ts ROCK_CYCLE, g7-banks.ts PHOTO_IO/MIXTURES/REACTION_SIGNS, g8-life.ts GEOLOGIC_TIME, g8-physical.ts CLIMATE_IMPACT/WAVES_INFO, g9-matter.ts BONDING/NUCLEAR, g9-systems.ts DNA_PROTEIN/CARRYING_CAPACITY/EARTH_ENERGY",
+    "problem": "The level-wide hint 2 is a glossary that states the answer outright for about 45 entries, against the rule that no hint contains the final answer. Examples: geologic.time \"Earth is about 4.5 billion years old \u2026 dinosaurs died out about 66 million years ago \u2026 life began at least 3.5 billion years ago\" answers entries #0, #2 and #8 verbatim. ORG_PARTS \"ribosomes build it \u2026 Golgi packs it \u2026 Lysosomes break things down \u2026 mitochondria release energy\" answers #0, #1, #4, #11 and #13. CLIMATE \"absorb heat given off by Earth and send some back down\" is the key to \"How do greenhouse gases warm Earth?\". EARTH_ENERGY \"liquid outer core \u2026 mantle is hot solid rock that flows very slowly\". CARRYING_CAPACITY J- and S-curve definitions. NUCLEAR fission/fusion definitions and \"turn a tiny amount of mass into a large amount of energy\". WAVES_INFO analog/digital definitions. PHOTO_IO gives every input and output and both organelles. ORG_THEORY states all three tenets.",
+    "fix": "Rewrite each bank strategy as a method (\"name the job first, then think which part does that job\") and move the facts into per-entry clue and explain. Or add an audit test that fails when hint 1 or 2 contains the entry's answer (verbatim or \u226575% of its content words) and reword those entries."
+   },
+   {
+    "severity": "major",
+    "where": "All 26 bank levels (SCIENCE_6_9_MORE_BANKS); worst are s.climate.impact 12/13, s.nuclear 11/14, s.resources 10/13, s.claim.evidence 9/13, s.waves.info 9/14, s.design.criteria 9/16",
+    "problem": "Length cue: the correct choice is strictly the longest in 183 of 358 entries (51%), where chance is about 96 (27%). A test-wise learner who always picks the longest option scores 92% on climate impact and 79% on nuclear without knowing the science. That makes mastery data from these drafts unreliable.",
+    "fix": "Edit the distractors to roughly the key's length and detail, or trim the qualifiers from keys (\"The lithosphere, which is broken into plates\" \u2192 \"The lithosphere\"). Add a test that limits how often the key is strictly longest (for example \u226435% per bank)."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/g9-systems.ts:51, DNA_PROTEIN entry #4 (\"One strand of DNA reads A T G C\")",
+    "problem": "The distractor \"G C A T\" (tag base-pair-mixup) is the reverse complement, which is how the partner strand reads in its own 5'\u21923' direction. A grade-9 student who knows strands are antiparallel can defend it as correct. Also, the clue (hint 3) \"Pair each base in order: A with T, T with A, G with C, C with G\" spells out the key letter by letter.",
+    "fix": "Replace G C A T with a real pairing error that is not the reverse complement, such as \"C G T A\" (A\u2194C, T\u2194G mix-up). Optionally say \"read in the same direction\". Change the clue to the rule only (\"A pairs with T and C pairs with G; pair each base in order\")."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/chem.ts:91, halfLifeItem time question, s.half.life L2, es (technetium-99m and isotope Q, unit horas)",
+    "problem": "Gender agreement error: \"\u00bfCu\u00e1ntos horas pasan hasta que solo quedan 200 g?\" (175 of 3,000 L2 seeds).",
+    "fix": "Pick the interrogative by unit gender (\"\u00bfCu\u00e1ntas horas\u2026\" / \"\u00bfCu\u00e1ntos d\u00edas/a\u00f1os\u2026\"), or rephrase without agreement: \"\u00bfCu\u00e1nto tiempo pasa, en horas, hasta que\u2026?\"."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/data.ts:204-205, populationItem L1 (yeast, unit h/horas), es",
+    "problem": "\"Si el patr\u00f3n contin\u00faa, \u00bfcu\u00e1ntas habr\u00e1 a los 10 h?\" and, read aloud, \"\u2026a los 10 horas\". The article should be \"a las \u2026 horas\" (736 of 3,000 L1 seeds).",
+    "fix": "Use an agreement-free form, \"\u00bfcu\u00e1ntas habr\u00e1 despu\u00e9s de ${T} ${U}?\", or choose \"a las\" when the unit is horas."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/g6-earth.ts:77 and :84, AIR_MASSES cold-front entry, es",
+    "problem": "\"Tall clouds\" (cumulonimbus) is translated as \"Nubes altas\". In Spanish meteorology \"nubes altas\" means high-level clouds (cirros, cirroestratos), which are the warm-front signature. The Spanish key therefore describes the wrong front.",
+    "fix": "Use \"Nubes de tormenta muy altas (cumulonimbos), tormentas el\u00e9ctricas y lluvia fuerte por poco tiempo\". In explain, use \"nubes de gran desarrollo vertical\"."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/g8-life.ts:132 and :168, NATURAL_SELECTION finch and insecticide keys, es",
+    "problem": "\"passed on\" is translated as \"heredaron\" in the correct answers: \"\u2026sobrevivieron y heredaron el pico grueso\", \"\u2026sobrevivieron y la heredaron\". This reads as \"survived and inherited it\", which reverses the direction in the very item that tests inheritance. The finch distractor uses \"heredaron\" in the correct sense (\"sus polluelos heredaron\u2026\"), which adds to the confusion.",
+    "fix": "Use \"\u2026sobrevivieron y transmitieron el pico grueso a sus cr\u00edas\" and \"\u2026sobrevivieron y transmitieron la resistencia a sus cr\u00edas\". Optionally also change lines 102 and 113 (\"hereda a sus cr\u00edas\", \"heredar los genes a\") to \"transmite\"/\"transmitir\"."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/g6-earth.ts:477-525, DESIGN (s.design.criteria L1)",
+    "problem": "7 of 16 entries are two-choice criterion/constraint items, so a blind guess scores 50%. That inflates performance on a skill with only one level.",
+    "fix": "Turn them into \"Which of these is a constraint/criterion for \u2026?\" with 3\u20134 statements (as entries #7 and #8 already do), or pair each with a second judgement (for example, which design meets both)."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/upper-more/physics.ts:466, momentumItem push-apart, s.momentum L2, es",
+    "problem": "\"Aiko (50 kg) y Mateo (65 kg) est\u00e1n quietos\u2026\" is always masculine. When both names are female (14 of the 28 in NAMES, about 24% of pairs) it must be \"quietas\".",
+    "fix": "Avoid agreement: \"\u2026est\u00e1n sin moverse sobre patines de hielo\u2026\", or choose quietos/quietas from a gender list for NAMES."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/upper-more/physics.ts:146-286, energyItem L2 hint 3",
+    "problem": "For kind \"pe\" with h = 1 m (backpack on a shelf), hint 3 \"m \u00d7 g = 5 \u00d7 9.8 = 49\" is the final answer (26 of 400 L2 seeds).",
+    "fix": "For h = 1 use hint 3 \"PE = m \u00d7 g \u00d7 h with h = 1 m\", or keep the backpack's shelf height at 2 m or more."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/upper-more/chem.ts:16, sayFormula; also say text with \"\u2192\" in g7-banks.ts:188 and \"(O\u2082)\" in g9-matter.ts:262",
+    "problem": "Read-aloud spells two-letter symbols with a lowercase letter (\"N a C l\", \"N a O H\"), which TTS reads as the article \"a\" or as a stray syllable. Bank say strings pass \"\u2192\" and subscript \"\u2082\" straight to TTS (\"grass \u2192 grasshopper\", \"O\u2082\").",
+    "fix": "Speak element symbols in capitals or by name (\"N A C L\", or \"sodium chloride\"). For bank say, swap \u2192 for \"then\"/\"luego\" and subscripts for spoken digits (\"O 2\"), or add a say field to Entry."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/upper-more/data.ts:175, populationItem bacteria, es",
+    "problem": "\"bacterias en un plato de laboratorio\" is a literal calque; a Spanish science teacher would say \"placa de Petri\" or \"caja de Petri\".",
+    "fix": "Use \"bacterias en una placa de Petri\"."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/upper-more/physics.ts:160 and :162, WAVES (s.wave.speed L1)",
+    "problem": "The \"Ripples cross a wave tank\" item uses wavelengths of 0.2\u20130.8 m (real ripple tanks are about 1\u20135 cm), and the Spanish \"tanque de olas\" means a wave pool; the term is \"cubeta de ondas\". Two ocean pairs are physically impossible: 0.2 Hz at 50 m gives 10 m/s and 0.3 Hz at 20 m gives 6 m/s, both above the deep-water speed for that period (7.8 and 5.2 m/s), and waves near a pier are slower still.",
+    "fix": "Ripple tank: f 5\u201320 Hz, \u03bb 0.01\u20130.05 m, es \"Unas ondas cruzan una cubeta de ondas.\" Ocean pairs: keep v \u2264 1.56/f, for example drop [2,500] and [3,200], or use [2,350] and [3,150]."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/upper-more/data.ts RATES runner context; notation.ts:51",
+    "problem": "Realism slips. The level-2 runner graph allows 8\u201310 m/s (10 m/s is world-record sprint pace for a student \"running at a steady pace\"; 17 of 400 seeds), and level 1 allows up to 8 m/s for 30 s. \"A national forest has about 1.1\u20139.9 \u00d7 10\u2076 trees\" is about 100\u00d7 too low for a typical US national forest (around 10\u2078).",
+    "fix": "Cap the runner's rate at about 6 m/s (rate: [2, 6], l1: [20, 60]). Change the forest to e = 8, or to \"A large state park has about \u2026 trees\"."
+   },
+   {
+    "severity": "minor",
+    "where": "Bank why tags: g6-life.ts:254 (Nucleolus tagged cytoplasm-nucleus-mixup), g6-earth.ts:444 (\"By conduction through the walls\" tagged conduction-radiation-mixup), g8-physical.ts:291 (\"Using solar panels\" tagged increases-emissions)",
+    "problem": "The why tag does not match the distractor, so a miss is recorded in the learner model as the wrong misconception.",
+    "fix": "Retag: nucleolus-vesicle-mixup; conduction-convection-mixup (or wrong-path); not-a-methane-source / irrelevant-action."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/upper-more/notation.ts:102, notationItem L1 \"find n\" hint 1",
+    "problem": "\"Where does the decimal point go so that 8 has one digit before it?\" (or \"\u20263.84 has one digit\u2026\") makes no sense: the mantissa already has one digit before the point. The intent is about the plain number.",
+    "fix": "\"In ${plain}, where must the decimal point move so the number reads ${ms}?\" / \"En ${plain}, \u00bfa d\u00f3nde debe moverse el punto para que quede ${ms}?\""
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/upper-more/moon.ts, s.moon.phase (principal phases)",
+    "problem": "The keys are astronomically right: the date is always in the keyed 45\u00b0 sector at every US local noon. But for new moon, first quarter, full moon and last quarter keys, the real event falls on the previous or next US-local calendar day in 1,517 of 3,708 cases (41%). A strict \"moon calendar\" would print the quarter or full icon on a neighbouring day, so a learner checking a real calendar may dispute the key; \"About\" covers this only loosely.",
+    "fix": "Reword to \"About what phase is the Moon in on D1?\" (drop \"a moon calendar shows\u2026 for\"), or keep principal-phase items only when the true event's US-local date equals D1, which can be checked offline with the Meeus routine."
+   },
+   {
+    "severity": "minor",
+    "where": "Spanish style in banks: g9-matter.ts:17 and :28, g9-systems.ts:416, g6-earth.ts:492, g6-life.ts (\"Un hongo de sombrero\"), physics.ts energy L2 English \"A roller coaster car with riders with a mass of 700 kg\"",
+    "problem": "Stiff calques. \"\u2026tienen el mismo n\u00famero de \u00bfqu\u00e9?\", \"\u2026juntas forman \u00bfqu\u00e9 capa?\", \"Un puente de modelo\", \"hongo de sombrero\", and the doubled \"with \u2026 with\" in English.",
+    "fix": "\"\u00bfQu\u00e9 tienen en igual n\u00famero los elementos del mismo grupo?\" or \"\u2026tienen el mismo n\u00famero de: \", \"\u00bfQu\u00e9 capa forman juntas la corteza y la parte superior del manto?\", \"Una maqueta de puente\", \"Un champi\u00f1\u00f3n\" (or \"una seta\"), and \"A roller coaster car, with its riders, has a mass of 700 kg\u2026\"."
+   }
+  ]
+ },
+ "sci-k5": {
+  "verdict": "I found no wrong answer key. All 9 computed skills matched my own recomputation on 552,000 generated items, and every hand-written key in the banks is factually right. It is still not ready for 1.0: 3 major problems and 15 minor ones need fixing first. Majors: (1) the climate data tells children Canada and the northern US have average July highs of 80\u201395\u00b0F (Canada: 65% of items say above 85\u00b0F, which no Canadian city has); (2) one grade-1 light question has two defensible answers and marks the true one wrong; (3) grade-5 material identification (level 3) has only 6 distinct questions, so they repeat. Most serious minors: \"unas 1\"-type Spanish grammar errors in about 26% of Earth's-water level 2\u20133 Spanish items; every water-wave scenario describes waves that could not exist; hint 2 (the level-wide hint) restates the answer on about 25 recall questions; picture and answer-length patterns let children guess right. The authors' claims hold up where checked: daylight hours match a sunrise\u2013sunset calculation, the gas from the fizzing cup stays within what baking soda and vinegar can make, desert towns get under 10 inches of rain, and the existing tests pass (207 for this strand, 904 across practice). I committed nothing and deleted my scratch files; the worktree is clean at 2d5827e.",
+  "sampled": "Setup: worktree reset to 2d5827e; node_modules copied as clones (left in place, ignored by git). Throwaway audit script covering all 33 skills, every level, both locales; it ran once with 600 seeds and once with 4,000 seeds (552,000 items).\n(1) For every computed skill I worked out the key myself from the prompt text and picture data, never from the generator's own variables: weather tallies, daylight against a sunrise\u2013sunset model for Denver, Philadelphia, Columbus and Indianapolis, habitat counts, climate, motion, waves read from the graph points, mass and stoichiometry, a material table I wrote myself, and Earth's water shares. 0 mismatches.\n(2) check() accepted every key and rejected every wrong choice and every listed wrong value; number-line answers always fall on the line. 0 failures.\n(3) Choices: no duplicates, key appears exactly once, every wrong choice has a kebab-case tag, the key has none. 0 failures.\n(4) Hints: flagged 48 hint kinds containing the answer word or number; reviewed each by hand.\n(5) Read-aloud text: no ^, digit/digit, braces, blanks or math symbols. 0 failures.\n(6) Spanish is never just English (only \"Alaska\" is the same in both).\n(7) Alt text: reviewed 18 flags.\n(8) Every bank level has 13\u201314 distinct items.\nExtra probes: test-taking cues (picture on the key, key as the longest choice); counts of Spanish \"unas 1\"; whether the iron hint ever helps; water-wave steepness; how often Canada July temperatures are unrealistic.\nManual reading: every bank entry (about 600 across all 46 bank levels) in English and Spanish, plus 2 seeds of every computed level in both languages, read as a teacher and as a Spanish reader. Also compared the NGSS codes with the first strand (early.ts), and ran the existing strand tests (207 pass) and all practice tests (904 pass).",
+  "findings": [
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/k5-more/computed-3-4.ts:17-20 (NORTH/SOUTH ranges), s.climate.data L1+L2, en+es",
+    "problem": "The data presented as fact is wrong. Canada and the northern US get average July highs drawn from 80\u201395\u00b0F (3,000 seeds: 63% of northern items state July above 85\u00b0F; Canada 493/761 = 65%). Real July average highs: Toronto 81, Montreal 79, Ottawa 80, Winnipeg 79, Vancouver 72, Calgary 74, Minneapolis 83, Chicago 84, Boston 82. April up to 68 and October up to 70 are too warm for Canada too. Australia's July range of 50\u201360 is too cold for Sydney (63), Perth (65) and Brisbane (71). Keys are still right, but the child is told false climate facts. The strand test only checks the ordering of the temperatures.",
+    "fix": "Use realistic ranges that keep the order. North: Jan [15,40], Apr [48,62], Jul [72,84], Oct [50,62]. Australia: name Melbourne/Adelaide, or use Jul [55,64] with Apr/Oct minimums above 64. Better: per-place tables from NOAA/ECCC/BOM normals, plus a test that each stated value falls inside the place's real range."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/k5-more/grade-1.ts:68, s.light.through L1 item 7 (closed book), en+es",
+    "problem": "Two defensible answers. The question is 'You shine a flashlight at a closed book. What happens to the light?' The key is 'No light gets through', but the wrong choice 'The light bounces back' is also true: a book reflects light diffusely, which is how you see the lit spot. A child who says that is marked wrong and tagged thinks-it-reflects, which is not a misconception. Item 4 (clear water, 'bounces back') has a milder version of the same problem.",
+    "fix": "Replace that wrong choice with one that is plainly false (e.g. 'The light shines out the back of the book'), or reword the stem to 'Does any light come out the other side?'"
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/practice/science/k5-more/computed-5.ts:166-211 (MATERIALS / identifyMaterial), s.matter.mass L3, en+es",
+    "problem": "Only 6 distinct questions across 4,000 seeds per locale: the question text depends only on which of 6 materials is the answer. That is below the 12-distinct-items bar, and children will memorize 'white crystals + the water conducts = salt' rather than reason.",
+    "fix": "Add materials (steel nail, copper wire, glass, wax, sand, plastic, baking soda, chalk vs. plaster) and vary which tests are reported and their order, so each level gives at least 12 distinct test-result sets that each fit exactly one material."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/k5-more/computed-5.ts:275-276, 293, 305-306, s.earth.water L2+L3",
+    "problem": "Number agreement breaks when a share is 1. Spanish: 'Unas 1 estar\u00edan en lagos\u2026', 'Del agua dulce, unas 1 de cada 100 gotas est\u00e1n\u2026', 'Unas 1 cubetas.' \u2014 1,570 of 6,000 Spanish L2+L3 items (about 26%). English: 'About 1 buckets.' (192/3,000 L2 items) and 'about 1 out of every 100 drops are\u2026'.",
+    "fix": "Add a singular branch. Spanish: 'M\u00e1s o menos 1 estar\u00eda\u2026', '1 de cada 100 gotas est\u00e1\u2026', 'M\u00e1s o menos 1 cubeta.' English: 'About 1 bucket', '1 out of every 100 drops is'. Or require fresh \u2265 200 in L2 so no share comes out as 1."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/k5-more/computed-3-4.ts:306 (wave-tank context) and :394 (compareWaves), s.wave.shape L1-L3",
+    "problem": "Every water-wave scenario is physically impossible. In all 1,970 wave-tank items (L1/L2) and all 3,000 pool items (L3), wave height \u00f7 wavelength exceeds 1/7, the point where real water waves break. Examples: amplitude 3 in with wavelength 2 in; 'Wave A has an amplitude of 5 feet and a wavelength of 4 feet' in a pool. A teacher will object, even though the keys are right.",
+    "fix": "Use rope and spring contexts for the graph levels. For L3, say 'Two waves travel along two long ropes', or keep water but give amplitudes in inches (1\u20135 in) and wavelengths in feet (5\u201320 ft)."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/k5-more/computed-5.ts:207, s.matter.mass L3 hint 3",
+    "problem": "The third hint is the same for every non-iron answer ('A magnet did not pull it, so it is not iron.') and rules out nothing in 1,444 of 3,000 items (48%), because iron is not among the choices. When the answer is iron, the hint says 'Magnets pull iron, but not aluminum or copper', which names the answer.",
+    "fix": "Build hint 3 from firstDifference() against a choice that is actually shown, e.g. 'Sugar water does not conduct electricity, so it is not sugar.'"
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/k5-more/computed-5.ts:170-171,189,198, s.matter.mass L3, es (and en)",
+    "problem": "For salt and sugar (1/3 of L3 Spanish items) the Spanish reads 'Es cristales blancos.', which is ungrammatical. The English 'It is white crystals.' is awkward. The question '\u00bfQu\u00e9 material es, lo m\u00e1s probable?' is unnatural.",
+    "fix": "Spanish: 'Son cristales blancos' / 'Est\u00e1 formado por cristales blancos' and '\u00bfQu\u00e9 material es, probablemente?'. English: 'It is made of white crystals.'"
+   },
+   {
+    "severity": "minor",
+    "where": "Bank strategy hints (hint 2) \u2014 grade-1.ts:29 (s.sound.vibrate [10]); grade-2.ts:91 (s.landforms.water L2 [0]); grade-2.ts s.plants.grow L3 [2],[10]; grade-2.ts s.wind.water.land L2 [4]; grade-1.ts s.parts.jobs L2 [0],[2], s.sky.patterns [10]; grade-4.ts:143 (s.renewable L1 [6]), s.speed.collisions L2 [4]; grade-5.ts:14 and s.plant.matter L1 [10], grade-5.ts:52 L3 [0]-[3], grade-5.ts:92 s.sun.gravity L2 [0],[4],[12], s.sun.gravity L1 [0],[4],[8], L3 [1],[12]; grade-k.ts s.sun.warms L2 [10]",
+    "problem": "On about 25 recall questions, the level-wide hint 2 states the answer word for word. Examples: 'On a map, what color usually shows water?' gets the hint 'On a map, blue shows water.'; 'Why is coal called nonrenewable?' gets '\u2026take millions of years to form'; 'Which sphere includes all living things?' gets '\u2026life (biosphere)'. A child can tap hint 2 and copy. Helped answers are marked helped, which limits the harm.",
+    "fix": "Give those entries their own `strat` that names a method ('Think about what you see on a globe', 'How long does nature take to make more?') rather than the fact being tested."
+   },
+   {
+    "severity": "minor",
+    "where": "Bank answer cues \u2014 grade-1.ts s.sound.vibrate L1; grade-k.ts s.sun.warms L2; grade-1.ts s.parents.young L2; grade-2.ts s.plants.grow L1; grade-4.ts s.structures.functions L2, s.quakes.volcanoes L2; grade-k.ts s.weather.ready; grade-2.ts s.heat.cool L2",
+    "problem": "Patterns let children guess right. Pictures: in s.sound.vibrate L1 the \u3030\ufe0f picture is on the key in 7/13 items and never on a wrong choice, so a pre-reader can score 54% by tapping it; \u26f1\ufe0f (s.sun.warms L2), \ud83d\udd00 (s.parents.young L2) and \u2600\ufe0f (s.plants.grow L1) each mark the key 4 times and never a wrong choice. Length: the key is the strictly longest choice in 12/13 (s.structures.functions L2), 11/13 (s.weather.ready), 10/13 (s.heat.cool L2) and 10/13 (s.quakes.volcanoes L2); 281/600 bank items overall.",
+    "fix": "Put those pictures on some wrong choices (e.g. \u3030\ufe0f 'It shakes slowly, with no sound'). Make wrong choices as long and specific as the key; add a test that caps any single cue at about 40% of a level."
+   },
+   {
+    "severity": "minor",
+    "where": "grade-1.ts:44 (s.light.see [4]); grade-2.ts:98 (s.landforms.water L2 [7]); grade-2.ts:183 (s.heat.cool L2 [12])",
+    "problem": "Questions that are ambiguous or slightly wrong. Cave: 'You are in a dark cave. Which one can you see?' \u2014 with a lit lantern present, the coin and rock near it are lit too. Pond: 'A pond freezes in winter. What form is its water now?' \u2014 usually only the top freezes, so the wrong choice 'Liquid' is partly right. Snow: 'can water freeze into snow again? Yes, cold can freeze water again' \u2014 snow forms from water vapor in clouds, not by melted water refreezing (that makes ice).",
+    "fix": "Cave: 'Which one could you see in a cave with no other light?' Pond: 'A puddle freezes solid' or 'The top of the pond freezes. What is the top layer now?' Snow: 'can that water freeze into ice again?'"
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/k5-more/computed-early.ts:34-39, s.weather.chart L2, en+es",
+    "problem": "The picture description gives away the answer in 100% of items: 'The first group, for sunny days, has 5 dots' when the question is 'How many sunny days were there?' (screen-reader users only).",
+    "fix": "Describe the groups without counts ('Two groups of dots to count: first for sunny days, second for rainy days') and make each dot focusable so it can be counted, or document this as an accepted exception for counting items."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/k5-more/computed-early.ts:176 (s.daylight.hours L2 steps), en+es",
+    "problem": "The worked solution 'In order: June 15, March 12, January 10.' ('junio 15, marzo 12\u2026') reads as calendar dates.",
+    "fix": "'In order: June (15 hours), March (12 hours), January (10 hours).'"
+   },
+   {
+    "severity": "minor",
+    "where": "grade-4.ts:182 (s.quakes.volcanoes L1 [5]); grade-k.ts:35 (s.sun.warms L2 [2]); grade-2.ts:61 (s.plants.grow L3 [10]); grade-k.ts:19 (s.sun.warms L1 [5]); computed-3-4.ts:291 (s.motion.patterns L3 hint 3)",
+    "problem": "English wording: 'Which of these can people NOT prevent?' with the choice 'Not having a family safety plan' is a double negative for grade 4. 'Which hat\u2026' lists 'Sunglasses only', which is not a hat. The key 'Flowers make seeds' does not grammatically answer 'What is it helping?'. The worked solution says 'Warm ice turns to water.' When the answer k is 3, hint 3 lists p, 2p, 3p, which already reaches the total, so it effectively finishes the count.",
+    "fix": "Choice 'A family having no safety plan'; ask 'Which keeps the most sun off your face?'; key 'It helps flowers make seeds'; 'The sun warms the ice until it melts'; hint 3 lists only 'p, 2p, and keep going'."
+   },
+   {
+    "severity": "minor",
+    "where": "Spanish wording \u2014 grade-3.ts:94 (s.adapt.survive L2 [0]); computed-early.ts:253; grade-1.ts:152 (s.parents.young L1 [8]); grade-k.ts:95 (s.weather.ready [1]); grade-1.ts:58 (s.light.through strategy); computed-early.ts:217-218 (PLACES); computed-3-4.ts:66 vs computed-early.ts:122; computed-5.ts:33; computed-early.ts:42",
+    "problem": "Unnatural or ambiguous Spanish: '\u00bfQu\u00e9 conejos ven menos los zorros?' reads as 'which rabbits see the foxes less'; 'Muchos tipos de seres vivos en un lugar se llama biodiversidad' (plural subject with singular verb); 'Ella respira por ella' (unclear who); 'Tener lista comida, agua y ropa abrigada' (should be 'listas'); 'Lo turbio\u2026 Los espejos la rebotan' ('rebotar' used transitively; 'turbio' means murky); 'el huerto' for 'the garden' with a \ud83c\udf3b picture; 'el charco de marea' (the usual term is 'poza de marea'); climate month choices lowercase ('julio') while daylight capitalizes ('Junio'); 'mezcla 25 gramos de az\u00facar en\u2026'; '\u00bfQu\u00e9 tipo de d\u00eda hubo m\u00e1s?'.",
+    "fix": "'\u00bfA qu\u00e9 conejos ven menos los zorros?' (or '\u00bfQu\u00e9 conejos son m\u00e1s dif\u00edciles de ver para los zorros?'); 'Cuando hay muchos tipos\u2026 se llama biodiversidad'; 'La mam\u00e1 respira por la cr\u00eda'; 'Tener listas\u2026'; 'Lo transl\u00facido\u2026 Los espejos la reflejan'; 'el jard\u00edn'; 'la poza de marea'; capitalize Spanish month choice labels; 'disuelve\u2026 en'; '\u00bfQu\u00e9 tipo de d\u00eda hubo m\u00e1s veces?'."
+   },
+   {
+    "severity": "minor",
+    "where": "grade-5.ts:22 (s.plant.matter L1 [8])",
+    "problem": "'Wood is mostly made of carbon' overstates it: dry wood is about 50% carbon, 44% oxygen and 6% hydrogen.",
+    "fix": "'Wood is about half carbon. Where did that carbon come from?'"
+   },
+   {
+    "severity": "minor",
+    "where": "grade-k.ts:77 (s.living.change L2 [4]); grade-1.ts:195 (s.sky.patterns [11])",
+    "problem": "Safety and tagging. Kindergartners are told to pick up park trash ('Pick it up with gloves'), which can include broken glass or needles. A night-sky choice 'The stars went away' carries the daytime tag thinks-stars-leave-in-day.",
+    "fix": "Change the key to 'Pick it up with gloves and a grown-up' (or 'Tell a grown-up'); retag the stars choice as thinks-stars-go-away."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/science/k5-more.ts:15-16 and the skill list (standard fields)",
+    "problem": "The file header says this strand covers science standards (NGSS performance expectations) that early.ts does not reach, but 3 skills repeat standards early.ts already tags: s.weather.chart K-ESS2-1 (= s.weather), s.habitat.survey 2-LS4-1 (= s.habitats), s.heat.cool 2-PS1-4 (= s.states.matter). Meanwhile standards taught in individual levels are not tagged anywhere: 2-LS2-2, K-ESS3-3, K-PS3-2, 2-ESS1-1, 2-ESS2-3, 3-ESS2-2, 3-PS2-4, 3-LS3-2, 3-LS4-2, 4-PS3-3, 4-LS1-2, 4-ESS2-2, 5-PS1-3, 5-ESS1-1. Any coverage report built from the standard field will be wrong.",
+    "fix": "Allow standards[] per skill (or per level) and tag each level with the standard it actually teaches; fix the header comment."
+   }
+  ]
+ },
+ "eng-phonics": {
+  "verdict": "Not ready to ship. Every answer key I recomputed independently came out right: letters, sounds, blends, swaps, sound counts, -ed/-ing and participle/gerund forms, syllable splits (checked against Merriam-Webster and my own RAE syllabifier), stress, aguda/llana/esdr\u00fajula, syllable types and compounds. The mechanical invariants also pass (check() accepts the key index and rejects the others, choices are distinct, why tags are present, no notation in say, both locales present, at least 12 items per level), and the author's 169 tests pass. Three problems should block release: (1) the English \"hand\" item shows a Spanish hint that is also factually wrong; (2) about 20 \"Which word is spelled right?\" items offer another correctly spelled real word, so there are two defensible answers; (3) the feet item uses a single-foot picture with \"foot\" as a distractor, and \"be\", \"tre\" and \"sno\" read aloud exactly as bee, tree and snow. There are also many structural problems: gap items whose distractors sound the same as the key while the hint claims they would sound different, hints that contain or spell the answer, two false Spanish spelling rules, misleading syllable hints, and vulgar Spanish words (\"pito\", \"g\u00fcevo\").",
+  "sampled": "Reset to 2923a82 and ran the author's tests (169 pass). Wrote throwaway tsx scripts in the scratchpad, ran them, then deleted them; nothing was committed and the worktree is clean. (a) Generated items for all 28 skills, 52 levels, en and es, 300 seeds each (31,200 items). On each I checked: check() with the key index (accepted) and every other index (rejected); answerText; distinct labels with the key exactly once; why tag on every wrong choice and none on the key; hints non-empty and not containing the key; say free of notation; EN differs from ES and no language leakage; alt does not contain the key; at least 12 distinct items per level. (b) Recomputed every bank entry (about 827 entries x 2 locales) by my own rules: phoneme tables for first/last sound, vowel patterns, onset+rime and syllable joins, letter-swap rebuilds, hand-coded sound counts, gap rebuild from the spoken word, an -ed sound classifier, my own -ed/-ing spelling rules, participle and gerund tables, ES seseo phoneme rules for soft c/g, an RAE syllabifier, hand-coded MW splits, stress lists and an English syllable-type classifier. Every key matched. (c) Read every bank entry in source, both languages (all items, not only 25 per skill), plus a full render of all composed hints and steps. (d) Checked in Runner.tsx and AnswerPad.tsx how picture, alt, hints and choices render: alt is only an aria-label, hints are shown as text and have their own Hear button.",
+  "findings": [
+   {
+    "severity": "blocker",
+    "where": "apps/web/src/practice/english/phonics/blend.ts:212-224 (e.segment.sounds, EN item \"hand\", every seed that picks it)",
+    "problem": "silentH = w.startsWith(\"h\") is not tied to the locale. The English item \"hand\" therefore gets the Spanish hint 3 \"La h no suena. El primer sonido se escribe .\": wrong language, a false fact (the h in hand is pronounced) and an empty letter slot.",
+    "fix": "const silentH = locale === \"es\" && w.startsWith(\"h\"); add a test that English hints contain no Spanish."
+   },
+   {
+    "severity": "blocker",
+    "where": "read.ts:79 SPELLED, used at grade2a.ts:171 (e.silent.letters EN), grade2a.ts:151 (e.soft.c.g L2 EN), grade2a.ts:93 (e.diphthongs L2 ES), grade2a.ts:152 (e.soft.c.g L2 ES), yvowel.ts:102 (e.y.vowel L2 ES)",
+    "problem": "The prompt is \"Which word is spelled right?\" / \"\u00bfCu\u00e1l est\u00e1 bien escrita?\" and never mentions the picture, but many distractors are real, correctly spelled words, so a child who picks one is marked wrong while being right. EN: two/to, two/tow, eight/ate, knot/not, knot/knit, write/rite, write/wrote, thumb/thump, sign/sine, sign/sing, lamb/limb, face/fake, bridge/bride, race/rake. ES: rey/re, ley/le, auto/ato, pausa/pasa, paisaje/pasaje, queso/ceso. In e.y.vowel ES the only cue is the spoken word, and \"rallo\" (rayo item, yvowel.ts:91) is a real word that sounds exactly like rayo for ye\u00edsta speakers.",
+    "fix": "Change SPELLED to \"Which word is the picture, spelled right?\" / \"\u00bfCu\u00e1l es el nombre del dibujo bien escrito?\". For e.y.vowel ES, which has no picture, say a context sentence (\"Cay\u00f3 un rayo.\") and replace rallo, re, le, esto and do with non-words."
+   },
+   {
+    "severity": "blocker",
+    "where": "grade1c.ts:76-79 EN_VT_READ (e.vowel.teams L2 EN)",
+    "problem": "Picture-word items have distractors that are right or decode exactly to the picture's name. The feet item uses \ud83e\uddb6, which is a single FOOT (its Unicode name), and offers \"foot\" as the wrong choice, so the distractor names the picture better than the key. The bee item offers \"be\", tree offers \"tre\" and snow offers \"sno\": all three decode by open-syllable rules to exactly bee, tree and snow, so a child who decodes correctly is marked wrong.",
+    "fix": "Feet: use a 'shoe' or 'sheep' style item or change the distractor to fat:V. Replace be, tre and sno with distractors that sound different (bed, try, snap); keep homophone spellings only in items explicitly asking for the correct spelling."
+   },
+   {
+    "severity": "major",
+    "where": "read.ts:112 gapQ hint 3; data grade1c.ts:59-66 (e.vowel.teams L1 EN, all 16), grade2a.ts:21-27 (e.r.controlled L1 EN: bird, girl, shirt, turtle, purse, burger, tiger, spider), grade2a.ts:61-67 (e.diphthongs L1 EN, all 16), grade1b.ts:26-28 (whale/w, duck and sock with k/c), grade2a.ts:69-75 (e.diphthongs L1 ES ei/ey)",
+    "problem": "The task is \"Which letters are missing?\" for a word that is spoken aloud, but at least one wrong fill sounds identical (ai/ay, ee/ea, oa/ow, ir/ur/er, oi/oy, ou/ow, wh/w, ck/k/c, ei/ey), so the item has two phonetically valid answers. Hint 3 then claims the homophone sounds different: \"With ay, it would say rayn\", \"With ur, it would say burd\", \"With oy, it would say coyn\", \"With ea, it would say feat\", \"With ow, it would say howse\", \"Con ei dir\u00eda rei\". The EN diphthong hint 2 even admits \"oi and oy sound alike\" but gives no rule for choosing.",
+    "fix": "Ask \"Which spelling is right?\" for these items and teach the position rule in hint 2 (ay/oy/ow usually end a word; ai/oi/ou come in the middle). For homophone-tagged fills, hint 3 should say \"sounds the same, but X is not spelled that way\". Alternatively, drop homophone fills from the listening gap level."
+   },
+   {
+    "severity": "major",
+    "where": "yvowel.ts:96-100 (e.y.vowel L2 ES, all 16 items)",
+    "problem": "On a \"\u00bfCu\u00e1l est\u00e1 bien escrita?\" item, hint 3 writes out the correct spelling: \"Buey termina con el sonido de i.\", \"En aire, el sonido de i est\u00e1 dentro de la palabra.\", \"En playa, despu\u00e9s de la y viene una vocal\". Hint 2 also spells rey and reina, which are themselves items. The hint gives the answer every time.",
+    "fix": "Use 'la palabra' instead of w in hint 3 (\"Esta palabra termina con el sonido de i\"), and use examples in hint 2 that are not in the bank (hoy \u2192 ley is in the bank too; use 'convoy', 'peine')."
+   },
+   {
+    "severity": "major",
+    "where": "endings.ts:108 and :189; grade2a.ts:171; grade2a.ts:128-129 with ES_SOFT :111,:113,:114; grade2c.ts:74",
+    "problem": "Hint 2 contains the exact answer on these items: participio hint lists escrito, roto, hecho (escribir, romper and hacer items); gerundio hint lists durmiendo and leyendo (dormir and leer items); silent letters hint shows \"knot, lamb\" (knot and lamb items); soft c/g ES anchors \"como en sol\" and \"como en jirafa\" are the key on cereza, gente and genio; syllable split examples \"rab-bit\" and \"pe-lo-ta\" are the rabbit and pelota items.",
+    "fix": "Choose worked examples outside the bank (dicho, vuelto; pidiendo, cayendo; knee, comb; seta/zapato; nap-kin, ca-mi-sa), or skip the example when it equals the key."
+   },
+   {
+    "severity": "major",
+    "where": "letters.ts:55 (e.letter.names L1 EN, all 16 items)",
+    "problem": "The task is to hear a letter name and find its shape, and the prompt deliberately shows no glyph. Hint 3, which is displayed as text, says \"N looks close, but it is not M.\" This puts the target glyph on screen, so a pre-reader can simply match shapes. The Spanish version correctly uses the letter name (\"no es la eme\").",
+    "fix": "Name the letter in the English hint (\"N looks close, but it is not em\") or point only at the look-alike (\"N looks close. Listen again.\")."
+   },
+   {
+    "severity": "major",
+    "where": "yvowel.ts:107 (e.y.vowel L2 ES hint 2) and grade2a.ts:90 (e.diphthongs L1 ES hint 2)",
+    "problem": "Both hints teach a false Spanish spelling rule. \"El sonido de i al final se escribe y\" and \"Al final de la palabra, la i se escribe y\" would make a child write casy, aquy, fuy, my, jabaly. The y applies only to an unstressed i closing a diphthong (rey, hoy, muy). The grade2a hint is also shown on the au/eu items (auto, pausa, euro, dinosaurio, astronauta, aplauso), where it does not apply.",
+    "fix": "\"Al final, la i que va despu\u00e9s de otra vocal y no lleva tilde se escribe y: rey, hoy, muy (pero: casi, fui, le\u00ed).\" Give the au/eu items their own hint."
+   },
+   {
+    "severity": "major",
+    "where": "grade2c.ts:122 (e.syllable.types L1 EN: me, she, we)",
+    "problem": "Hint 2 says \"Open ends in a vowel. Silent e ends in e.\" The key-open items me, she and we end in e, so the hint supports both 'open' and 'silent e'.",
+    "fix": "\"Silent e: vowel, one consonant, then an e you do not hear (cake). Open: the word ends with the vowel sound (go, me).\""
+   },
+   {
+    "severity": "major",
+    "where": "grade2c.ts:75 (e.syllable.split L2 ES: r\u00edo, sand\u00eda, pa\u00eds)",
+    "problem": "Hint 2 \"No se separan ... diptongos como io o ue\" points to the wrong choice on r\u00edo (\"io\": key r\u00ed-o, distractor r\u00edo) and does the same on sand\u00eda and pa\u00eds. These are hiatuses because of the tilde.",
+    "fix": "Add: \"pero si la i o la u lleva tilde, se separan: r\u00ed-o, pa-\u00eds, san-d\u00ed-a\"."
+   },
+   {
+    "severity": "major",
+    "where": "read.ts:46 MISS['dropped-letter'] with grade1c.ts:75-80 (e.vowel.teams L2 EN, all 16) and grade2a.ts:77-82 (e.diphthongs L2 EN: coin, point, house, cloud, mouth, noise)",
+    "problem": "Hint 3 says \"X is missing a sound\" for distractors that drop a letter of the vowel team but keep the same number of sounds (ran, tran, snal, shep, fet, lef, sel, pech, bot, got, sop, rod, bol, con, pint, hose, clod, moth, nose). Be, tre and sno even sound the same as the key. The statement is false.",
+    "fix": "For vowel-team drops, use 'has one vowel where two belong' (a new tag such as 'single-vowel-for-team'), or change the dropped-letter text to 'is missing a letter'."
+   },
+   {
+    "severity": "major",
+    "where": "sounds.ts:112 (e.word.families L1 ES, -ito); blend.ts:79 (e.blend.onset L2 ES, pa+to); grade1c.ts:23 (e.silent.e L1 ES, huevo); grade1a.ts:23,41 (e.short.vowels L1 ES, pato)",
+    "problem": "Age-inappropriate Spanish. \"pito\" (common vulgar slang for penis in Spain, Mexico and Argentina) is spoken aloud by TTS (\"Gatito, perrito, pito.\") and shown as a choice. \"g\u00fcevo\" (vulgar in Venezuela, Colombia and the Caribbean) is a distractor. Hint 3 on the pato item reads \"Con po dir\u00eda poto\" (buttocks in Chile and Peru).",
+    "fix": "Use palito/bonito/grito for -ito and pita/pino for pa+to; replace g\u00fcevo with uebo; reorder the pato distractors so hint 3 uses pe (\"pe-to\" is also odd, so use ba \u2192 \"bato\")."
+   },
+   {
+    "severity": "minor",
+    "where": "sounds.ts:29 (e.middle.vowel L1 ES, bici)",
+    "problem": "In a listening item, boca is tagged matched-consonants and hint 3 says \"Boca tiene las consonantes de bici\". By sound that is false: bici is /bisi/ and boca is /boka/.",
+    "fix": "Use 'beso' (b-s, vowels e-o) as the near miss, or tag it different-vowel."
+   },
+   {
+    "severity": "minor",
+    "where": "grade2a.ts:128 and :143, ES_SOFT and ES_SOFT_READ (e.soft.c.g ES)",
+    "problem": "The items assume seseo: cereza starts like sol, \"Con e, i, la c suena como en sol\", and zereza/sereza \"suena igual\". This is false for Castilian Spanish, where ce, ci and z are /\u03b8/.",
+    "fix": "Declare Latin American Spanish as the target in the content or the UI, or word the hint as \"en casi toda Am\u00e9rica suena como en sol\"."
+   },
+   {
+    "severity": "minor",
+    "where": "grade2a.ts:122 (e.soft.c.g L1), endings.ts:42 (e.ending.ed L1 EN), yvowel.ts:25 (e.y.vowel L1 EN), letters.ts:151 (e.final.sound ES)",
+    "problem": "The written prompt can be met by the written labels, which leads to the misconception being taught. \"Read: city. Which picture starts the same?\" \u2014 the label 'cat' starts with the same letter. \"Which word ends like jumped?\" \u2014 all three choices end in -ed. \"ends like fly\" \u2014 both cry and baby end in y. In ES, \"\u00bfCu\u00e1l termina como gato?\" with key perro is read as a final-syllable rhyme in Spanish classrooms.",
+    "fix": "Say \"starts/ends with the same sound\" in the prompt itself, as the say line already does."
+   },
+   {
+    "severity": "minor",
+    "where": "yvowel.ts:43 (yoy\u00f3), :66-69 (my, yes), :32 (hint 2 anchors)",
+    "problem": "Some keys repeat the word being asked about. \"\u00bfC\u00f3mo suena la y en yoy\u00f3?\" has key \"como en yoy\u00f3\"; \"y in my\" has key \"i, as in my\"; \"y in yes\" has key \"y, as in yes\". Hint 2's anchors (\"In fly... In baby...\") equal the key on the cry, butterfly and daisy items.",
+    "fix": "Use anchors that are not bank words (\"como en yema\" \u2192 use \"como en llave\"; \"i, as in kite\"; \"y, as in yo-yo\") and pick different hint anchors."
+   },
+   {
+    "severity": "minor",
+    "where": "read.ts:89, sounds.ts:159, core.ts:38 altFor (all picture-word reading levels plus e.word.families L2)",
+    "problem": "The alt text (the picture's aria-label) is the key itself (\"A cat\" on \"Which word names the picture?\"), so a screen-reader user hears the answer. Sighted children are not affected.",
+    "fix": "For reading-the-picture items, use a neutral alt (\"Picture to name\" / \"Dibujo para nombrar\") or describe the picture without its name."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/practice/answer.ts check() and answerText() for kind 'choice'",
+    "problem": "check(answer, answerText(answer)) rejects the key on every choice item: answerText returns a string (the index, or the label when choices are passed), while check compares it with === to the numeric index. Runner and tools.ts pass the index, so this is latent today, but any caller that uses answerText output will mark right answers wrong.",
+    "fix": "In check, accept Number(response) === index or a label match, or document that choice answers take the index."
+   },
+   {
+    "severity": "minor",
+    "where": "sight.ts:183 (algod\u00f3n), grade2a.ts:47 (corro) and :49 (encerrar), grade2b.ts:84 (houseboat), grade1b.ts:42 (cherry/berry)",
+    "problem": "Some distractors are defensible answers. \"\u00bfHay algod\u00f3n en la puerta?\" is a sensible sentence. \"El corro canta\" works, since corro is a ring of children. \"El perro quiere encerrar su hueso\" is sensible. A houseboat is arguably 'a kind of house'. A \ud83c\udf52 is often called a berry by children.",
+    "fix": "Replace these with clearly nonsensical look-alikes (alguien \u2192 alfombra is also sensible, so use 'algodonero' \u2192 better 'alguno'; corro \u2192 'cono'; encerrar \u2192 'enterado'; houseboat \u2192 swap the one-part option to 'a kind of boat'? no \u2014 that is the key's head; use a different compound; berry \u2192 'chewy')."
+   },
+   {
+    "severity": "minor",
+    "where": "endings.ts:109 (e.ending.ed L2 ES, salir)",
+    "problem": "Hint 3 says \"Salado no va despu\u00e9s de he.\" This is false: \"he salado\" is correct Spanish (from salar). It is wrong only as the participle of salir.",
+    "fix": "\"Salado viene de salar, no de salir.\" Or use 'sala\u00eddo'-style non-words such as 'saldo'? Better: 'salado' \u2192 replace with 'saliado'."
+   },
+   {
+    "severity": "minor",
+    "where": "grade2b.ts:115 and :114, grade2b.ts:38",
+    "problem": "The Spanish compound hints sound unnatural: \"Un girasol hace algo con sol.\", \"Un paraguas hace algo con aguas.\", \"La segunda, sobre qu\u00e9 lo hace.\" Also, \"alto\" is tagged one-part-only for alta+voz but is neither part.",
+    "fix": "\"La segunda palabra dice con qu\u00e9: girasol \u2192 sol.\" Use 'alta' or 'voz' as the one-part distractor."
+   },
+   {
+    "severity": "minor",
+    "where": "sight.ts:87 (e.sight.preprimer L2 ES: tu/t\u00fa, se/s\u00e9)",
+    "problem": "The tilde diacr\u00edtica (tu vs t\u00fa, se vs s\u00e9) is tested in the pre-primer band, which is kindergarten. It is normally taught in grades 2-3, so the item is age-inappropriate for this band.",
+    "fix": "Move these items to the grade 2 band and replace them here with non-accent look-alikes (te, tos, su)."
+   },
+   {
+    "severity": "minor",
+    "where": "blend.ts:38 (e.blend.onset L1 EN rimes an/up/at/all) and blend.ts:175 (e.sound.swap L2 EN \"Change the a in hat to i\")",
+    "problem": "Speech engines reduce function words. \"Then add an.\" comes out as /\u0259n/; \"Then add up.\" sounds like the phrase 'add up'; \"the a in hat\" comes out as a schwa. The child hears the wrong sound.",
+    "fix": "Quote the parts and name letters explicitly (add the ending \"an\"; 'the letter a') or use rimes that are content words (ox, ice, oat, eat)."
+   },
+   {
+    "severity": "minor",
+    "where": "grade2a.ts:152 and :129 (e.soft.c.g)",
+    "problem": "The ES hint \"Se escribe ce, ci, ge, gi...\" points to the wrong choices girafa and tigeras on the jirafa and tijeras items. The EN hint \"Before e, i, or y, g often says j\" sits next to keys gift and girl (hard g before i) on the gum, goat and gold items.",
+    "fix": "ES: add \"el sonido de jirafa tambi\u00e9n se escribe ja, je, ji, jo, ju\". EN: pick anchor keys that follow the rule (gum \u2192 gate, goat \u2192 gas)."
+   },
+   {
+    "severity": "minor",
+    "where": "endings.ts:159 (e.ending.ing L2 ES, poder)",
+    "problem": "\"Estoy pudiendo\" (poder in the progressive) is unnatural Spanish for a child's model sentence.",
+    "fix": "Replace with vestir \u2192 vistiendo or elegir \u2192 eligiendo."
+   }
+  ]
  }
 }
