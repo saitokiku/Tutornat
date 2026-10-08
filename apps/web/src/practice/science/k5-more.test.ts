@@ -169,6 +169,33 @@ describe.each(DRAFT.map((s) => [s.id, s] as const))("bank %s", (id, skill) => {
     expect(new Set(tags).size, `${id} tags ${[...new Set(tags)].join(", ")}`).toBeLessThanOrEqual(Math.ceil(tags.length / 2));
   });
 
+  it("does not let answer length or a picture point to the key", () => {
+    levels.forEach((level, li) => {
+      const where = `${id} L${li + 1}`;
+      // Two-choice items use fixed label pairs (Yes/No, Renewable/Nonrenewable), so length says nothing.
+      const multi = level.items.filter((e) => e.a.length > 2);
+      for (const locale of LOCALES) {
+        const longest = multi.filter((e) => e.a.slice(1).every((c) => pick(c.t, locale).length < pick(e.a[0].t, locale).length));
+        expect(longest.length, `${where} ${locale}: key is the longest choice in ${longest.length} of ${multi.length}`).toBeLessThanOrEqual(Math.floor(0.4 * multi.length));
+      }
+      // Tapping one picture whenever it shows up must not beat reading: keys it marks, minus wrong
+      // choices it marks, stay at 40% of the level, and a picture never on a wrong choice marks at most 3 keys.
+      const marks = new Map<string, { key: number; wrong: number }>();
+      for (const e of level.items)
+        e.a.forEach((c, i) => {
+          if (!c.pic) return;
+          const m = marks.get(c.pic) ?? { key: 0, wrong: 0 };
+          if (i === 0) m.key++;
+          else m.wrong++;
+          marks.set(c.pic, m);
+        });
+      for (const [pic, m] of marks) {
+        expect(m.key - m.wrong, `${where} picture ${pic} marks the key ${m.key} times, a wrong choice ${m.wrong}`).toBeLessThanOrEqual(Math.floor(0.4 * level.items.length));
+        if (m.wrong === 0) expect(m.key, `${where} picture ${pic} is only ever on the key`).toBeLessThanOrEqual(3);
+      }
+    });
+  });
+
   it("writes plain, kid-sized copy", () => {
     const [maxEn, maxEs] = EARLY.has(skill.grade) ? [10, 14] : [20, 26];
     const problems: string[] = [];
