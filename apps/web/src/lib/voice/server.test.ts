@@ -11,6 +11,7 @@ import {
   TTS_PER_MINUTE,
   ttsConfigured,
   ttsTokenResponse,
+  voiceMetricResponse,
   voiceStatusResponse,
 } from "./server";
 
@@ -50,11 +51,13 @@ beforeEach(() => {
   vi.stubEnv("KAIZEN_VOICE_DAILY_TOKENS", "");
   vi.stubEnv("ELEVENLABS_API_KEY", "el-test-key");
   vi.stubEnv("DEEPGRAM_API_KEY", "dg-test-key");
-  vi.stubEnv("ELEVENLABS_VOICE_ID", "");
-  vi.stubEnv("ELEVENLABS_VOICE_ID_ES", "");
+  vi.stubEnv("ELEVENLABS_VOICE_ID", "voiceEN");
+  vi.stubEnv("ELEVENLABS_VOICE_ID_ES", "voiceES");
   vi.stubEnv("ELEVENLABS_MODEL", "");
+  vi.stubEnv("ELEVENLABS_TRANSPORT", "");
   vi.stubEnv("ELEVENLABS_ZERO_RETENTION", "");
   vi.stubEnv("DEEPGRAM_MODEL", "");
+  vi.stubEnv("DEEPGRAM_MODEL_ES", "");
   vi.stubEnv("DEEPGRAM_LANGUAGE_ES", "");
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
@@ -66,10 +69,20 @@ afterEach(() => {
 
 describe("which voice vendors are set up", () => {
   it("follows the keys", async () => {
-    expect(await voiceStatusResponse(statusReq()).json()).toEqual({ tts: true, stt: true });
+    expect(await voiceStatusResponse(statusReq()).json()).toEqual({ tts: true, ttsEs: true, stt: true });
     vi.stubEnv("ELEVENLABS_API_KEY", "");
-    expect(await voiceStatusResponse(statusReq()).json()).toEqual({ tts: false, stt: true });
+    expect(await voiceStatusResponse(statusReq()).json()).toEqual({ tts: false, ttsEs: false, stt: true });
     expect(voiceStatusResponse(statusReq()).headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("has no default voice: each language needs the voice id chosen for it", async () => {
+    vi.stubEnv("ELEVENLABS_VOICE_ID_ES", "");
+    expect(await voiceStatusResponse(statusReq()).json()).toEqual({ tts: true, ttsEs: false, stt: true });
+    vi.stubEnv("ELEVENLABS_VOICE_ID", "");
+    vi.stubEnv("ELEVENLABS_VOICE_ID_ES", "voiceES");
+    expect(await voiceStatusResponse(statusReq()).json()).toEqual({ tts: false, ttsEs: true, stt: true });
+    expect(ttsConfigured("en")).toBe(false);
+    expect(ttsConfigured("es")).toBe(true);
   });
 
   it("hands out an HttpOnly, same-site voice pass only when there is a vendor to use it on", () => {
@@ -172,7 +185,7 @@ describe("tts token", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("set-cookie")).toMatch(new RegExp(`^${PASS_COOKIE}=`));
     const body = await res.json();
-    expect(body).toEqual({ token: "sutkn_abc", voiceId: "JBFqnCBsd6RMkjVDRZzb", modelId: "eleven_flash_v2_5", languageCode: "es", outputFormat: "pcm_24000", zeroRetention: false });
+    expect(body).toEqual({ token: "sutkn_abc", voiceId: "voiceES", modelId: "eleven_flash_v2_5", languageCode: "es", outputFormat: "pcm_24000", zeroRetention: false, transport: "stream-input" });
     expect(JSON.stringify(body)).not.toContain("el-test-key");
     const [url, init] = f.mock.calls[0];
     expect(url).toBe("https://api.elevenlabs.io/v1/single-use-token/tts_websocket");
@@ -189,6 +202,21 @@ describe("tts token", () => {
     expect(es).toMatchObject({ voiceId: "voiceES", modelId: "eleven_multilingual_v2", languageCode: null, zeroRetention: true });
     const en = await (await ttsTokenResponse(post(ALLOWED), vendor(200, { token: "t" }))).json();
     expect(en.voiceId).toBe("voiceEN");
+  });
+
+  it("refuses Spanish when no Spanish voice was chosen, rather than read it in the English one", async () => {
+    vi.stubEnv("ELEVENLABS_VOICE_ID_ES", "");
+    const f = vendor(200, { token: "t" });
+    const res = await ttsTokenResponse(post({ ...ALLOWED, locale: "es" }), f);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "not_configured" });
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("switches to the v4 Turbo dialogue socket only when told to", async () => {
+    vi.stubEnv("ELEVENLABS_TRANSPORT", "dialogue");
+    const t = await (await ttsTokenResponse(post(ALLOWED), vendor(200, { token: "t" }))).json();
+    expect(t).toMatchObject({ modelId: "eleven_v4_turbo", transport: "dialogue", languageCode: "en" });
   });
 
   it("says the vendor failed without passing its reply on", async () => {
@@ -223,6 +251,16 @@ describe("tts token", () => {
     vi.setSystemTime(new Date("2031-01-03T00:00:01Z"));
     expect((await ttsTokenResponse(post(ALLOWED), f)).status).toBe(200);
   });
+
+  it("reserves against the ceiling first and hands the reservation back when the vendor fails", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2031-02-02T10:00:00Z"));
+    vi.stubEnv("KAIZEN_VOICE_DAILY_TOKENS", "2");
+    const down = vendor(500, {});
+    for (let i = 0; i < 4; i++) expect((await ttsTokenResponse(post(ALLOWED), down)).status).toBe(502);
+    const ok = vendor(200, { token: "t" });
+    expect([(await ttsTokenResponse(post(ALLOWED), ok)).status, (await ttsTokenResponse(post(ALLOWED), ok)).status, (await ttsTokenResponse(post(ALLOWED), ok)).status]).toEqual([200, 200, 429]);
+  });
 });
 
 describe("stt token", () => {
@@ -235,16 +273,23 @@ describe("stt token", () => {
     expect(f).not.toHaveBeenCalled();
   });
 
-  it("grants a 30-second token and picks the language", async () => {
-    const f = vendor(200, { access_token: "jwt.abc", expires_in: 30 });
+  it("grants a 60-second token for Flux by default, multilingual for Spanish", async () => {
+    const f = vendor(200, { access_token: "jwt.abc", expires_in: 60 });
     const en = await (await sttTokenResponse(post(ALLOWED), f)).json();
-    expect(en).toEqual({ token: "jwt.abc", expiresIn: 30, model: "nova-3", language: "en-US" });
+    expect(en).toEqual({ token: "jwt.abc", expiresIn: 60, model: "flux-general-en", language: "en", api: "v2" });
     const [url, init] = f.mock.calls[0];
     expect(url).toBe("https://api.deepgram.com/v1/auth/grant");
     expect((init?.headers as Record<string, string>).authorization).toBe("Token dg-test-key");
-    expect(JSON.parse(String(init?.body))).toEqual({ ttl_seconds: 30 });
+    expect(JSON.parse(String(init?.body))).toEqual({ ttl_seconds: 60 });
     const es = await (await sttTokenResponse(post({ ...ALLOWED, locale: "es" }), f)).json();
-    expect(es.language).toBe("es-419");
+    expect(es).toMatchObject({ model: "flux-general-multi", api: "v2", languageHint: ["es", "en"] });
+  });
+
+  it("falls back to Nova-3 when configured, with the Spanish language setting", async () => {
+    vi.stubEnv("DEEPGRAM_MODEL", "nova-3");
+    const f = vendor(200, { access_token: "jwt", expires_in: 60 });
+    expect(await (await sttTokenResponse(post(ALLOWED), f)).json()).toMatchObject({ model: "nova-3", language: "en-US", api: "v1" });
+    expect(await (await sttTokenResponse(post({ ...ALLOWED, locale: "es" }), f)).json()).toMatchObject({ model: "nova-3", language: "es-419" });
     vi.stubEnv("DEEPGRAM_LANGUAGE_ES", "multi");
     expect((await (await sttTokenResponse(post({ ...ALLOWED, locale: "es" }), f)).json()).language).toBe("multi");
   });
@@ -262,6 +307,32 @@ describe("stt token", () => {
     for (let i = 0; i <= STT_PER_MINUTE; i++) last = (await sttTokenResponse(same(), f)).status;
     expect(last).toBe(429);
     expect(STT_PER_MINUTE).toBeLessThan(TTS_PER_MINUTE);
+  });
+});
+
+describe("turn metrics", () => {
+  const metric = (body: unknown, headers: Record<string, string> = {}) =>
+    new Request("https://kaizenedu.net/api/voice/metric", {
+      method: "POST",
+      headers: { host: "kaizenedu.net", origin: "https://kaizenedu.net", "sec-fetch-site": "same-origin", "x-forwarded-for": `10.7.0.${++ip % 250}`, ...headers },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+  const GOOD = { band: "35", locale: "es", in: "deepgram", out: "elevenlabs", stt: "flux", mode: "tap", segments: { eot: 420, total: 1550 }, ttsApi: 180, precheck: true, modelCalls: 1 };
+
+  it("logs one JSON line of numbers per turn", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const res = await voiceMetricResponse(metric(GOOD));
+    expect(res.status).toBe(204);
+    expect(log).toHaveBeenCalledOnce();
+    expect(JSON.parse(String(log.mock.calls[0][0]))).toEqual({ voice_turn: GOOD });
+  });
+
+  it("refuses anything that isn't a number or a label: no text, no names", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    for (const bad of [{ ...GOOD, transcript: "I think it's twelve" }, { ...GOOD, segments: { total: "fast" } }, { ...GOOD, band: "teen" }, "not json", "x".repeat(3000)])
+      expect((await voiceMetricResponse(metric(bad))).status).toBe(400);
+    expect((await voiceMetricResponse(metric(GOOD, { origin: "https://evil.example", "sec-fetch-site": "cross-site" }))).status).toBe(403);
+    expect(log).not.toHaveBeenCalled();
   });
 });
 
