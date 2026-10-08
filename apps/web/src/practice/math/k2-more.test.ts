@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Locale } from "@/lib/types";
+import { counterCell, isMarkable, layoutCounters } from "@/components/practice/MarkCounters";
 import { barText } from "@/components/practice/pad-math";
 import { answerText, check, misconceptionOf } from "../answer";
 import { evaluate, parse } from "../expr";
@@ -234,6 +235,27 @@ describe("K–2 math: every item", () => {
       }
     }
   }, 60_000);
+
+  it("a question about left and right is drawn in one row on a 320 px phone", () => {
+    // Tap-to-mark counters wrap groups onto new lines when the room runs out; the plain picture never
+    // does. So an item that names groups by position is either plain, or its marked layout keeps every
+    // group on the first line at phone width (the room the Runner gives counters there).
+    const PHONE_ROOM = 320 - 2 * 16 - 2;
+    let positional = 0;
+    for (const skill of MATH_K_2_MORE)
+      for (const level of levelsOf(skill.id))
+        for (const locale of LOCALES)
+          for (const it of items(skill.id, level, locale)) {
+            const copy = [text(it), it.say, it.alt ?? "", ...it.hints, ...it.steps, ...(it.choices ?? []).flatMap((c) => [c.label, c.say ?? ""])].join(" ");
+            if (!/\b(left|right)\b|izquierda|derecha/i.test(copy)) continue;
+            positional++;
+            if (!it.markable) continue;
+            if (!isMarkable(it.visual)) throw new Error(`${skill.id} markable without counters`);
+            const lay = layoutCounters(it.visual, PHONE_ROOM, counterCell(true));
+            expect(new Set(lay.counters.filter((c) => c.row === 0).map((c) => c.y)).size, `${skill.id} L${level} groups wrap`).toBe(1);
+          }
+    expect(positional).toBeGreaterThan(500);
+  });
 
   it("keeps the fact drill at fact-recall pace", () => {
     for (const level of levelsOf("m.addsub.20"))

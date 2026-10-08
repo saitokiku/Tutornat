@@ -1358,9 +1358,10 @@ export const MATH_K_2_MORE: Skill[] = [
       const body = {
         prompt: [text],
         say: text,
+        // Not markable on purpose: the legend reads the groups left to right, and tap-to-mark counters
+        // wrap groups onto new lines on a phone. The plain picture always keeps the three in one row.
         visual: dots(c),
-        alt: q === "count" ? tr(locale, "Three groups of dots, one group for each choice", "Tres grupos de puntos, uno para cada opción") : tr(locale, `Dots for each choice. ${counts}`, `Puntos para cada opción. ${counts}`),
-        markable: true,
+        alt: q === "count" ? tr(locale, "Three groups of dots in a row, one group for each choice", "Tres grupos de puntos en fila, uno para cada opción") : tr(locale, `Dots for each choice. ${counts}`, `Puntos para cada opción. ${counts}`),
         seconds: level === 1 ? 15 : level === 2 ? 20 : 25,
       };
       if (q === "most" || q === "fewest") {
@@ -1381,7 +1382,7 @@ export const MATH_K_2_MORE: Skill[] = [
             q === "most" ? tr(locale, "The biggest count has the most votes.", "El número mayor tiene más votos.") : tr(locale, "The smallest count has the fewest votes.", "El número menor tiene menos votos."),
             `${cap(names[0])}: ${c[0]}.`,
           ],
-          steps: [counts, q === "most" ? tr(locale, `${cap(names[want])} got the most votes.`, `${cap(names[want])} tuvo más votos.`) : tr(locale, `${cap(names[want])} got the fewest votes.`, `${cap(names[want])} tuvo menos votos.`)],
+          steps: [counts, q === "most" ? tr(locale, `${cap(names[want])} got the most votes.`, `El grupo de ${names[want]} tuvo más votos.`) : tr(locale, `${cap(names[want])} got the fewest votes.`, `El grupo de ${names[want]} tuvo menos votos.`)],
         };
       }
       if (q === "count") {
@@ -1393,7 +1394,7 @@ export const MATH_K_2_MORE: Skill[] = [
           wrong: misses(v, [[v + 1, "miscounted"], [v - 1, "miscounted"]]),
           hints: [
             tr(locale, `Find the group for ${X}.`, `Busca el grupo de ${X}.`),
-            tr(locale, "Touch each dot in that group once.", "Toca cada punto de ese grupo una vez."),
+            tr(locale, "Point to each dot in that group once.", "Señala cada punto de ese grupo una vez."),
             tr(locale, `It is group number ${xi + 1} from the left.`, `Es el grupo número ${xi + 1} desde la izquierda.`),
           ],
           steps: [tr(locale, `The ${X} group has ${v} dots.`, `El grupo de ${X} tiene ${v} puntos.`), tr(locale, `${v} kids picked ${X}.`, `${v} niños eligieron ${X}.`)],
