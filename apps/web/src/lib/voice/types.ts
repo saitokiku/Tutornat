@@ -21,6 +21,7 @@ export type VoiceErrorCode =
   | "network" // the connection to the speech service dropped
   | "consent" // a grown-up hasn't allowed voice for this learner
   | "unavailable" // the speech service refused or isn't configured
+  | "limit" // our server's per-minute or daily voice budget is spent: try again later, same service
   | "speak"; // the reply couldn't be read aloud
 
 export class VoiceError extends Error {
@@ -113,8 +114,13 @@ export interface SpeechOut {
  */
 export type OutTiming = { run: number; vendor: SpeechOut["kind"]; firstSentenceAt: number | null; firstChunkAt: number | null; firstAudibleAt: number | null; underruns: number; retried: boolean };
 
-/** A recognized word, with when it was said (performance.now() ms) and how sure the recognizer is (0..1). */
-export type HeardWord = { word: string; start: number; end: number; confidence: number | null };
+/**
+ * A recognized word, with when it was said (performance.now() ms) and how sure the recognizer is
+ * (0..1). `coarse`: the recognizer gives no word times (Flux), only a window: the word was said
+ * somewhere between `start` (the turn's audio began) and `end` (the end of the audio it first
+ * appeared in, an upper bound of when it ended).
+ */
+export type HeardWord = { word: string; start: number; end: number; confidence: number | null; coarse?: boolean };
 
 /** What comes with a finished turn. */
 export type TurnMeta = {
@@ -176,6 +182,13 @@ export interface SpeechIn {
   prepare?(): () => void;
   /** Which vendor model the last stream used ("flux" | "nova"), for the latency log. */
   readonly model?: "flux" | "nova" | null;
+  /**
+   * Each ~20 ms block's own loudness (0..1, not smoothed) and when it was captured (performance.now()
+   * ms), for barge-in onset. Recognizers that can't measure the microphone don't have it.
+   */
+  onLevel?(fn: (level: number, at: number) => void): Unsubscribe;
+  /** Listening moved to another recognizer for good (the vendor's service was lost): its kind and duplex from now on. */
+  onSwitch?(fn: (to: { kind: SpeechIn["kind"]; duplex: boolean }) => void): Unsubscribe;
   onError(fn: (e: VoiceError) => void): Unsubscribe;
 }
 

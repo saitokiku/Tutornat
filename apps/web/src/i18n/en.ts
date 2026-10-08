@@ -2369,6 +2369,7 @@ const en = {
   "voice.fail.speak": "Voice is off for now. The words are on screen.",
   "spoken.didYouSay": "Did you say {reading}?",
   "spoken.typeIt": "Tap or type this one.",
+  "voice.fail.limit": "Voice is busy right now. Try again in a minute.",
 } as const;
 
 export default en;

@@ -47,11 +47,16 @@ export const echoWords = (text: string) => foldWords(text);
 /** A word the tutor's voice played, folded, and when it was heard (performance.now() ms). */
 export type PlayedWord = { word: string; at: number };
 
-/** For each heard word: was the same word played within ±400 ms of it? */
+/**
+ * For each heard word: was the same word played within ±400 ms of it? A coarse word (Flux: only the
+ * window it came in is known) counts when the same word was played anywhere inside its window
+ * (±400 ms); echoByTime then also asks that the words come in the order they were played.
+ */
 export function echoMarks(heard: HeardWord[], played: PlayedWord[], locale: Locale = "en", windowMs = ECHO_WINDOW_MS): boolean[] {
   return heard.map((h) => {
     // One written word may be several spoken ones ("3/4": "three fourths"); each later one may start a little later.
     const forms = foldWords(h.word, locale);
+    if (h.coarse) return forms.length > 0 && forms.every((f) => played.some((p) => p.word === f && p.at >= h.start - windowMs && p.at <= h.end + windowMs));
     return forms.length > 0 && forms.every((f, k) => played.some((p) => p.word === f && Math.abs(p.at - h.start) <= windowMs + k * 300));
   });
 }
@@ -61,6 +66,16 @@ export function echoByTime(heard: HeardWord[], played: PlayedWord[], locale: Loc
   const marks = echoMarks(heard, played, locale);
   if (!marks.length) return "no";
   const share = marks.filter(Boolean).length / marks.length;
+  // Window-only times: the words must also follow the tutor's, in order, inside the window.
+  const coarse = heard.filter((h) => h.coarse);
+  if (coarse.length) {
+    const lo = Math.min(...coarse.map((h) => h.start)) - ECHO_WINDOW_MS;
+    const hi = Math.max(...coarse.map((h) => h.end)) + ECHO_WINDOW_MS;
+    const inWindow = played.filter((p) => p.at >= lo && p.at <= hi).map((p) => p.word);
+    const ordered = echoScore(heard.flatMap((h) => foldWords(h.word, locale)), inWindow) >= 0.8;
+    if (marks.length >= 2) return share >= 0.8 && ordered ? "echo" : "no";
+    return marks[0] && ordered ? "maybe" : "no";
+  }
   if (marks.length >= 2) return share >= 0.8 ? "echo" : "no";
   return marks[0] ? "maybe" : "no";
 }

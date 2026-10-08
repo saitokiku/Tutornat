@@ -88,6 +88,13 @@ describe("the live loop", () => {
     expect(run([{ type: "route", at: 3000 }], speaking).s.phase).toBe("idle");
   });
 
+  it("the vendor recognizer lost for good: half duplex and tap mode from then on", () => {
+    const r = run([{ type: "recognizer", duplex: false, vendor: false, at: 0 }], { band: "k2", conversationAllowed: true });
+    expect(r.s).toMatchObject({ halfDuplex: true, conversationAllowed: false, mode: "tap" });
+    expect(r.effects).toEqual([{ type: "mode", mode: "tap" }]);
+    expect(run([{ type: "mode", mode: "conversation", at: 10 }], r.s).s.mode).toBe("tap");
+  });
+
   it("offline: tap and type at once", () => {
     const r = run([{ type: "mic", at: 0 }, { type: "offline", at: 100 }], { band: "k2", conversationAllowed: true });
     expect(r.s).toMatchObject({ phase: "idle", mode: "tap", notice: "offline" });
@@ -133,13 +140,52 @@ describe("thinking", () => {
     expect(eager.s.phase).toBe("thinking");
     expect(eager.effects).toEqual([{ type: "send", text: "twelve", speculative: true }]);
     const resumed = run([{ type: "resumed", at: 1000 }], eager.s);
-    expect(resumed).toMatchObject({ s: { phase: "hearing" }, types: ["abort-request"] });
+    expect(resumed).toMatchObject({ s: { phase: "hearing" }, types: ["abort-request", "stop-voice"] });
+    expect(resumed.effects[1]).toEqual({ type: "stop-voice", fadeMs: 0 });
     const same = run([turn("twelve", 1300)], eager.s);
     expect(same.types).toEqual(["close-mic", "commit"]);
+    // The recognizer's capital and full stop don't make it another turn.
+    expect(run([turn("Twelve.", 1300)], eager.s).types).toEqual(["close-mic", "commit"]);
     const longer = run([turn("twelve hundred", 1300)], eager.s);
     expect(longer.types).toEqual(["close-mic", "abort-request", "send"]);
     // K–2 never starts early.
     expect(run([{ type: "eager", text: "twelve", confidence: 0.9, at: 900 }], { ...hearing, band: "k2" }).types).toEqual([]);
+  });
+
+  it("a speculative reply is never heard before its commit: eager, first audio can't arrive, resumed takes it back in any phase", () => {
+    const hearing = run([{ type: "mic", at: 0 }, { type: "partial", text: "twelve", at: 500 }]).s;
+    const eager = run([{ type: "eager", text: "twelve", confidence: 0.9, at: 900 }], hearing).s;
+    // Even if a voice played early, TurnResumed stops it at once and takes the request back.
+    const playedEarly = run([{ type: "first-audio", at: 1200 }], eager).s;
+    const back = run([{ type: "resumed", at: 1300 }], playedEarly);
+    expect(back.s).toMatchObject({ phase: "hearing", turn: null });
+    expect(back.effects).toEqual([{ type: "abort-request" }, { type: "stop-voice", fadeMs: 0 }]);
+    // A held reply's end before the commit isn't the end of the turn.
+    expect(run([{ type: "reply-end", at: 1200, question: false, cancelled: false }], eager).s.phase).toBe("thinking");
+  });
+
+  it("'wait' is never sent, not even speculatively", () => {
+    const hearing = run([{ type: "mic", at: 0 }, { type: "partial", text: "wait", at: 500 }]).s;
+    expect(run([{ type: "eager", text: "wait", confidence: 0.9, at: 900 }], hearing).types).toEqual([]);
+    expect(run([{ type: "eager", text: "um let me think", confidence: 0.9, at: 900 }], hearing).types).toEqual([]);
+  });
+
+  it("a second turn while the first is still thinking joins it: one request, never two at once", () => {
+    const o = { band: "k2" as const, conversationAllowed: true }; // conversation mode: the mic stays open while thinking
+    const r = run([{ type: "mic", at: 0 }, turn("seven", 1000), turn("can you help me", 3500)], o);
+    expect(r.types).toEqual(["open-mic", "send", "abort-request", "send"]);
+    expect(r.effects.at(-1)).toEqual({ type: "send", text: "seven can you help me", speculative: false });
+    // Once the tutor is talking, the reply stops first.
+    const talking = run([{ type: "mic", at: 0 }, turn("seven", 1000), { type: "first-audio", at: 2000 }, turn("wait", 2500)], o);
+    expect(talking.types.slice(-3)).toEqual(["stop-voice", "stop-reply", "send"]);
+    expect(talking.effects.at(-1)).toEqual({ type: "send", text: "wait", speculative: false });
+  });
+
+  it("a reply that isn't read aloud: its text on screen ends the 'Still working on it' clock", () => {
+    const s = run([{ type: "reply-text", at: 1500 }], thinking()).s;
+    expect(s.turn?.shown).toBe(true);
+    expect(wakeAt(s)).toBeNull();
+    expect(run([{ type: "tick", at: 1000 + LONGER_MS }], s).s.notice).toBeNull();
   });
 
   it("a stream error says 'Lost the connection' and Try again resends the saved turn", () => {

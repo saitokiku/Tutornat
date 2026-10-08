@@ -203,8 +203,9 @@ describe("Deepgram live listening", () => {
   it("only a refusal that says consent is about consent", async () => {
     const other = setup({ tokenStatus: 403, tokenBody: { error: "origin" } });
     await expect(other.input.start()).rejects.toMatchObject({ code: "unavailable" });
+    // A spent budget is "try again in a minute", not a lost service (which would switch recognizers).
     const busy = setup({ tokenStatus: 429, tokenBody: { error: "rate" } });
-    await expect(busy.input.start()).rejects.toMatchObject({ code: "unavailable" });
+    await expect(busy.input.start()).rejects.toMatchObject({ code: "limit" });
   });
 
   it("renews the voice pass once when it has run out", async () => {

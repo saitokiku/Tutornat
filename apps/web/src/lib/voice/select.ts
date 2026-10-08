@@ -78,7 +78,9 @@ const SWITCH_CODES = new Set<VoiceErrorCode>(["network", "unavailable"]);
 
 /**
  * A SpeechIn that uses `primary` until it can't reach its service, then the one `fallback()` makes
- * (from then on). kind and duplex follow whichever is in use.
+ * (from then on). kind and duplex follow whichever is in use, and onSwitch says when that changed:
+ * the browser's recognizer is half duplex and tap mode only, so whoever computed conversation mode
+ * or full duplex from the first one must drop them. A spent budget ("limit") is not a lost service.
  */
 export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null): SpeechIn {
   const ev = {
@@ -90,6 +92,8 @@ export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null)
     resumed: emitter<[]>(),
     speech: emitter<[]>(),
     slow: emitter<[boolean]>(),
+    level: emitter<[number, number]>(),
+    switched: emitter<[{ kind: SpeechIn["kind"]; duplex: boolean }]>(),
     error: emitter<[VoiceError]>(),
   };
   let active = primary;
@@ -104,6 +108,7 @@ export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null)
     s.onTurnResumed(() => active === s && ev.resumed.emit()),
     s.onSpeechStart(() => active === s && ev.speech.emit()),
     s.onSlow((x) => active === s && ev.slow.emit(x)),
+    ...(s.onLevel ? [s.onLevel((l, at) => active === s && ev.level.emit(l, at))] : []),
     s.onError((e) => {
       if (active !== s || (starting && s === primary)) return; // a failed start is decided in start()
       if (s === primary && SWITCH_CODES.has(e.code)) moveOn = true;
@@ -116,6 +121,7 @@ export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null)
     if (!fb) return null;
     wire(fb);
     active = fb;
+    ev.switched.emit({ kind: fb.kind, duplex: fb.duplex });
     return fb;
   };
   return {
@@ -162,6 +168,8 @@ export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null)
     onTurnResumed: ev.resumed.on,
     onSpeechStart: ev.speech.on,
     onSlow: ev.slow.on,
+    onLevel: ev.level.on,
+    onSwitch: ev.switched.on,
     onError: ev.error.on,
   };
 }

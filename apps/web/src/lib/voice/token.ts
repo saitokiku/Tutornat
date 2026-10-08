@@ -2,8 +2,8 @@ import { VoiceError } from "./types";
 
 // Asking our server for a vendor token (/api/voice/tts-token, /api/voice/stt-token). The server wants
 // the voice pass cookie that /api/voice/status hands out; when it has run out (401), one fresh status
-// call renews it. Only a refusal that says "consent" is about consent; any other refusal means the
-// service isn't available to this page (a proxy, a host mismatch, a spent budget).
+// call renews it. Only a refusal that says "consent" is about consent; 429 is a spent budget ("limit":
+// try again later); any other refusal means the service isn't available to this page.
 
 export type TokenBody = {
   /** A grown-up allowed voice for this learner. */
@@ -29,6 +29,9 @@ export async function requestToken<T>(f: typeof fetch, url: string, body: TokenB
       const why = (await res.json().catch(() => null)) as { error?: unknown } | null;
       throw new VoiceError(why?.error === "consent" ? "consent" : "unavailable", `refused: ${String(why?.error ?? res.status)}`);
     }
+    // The per-minute or daily budget: the service is fine, just not this minute. Never a reason to
+    // switch recognizers for the rest of the visit.
+    if (res.status === 429) throw new VoiceError("limit", "budget");
     if (!res.ok) throw new VoiceError("unavailable", `token ${res.status}`);
     const t = (await res.json().catch(() => null)) as T | null;
     if (!t) throw new VoiceError("unavailable", "token reply");

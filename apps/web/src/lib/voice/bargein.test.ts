@@ -26,6 +26,21 @@ describe("echo by time", () => {
     { word: "fourths", at: 1650 },
   ];
 
+  it("Flux words, timed only by their window, are judged by the window and their order, not by evenly spread times", () => {
+    const tutor = [
+      { word: "which", at: 1000 },
+      { word: "part", at: 1250 },
+      { word: "is", at: 1500 },
+      { word: "tricky", at: 1700 },
+    ];
+    const win = (word: string): HeardWord => ({ word, start: 1000, end: 2600, confidence: 0.9, coarse: true });
+    expect(echoByTime(["which", "part", "is", "tricky"].map(win), tutor)).toBe("echo");
+    // The same words in another order are the learner talking.
+    expect(echoByTime(["tricky", "is", "which", "part"].map(win), tutor)).toBe("no");
+    // And words the tutor didn't play in that window are not echo.
+    expect(echoByTime(["which", "part", "is", "tricky"].map((x) => ({ ...win(x), start: 4000, end: 5000 })), tutor)).toBe("no");
+  });
+
   it("a word heard within ±400 ms of the same word played is echo; the same word 700 ms later is not", () => {
     expect(echoMarks([heard("three", 1700)], played)).toEqual([true]);
     expect(echoMarks([heard("three", 2100)], played)).toEqual([false]);

@@ -287,6 +287,7 @@ export function voiceErrorKey(code: VoiceErrorCode): Key {
     network: "voice.fail.network",
     consent: "voice.fail.consent",
     unavailable: "voice.fail.unavailable",
+    limit: "voice.fail.limit",
     speak: "voice.fail.speak",
   };
   return keys[code];

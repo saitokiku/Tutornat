@@ -2371,6 +2371,7 @@ const es: Record<Key, string> = {
   "voice.fail.speak": "La voz está apagada por ahora. Las palabras están en la pantalla.",
   "spoken.didYouSay": "¿Dijiste {reading}?",
   "spoken.typeIt": "Toca o escribe esta.",
+  "voice.fail.limit": "La voz está ocupada en este momento. Inténtalo de nuevo en un minuto.",
 };
 
 export default es;

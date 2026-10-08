@@ -122,6 +122,45 @@ describe("talking over the tutor", () => {
     expect(s.output.state).toBe("speaking");
   });
 
+  it("per-block levels: one loud click doesn't duck; 120 ms of voice does, timed from when it was captured", async () => {
+    const output = fakeOut({ auto: false, kind: "elevenlabs" });
+    const input = fakeIn({ kind: "deepgram", levels: true });
+    const metrics: ConverseMetric[] = [];
+    const talk = converse({ input, output, onTurn: () => {}, onMetric: (m) => metrics.push(m), now: () => Date.now() });
+    void talk.say("Look at the top number. Now look at the bottom number. They tell different things.");
+    await vi.advanceTimersByTimeAsync(1);
+    // A cough: one 20 ms block. (A smoothed meter would stay above 0.5 for ~80 ms more.)
+    const t0 = Date.now();
+    input.block(0.9, t0);
+    for (let k = 1; k < 8; k++) input.block(0.1, t0 + k * 20);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(output.gains).toEqual([]);
+    // A voice: loud blocks from t1 on; the duck comes on the block that makes 120 ms.
+    const t1 = Date.now();
+    for (let k = 0; k <= 6; k++) input.block(0.7, t1 + k * 20);
+    expect(output.gains.at(-1)).toEqual({ gain: 0.3, ms: 80 });
+    input.words([w("wait", t1 + 200)]);
+    const m = metrics.find((x) => x.name === "barge-in");
+    expect(m).toMatchObject({ onsetAt: t1 });
+    talk.dispose();
+  });
+
+  it("Flux's words carry only their window: echo is judged by order inside it, not by spread-out times", async () => {
+    const s = setup();
+    const at = await tutorSays(s, "Which part is tricky?");
+    // The window Flux reports runs a second and a half past the tutor's words.
+    const coarse = (word: string): HeardWord => ({ word, start: at[0], end: at[0] + 1600, confidence: 0.9, coarse: true });
+    s.input.endOfTurn("which part is tricky", meta(["which", "part", "is", "tricky"].map(coarse)));
+    expect(s.seen.echoes).toEqual(["which part is tricky"]);
+    expect(s.seen.turns).toEqual([]);
+  });
+
+  it("listening falling back to the browser's recognizer makes the session half duplex", async () => {
+    const s = setup();
+    s.input.switchTo({ kind: "browser", duplex: false });
+    expect(s.talk.halfDuplex).toBe(true);
+  });
+
   it("two echo set-asides switch the session to half duplex", async () => {
     const s = setup();
     for (let k = 0; k < 2; k++) {

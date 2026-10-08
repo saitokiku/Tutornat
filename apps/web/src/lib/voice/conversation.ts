@@ -1,3 +1,4 @@
+import { isHolding, words } from "./backchannel";
 import { REOPEN_IDLE_MS } from "./bands";
 import type { Band } from "./types";
 
@@ -17,6 +18,11 @@ import type { Band } from "./types";
 // "Taking longer than usual." with Try again at 10 s; no spoken filler. A turn the recognizer wasn't
 // sure of (mean confidence < 0.6), or one that starts with "Mom" or a sibling's name, waits behind a
 // question instead of being sent.
+//
+// One request at a time: a speculative request (Flux's eager end) is never heard until its turn is
+// committed, and is taken back whenever the learner goes on; a second turn while the first is still
+// thinking is merged with it and sent again (the first request is dropped), and one while the tutor
+// speaks stops that reply first.
 
 export type Phase = "idle" | "listening" | "hearing" | "thinking" | "speaking" | "confirm" | "error" | "micOff";
 export type Mode = "tap" | "conversation";
@@ -51,8 +57,8 @@ export type ConvState = {
   error: { side: "in"; code: string } | null;
   micOff: MicOff | null;
   notice: Notice;
-  /** The turn in flight. */
-  turn: { text: string; endedAt: number; speculative: boolean; firstAudio: boolean; merged: boolean } | null;
+  /** The turn in flight. `shown`: the reply's text is on screen (a reply that isn't read aloud). */
+  turn: { text: string; endedAt: number; speculative: boolean; firstAudio: boolean; merged: boolean; shown?: boolean } | null;
   /** Words to merge with the next turn (a self-correction during thinking). */
   mergeFrom: string | null;
   /** The last text sent, for Try again. */
@@ -87,7 +93,11 @@ export type ConvEvent =
   | { type: "confirm-send"; at: number }
   | { type: "confirm-again"; at: number }
   | { type: "first-audio"; at: number }
+  /** The reply's first text is on screen (it matters when the reply isn't read aloud: no "Still working on it" then). */
+  | { type: "reply-text"; at: number }
   | { type: "reply-end"; at: number; question: boolean; cancelled: boolean }
+  /** Listening moved to another recognizer for good (withFallback): the browser's is half duplex, tap mode only. */
+  | { type: "recognizer"; duplex: boolean; vendor: boolean; at: number }
   | { type: "duck"; on: boolean; at: number }
   | { type: "barge"; at: number }
   | { type: "half-duplex"; at: number }
@@ -154,36 +164,59 @@ const listen = (s: ConvState, at: number, effects: Effect[] = []): Out => ({
   effects: [...effects, { type: "open-mic" }],
 });
 
+/** The same words, whatever the recognizer did with case and punctuation ("twelve" and "Twelve."). */
+export const sameTurn = (a: string, b: string) => words(a).join(" ") === words(b).join(" ");
+
 /** A finished turn: shown back when unsure or addressed to someone else, else sent. */
 function takeTurn(s: ConvState, e: TurnIn & { at: number }): Out {
-  const text = (s.mergeFrom ? `${s.mergeFrom} ${e.text}` : e.text).trim();
-  const merged = !!s.mergeFrom;
+  // Still thinking about the last turn (no audio yet): this one joins it and the two go as one, so
+  // two requests never run at once. The tutor already talking: its reply stops first.
+  const pending = s.phase === "thinking" && s.turn && !s.turn.speculative && !s.turn.firstAudio ? s.turn : null;
+  const talking = s.phase === "speaking" && s.turn && !s.turn.speculative ? s.turn : null;
+  const said = e.text.trim();
+  if (!said && pending) return { state: s, effects: [] };
+  const text = [s.mergeFrom, pending?.text, said].filter(Boolean).join(" ").trim();
+  const merged = !!s.mergeFrom || !!pending;
   // Speaking in a reopened window breaks a run of empty reopenings; a turn after tapping the mic doesn't.
   const base = { ...s, heard: "", mergeFrom: null, spokeSinceReopen: s.reopenedAt != null ? true : s.spokeSinceReopen, emptyReopens: s.reopenedAt != null ? 0 : s.emptyReopens };
   if (!text) return s.mode === "conversation" ? { state: { ...base, phase: "listening" }, effects: [] } : { state: { ...base, phase: "idle" }, effects: [{ type: "close-mic" }] };
   const closeMic: Effect[] = s.mode === "tap" || s.halfDuplex ? [{ type: "close-mic" }] : [];
-  if (e.addressee) return { state: { ...base, phase: "confirm", confirm: { text, kind: "addressee" } }, effects: closeMic };
-  if (e.confidence != null && e.confidence < LOW_CONFIDENCE) return { state: { ...base, phase: "confirm", confirm: { text, kind: "unsure", reading: e.reading } }, effects: closeMic };
-  // A speculative request (sent at the eager end of turn) already carries these words.
-  if (s.turn?.speculative && s.turn.text === text)
-    return { state: { ...base, phase: "thinking", turn: { ...s.turn, speculative: false, endedAt: e.at }, lastSent: text }, effects: [...closeMic, { type: "commit" }] };
-  const replace: Effect[] = s.turn?.speculative ? [{ type: "abort-request" }] : [];
+  // Shown back on its own (the turn in flight, if any, goes on): this turn's words.
+  const own = [s.mergeFrom, said].filter(Boolean).join(" ").trim();
+  if (e.addressee) return { state: { ...base, phase: "confirm", confirm: { text: own, kind: "addressee" } }, effects: closeMic };
+  if (e.confidence != null && e.confidence < LOW_CONFIDENCE) return { state: { ...base, phase: "confirm", confirm: { text: own, kind: "unsure", reading: e.reading } }, effects: closeMic };
+  // A speculative request (sent at the eager end of turn) already carries these words: it stands, and its reply may now be heard.
+  if (s.turn?.speculative && sameTurn(s.turn.text, text))
+    return { state: { ...base, phase: "thinking", turn: { ...s.turn, speculative: false, endedAt: e.at }, lastSent: s.turn.text }, effects: [...closeMic, { type: "commit" }] };
+  const replace: Effect[] = s.turn?.speculative || pending ? [{ type: "abort-request" }] : talking ? [{ type: "stop-voice", fadeMs: 120 }, { type: "stop-reply" }] : [];
   return {
-    state: { ...base, phase: "thinking", notice: null, turn: { text, endedAt: e.at, speculative: false, firstAudio: false, merged }, lastSent: text },
+    state: { ...base, phase: "thinking", notice: null, ducked: false, turn: { text, endedAt: e.at, speculative: false, firstAudio: false, merged }, lastSent: text },
     effects: [...closeMic, ...replace, { type: "send", text, speculative: false }],
   };
 }
 
-/** Stops everything: the microphone, the voice. */
+/** Stops everything: the microphone, the voice, the reply in flight. */
 const stopAll = (s: ConvState, phase: Phase, micOff: MicOff | null, extra: Partial<ConvState> = {}): Out => ({
-  state: { ...s, phase, micOff, ducked: false, heard: "", reopenedAt: null, ...extra },
+  state: { ...s, phase, micOff, ducked: false, heard: "", reopenedAt: null, turn: null, ...extra },
   effects: [{ type: "abort-mic" }, { type: "stop-voice", fadeMs: 120 }, { type: "stop-reply" }],
 });
 
 export function convStep(s: ConvState, e: ConvEvent): Out {
   const none: Out = { state: s, effects: [] };
+  // The learner went on after an eager end, whatever the phase: the speculative request and its
+  // (held, never heard) reply go, at once.
+  if (e.type === "resumed" && s.turn?.speculative)
+    return { state: { ...s, phase: "hearing", turn: null, ducked: false }, effects: [{ type: "abort-request" }, { type: "stop-voice", fadeMs: 0 }] };
   switch (e.type) {
     // ---- anywhere
+    case "recognizer": {
+      // The browser's recognizer: half duplex, tap mode only.
+      const conversationAllowed = s.conversationAllowed && e.vendor;
+      const back = s.mode === "conversation" && !conversationAllowed;
+      return { state: { ...s, halfDuplex: s.halfDuplex || !e.duplex, conversationAllowed, mode: back ? "tap" : s.mode, conversationSince: back ? null : s.conversationSince }, effects: back ? [{ type: "mode", mode: "tap" }] : [] };
+    }
+    case "reply-text":
+      return s.phase === "thinking" && s.turn && !s.turn.speculative ? { state: { ...s, notice: null, turn: { ...s.turn, shown: true } }, effects: [] } : none;
     case "hidden":
       return stopAll(s, "micOff", "hidden");
     case "route":
@@ -200,8 +233,8 @@ export function convStep(s: ConvState, e: ConvEvent): Out {
     case "error-in":
       return { state: { ...s, phase: "error", error: { side: "in", code: e.code }, heard: "", reopenedAt: null }, effects: [] };
     case "error-out":
-      // The words stay on screen; the voice is off for now.
-      return { state: { ...s, notice: "voiceOff", ducked: false, phase: s.phase === "speaking" || s.phase === "thinking" ? "idle" : s.phase }, effects: [] };
+      // The words stay on screen; the voice is off for now. The reply is no longer "in flight" for the voice.
+      return { state: { ...s, notice: "voiceOff", ducked: false, phase: s.phase === "speaking" || s.phase === "thinking" ? "idle" : s.phase, turn: s.phase === "speaking" || s.phase === "thinking" ? null : s.turn }, effects: [] };
     case "mic-off":
       if (s.phase !== "listening" && s.phase !== "hearing") return none;
       return { state: { ...s, phase: "micOff", micOff: e.why, heard: "", reopenedAt: null }, effects: [] };
@@ -237,7 +270,8 @@ export function convStep(s: ConvState, e: ConvEvent): Out {
       if (e.type === "partial") return { state: { ...s, heard: e.text }, effects: [] };
       if (e.type === "mic") return { state: s, effects: [{ type: "close-mic" }] }; // the second tap: done
       if (e.type === "eager") {
-        if (s.band === "k2" || !e.text.trim() || e.addressee || (e.confidence != null && e.confidence < LOW_CONFIDENCE)) return none;
+        // "wait", "a ver": never sent on their own, not even speculatively.
+        if (s.band === "k2" || !e.text.trim() || isHolding(e.text, true) || e.addressee || (e.confidence != null && e.confidence < LOW_CONFIDENCE)) return none;
         const text = (s.mergeFrom ? `${s.mergeFrom} ${e.text}` : e.text).trim();
         return { state: { ...s, phase: "thinking", turn: { text, endedAt: e.at, speculative: true, firstAudio: false, merged: !!s.mergeFrom } }, effects: [{ type: "send", text, speculative: true }] };
       }
@@ -246,14 +280,14 @@ export function convStep(s: ConvState, e: ConvEvent): Out {
 
     case "thinking": {
       const t = s.turn;
-      if (e.type === "resumed" && t?.speculative) return { state: { ...s, phase: "hearing", turn: null }, effects: [{ type: "abort-request" }] };
       if (e.type === "turn") return takeTurn(s, e);
       // A self-correction ("ten, no, twelve"): speech again right after the end of turn, before any audio.
       if ((e.type === "speech-start" || e.type === "partial") && t && !t.speculative && !t.firstAudio && !t.merged && e.at - t.endedAt <= MERGE_MS)
         return { state: { ...s, phase: "hearing", turn: null, mergeFrom: t.text, heard: e.type === "partial" ? e.text : "" }, effects: [{ type: "abort-request" }, ...(s.mode === "tap" || s.halfDuplex ? [{ type: "open-mic" } as Effect] : [])] };
       if (e.type === "first-audio") return { state: { ...s, phase: "speaking", notice: null, turn: t ? { ...t, firstAudio: true } : t }, effects: s.halfDuplex ? [{ type: "close-mic" }] : [] };
       if (e.type === "stop-voice") return { state: { ...s, phase: s.mode === "conversation" && !s.halfDuplex ? "listening" : "idle", turn: null }, effects: [{ type: "stop-voice", fadeMs: 120 }, { type: "stop-reply" }] };
-      if (e.type === "reply-end") return replyEnd(s, e);
+      // A speculative reply can't be over before its turn is: it waits for the commit.
+      if (e.type === "reply-end") return t?.speculative ? none : replyEnd(s, e);
       return none;
     }
 
@@ -299,7 +333,7 @@ function tick(s: ConvState, at: number): Out {
       effects: [{ type: "abort-mic" }, ...(back ? [{ type: "mode", mode: "tap" } as Effect] : [])],
     };
   }
-  if (s.phase === "thinking" && s.turn && !s.turn.speculative) {
+  if (s.phase === "thinking" && s.turn && !s.turn.speculative && !s.turn.shown) {
     const waited = at - s.turn.endedAt;
     const notice: Notice = waited >= LONGER_MS ? "longer" : waited >= STILL_MS ? "still" : s.notice;
     if (notice !== s.notice) return { state: { ...s, notice }, effects: [] };
@@ -312,7 +346,7 @@ export function wakeAt(s: ConvState): number | null {
   const times: number[] = [];
   if (s.mode === "conversation" && s.conversationSince != null) times.push(s.conversationSince + CONVERSATION_LIMIT_MS);
   if (s.phase === "listening" && s.mode === "conversation" && s.reopenedAt != null && !s.spokeSinceReopen) times.push(s.reopenedAt + REOPEN_IDLE_MS[s.band]);
-  if (s.phase === "thinking" && s.turn && !s.turn.speculative) {
+  if (s.phase === "thinking" && s.turn && !s.turn.speculative && !s.turn.shown) {
     if (s.notice !== "still" && s.notice !== "longer") times.push(s.turn.endedAt + STILL_MS);
     if (s.notice !== "longer") times.push(s.turn.endedAt + LONGER_MS);
   }

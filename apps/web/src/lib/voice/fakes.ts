@@ -266,8 +266,8 @@ export function fakeOut({ auto = true, kind = "browser" as SpeechOut["kind"], ti
   return out satisfies SpeechOut;
 }
 
-/** A SpeechIn the test speaks into. */
-export function fakeIn({ kind = "browser", duplex }: { kind?: SpeechIn["kind"]; duplex?: boolean } = {}) {
+/** A SpeechIn the test speaks into. `levels`: it hands over per-block levels (onLevel), like the vendor recognizer. */
+export function fakeIn({ kind = "browser", duplex, levels = false }: { kind?: SpeechIn["kind"]; duplex?: boolean; levels?: boolean } = {}) {
   const ev = {
     partial: emitter<[string]>(),
     final: emitter<[string]>(),
@@ -277,6 +277,8 @@ export function fakeIn({ kind = "browser", duplex }: { kind?: SpeechIn["kind"]; 
     resumed: emitter<[]>(),
     speech: emitter<[]>(),
     slow: emitter<[boolean]>(),
+    level: emitter<[number, number]>(),
+    switched: emitter<[{ kind: SpeechIn["kind"]; duplex: boolean }]>(),
     error: emitter<[VoiceError]>(),
   };
   const input = {
@@ -304,8 +306,14 @@ export function fakeIn({ kind = "browser", duplex }: { kind?: SpeechIn["kind"]; 
     onTurnResumed: ev.resumed.on,
     onSpeechStart: ev.speech.on,
     onSlow: ev.slow.on,
+    onLevel: levels ? ev.level.on : undefined,
+    onSwitch: ev.switched.on,
     onError: ev.error.on,
     // The test speaks:
+    /** One ~20 ms block's level, captured at `at`. */
+    block: (level: number, at: number) => ev.level.emit(level, at),
+    /** Listening moved to another recognizer for good. */
+    switchTo: (to: { kind: SpeechIn["kind"]; duplex: boolean }) => ev.switched.emit(to),
     speechStart: () => ev.speech.emit(),
     partial: (t: string) => ev.partial.emit(t),
     words: (w: HeardWord[]) => ev.words.emit(w),

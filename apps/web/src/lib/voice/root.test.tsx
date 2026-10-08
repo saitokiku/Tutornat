@@ -13,12 +13,12 @@ import { VoiceError } from "./types";
 
 const LEARNER: VoiceLearner = { id: "L1", locale: "en", grade: "4", consent: true, names: ["Ada"], siblings: ["Leo"] };
 
-function voices({ kind = "elevenlabs" as const, conversation = true, device = false } = {}) {
-  const out = fakeOut({ auto: false, kind });
+function voices({ kind = "elevenlabs" as "elevenlabs" | "browser", conversation = true, device = false, tier = "A" as "A" | "B" } = {}) {
+  const out = fakeOut({ auto: false, kind, tier });
   const deviceOut = device ? fakeOut({ auto: false, kind: "browser" }) : null;
   const input = fakeIn({ kind: "deepgram" });
   input.listening = false;
-  const v: Voice = { out, in: input, vendor: { out: out.kind, in: input.kind }, allowed: true, tier: "A", autoRead: true, conversation, deviceOut, tip: false };
+  const v: Voice = { out, in: input, vendor: { out: out.kind, in: input.kind }, allowed: true, tier, autoRead: tier === "A", conversation: conversation && tier === "A", deviceOut, tip: false };
   const build = vi.fn(async (setup: VoiceSetup) => (void setup, v));
   return { out, deviceOut, input, v, build };
 }
@@ -296,6 +296,102 @@ describe("the talking tutor", () => {
     expect(t.result.current.state.confirm).toMatchObject({ kind: "unsure", text: "fish" });
     act(() => t.result.current.confirmSend());
     expect(t.onSend).toHaveBeenCalledWith("fish", expect.objectContaining({ via: "voice" }));
+  });
+
+  it("a Tier B voice never reads a reply by itself: shown, not spoken, and the loop still settles", async () => {
+    const t = tutor({}, LEARNER, { kind: "browser", tier: "B" });
+    await flush();
+    act(() => t.result.current.mic());
+    act(() => t.input.endOfTurn("twelve", { confidence: 0.9 }));
+    act(() => {
+      const feed = t.onSend.mock.calls[0][1].reply;
+      feed.write("Twelve is right. Do you want another?");
+      feed.end();
+    });
+    await flush();
+    expect(t.out.said).toEqual([]); // no speak() at all: a Hear playing would go on
+    expect(t.result.current.state.phase).toBe("idle");
+  });
+
+  it("the read-aloud toggle overrides the default either way", async () => {
+    const t = tutor({ speakReplies: true }, LEARNER, { kind: "browser", tier: "B" });
+    await flush();
+    act(() => t.result.current.mic());
+    act(() => t.input.endOfTurn("twelve", { confidence: 0.9 }));
+    act(() => t.onSend.mock.calls[0][1].reply.write("Twelve is right. Now"));
+    await flush();
+    expect(t.out.said).toEqual([["Twelve is right."]]);
+  });
+
+  it("an eager end sends at once, but its reply is heard only after the commit; resumed takes it back unheard", async () => {
+    const t = tutor({ onCommit: vi.fn() });
+    await flush();
+    act(() => t.result.current.mic());
+    act(() => t.input.partial("twelve"));
+    act(() => t.input.eager("twelve", { confidence: 0.9, lastWordEnd: performance.now() - 300 }));
+    expect(t.onSend).toHaveBeenCalledWith("twelve", expect.objectContaining({ speculative: true }));
+    act(() => t.onSend.mock.calls[0][1].reply.write("Twelve is right. Now"));
+    await flush();
+    expect(t.out.held.size).toBe(1); // opened, held
+    expect(t.result.current.state.phase).toBe("thinking");
+    act(() => t.input.endOfTurn("Twelve.", { confidence: 0.9 }));
+    await flush();
+    expect(t.out.held.size).toBe(0);
+    expect(t.out.said.at(-1)).toEqual(["Twelve is right."]);
+    expect(t.result.current.state.phase).toBe("speaking");
+    // The committed turn keeps the eager turn's marks: its numbers are posted from the eager end.
+    act(() => t.out.timing({ firstSentenceAt: performance.now(), firstChunkAt: performance.now(), firstAudibleAt: performance.now() + 80, underruns: 0, retried: false }));
+    const post = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.find((c) => c[0] === "/api/voice/metric");
+    const segs = JSON.parse(String(post![1].body)).segments;
+    expect(segs).toMatchObject({ eot: 300, request: expect.any(Number), firstChunk: expect.any(Number) });
+    expect(segs.total).toBeGreaterThanOrEqual(300 + 80); // from the eager turn's last word, not the commit
+
+    // Another eager end, then the learner goes on: nothing of it is heard.
+    act(() => t.out.finish());
+    act(() => t.result.current.mic());
+    act(() => t.input.partial("seven"));
+    act(() => t.input.eager("seven", { confidence: 0.9 }));
+    act(() => t.onSend.mock.calls.at(-1)![1].reply.write("Seven is right. Now"));
+    await flush();
+    act(() => t.input.resumed());
+    await flush();
+    expect(t.onAbortRequest).toHaveBeenCalledOnce();
+    expect(t.out.said.at(-1)).toEqual([]); // held, then cancelled: never spoken
+    expect(t.result.current.state.phase).toBe("hearing");
+  });
+
+  it("a lost model stream shows 'Lost the connection'; Try again resends the turn, untimed", async () => {
+    const t = tutor();
+    await flush();
+    act(() => t.result.current.mic());
+    act(() => t.input.endOfTurn("twelve", { confidence: 0.9, lastWordEnd: performance.now() - 300 }));
+    act(() => t.result.current.streamError());
+    expect(t.result.current.state).toMatchObject({ phase: "error", notice: "lost" });
+    act(() => t.result.current.retry());
+    expect(t.onSend).toHaveBeenLastCalledWith("twelve", expect.objectContaining({ retry: true }));
+    act(() => t.out.timing({ firstSentenceAt: performance.now(), firstChunkAt: null, firstAudibleAt: performance.now() + 50, underruns: 0, retried: false }));
+    expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.some((c) => c[0] === "/api/voice/metric")).toBe(false);
+  });
+
+  it("a typed reply read aloud is never timed as a spoken turn", async () => {
+    const t = tutor();
+    await flush();
+    act(() => t.result.current.mic());
+    act(() => t.input.endOfTurn("twelve", { confidence: 0.9, lastWordEnd: performance.now() - 300 }));
+    act(() => t.result.current.reply().write("Here is a typed answer. "));
+    await flush();
+    act(() => t.out.timing({ firstSentenceAt: performance.now(), firstChunkAt: null, firstAudibleAt: performance.now() + 50, underruns: 0, retried: false }));
+    expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.some((c) => c[0] === "/api/voice/metric")).toBe(false);
+  });
+
+  it("when listening falls back to the browser's recognizer, conversation mode and full duplex go", async () => {
+    const t = tutor({}, { ...LEARNER, grade: "1" });
+    await flush();
+    expect(t.result.current.state.mode).toBe("conversation");
+    const input = t.input as typeof t.input & { onSwitch?: (fn: (to: { kind: "browser" | "deepgram"; duplex: boolean }) => void) => () => void };
+    expect(input.onSwitch).toBeDefined();
+    act(() => t.input.switchTo({ kind: "browser", duplex: false }));
+    expect(t.result.current.state).toMatchObject({ mode: "tap", halfDuplex: true, conversationAllowed: false });
   });
 
   it("leaving the screen closes the mic and stops its reply", async () => {

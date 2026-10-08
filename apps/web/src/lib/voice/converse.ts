@@ -35,8 +35,8 @@ import { countWords, type HeardWord, type SpeakOptions, type SpeakSource, type S
 export type ConverseMetric =
   /** say() → the first audio was scheduled. */
   | { name: "first-audio"; ms: number; vendor: SpeechOut["kind"] }
-  /** The learner's first sound → the tutor ducked, → the tutor stopped. */
-  | { name: "barge-in"; duckMs: number | null; stopMs: number; vendor: SpeechOut["kind"] };
+  /** The learner's first sound (onsetAt: when the first loud mic block was captured, or the recognizer's start) → the tutor ducked, → the tutor stopped. */
+  | { name: "barge-in"; onsetAt: number; duckMs: number | null; stopMs: number; vendor: SpeechOut["kind"] };
 /** @deprecated the first version's name. */
 export type VoiceMetric = ConverseMetric;
 
@@ -126,11 +126,15 @@ export function converse({
   let halfDuplex = !!input && !input.duplex;
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
   let frameTimer: ReturnType<typeof setInterval> | undefined;
+  let framesOn = false;
   const subs: Unsubscribe[] = [];
 
   const state = () => output?.state ?? "idle";
   const playing = () => state() === "speaking";
-  const midReply = () => state() === "speaking" || state() === "paused" || state() === "waiting";
+  // Mid-reply means the learner has heard some of it. A reply still waiting for its first audio (or
+  // held until its speculative turn is committed) isn't interrupted by a turn: the state machine
+  // decides (it merges with the turn in flight, or commits it).
+  const midReply = () => state() === "speaking" || state() === "paused";
 
   /** The tutor's voice was heard at t, or stopped less than 1.5 s before (its echo may still come in). */
   const nearVoice = (t: number) => playing() || (reply?.endedAt != null && !reply.cancelled && t - reply.endedAt <= ECHO_SCREEN_MS);
@@ -190,7 +194,7 @@ export function converse({
         // The caller hears of the barge-in first (while what was heard is still known), then the voice stops.
         onBargeIn?.();
         output?.cancel({ fadeMs: a.fadeMs }); // ends the run, which resets the duck
-        if (output) onMetric?.({ name: "barge-in", duckMs, stopMs, vendor: output.kind });
+        if (output) onMetric?.({ name: "barge-in", onsetAt: a.onsetAt, duckMs, stopMs, vendor: output.kind });
         duckedAt = null;
         onDuck?.(false);
       }
@@ -203,15 +207,23 @@ export function converse({
     act(r.actions);
   };
 
-  /** While the tutor speaks and the microphone is open, read its level for the onset. */
+  /**
+   * While the tutor speaks and the microphone is open, watch its level for the onset. A recognizer
+   * that hands over each ~20 ms block's own level and capture time (onLevel) is used as is, so one
+   * loud click can't hold a smoothed meter up past 120 ms, and the onset is when the sound was
+   * captured. Otherwise the meter is polled.
+   */
   function frames(on: boolean) {
     clearInterval(frameTimer);
     frameTimer = undefined;
-    if (!on || !input || halfDuplex) return;
+    framesOn = on && !!input && !halfDuplex;
+    if (!framesOn || !input) return;
     frameTimer = setInterval(() => {
-      const level = input.listening ? input.level() : null;
       const t = now();
-      if (level != null) feed({ type: "frame", level, at: t, playing: playing() });
+      if (!input.onLevel) {
+        const level = input.listening ? input.level() : null;
+        if (level != null) feed({ type: "frame", level, at: t, playing: playing() });
+      }
       feed({ type: "tick", at: t });
     }, frameMs);
   }
@@ -276,6 +288,21 @@ export function converse({
       }),
       input.onEndOfTurn((text, meta) => endOfTurn(text, meta)),
     );
+    if (input.onLevel)
+      subs.push(
+        input.onLevel((level, at) => {
+          if (framesOn && !halfDuplex && input.listening) feed({ type: "frame", level, at, playing: playing() });
+        }),
+      );
+    // The vendor recognizer was lost and the browser's took over: it is half duplex from now on.
+    if (input.onSwitch)
+      subs.push(
+        input.onSwitch((to) => {
+          if (to.duplex || halfDuplex) return;
+          halfDuplex = true;
+          frames(false);
+        }),
+      );
   }
 
   if (output) {
