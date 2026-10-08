@@ -79,7 +79,9 @@ describe("microphone errors", () => {
     for (const s of ["ok", "quiet", "silent", "denied"] as const) expect(en[selfTestKey(s)], s).toBeTruthy();
     expect(en[listenTestKey({ status: "words", text: "hi" })]).toContain("{text}");
     expect(en[listenTestKey({ status: "nothing" })]).toBeTruthy();
-    expect(listenTestKey({ status: "network" })).toBe("voice.error.network");
+    expect(listenTestKey({ status: "network" })).toBe("voice.fail.network");
+    // No "Typing always works." boilerplate on any of them.
+    for (const c of codes) expect(en[voiceErrorKey(c)], c).not.toMatch(/Typing always works/);
     expect(en[micOffKey("idle")]).toBeTruthy();
     expect(en[micOffKey("hidden")]).toBeTruthy();
   });

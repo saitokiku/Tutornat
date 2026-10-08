@@ -268,20 +268,23 @@ export function listenTestKey(r: ListenTest): Key {
   return voiceErrorKey(r.status);
 }
 
-/** The sentence to show when the microphone turned itself off. */
-export const micOffKey = (why: "idle" | "hidden"): Key => (why === "idle" ? "voice.micOff.idle" : "voice.micOff.hidden");
+/** The sentence to show when the microphone turned itself off ("limit": conversation mode's 20 minutes). */
+export const micOffKey = (why: "idle" | "hidden" | "limit"): Key => (why === "idle" ? "voice.micOff.idle" : why === "hidden" ? "voice.micOff.hidden" : "voice.micOff.limit");
 
-/** The sentence to show for a voice error. Every one ends with what still works. */
+/**
+ * The sentence to show for a voice error: what happened and what to do, no boilerplate. Grades 3–9
+ * add "voice.typeInstead" once after it; K–2 gets an icon chip, never a text-only error.
+ */
 export function voiceErrorKey(code: VoiceErrorCode): Key {
   const keys: Record<VoiceErrorCode, Key> = {
-    unsupported: "voice.error.unsupported",
-    denied: "voice.error.denied",
-    "no-device": "voice.error.noDevice",
-    busy: "voice.error.busy",
-    network: "voice.error.network",
-    consent: "voice.error.consent",
-    unavailable: "voice.error.unavailable",
-    speak: "voice.error.speak",
+    unsupported: "voice.fail.unsupported",
+    denied: "voice.fail.denied",
+    "no-device": "voice.fail.noDevice",
+    busy: "voice.fail.busy",
+    network: "voice.fail.network",
+    consent: "voice.fail.consent",
+    unavailable: "voice.fail.unavailable",
+    speak: "voice.fail.speak",
   };
   return keys[code];
 }

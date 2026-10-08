@@ -41,7 +41,7 @@ describe("choosing a voice", () => {
     expect(r.vendor).toEqual({ out: "elevenlabs", in: "deepgram" });
     expect(r).toMatchObject({ allowed: true, tier: "A", autoRead: true, conversation: true, tip: false });
     expect(r.deviceOut).toBeNull(); // no natural browser voice to fall back on for the next reply
-    expect(voiceDisclosure(r)).toEqual(["voice.source.deepgram", "voice.source.elevenlabs"]);
+    expect(voiceDisclosure(r)).toEqual(["voice.source.deepgram", "voice.source.vendorRead"]);
     // The status check is a plain GET: nothing about the learner goes with it.
     expect(f).toHaveBeenCalledWith("/api/voice/status", { cache: "no-store" });
   });
@@ -64,7 +64,7 @@ describe("choosing a voice", () => {
     const off = await voice({ ...setup, locale: "es", consent: false, under13: false, fetch: statusFetch(ALL) });
     expect(off.vendor).toEqual({ out: "elevenlabs", in: null });
     expect(off.conversation).toBe(false);
-    expect(voiceDisclosure(off)).toEqual(["voice.source.readOnly", "voice.source.elevenlabs"]);
+    expect(voiceDisclosure(off)).toEqual(["voice.source.readOnly", "voice.source.vendorRead"]);
     const on = await voice({ ...setup, locale: "es", consent: true, under13: false, fetch: statusFetch(ALL) });
     expect(on.vendor).toEqual({ out: "elevenlabs", in: "deepgram" });
   });

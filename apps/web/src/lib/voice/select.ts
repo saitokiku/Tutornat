@@ -204,7 +204,8 @@ export function voiceDisclosure(v: Pick<Voice, "vendor" | "allowed">): Key[] {
   if (v.vendor.in === "deepgram") keys.push("voice.source.deepgram");
   if (v.vendor.in === "browser") keys.push("voice.source.browser");
   if (!v.allowed && v.vendor.out) keys.push("voice.source.readOnly");
-  if (v.vendor.out === "elevenlabs") keys.push("voice.source.elevenlabs");
+  // The vendor voice is never handed to the browser's voice mid-reply, so its line no longer says so.
+  if (v.vendor.out === "elevenlabs") keys.push("voice.source.vendorRead");
   if (v.vendor.out === "browser") keys.push("voice.source.browserRead");
   return keys;
 }
