@@ -4,7 +4,7 @@ import { cats, skill, type Bi, type Entry, type GroupJob } from "./shared";
 
 // ---------------------------------------------------------------------------------------------------
 // e.phrases.clauses — level 1: is the quoted group a phrase, an independent clause or a dependent clause
-// (Spanish: frase, oración independiente u oración subordinada; the test is a conjugated verb, since a
+// (Spanish: frase, oración principal o independiente, u oración subordinada; the test is a conjugated verb, since a
 // Spanish subject is often left unsaid); level 2: does the group work as a noun, an adjective or an
 // adverb in this sentence.
 
@@ -12,7 +12,7 @@ type GroupKind = "phrase" | "independent" | "dependent";
 const GROUP_KIND = cats<GroupKind>(
   {
     en: { phrase: "Phrase", independent: "Independent clause", dependent: "Dependent clause" },
-    es: { phrase: "Frase", independent: "Oración independiente", dependent: "Oración subordinada" },
+    es: { phrase: "Frase", independent: "Oración principal o independiente", dependent: "Oración subordinada" },
   },
   { en: ["phrase", "independent", "dependent"], es: ["phrase", "independent", "dependent"] },
   [
@@ -38,7 +38,7 @@ const GROUP_KIND = cats<GroupKind>(
     },
     {
       en: ["When the bell rang, everyone ran outside.", "independent", "Read these words by themselves. Are they a complete thought?", "It has a subject and a verb and is a complete thought: an independent clause.", "everyone ran outside"],
-      es: ["Cuando sonó el timbre, todos salieron corriendo.", "independent", "Lee esas palabras solas. ¿Tienen sentido completo?", "Tiene sujeto y verbo conjugado, y tiene sentido completo: es una oración independiente.", "todos salieron corriendo"],
+      es: ["Cuando sonó el timbre, todos salieron corriendo.", "independent", "Lee esas palabras solas. ¿Tienen sentido completo?", "Tiene sujeto y verbo conjugado, y tiene sentido completo: es la oración principal, y podría ir sola.", "todos salieron corriendo"],
     },
     {
       en: ["My cousin, a talented painter, sold her first picture.", "phrase", "Look for a verb in these words.", "“A talented painter” renames my cousin but has no verb, so it is a phrase.", "a talented painter"],
@@ -58,7 +58,7 @@ const GROUP_KIND = cats<GroupKind>(
     },
     {
       en: ["If it snows tomorrow, school will close.", "independent", "Read these words by themselves. Are they a complete thought?", "It has a subject and a verb and is a complete thought: an independent clause.", "school will close"],
-      es: ["Si nieva mañana, no habrá clases.", "independent", "Lee esas palabras solas. ¿Tienen sentido completo?", "Tiene verbo conjugado y sentido completo: es una oración independiente.", "no habrá clases"],
+      es: ["Si nieva mañana, no habrá clases.", "independent", "Lee esas palabras solas. ¿Tienen sentido completo?", "Tiene verbo conjugado y sentido completo: es la oración principal, y podría ir sola.", "no habrá clases"],
     },
     {
       en: ["We hiked to the top of the mountain.", "phrase", "Look for a verb in these words.", "These words have no subject and no verb, so they are a phrase.", "to the top of the mountain"],
@@ -70,7 +70,7 @@ const GROUP_KIND = cats<GroupKind>(
     },
     {
       en: ["Although it was cold, we swam in the lake.", "independent", "Read these words by themselves. Are they a complete thought?", "It has a subject and a verb and is a complete thought: an independent clause.", "we swam in the lake"],
-      es: ["Aunque hacía frío, nadamos en el lago.", "independent", "Lee esas palabras solas. ¿Tienen sentido completo?", "Tiene verbo conjugado (el sujeto, nosotros, no se dice) y sentido completo: es una oración independiente.", "nadamos en el lago"],
+      es: ["Aunque hacía frío, nadamos en el lago.", "independent", "Lee esas palabras solas. ¿Tienen sentido completo?", "Tiene verbo conjugado (el sujeto, nosotros, no se dice) y sentido completo: es la oración principal, y podría ir sola.", "nadamos en el lago"],
     },
     {
       en: ["Although it was cold, we swam in the lake.", "dependent", "Look at the first word of the group.", "It starts with “although,” so it cannot stand alone: a dependent clause.", "Although it was cold"],
@@ -161,7 +161,7 @@ const PHRASES_CLAUSES = skill(
       ask: { en: "In this sentence, what is {t}?", es: "En esta oración, ¿qué es {t}?" },
       hints: {
         en: ["Look for a subject and a verb inside the quoted words.", "A phrase has no subject-verb pair; a clause has one. An independent clause can stand alone as a sentence. A dependent clause starts with a word like because, when, if, although, that, or who, and cannot stand alone."],
-        es: ["Busca un verbo conjugado dentro de las palabras entre comillas.", "Una frase no tiene verbo conjugado; una oración sí. La oración independiente podría ir sola; la subordinada empieza con palabras como porque, cuando, si, aunque o que, y no puede ir sola."],
+        es: ["Busca un verbo conjugado dentro de las palabras entre comillas.", "Una frase no tiene verbo conjugado; una oración sí. La oración principal o independiente podría ir sola; la subordinada empieza con palabras como porque, cuando, si, aunque o que, y no puede ir sola."],
       },
       seconds: 20,
     },
@@ -217,16 +217,16 @@ const COORDINATE: Bi<Entry>[] = [
     es: ["Lleva una chaqueta. Te puede dar frío.", "Lleva una chaqueta o te puede dar frío.", [["Lleva una chaqueta, así que te puede dar frío.", "wrong-relationship"], ["Lleva una chaqueta te puede dar frío.", "run-on"]], "¿Qué pasa si no llevas chaqueta?", "Aquí “o” significa “si no”: sin chaqueta, te puede dar frío."],
   },
   {
-    en: ["The power went out. We played board games by candlelight.", "The power went out, so we played board games by candlelight.", [["The power went out, but we played board games by candlelight.", "wrong-relationship"], ["The power went out, we played board games by candlelight.", "comma-splice"], ["We played board games by candlelight, so the power went out.", "reversed-relationship"]], "Why did we play by candlelight?", "The power outage caused the candlelight games, so the link is a result: “so.”"],
-    es: ["Se fue la luz. Jugamos juegos de mesa con velas.", "Se fue la luz, así que jugamos juegos de mesa con velas.", [["Se fue la luz, pero jugamos juegos de mesa con velas.", "wrong-relationship"], ["Se fue la luz jugamos juegos de mesa con velas.", "run-on"], ["Jugamos juegos de mesa con velas, así que se fue la luz.", "reversed-relationship"]], "¿Por qué jugamos con velas?", "El apagón causó el juego con velas: es una consecuencia, y se une con “así que”."],
+    en: ["The power went out. We played board games by candlelight.", "The power went out, so we played board games by candlelight.", [["The power went out, or we played board games by candlelight.", "wrong-relationship"], ["The power went out, we played board games by candlelight.", "comma-splice"], ["We played board games by candlelight, so the power went out.", "reversed-relationship"]], "Why did we play by candlelight?", "The power outage caused the candlelight games, so the link is a result: “so.”"],
+    es: ["Se fue la luz. Jugamos juegos de mesa con velas.", "Se fue la luz, así que jugamos juegos de mesa con velas.", [["Se fue la luz o jugamos juegos de mesa con velas.", "wrong-relationship"], ["Se fue la luz jugamos juegos de mesa con velas.", "run-on"], ["Jugamos juegos de mesa con velas, así que se fue la luz.", "reversed-relationship"]], "¿Por qué jugamos con velas?", "El apagón causó el juego con velas: es una consecuencia, y se une con “así que”."],
   },
   {
     en: ["Kai loves basketball. He has never played on a team.", "Kai loves basketball, but he has never played on a team.", [["Kai loves basketball, so he has never played on a team.", "wrong-relationship"], ["Kai loves basketball, he has never played on a team.", "comma-splice"]], "Is the second fact what you would expect?", "Never playing on a team is surprising for someone who loves the game, so the link is a contrast: “but.”"],
     es: ["A Kai le encanta el básquetbol. Nunca ha jugado en un equipo.", "A Kai le encanta el básquetbol, pero nunca ha jugado en un equipo.", [["A Kai le encanta el básquetbol, así que nunca ha jugado en un equipo.", "wrong-relationship"], ["A Kai le encanta el básquetbol nunca ha jugado en un equipo.", "run-on"]], "¿El segundo dato es lo que esperarías?", "Es sorprendente para alguien a quien le encanta el juego: es un contraste, y se une con “pero”."],
   },
   {
-    en: ["The bakery sells fresh bread. It sells muffins too.", "The bakery sells fresh bread, and it sells muffins too.", [["The bakery sells fresh bread, but it sells muffins too.", "wrong-relationship"], ["The bakery sells fresh bread, it sells muffins too.", "comma-splice"]], "The second sentence adds one more thing the bakery sells.", "An added fact of the same kind is joined with “and.”"],
-    es: ["La panadería vende pan fresco. También vende panecillos.", "La panadería vende pan fresco y también vende panecillos.", [["La panadería vende pan fresco, pero también vende panecillos.", "wrong-relationship"], ["La panadería vende pan fresco también vende panecillos.", "run-on"]], "La segunda oración agrega otra cosa que vende la panadería.", "Un dato más del mismo tipo se une con “y”, sin coma."],
+    en: ["The bakery sells fresh bread. It sells muffins too.", "The bakery sells fresh bread, and it sells muffins too.", [["The bakery sells fresh bread, so it sells muffins too.", "wrong-relationship"], ["The bakery sells fresh bread, it sells muffins too.", "comma-splice"]], "The second sentence adds one more thing the bakery sells.", "An added fact of the same kind is joined with “and.”"],
+    es: ["La panadería vende pan fresco. También vende panecillos.", "La panadería vende pan fresco y también vende panecillos.", [["La panadería vende pan fresco, así que también vende panecillos.", "wrong-relationship"], ["La panadería vende pan fresco también vende panecillos.", "run-on"]], "La segunda oración agrega otra cosa que vende la panadería.", "Un dato más del mismo tipo se une con “y”, sin coma."],
   },
   {
     en: ["We can eat lunch now. We can wait until after the game.", "We can eat lunch now, or we can wait until after the game.", [["We can eat lunch now, so we can wait until after the game.", "wrong-relationship"], ["We can eat lunch now, we can wait until after the game.", "comma-splice"]], "The sentences give two options.", "Two choices are joined with “or.”"],

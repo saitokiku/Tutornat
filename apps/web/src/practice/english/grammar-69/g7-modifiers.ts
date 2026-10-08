@@ -13,7 +13,7 @@ const MISPLACED: Bi<Entry>[] = [
     es: ["Las camisas son de algodón y son para hombre.", "Se venden camisas de algodón para hombre.", [["Se venden camisas para hombre de algodón.", "misplaced-modifier"], ["De algodón se venden camisas para hombre.", "misplaced-modifier"]], "¿Qué es de algodón: las camisas o el hombre?", "“De algodón” va junto a “camisas”."],
   },
   {
-    en: ["Mia ate nearly all of the pizza. One slice was left.", "Mia ate almost the whole pizza.", [["Mia almost ate the whole pizza.", "misplaced-modifier"], ["Almost Mia ate the whole pizza.", "misplaced-modifier"]], "What is “almost”: the eating, or the whole pizza?", "“Almost” goes right before “the whole pizza,” because she ate nearly all of it."],
+    en: ["Mia ate pizza and nothing else.", "Mia ate only pizza.", [["Only Mia ate pizza.", "misplaced-modifier"], ["Mia ate the only pizza.", "misplaced-modifier"]], "What does “only” limit: who ate, or what she ate?", "“Only” goes right before “pizza,” because pizza was the one thing she ate."],
     es: ["La cuna es de madera y es para bebé.", "Vendo cuna de madera para bebé.", [["Vendo cuna para bebé de madera.", "misplaced-modifier"], ["De madera vendo cuna para bebé.", "misplaced-modifier"]], "¿Qué es de madera: la cuna o el bebé?", "“De madera” va junto a “cuna”."],
   },
   {
@@ -22,7 +22,7 @@ const MISPLACED: Bi<Entry>[] = [
   },
   {
     en: ["The wallet was full of cash. Ana found it on the sidewalk.", "Ana found a wallet full of cash on the sidewalk.", [["Ana found a wallet on the sidewalk full of cash.", "misplaced-modifier"], ["Full of cash, Ana found a wallet on the sidewalk.", "misplaced-modifier"]], "What was full of cash?", "“Full of cash” goes right after “a wallet.”"],
-    es: ["Mía se comió la pizza y solo dejó una rebanada.", "Mía se comió casi toda la pizza.", [["Mía casi se comió toda la pizza.", "misplaced-modifier"], ["Casi Mía se comió toda la pizza.", "misplaced-modifier"]], "¿Qué es “casi”: comer, o toda la pizza?", "“Casi” va antes de “toda la pizza”, porque se comió casi toda."],
+    es: ["Mía comió pizza y nada más.", "Mía comió solo pizza.", [["Solo Mía comió pizza.", "misplaced-modifier"], ["Mía comió la única pizza.", "misplaced-modifier"]], "¿Qué limita “solo”: quién comió, o qué comió?", "“Solo” va antes de “pizza”, porque la pizza fue lo único que comió."],
   },
   {
     en: ["The cookies were warm from the oven. The baker handed them to the children.", "The baker handed the cookies, warm from the oven, to the children.", [["The baker handed the cookies to the children warm from the oven.", "misplaced-modifier"], ["Warm from the oven, the baker handed the cookies to the children.", "misplaced-modifier"]], "What was warm from the oven?", "“Warm from the oven” goes right after “the cookies.”"],
@@ -49,11 +49,11 @@ const MISPLACED: Bi<Entry>[] = [
     es: ["La bufanda la tejió mi abuela. Me la puse para ir a la escuela.", "Para ir a la escuela, me puse la bufanda que tejió mi abuela.", [["Me puse la bufanda para ir a la escuela que tejió mi abuela.", "misplaced-modifier"], ["Tejida por mi abuela, me puse la bufanda para ir a la escuela.", "misplaced-modifier"]], "¿Qué tejió la abuela?", "“Que tejió mi abuela” va junto a “la bufanda”."],
   },
   {
-    en: ["The tickets cost five dollars each. Sam bought two of them for the concert.", "For the concert, Sam bought two tickets that cost five dollars each.", [["Sam bought two tickets for the concert that cost five dollars each.", "misplaced-modifier"], ["That cost five dollars each, Sam bought two tickets for the concert.", "misplaced-modifier"]], "What cost five dollars each?", "“That cost five dollars each” goes right after “two tickets.”"],
+    en: ["The tickets cost a lot. Sam bought two of them for the concert.", "For the concert, Sam bought two tickets that cost a lot.", [["Sam bought two tickets for the concert that cost a lot.", "misplaced-modifier"], ["That cost a lot, Sam bought two tickets for the concert.", "misplaced-modifier"]], "What cost a lot: the tickets or the concert?", "“That cost a lot” goes right after “two tickets.” After “the concert,” it seems to describe the concert."],
     es: ["Las galletas estaban recién horneadas. El panadero se las dio a los niños.", "El panadero les dio a los niños las galletas recién horneadas.", [["El panadero les dio las galletas a los niños recién horneados.", "misplaced-modifier"], ["Recién horneado, el panadero les dio las galletas a los niños.", "misplaced-modifier"]], "¿Qué estaba recién horneado?", "“Recién horneadas” va junto a “las galletas”."],
   },
   {
-    en: ["The puppy had muddy paws. It ran across our clean kitchen floor.", "The puppy with muddy paws ran across our clean kitchen floor.", [["The puppy ran across our clean kitchen floor with muddy paws.", "misplaced-modifier"], ["With muddy paws, our clean kitchen floor was crossed by the puppy.", "misplaced-modifier"]], "What had muddy paws?", "“With muddy paws” goes right after “the puppy.”"],
+    en: ["The puppy was covered in mud. It ran across the kitchen floor.", "Covered in mud, the puppy ran across the kitchen floor.", [["The puppy ran across the kitchen floor covered in mud.", "misplaced-modifier"], ["Covered in mud, the kitchen floor was crossed by the puppy.", "misplaced-modifier"]], "What was covered in mud: the puppy or the floor?", "“Covered in mud” goes right next to “the puppy.” After “the kitchen floor,” it seems to describe the floor."],
     es: ["El perro tenía una cola larga y peluda. El veterinario lo revisó.", "El veterinario revisó al perro de cola larga y peluda.", [["El veterinario de cola larga y peluda revisó al perro.", "misplaced-modifier"], ["De cola larga y peluda, el veterinario revisó al perro.", "misplaced-modifier"]], "¿Quién tiene la cola peluda?", "“De cola larga y peluda” va junto a “al perro”."],
   },
   {
@@ -62,7 +62,7 @@ const MISPLACED: Bi<Entry>[] = [
   },
   {
     en: ["The coach was holding a stopwatch. She timed the runners.", "Holding a stopwatch, the coach timed the runners.", [["The coach timed the runners holding a stopwatch.", "misplaced-modifier"], ["Holding a stopwatch, the runners were timed by the coach.", "misplaced-modifier"]], "Who held the stopwatch?", "“Holding a stopwatch” goes right next to “the coach.”"],
-    es: ["Los boletos costaban cinco dólares cada uno. Sam compró dos para el concierto.", "Para el concierto, Sam compró dos boletos de cinco dólares cada uno.", [["Sam compró dos boletos para el concierto de cinco dólares cada uno.", "misplaced-modifier"], ["De cinco dólares cada uno, Sam compró dos boletos para el concierto.", "misplaced-modifier"]], "¿Qué costaba cinco dólares?", "“De cinco dólares cada uno” va junto a “dos boletos”."],
+    es: ["Cada boleto costaba cinco dólares. Sam compró dos para el concierto.", "Para el concierto, Sam compró dos boletos de cinco dólares.", [["Sam compró dos boletos para el concierto de cinco dólares.", "misplaced-modifier"], ["De cinco dólares, Sam compró dos boletos para el concierto.", "misplaced-modifier"]], "¿Qué costaba cinco dólares: los boletos o el concierto?", "“De cinco dólares” va junto a “dos boletos”. Junto a “el concierto”, parece que el concierto costaba cinco dólares."],
   },
 ];
 
@@ -132,8 +132,8 @@ const MODIFIERS = skill(
       bank: MISPLACED,
       ask: { en: "Which sentence says this clearly, with each describing phrase next to the word it describes?", es: "¿Qué oración lo dice con claridad, con cada modificador junto a la palabra que describe?" },
       hints: {
-        en: ["Find each describing phrase and ask what it describes.", "Put a describing phrase right next to the word it describes. Words like “almost” go right before the word they limit."],
-        es: ["Busca cada modificador y pregúntate qué describe.", "Pon el modificador junto a la palabra que describe. Palabras como “casi” van justo antes de la palabra que limitan."],
+        en: ["Find each describing phrase and ask what it describes.", "Put a describing phrase right next to the word it describes. Words like “only” go right before the word they limit."],
+        es: ["Busca cada modificador y pregúntate qué describe.", "Pon el modificador junto a la palabra que describe. Palabras como “solo” van justo antes de la palabra que limitan."],
       },
       seconds: 30,
     },

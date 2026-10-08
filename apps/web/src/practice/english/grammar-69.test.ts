@@ -27,6 +27,11 @@ const lc = (s: string) => s.toLowerCase();
 const bare = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "");
 const words = (s: string) => lc(s).replace(/[^\p{L}\p{N}']+/gu, " ").trim().split(" ").filter(Boolean);
 const sameWords = (a: string, b: string) => words(a).join(" ") === words(b).join(" ");
+/** How many times a word or phrase appears in a text as whole words. */
+const occurrences = (text: string, phrase: string) => {
+  const [t, p] = [words(text), words(phrase)];
+  return t.filter((_, i) => p.every((w, j) => t[i + j] === w)).length;
+};
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Whole word or phrase, ignoring case. */
 const hasPhrase = (text: string, phrase: string) => new RegExp(`(?<![\\p{L}\\p{N}])${esc(lc(phrase))}(?![\\p{L}\\p{N}])`, "u").test(lc(text));
@@ -153,9 +158,16 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
     }
     each("e.intensive.pronouns", 2, ([shown, , , , , target], locale) => {
       expect(target, shown).toBeTruthy();
-      expect(words(shown).filter((w) => w === lc(target!)).length, `${shown} target once`).toBe(1);
+      expect(occurrences(shown, target!), `${shown} target once`).toBe(1);
       if (locale === "en") expect(SELF, shown).toContain(lc(target!));
     });
+    // Spanish: the word form alone must not decide the answer. Some reflexive targets carry "mismo", and
+    // some intensive targets do not.
+    const [enfatico, reflexivo] = levels("e.intensive.pronouns")[1].order!.es;
+    const es2 = bank("e.intensive.pronouns", 2, "es");
+    const mismo = (t: string) => /\bmism[oa]s?$/.test(t);
+    expect(es2.some(([, right, , , , t]) => right === reflexivo && mismo(t!)), "a reflexive target with mismo").toBe(true);
+    expect(es2.some(([, right, , , , t]) => right === enfatico && !mismo(t!)), "an intensive target without mismo").toBe(true);
   });
 
   it("vague pronouns: both possible antecedents come before the pronoun; a clear pronoun agrees with only one", () => {
@@ -204,10 +216,27 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
     expect(clear, "clear pronouns in the bank").toBeGreaterThanOrEqual(16);
   });
 
-  it("vague pronouns, later levels: revisions differ from the original", () => {
+  it("vague pronouns, later levels: revisions differ from the original; shifts are pronoun shifts", () => {
     each("e.vague.pronouns", 2, ([shown, right, wrong]) => {
       expect(right, shown).not.toBe(shown);
       for (const [w] of wrong) expect(w, shown).not.toBe(shown);
+    });
+    // Level 3 is L.6.1c, shifts in pronoun person and number: every choice is or holds a pronoun, so an
+    // item cannot quietly test verb agreement instead.
+    const PRONOUNS = {
+      en: "i we you he she it they one my our your his her its their or".split(" "),
+      es: "me te se nos le les lo la su sus tu tus mi mis nuestro nuestra nuestros nuestras".split(" "),
+    };
+    each("e.vague.pronouns", 3, ([shown, right, wrong], locale) => {
+      for (const l of [right, ...wrong.map(([w]) => w)]) {
+        const ws = words(l);
+        if (locale === "en") expect(ws.every((w) => PRONOUNS.en.includes(w)), `${shown}: ${l}`).toBe(true);
+        else expect(ws.some((w) => PRONOUNS.es.includes(w)), `${shown}: ${l}`).toBe(true);
+      }
+      // A possessive blank is tied to the subject ("own", "propio", or a body part), so a distractor
+      // cannot simply name a different owner.
+      if (/^(my|our|your|his|her|its|their|su|sus|tu|tus|mi|mis|nuestr[oa]s?)$/.test(lc(right)))
+        expect(/___ (own|propi[oa]s?|legs|eyes) /.test(shown), `${shown}: a possessive distractor could name another owner`).toBe(true);
     });
   });
 

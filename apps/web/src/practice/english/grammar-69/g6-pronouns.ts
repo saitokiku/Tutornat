@@ -73,7 +73,7 @@ const SELF_USE = cats<SelfUse>(
   [
     {
       en: ["Maya taught herself to play the guitar.", "reflexive", "Read it without “herself”: “Maya taught to play the guitar.” Who learned?", "“Herself” receives the teaching and means the same person as Maya.", "herself"],
-      es: ["Lucía se miró en el espejo antes de salir.", "reflexive", "Lucía hace la acción de mirar, y también es a quien mira.", "“Se” indica que Lucía se mira a sí misma.", "se"],
+      es: ["Lucía se miró a sí misma en el espejo antes de salir.", "reflexive", "Lucía hace la acción de mirar, y también es a quien mira.", "“Sí misma” es Lucía, la misma persona que mira: es reflexivo, aunque lleve “misma”.", "sí misma"],
     },
     {
       en: ["Maya herself built the bookshelf.", "intensive", "Read it without “herself”: “Maya built the bookshelf.”", "The sentence is complete without it; “herself” only stresses that Maya did it.", "herself"],
@@ -97,11 +97,11 @@ const SELF_USE = cats<SelfUse>(
     },
     {
       en: ["You should be proud of yourself.", "reflexive", "Read it without “yourself”: “You should be proud of.” The sentence breaks.", "“Yourself” completes “proud of” and means the same person as “you.”", "yourself"],
-      es: ["La directora misma nos dio la noticia.", "intensive", "Quita la palabra: “La directora nos dio la noticia” dice lo mismo.", "“Misma” solo da énfasis.", "misma"],
+      es: ["La propia directora nos dio la noticia.", "intensive", "Quita la palabra: “La directora nos dio la noticia” dice lo mismo.", "“Propia” solo subraya que fue la directora en persona: es enfático.", "propia"],
     },
     {
       en: ["The students themselves planned the fundraiser.", "intensive", "Read it without “themselves”: “The students planned the fundraiser.”", "The sentence is complete without it; “themselves” stresses who did the planning.", "themselves"],
-      es: ["Me lavo las manos antes de comer.", "reflexive", "Yo hago la acción de lavar, y las manos que lavo son mías.", "“Me” indica que la acción recae sobre quien la hace.", "Me"],
+      es: ["Me prometí a mí mismo que terminaría el libro.", "reflexive", "Yo hago la promesa, y también soy a quien se la hago.", "“Mí mismo” es la misma persona que promete: es reflexivo, aunque lleve “mismo”.", "mí mismo"],
     },
     {
       en: ["They introduced themselves to the new neighbors.", "reflexive", "Read it without “themselves”: “They introduced to the new neighbors.” Who was introduced?", "“Themselves” receives the action and means the same people as “they.”", "themselves"],
@@ -109,7 +109,7 @@ const SELF_USE = cats<SelfUse>(
     },
     {
       en: ["The mayor herself cut the ribbon at the new library.", "intensive", "Read it without “herself”: “The mayor cut the ribbon at the new library.”", "The sentence is complete without it; “herself” adds emphasis.", "herself"],
-      es: ["Mis hermanos se peinan frente al espejo.", "reflexive", "Mis hermanos hacen la acción de peinar, y es su propio pelo.", "“Se” indica que la acción recae sobre quienes la hacen.", "se"],
+      es: ["Mi hermano habla consigo mismo cuando arma rompecabezas.", "reflexive", "¿Con quién habla mi hermano?", "“Consigo mismo” es el propio hermano: la acción recae sobre quien la hace, así que es reflexivo.", "consigo mismo"],
     },
     {
       en: ["The cat licked itself clean after dinner.", "reflexive", "Read it without “itself”: “The cat licked clean after dinner.” What did it lick?", "“Itself” is what the cat licked, the same animal as the subject.", "itself"],
@@ -151,7 +151,7 @@ const INTENSIVE_PRONOUNS = skill(
       ask: { en: "Is {t} intensive or reflexive in this sentence?", es: "En esta oración, ¿{t} es enfático o reflexivo?" },
       hints: {
         en: ["Try reading the sentence without the -self word. Does it still make sense?", "An intensive pronoun only adds emphasis, so the sentence is complete without it. A reflexive pronoun is needed: it receives the action and means the same person as the subject."],
-        es: ["¿La acción recae sobre quien la hace, o la palabra solo subraya quién la hizo?", "Un pronombre reflexivo (me, te, se, nos) indica que quien hace la acción también la recibe. “Mismo” o “misma” es enfático: solo da énfasis, y si lo quitas la oración dice lo mismo."],
+        es: ["¿La acción recae sobre quien la hace, o la palabra solo subraya quién la hizo?", "Si la acción recae sobre quien la hace (Ana se peinó; Ana se peinó a sí misma), es reflexivo. Si la palabra solo subraya quién hizo la acción (el piloto mismo nos saludó: fue él y nadie más), es enfático. “Mismo” puede aparecer en los dos."],
       },
       seconds: 15,
     },
@@ -206,7 +206,7 @@ const AMBIGUOUS: Bi<Entry>[] = [
   },
   {
     en: ["Jada told her sister that she won the art contest.", "Either one: Jada or her sister", [["Only Jada", "assumed-first-noun"], ["Only her sister", "assumed-nearest-noun"]], "Try “Jada won.” Then try “her sister won.”", "Either girl could have won, so “she” is unclear.", "she"],
-    es: ["Elena le prestó a Carmen su libro de cuentos.", "Cualquiera de las dos: Elena o Carmen", [["Solo Elena", "assumed-first-noun"], ["Solo Carmen", "assumed-nearest-noun"]], "Prueba “el libro de Elena” y luego “el libro de Carmen”.", "El libro puede ser de cualquiera de las dos, así que “su” es ambiguo.", "su"],
+    es: ["Elena le mostró a Carmen su libro de cuentos.", "Cualquiera de las dos: Elena o Carmen", [["Solo Elena", "assumed-first-noun"], ["Solo Carmen", "assumed-nearest-noun"]], "Prueba “el libro de Elena” y luego “el libro de Carmen”.", "El libro puede ser de cualquiera de las dos, así que “su” es ambiguo.", "su"],
   },
   {
     en: ["The coach told the referee that he had made a mistake.", "Either one: the coach or the referee", [["Only the coach", "assumed-first-noun"], ["Only the referee", "assumed-nearest-noun"]], "Try “the coach made a mistake.” Then try “the referee made a mistake.”", "Either one could have made the mistake, so “he” is unclear.", "he"],
@@ -307,7 +307,7 @@ const CLEAR_REVISION: Bi<Entry>[] = [
   },
   {
     en: ["In the instructions, it says to preheat the oven.", "The instructions say to preheat the oven.", [["In the instructions, they say to preheat the oven.", "still-unclear"], ["The instructions say not to preheat the oven.", "changed-meaning"]], "Nothing in the sentence is “it.” What is actually giving the direction?", "Make the instructions the subject."],
-    es: ["Elena le prestó a Carmen su libro de cuentos.", "Elena tenía un libro de cuentos y se lo prestó a Carmen.", [["Elena le prestó a Carmen su nuevo libro de cuentos.", "still-unclear"], ["Carmen le prestó a Elena un libro de cuentos.", "changed-meaning"]], "Di primero quién tenía el libro.", "Ahora queda claro que el libro era de Elena."],
+    es: ["Elena le mostró a Carmen su libro de cuentos.", "Elena tenía un libro de cuentos y se lo mostró a Carmen.", [["Elena le mostró a Carmen su nuevo libro de cuentos.", "still-unclear"], ["Carmen le mostró a Elena un libro de cuentos.", "changed-meaning"]], "Di primero quién tenía el libro.", "Ahora queda claro que el libro era de Elena."],
   },
   {
     en: ["Jada told her sister that she won the art contest.", "Jada told her sister, “I won the art contest.”", [["Jada told her sister that she had won the art contest.", "still-unclear"], ["Jada's sister told her about the art contest.", "changed-meaning"]], "A quote can show who won.", "In the quote, “I” can only mean Jada."],
@@ -334,55 +334,55 @@ const SHIFTS: Bi<Entry>[] = [
   },
   {
     en: ["We love hiking because ___ can see the whole valley from the top.", "we", [["you", "shift-in-person"], ["one", "shift-in-person"]], "The sentence starts in the first person plural.", "Keep the same person all the way through."],
-    es: ["La gente del barrio ___ a limpiar el parque.", "ayudó", [["ayudaron", "shift-in-number"], ["ayudamos", "shift-in-person"]], "“La gente” es una sola palabra en singular, aunque nombre a muchas personas.", "“La gente” es singular, así que el verbo también."],
+    es: ["Los vecinos ___ arrepintieron de haber cortado el árbol.", "se", [["nos", "shift-in-person"], ["te", "shift-in-person"]], "El sujeto es “los vecinos”, en tercera persona del plural.", "“Arrepentirse” lleva un pronombre de la misma persona que el sujeto: los vecinos se arrepintieron."],
   },
   {
-    en: ["The members of the band tuned ___ instruments before the show.", "their", [["his or her", "shift-in-number"], ["your", "shift-in-person"]], "The pronoun points back to “the members,” more than one person.", "Plural “members” takes a plural pronoun."],
-    es: ["Los integrantes de la banda afinaron ___ instrumentos antes del concierto.", "sus", [["su", "shift-in-number"], ["nuestros", "shift-in-person"]], "Lo que se posee es “instrumentos”, en plural.", "En español, el posesivo concuerda con lo que se posee: “instrumentos” es plural."],
+    en: ["The members of the band tuned ___ own instruments before the show.", "their", [["his or her", "shift-in-number"], ["your", "shift-in-person"]], "The pronoun points back to “the members,” more than one person.", "Plural “members” takes a plural pronoun."],
+    es: ["Los integrantes de la banda afinaron ___ propios instrumentos antes del concierto.", "sus", [["su", "shift-in-number"], ["nuestros", "shift-in-person"]], "Los dueños son “los integrantes”, en tercera persona, y lo que se posee es “instrumentos”, en plural.", "El posesivo de tercera persona concuerda con lo que se posee: “instrumentos” es plural."],
   },
   {
     en: ["I enjoy painting because ___ can show feelings without words.", "I", [["you", "shift-in-person"], ["they", "shift-in-person"]], "The sentence starts in the first person singular.", "Keep the same person all the way through."],
-    es: ["Me gusta pintar porque así ___ expresar lo que siento.", "puedo", [["puedes", "shift-in-person"], ["pueden", "shift-in-person"]], "La oración empieza con “me gusta”: habla la primera persona, yo.", "Se mantiene la primera persona del singular."],
+    es: ["Tú siempre ___ atreves a probar comidas nuevas.", "te", [["se", "shift-in-person"], ["me", "shift-in-person"]], "El sujeto es “tú”, la segunda persona.", "Con “tú” va el pronombre de segunda persona: “tú te atreves”."],
   },
   {
     en: ["Hikers should carry water so that ___ do not get dehydrated.", "they", [["you", "shift-in-person"], ["he", "shift-in-number"]], "The pronoun points back to “hikers.”", "Plural “hikers” takes a plural pronoun."],
-    es: ["Si uno practica todos los días, ___ más rápido.", "mejora", [["mejoras", "shift-in-person"], ["mejoran", "shift-in-number"]], "La oración empieza con “uno”, en tercera persona del singular.", "Con “uno”, el verbo va en tercera persona del singular."],
+    es: ["Si uno se apura demasiado, ___ en los detalles.", "se equivoca", [["te equivocas", "shift-in-person"], ["nos equivocamos", "shift-in-person"]], "La oración empieza con “uno”, en tercera persona del singular.", "Con “uno” se mantiene la tercera persona: “uno se equivoca”."],
   },
   {
     en: ["When I practice piano every day, ___ notice that my fingers move faster.", "I", [["you", "shift-in-person"], ["we", "shift-in-number"]], "The sentence starts in the first person singular.", "Keep the same person and number all the way through."],
-    es: ["El equipo celebró ___ triunfo en la cancha.", "su", [["sus", "shift-in-number"], ["nuestro", "shift-in-person"]], "Lo que se posee es “triunfo”, uno solo.", "“Triunfo” es singular, así que el posesivo también."],
+    es: ["El equipo celebró ___ propio triunfo en la cancha.", "su", [["sus", "shift-in-number"], ["nuestro", "shift-in-person"]], "El dueño del triunfo es “el equipo”, en tercera persona, y el triunfo es uno solo.", "El posesivo de tercera persona concuerda con “triunfo”, que es singular."],
   },
   {
-    en: ["The scientists published ___ results in a journal.", "their", [["its", "shift-in-number"], ["our", "shift-in-person"]], "The pronoun points back to “the scientists.”", "Plural “scientists” takes a plural pronoun."],
-    es: ["Cada uno de los estudiantes ___ su proyecto.", "presentó", [["presentaron", "shift-in-number"], ["presentamos", "shift-in-person"]], "El sujeto es “cada uno”, en singular.", "“Cada uno” pide el verbo en singular."],
+    en: ["The scientists published ___ own results in a journal.", "their", [["its", "shift-in-number"], ["our", "shift-in-person"]], "The pronoun points back to “the scientists.”", "Plural “scientists” takes a plural pronoun."],
+    es: ["Cuando uno viaja, lleva ___ propia maleta.", "su", [["tu", "shift-in-person"], ["sus", "shift-in-number"]], "La oración empieza con “uno”, en tercera persona del singular, y la maleta es una sola.", "Con “uno” va el posesivo de tercera persona del singular: “su propia maleta”."],
   },
   {
     en: ["You should wear a helmet whenever ___ ride a bike.", "you", [["one", "shift-in-person"], ["they", "shift-in-person"]], "The sentence starts in the second person, talking to the reader.", "Keep the same person all the way through."],
-    es: ["Nosotros llegamos temprano al museo, pero ___ que esperar en la fila.", "tuvimos", [["tuvieron", "shift-in-person"], ["tuviste", "shift-in-person"]], "La oración empieza con “nosotros”.", "Se mantiene la primera persona del plural."],
+    es: ["Mis primos y yo nunca ___ quejamos de la comida de la abuela.", "nos", [["se", "shift-in-person"], ["me", "shift-in-number"]], "El grupo incluye a quien habla: “mis primos y yo”.", "Un grupo que incluye a “yo” lleva el pronombre de primera persona del plural: “nos quejamos”."],
   },
   {
-    en: ["My friends and I packed ___ bags the night before the trip.", "our", [["their", "shift-in-person"], ["my", "shift-in-number"]], "“My friends and I” includes the speaker and other people.", "A group that includes “I” takes a first-person plural pronoun."],
-    es: ["Mis amigos y yo preparamos ___ mochilas la noche anterior.", "nuestras", [["sus", "shift-in-person"], ["nuestra", "shift-in-number"]], "El grupo incluye a quien habla: “mis amigos y yo”.", "Un grupo que incluye a “yo” lleva el posesivo de primera persona del plural, y concuerda con “mochilas”."],
+    en: ["My friends and I packed ___ own bags the night before the trip.", "our", [["their", "shift-in-person"], ["my", "shift-in-number"]], "“My friends and I” includes the speaker and other people.", "A group that includes “I” takes a first-person plural pronoun."],
+    es: ["Mis amigos y yo preparamos ___ propias mochilas la noche anterior.", "nuestras", [["sus", "shift-in-person"], ["nuestra", "shift-in-number"]], "El grupo incluye a quien habla: “mis amigos y yo”.", "Un grupo que incluye a “yo” lleva el posesivo de primera persona del plural, y concuerda con “mochilas”."],
   },
   {
-    en: ["A spider spins ___ web in a corner of the barn.", "its", [["their", "shift-in-number"], ["your", "shift-in-person"]], "The pronoun points back to “a spider,” one animal.", "One animal takes a singular pronoun."],
-    es: ["La familia de Inés ___ de vacaciones a Puerto Rico.", "viajó", [["viajaron", "shift-in-number"], ["viajamos", "shift-in-person"]], "El sujeto es “la familia”, una sola palabra en singular.", "“La familia” pide el verbo en singular."],
+    en: ["A spider spins ___ own web in a corner of the barn.", "its", [["their", "shift-in-number"], ["your", "shift-in-person"]], "The pronoun points back to “a spider,” one animal.", "One animal takes a singular pronoun."],
+    es: ["Cada pájaro construye ___ propio nido.", "su", [["tu", "shift-in-person"], ["sus", "shift-in-number"]], "El sujeto es “cada pájaro”, uno solo, en tercera persona.", "“Cada pájaro” es tercera persona del singular, y el nido es uno solo: “su propio nido”."],
   },
   {
-    en: ["Runners must stretch before ___ race.", "their", [["his", "shift-in-number"], ["your", "shift-in-person"]], "The pronoun points back to “runners.”", "Plural “runners” takes a plural pronoun."],
+    en: ["Before a race, runners stretch ___ legs and arms.", "their", [["his", "shift-in-number"], ["your", "shift-in-person"]], "The pronoun points back to “runners.”", "Plural “runners” takes a plural pronoun."],
     es: ["Cuando tú haces ejercicio, ___ sientes con más energía.", "te", [["se", "shift-in-person"], ["me", "shift-in-person"]], "La oración empieza con “tú”.", "Con “tú” se mantiene la segunda persona."],
   },
   {
     en: ["When we arrived at the museum, ___ had to wait in a long line.", "we", [["you", "shift-in-person"], ["they", "shift-in-person"]], "The sentence starts in the first person plural.", "Keep the same person all the way through."],
-    es: ["Los gansos volaron al sur porque ___ un lugar más cálido.", "buscaban", [["buscaba", "shift-in-number"], ["buscábamos", "shift-in-person"]], "El sujeto es “los gansos”, en plural.", "“Los gansos” es plural, así que el verbo también."],
+    es: ["Uno ___ mejor de lo que escribe a mano.", "se acuerda", [["te acuerdas", "shift-in-person"], ["se acuerdan", "shift-in-number"]], "La oración empieza con “uno”, en tercera persona del singular.", "Con “uno” se mantiene la tercera persona del singular: “uno se acuerda”."],
   },
   {
     en: ["The geese flew south because ___ needed a warmer place for winter.", "they", [["it", "shift-in-number"], ["we", "shift-in-person"]], "The pronoun points back to “the geese,” more than one bird.", "“Geese” is plural, so the pronoun is too."],
-    es: ["Uno se siente mejor cuando ___ bien.", "duerme", [["duermes", "shift-in-person"], ["duermen", "shift-in-number"]], "La oración empieza con “uno”, en tercera persona del singular.", "Se mantiene la tercera persona del singular."],
+    es: ["Cuando uno no duerme bien, al día siguiente ___ cansado.", "se siente", [["te sientes", "shift-in-person"], ["se sienten", "shift-in-number"]], "La oración empieza con “uno”, en tercera persona del singular.", "Con “uno” se mantiene la tercera persona del singular: “uno se siente”."],
   },
   {
-    en: ["Musicians in an orchestra must watch ___ conductor closely.", "their", [["your", "shift-in-person"], ["his", "shift-in-number"]], "The pronoun points back to “musicians.”", "Plural “musicians” takes a plural pronoun."],
-    es: ["Los músicos de la orquesta miran a ___ director con atención.", "su", [["sus", "shift-in-number"], ["tu", "shift-in-person"]], "Lo que se posee es “director”, uno solo.", "“Director” es singular, así que el posesivo también."],
+    en: ["Musicians in an orchestra must keep ___ eyes on the conductor.", "their", [["your", "shift-in-person"], ["his", "shift-in-number"]], "The pronoun points back to “musicians.”", "Plural “musicians” takes a plural pronoun."],
+    es: ["Los músicos de la orquesta ___ esforzaron mucho en el ensayo.", "se", [["nos", "shift-in-person"], ["te", "shift-in-person"]], "El sujeto es “los músicos”, en tercera persona del plural.", "“Esforzarse” lleva un pronombre de la misma persona que el sujeto: los músicos se esforzaron."],
   },
 ];
 
