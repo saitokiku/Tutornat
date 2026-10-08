@@ -38,6 +38,8 @@ export function resourcesFor(q: { skillId?: string; topic?: string; subject?: Su
   const scored = RESOURCES.map((r) => {
     let score = 0;
     if (subject && r.subject !== subject) return [r, -1] as const;
+    // A Spanish-only book is no use to an English learner; Spanish learners still get English sources ("en inglés").
+    if (q.locale === "en" && !r.languages.includes("en")) return [r, -1] as const;
     if (grade && (gi(grade) < gi(r.grades[0]) - 1 || gi(grade) > gi(r.grades[1]) + 1)) return [r, -1] as const;
     if (skill)
       for (const f of r.fits) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSkill, SKILLS } from "@/practice/skills";
+import { getSkill, gradeIndex, SKILLS } from "@/practice/skills";
 import { linkOf, resourcesFor } from "./index";
 import { RESOURCES } from "./list";
 
@@ -40,5 +40,36 @@ describe("resources", () => {
     const imK5 = RESOURCES.filter((r) => r.url.startsWith("https://im.kendallhunt.com/k5/"));
     expect(imK5.length).toBeGreaterThan(0);
     for (const r of imK5) expect(linkOf(r, "es"), r.id).toBe(r.url.replace("/k5/", "/k5_es/"));
+  });
+
+  it("fit only skills whose grade the practice page can reach (the skill's grade, within the band ±1)", () => {
+    // English and science sources. Math still has one (phet-number-line-integers fits m.compare.100, grade 1,
+    // band 5–7); drop this filter once it is fixed.
+    for (const r of RESOURCES.filter((x) => x.subject !== "math")) {
+      const [lo, hi] = [gradeIndex(r.grades[0]) - 1, gradeIndex(r.grades[1]) + 1];
+      for (const f of r.fits) {
+        const skill = /^[mes]\.[a-z]/.test(f) && !f.endsWith(".") ? getSkill(f) : undefined;
+        if (!skill) continue;
+        const g = gradeIndex(skill.grade);
+        expect(g >= lo && g <= hi, `${r.id} fits ${f} (grade ${skill.grade}) outside ${r.grades.join("–")}`).toBe(true);
+        expect(resourcesFor({ skillId: f }).map((x) => x.id), `${r.id} never ranks for ${f}`).toContain(r.id);
+      }
+    }
+  });
+
+  it("never offer an English-only learner a source that has no English", () => {
+    const topics = ["fables", "poems", "prose poems", "stories", "audiobooks", "classics", "morals"];
+    for (const topic of topics)
+      for (const grade of ["2", "4", "6", "8"]) {
+        const list = resourcesFor({ topic, grade, subject: "english", locale: "en" });
+        expect(list.every((r) => r.languages.includes("en")), `${topic} grade ${grade}`).toBe(true);
+      }
+    expect(resourcesFor({ topic: "fables", grade: "4", locale: "en" }).map((r) => r.id)).not.toContain("librivox-samaniego-fabulas");
+    // Spanish learners still see Spanish-only books, and English sources marked "(en inglés)".
+    const es = resourcesFor({ topic: "fables", grade: "4", locale: "es" }).map((r) => r.id);
+    expect(es).toContain("librivox-samaniego-fabulas");
+    expect(es).toContain("loc-aesop-for-children");
+    for (const skillId of ["e.main.idea", "e.figurative", "e.context.clues"])
+      expect(resourcesFor({ skillId, locale: "en" }).every((r) => r.languages.includes("en")), skillId).toBe(true);
   });
 });

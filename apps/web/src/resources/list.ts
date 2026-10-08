@@ -274,7 +274,7 @@ export const RESOURCES: Resource[] = [
     subject: "english",
     grades: ["6", "adult"],
     languages: ["en"],
-    fits: ["e.pronouns", "e.active.passive", "e.sentence.types", "e.commas", "e.subject.verb", "e.concision", "grammar"],
+    fits: ["e.pronouns", "e.active.passive", "e.sentence.types", "e.concision", "grammar"],
     about: { en: "Clear explanations of grammar, punctuation and sentence style.", es: "Explicaciones claras de gramática y puntuación (en inglés)." },
   },
   {
@@ -397,7 +397,7 @@ export const RESOURCES: Resource[] = [
     subject: "science",
     grades: ["2", "8"],
     languages: ["en"],
-    fits: ["s.weather", "s.water.cycle", "climate", "earth", "weather"],
+    fits: ["s.water.cycle", "climate", "earth", "weather"],
     about: { en: "Earth's air, water and climate explained for young learners.", es: "El aire, el agua y el clima de la Tierra explicados para niños (en inglés)." },
   },
   {
@@ -445,7 +445,7 @@ export const RESOURCES: Resource[] = [
     subject: "science",
     grades: ["8", "adult"],
     languages: ["en"],
-    fits: ["s.cells", "s.genetics", "s.ecosystems", "biology"],
+    fits: ["s.genetics", "s.ecosystems", "biology", "cells"],
     about: { en: "A free introductory biology textbook: cells, genetics, ecology.", es: "Un libro de biología introductoria gratis: células, genética, ecología (en inglés)." },
   },
   {
@@ -994,7 +994,7 @@ export const RESOURCES: Resource[] = [
     grades: ["K", "3"],
     languages: ["en", "es"],
     fits: ["e.sight.words", "e.cvc.words", "e.syllables", "read aloud", "stories", "picture books", "leveled readers"],
-    about: { en: "Forty illustrated stories in five reading levels, each with text and audio in English, Spanish and Indigenous languages of Mexico.", es: "Cuarenta cuentos ilustrados en cinco niveles de lectura, cada uno con texto y audio en español, inglés y lenguas indígenas de México." },
+    about: { en: "Forty illustrated stories in five reading levels, with text and audio in English and Spanish, and some in Indigenous languages of Mexico. The site's menus are in Spanish.", es: "Cuarenta cuentos ilustrados en cinco niveles de lectura, con texto y audio en español e inglés, y algunos en lenguas indígenas de México." },
   },
   {
     id: "bookdash-books",
@@ -1027,10 +1027,11 @@ export const RESOURCES: Resource[] = [
     url: "https://read.gov/books/",
     kind: "library",
     subject: "english",
-    grades: ["K", "6"],
+    grades: ["2", "8"],
     languages: ["en"],
     fits: ["picture books", "classics", "books", "stories", "nursery rhymes"],
-    about: { en: "Old illustrated children's books from the Library of Congress that you can page through online.", es: "Libros infantiles antiguos e ilustrados de la Biblioteca del Congreso para hojear en línea (en inglés)." },
+    about: { en: "Old books from the Library of Congress to page through online, from alphabet books and nursery rhymes to classic novels.", es: "Libros antiguos de la Biblioteca del Congreso para hojear en línea, desde abecedarios y rimas infantiles hasta novelas clásicas (en inglés)." },
+    note: { en: "Old books; some show the attitudes of their time. Choose together.", es: "Libros antiguos; algunos muestran ideas de su época. Elijan juntos." },
   },
   {
     id: "gutenberg-childs-garden-verses",
@@ -1077,10 +1078,11 @@ export const RESOURCES: Resource[] = [
     url: "https://owl.purdue.edu/owl/general_writing/punctuation/commas/index.html",
     kind: "text",
     subject: "english",
-    grades: ["4", "adult"],
+    grades: ["5", "adult"],
     languages: ["en"],
     fits: ["e.commas", "punctuation", "grammar"],
     about: { en: "The main comma rules, each with a short example sentence.", es: "Las reglas principales de la coma, cada una con una oración de ejemplo (en inglés)." },
+    note: { en: "Written for older students; read it together.", es: "Escrito para estudiantes mayores; léanlo juntos." },
   },
   {
     id: "owl-subject-verb",
@@ -1089,10 +1091,11 @@ export const RESOURCES: Resource[] = [
     url: "https://owl.purdue.edu/owl/general_writing/grammar/subject_verb_agreement.html",
     kind: "text",
     subject: "english",
-    grades: ["4", "adult"],
+    grades: ["5", "adult"],
     languages: ["en"],
-    fits: ["e.subject.verb", "e.nouns.verbs", "grammar"],
+    fits: ["e.subject.verb", "grammar"],
     about: { en: "Rules for making a verb agree with its subject, with example sentences for each.", es: "Reglas para que el verbo concuerde con su sujeto, con oraciones de ejemplo (en inglés)." },
+    note: { en: "Written for older students; read it together.", es: "Escrito para estudiantes mayores; léanlo juntos." },
   },
   {
     id: "owl-active-passive",
@@ -1115,7 +1118,7 @@ export const RESOURCES: Resource[] = [
     subject: "english",
     grades: ["8", "adult"],
     languages: ["en"],
-    fits: ["e.concision", "e.active.passive", "e.commas", "writing", "style"],
+    fits: ["e.concision", "e.active.passive", "writing", "style"],
     about: { en: "William Strunk's short guide to clear writing, with rules like 'omit needless words' and 'use the active voice'.", es: "La guía breve de William Strunk para escribir con claridad, con reglas como omitir palabras innecesarias (en inglés)." },
   },
   // Classic books, grades 3–9 (public domain)
@@ -1123,13 +1126,13 @@ export const RESOURCES: Resource[] = [
     id: "gutenberg-wizard-of-oz",
     title: "The Wonderful Wizard of Oz",
     source: "Project Gutenberg",
-    url: "https://www.gutenberg.org/ebooks/55",
+    url: "https://www.gutenberg.org/ebooks/43936",
     kind: "book",
     subject: "english",
     grades: ["3", "5"],
     languages: ["en"],
     fits: ["e.figurative", "e.context.clues", "novels", "classics", "books"],
-    about: { en: "L. Frank Baum's full novel about Dorothy's trip to Oz, free to read online or download.", es: "La novela completa de L. Frank Baum sobre el viaje de Dorothy a Oz, gratis para leer o descargar (en inglés)." },
+    about: { en: "L. Frank Baum's full novel about Dorothy's trip to Oz, with W. W. Denslow's original pictures, free to read online or download.", es: "La novela completa de L. Frank Baum sobre el viaje de Dorothy a Oz, con las ilustraciones originales de W. W. Denslow, gratis para leer o descargar (en inglés)." },
   },
   {
     id: "librivox-alice",
@@ -1176,7 +1179,7 @@ export const RESOURCES: Resource[] = [
     subject: "english",
     grades: ["6", "9"],
     languages: ["en"],
-    fits: ["e.context.clues", "e.figurative", "novels", "adventure", "classics"],
+    fits: ["e.context.clues", "novels", "adventure", "classics"],
     about: { en: "Robert Louis Stevenson's pirate adventure, in a carefully proofread free edition to read online or download.", es: "La aventura de piratas de Robert Louis Stevenson, en una edición gratis y bien corregida (en inglés)." },
   },
   {
@@ -1251,7 +1254,7 @@ export const RESOURCES: Resource[] = [
     subject: "english",
     grades: ["6", "9"],
     languages: ["en", "es"],
-    fits: ["e.figurative", "e.main.idea", "fables", "poems"],
+    fits: ["e.main.idea", "fables", "poems"],
     about: { en: "Tomás de Iriarte's short verse fables about writing and learning, in English translation or the original Spanish.", es: "Las fábulas en verso de Tomás de Iriarte sobre escribir y aprender, en el español original o traducidas al inglés." },
   },
   {
@@ -1276,7 +1279,12 @@ export const RESOURCES: Resource[] = [
   phet("pendulum-lab", "Pendulum Lab", ["s.variables", "fair test", "experiments"], ["5", "9"], "science", "Change one thing at a time, like length or mass, and measure how a pendulum swings.", "Cambia una sola cosa a la vez, como el largo o la masa, y mide cómo oscila un péndulo."),
   phet("reactants-products-and-leftovers", "Reactants, Products and Leftovers", ["s.chem.phys", "s.formula.atoms", "chemical reactions"], ["7", "adult"], "science", "Make sandwiches and molecules to see what a reaction uses up, makes and leaves over.", "Arma sándwiches y moléculas para ver qué gasta, qué produce y qué sobra en una reacción."),
   phet("magnets-and-electromagnets", "Magnets and Electromagnets", ["s.forces", "magnets"], ["3", "9"], "science", "Move a magnet near a compass, then build an electromagnet and change its strength.", "Acerca un imán a una brújula y luego construye un electroimán y cambia su fuerza."),
-  phet("forces-and-motion", "Forces and Motion", ["s.newton", "s.newton.laws", "s.speed", "s.forces"], ["5", "9"], "science", "Push objects with and without friction and watch their speed and acceleration change.", "Empuja objetos con y sin fricción y mira cómo cambian su rapidez y su aceleración."),
+  // The older Java sim: its graphs over time and free-body diagram are what Forces and Motion: Basics lacks,
+  // so it fits those topics, not the skills Basics already covers.
+  {
+    ...phet("forces-and-motion", "Forces and Motion", ["free-body diagrams", "motion graphs", "friction"], ["5", "9"], "science", "Push a filing cabinet against friction and watch graphs of force, position, velocity and acceleration over time, with a free-body diagram.", "Empuja un archivero contra la fricción y mira las gráficas de fuerza, posición, velocidad y aceleración en el tiempo, con un diagrama de cuerpo libre."),
+    note: { en: "An older sim that runs Java in the browser; slow to start and may not work on every tablet.", es: "Una simulación antigua que usa Java en el navegador; tarda en abrir y puede no funcionar en todas las tabletas." },
+  },
   // Space, Earth and weather
   {
     id: "spaceplace-seasons",
@@ -1288,7 +1296,7 @@ export const RESOURCES: Resource[] = [
     subject: "science",
     grades: ["2", "6"],
     languages: ["en", "es"],
-    fits: ["s.earth.sun.moon", "s.weather", "seasons", "tilt"],
+    fits: ["s.earth.sun.moon", "seasons", "tilt"],
     about: { en: "Why Earth has seasons, explained with pictures: it is the tilt of the Earth, not its distance from the Sun.", es: "Por qué hay estaciones en la Tierra, explicado con imágenes: es la inclinación de la Tierra, no su distancia al Sol." },
   },
   {
@@ -1309,13 +1317,14 @@ export const RESOURCES: Resource[] = [
     title: "The water cycle for kids",
     source: "U.S. Geological Survey",
     url: "https://www.usgs.gov/media/images/water-cycle-kids",
-    urlEs: "https://www.usgs.gov/water-science-school/science/el-ciclo-del-agua-water-cycle-schools-spanish",
+    urlEs: "https://www.usgs.gov/media/images/el-ciclo-del-agua-para-ninos-water-cycle-schools-spanish",
     kind: "text",
     subject: "science",
     grades: ["2", "6"],
     languages: ["en", "es"],
     fits: ["s.water.cycle", "water", "evaporation", "condensation", "rain"],
-    about: { en: "A labeled picture of the water cycle made for kids, free to download in English, Spanish and over 30 other languages.", es: "Una lámina del ciclo del agua hecha para niños, con la explicación de cada paso, gratis para descargar." },
+    about: { en: "A labeled picture of the water cycle made for kids, free to download in English, Spanish and over 30 other languages.", es: "Una lámina con rótulos del ciclo del agua hecha para niños, gratis para descargar en español, en inglés y en más de 30 idiomas." },
+    note: { en: "The Spanish version says \"billones\" (trillions) of years; it means billions.", es: "La versión en español dice «billones de años»; lo correcto es «miles de millones de años»." },
   },
   {
     id: "usgs-this-dynamic-earth",
@@ -1326,7 +1335,7 @@ export const RESOURCES: Resource[] = [
     subject: "science",
     grades: ["6", "adult"],
     languages: ["en"],
-    fits: ["s.plate.tectonics", "s.rocks", "earthquakes", "volcanoes"],
+    fits: ["s.plate.tectonics", "earthquakes", "volcanoes"],
     about: { en: "A short USGS book online about moving plates and the earthquakes, volcanoes and mountains they make.", es: "Un libro breve del USGS en línea sobre las placas que se mueven y los terremotos, volcanes y montañas que forman (en inglés)." },
   },
   {
@@ -1351,7 +1360,7 @@ export const RESOURCES: Resource[] = [
     subject: "science",
     grades: ["4", "9"],
     languages: ["en"],
-    fits: ["s.rocks", "s.materials", "rocks", "minerals"],
+    fits: ["s.rocks", "rocks", "minerals"],
     about: { en: "How rocks and minerals form and the story they tell about the scenery in national parks.", es: "Cómo se forman las rocas y los minerales y lo que cuentan sobre los paisajes de los parques nacionales (en inglés)." },
   },
   {
@@ -1363,7 +1372,7 @@ export const RESOURCES: Resource[] = [
     subject: "science",
     grades: ["5", "9"],
     languages: ["en"],
-    fits: ["s.weather", "s.water.cycle", "clouds"],
+    fits: ["s.water.cycle", "clouds"],
     about: { en: "How clouds form and how to name the basic cloud types, from NOAA's online school for weather.", es: "Cómo se forman las nubes y cómo se llaman los tipos básicos, de la escuela del tiempo en línea de NOAA (en inglés)." },
   },
   // Life science
