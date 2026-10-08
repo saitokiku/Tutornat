@@ -69,6 +69,33 @@ describe("typing after help", () => {
     await userEvent.keyboard("{Enter}");
     expect(screen.getByLabelText("Submitted answers")).toHaveTextContent(input === "clock" ? '["12:00"]' : '["0"]');
   });
+
+  it("keypad typing after a hint focuses the keys, never the live readout a screen reader already announces", async () => {
+    render(<TypingHarness input="keypad" />);
+    await userEvent.click(screen.getByRole("button", { name: "Hint" }));
+    await userEvent.keyboard("3");
+    expect(screen.getByRole("group", { name: "Number keys" })).toHaveFocus();
+    expect(document.activeElement?.closest("[aria-live]")).toBeNull();
+  });
+
+  it.each([
+    ["keypad", "3"],
+    ["fraction", "3/4"],
+    ["remainder", "3r1"],
+  ] as const)("typing never pulls focus out of a panel open beside the problem (%s)", async (input, keys) => {
+    render(
+      <>
+        <TypingHarness input={input} />
+        <aside role="dialog" aria-modal="false" aria-label="Tutor">
+          <button type="button">Show me</button>
+        </aside>
+      </>,
+    );
+    const inPanel = screen.getByRole("button", { name: "Show me" });
+    inPanel.focus();
+    await userEvent.keyboard(keys);
+    expect(inPanel).toHaveFocus();
+  });
 });
 
 /** jsdom has no layout; give an element a box so taps can be turned into positions. */

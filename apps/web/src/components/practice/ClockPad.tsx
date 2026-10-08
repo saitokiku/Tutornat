@@ -122,6 +122,7 @@ export function ClockPad({ pad = DEFAULT_PADS.clock, value, onChange, onSubmit, 
           <span
             role="spinbutton"
             tabIndex={disabled ? -1 : 0}
+            data-answer-target={active ? "" : undefined}
             aria-label={t(which === "hour" ? "pr.clock.hour" : "pr.clock.minutes")}
             aria-valuemin={which === "hour" ? 1 : 0}
             aria-valuemax={which === "hour" ? 12 : 59}

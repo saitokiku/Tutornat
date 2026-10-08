@@ -126,6 +126,30 @@ describe("Runner", () => {
     expect(openTutor).not.toHaveBeenCalled();
   });
 
+  // Dogfood #5, the other order: the answer is typed first, then a hint, then Enter. Focus is on the
+  // hint button by then; Enter must check the answer, not take a second hint nobody asked for.
+  it.each([
+    ["fraction", "m.frac.unit", 1],
+    ["keypad", "m.div.long", 1],
+    ["remainder", "m.div.long", 2],
+  ] as const)("typed_then_hint_then_enter_checks_once (%s)", async (input, skillId, level) => {
+    const p = await learner("4");
+    // Two hints or more, so the hint button stays on screen (as "Another hint") after the first.
+    const seed = seedWhere(skillId, level, (it) => it.input === input && it.hints.length >= 2 && (it.answer.kind !== "remainder" || it.answer.r > 0));
+    const { answer } = makeItem(skillId, level, seed, "en");
+    const keys = answer.kind === "fraction" ? `${answer.n}/${answer.d}` : answer.kind === "remainder" ? `${answer.q}r${answer.r}` : answer.kind === "number" ? String(answer.value) : "";
+    const set = setOf(p, "pick", [{ skillId, seed, role: "main", level }]);
+    await show(set, p);
+    await userEvent.keyboard(keys);
+    await userEvent.click(screen.getByRole("button", { name: /^Hint/ }));
+    expect(screen.getByRole("button", { name: /Another hint/ })).toBeInTheDocument();
+    await userEvent.keyboard("{Enter}");
+
+    expect(read().attempts).toEqual([expect.objectContaining({ correct: true, assisted: true })]);
+    expect(read().acts.filter((a) => a.kind === "hint")).toHaveLength(1);
+    expect(screen.getByText("Right, with help.")).toBeInTheDocument();
+  });
+
   it("a hinted fraction can be entered by touch and checked once", async () => {
     const p = await learner("3");
     const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);

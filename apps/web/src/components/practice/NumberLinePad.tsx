@@ -92,6 +92,7 @@ export function NumberLinePad({ pad = DEFAULT_PADS.line, value, onChange, onSubm
         ref={track}
         role="slider"
         tabIndex={disabled ? -1 : 0}
+        data-answer-target=""
         aria-label={t("pr.line.label")}
         aria-describedby={desc}
         aria-valuemin={points[0].value}

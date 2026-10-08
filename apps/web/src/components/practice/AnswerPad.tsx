@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import { IconX } from "@/components/icons";
 import { Hear } from "@/components/stage/hear";
 import { useT } from "@/i18n";
@@ -13,6 +13,7 @@ import { hearSize } from "./targets";
 // How a learner answers. Big targets, the physical keyboard works everywhere, nothing is drag-only.
 // Every pad reports a plain string (choices report the index), so the checker sees one shape.
 // Touch pads (number line, fraction bar, clock) answer by doing; see their files for the conventions.
+// The control where Enter answers carries `data-answer-target`: help hands focus back to it (Runner).
 
 type PadProps = {
   value: string;
@@ -24,7 +25,12 @@ type PadProps = {
 
 const KEY = "grid place-items-center rounded-md border border-border bg-panel font-opmono text-ink shadow-soft transition-colors hover:border-ink/30 active:bg-panel2 disabled:opacity-40";
 
-function Keys({ onKey, extra, disabled, young }: { onKey: (k: string) => void; extra: string[]; disabled?: boolean; young?: boolean }) {
+/**
+ * `target`: this keypad is the pad's whole answer (no fields of its own), so it takes focus when typing
+ * or a hint hands Enter back to the answer. Focus lands on the group, never on the live readout above
+ * it, which a screen reader would then announce twice.
+ */
+function Keys({ onKey, extra, disabled, young, target }: { onKey: (k: string) => void; extra: string[]; disabled?: boolean; young?: boolean; target?: Ref<HTMLDivElement> }) {
   const t = useT();
   const size = young ? "h-16 text-2xl" : "h-13 text-xl";
   // 1–9, then the last row: minus (or a gap), 0, delete; a decimal point gets its own key under 0.
@@ -33,7 +39,7 @@ function Keys({ onKey, extra, disabled, young }: { onKey: (k: string) => void; e
   const name = (k: string) => (k === "⌫" ? t("practice.delete") : k === "-" ? t("practice.minus") : k === "." ? t("practice.point") : k);
   return (
     // data-answers: Enter on a focused key answers (it would otherwise type that key again).
-    <div className="grid grid-cols-3 gap-2" role="group" aria-label={t("practice.keypad")} data-answers>
+    <div ref={target} tabIndex={target ? -1 : undefined} data-answer-target={target ? "" : undefined} className="grid grid-cols-3 gap-2" role="group" aria-label={t("practice.keypad")} data-answers>
       {keys.map((k, i) =>
         k ? (
           <button key={i} type="button" disabled={disabled} onClick={() => onKey(k)} aria-label={name(k)} className={`${KEY} ${size} ${k === "⌫" ? "text-muted" : ""}`}>
@@ -56,6 +62,14 @@ const apply = (v: string, k: string, max = 12) => {
 
 /** Controls that answer Enter themselves (a hint button, a counter, a link, a slider). */
 const OWN_ENTER = "button, a[href], summary, [role=slider], [role=spinbutton], [role=tab]";
+
+/**
+ * Typing hands Enter back to the answer by moving focus to its field, but never out of a panel open
+ * beside the problem (the tutor): a learner working in it keeps their place.
+ */
+function claim(field: HTMLElement | null | undefined) {
+  if (!document.activeElement?.closest("dialog, [role=dialog]")) field?.focus();
+}
 
 /**
  * Typing on a hardware keyboard while a pad is on screen. Enter answers, unless it is aimed at a
@@ -103,20 +117,20 @@ const DIGITS_ALL = /^[0-9.-]$/;
 
 export function Keypad({ value, onChange, onSubmit, disabled, young, keys = [] }: PadProps & { keys?: ("-" | ".")[] }) {
   const t = useT();
-  const answer = useRef<HTMLOutputElement>(null);
+  const keypad = useRef<HTMLDivElement>(null);
   const press = (k: string) => onChange(apply(value, k));
   const allowed = keys.includes("-") && keys.includes(".") ? DIGITS_ALL : keys.includes("-") ? DIGITS_NEG : keys.includes(".") ? DIGITS_DOT : DIGITS;
   useTyping(!disabled, (k) => {
     press(k);
     const target = document.activeElement;
-    if (target?.closest(OWN_ENTER) && !target.closest("[data-answers]")) answer.current?.focus();
+    if (target?.closest(OWN_ENTER) && !target.closest("[data-answers]")) claim(keypad.current);
   }, onSubmit, allowed);
   return (
     <div className="mx-auto w-full max-w-xs space-y-3">
-      <output ref={answer} tabIndex={-1} aria-live="polite" aria-label={t("practice.yourAnswer")} className={`flex items-center justify-center rounded-md border-2 border-ink/80 bg-panel px-4 font-opmono tabular-nums text-ink ${young ? "h-20 text-4xl" : "h-16 text-3xl"}`}>
+      <output aria-live="polite" aria-label={t("practice.yourAnswer")} className={`flex items-center justify-center rounded-md border-2 border-ink/80 bg-panel px-4 font-opmono tabular-nums text-ink ${young ? "h-20 text-4xl" : "h-16 text-3xl"}`}>
         {value ? value.replace("-", "−") : <span className="text-muted/50">?</span>}
       </output>
-      <Keys onKey={press} extra={keys} disabled={disabled} young={young} />
+      <Keys onKey={press} extra={keys} disabled={disabled} young={young} target={keypad} />
     </div>
   );
 }
@@ -145,11 +159,11 @@ export function FractionPad({ value, onChange, onSubmit, disabled, young }: PadP
   useTyping(!disabled, (k) => {
     if (k === "/") {
       setFocus("den");
-      fields.current.den?.focus();
+      claim(fields.current.den);
     } else {
       press(k);
       // Once typing starts, Enter belongs to the answer, even after a hint was focused.
-      fields.current[focus]?.focus();
+      claim(fields.current[focus]);
     }
   }, onSubmit, /^[0-9/-]$/);
   const box = (field: "whole" | "num" | "den", label: string) => (
@@ -161,6 +175,7 @@ export function FractionPad({ value, onChange, onSubmit, disabled, young }: PadP
       onFocus={() => setFocus(field)}
       aria-label={`${label}: ${parts[field] || t("practice.empty")}`}
       aria-pressed={focus === field}
+      data-answer-target={focus === field ? "" : undefined}
       className={`grid min-w-16 place-items-center rounded-md border-2 bg-panel px-3 font-opmono tabular-nums ${young ? "h-16 text-3xl" : "h-14 text-2xl"} ${
         focus === field ? "border-accent text-ink" : "border-border text-ink"
       }`}
@@ -211,10 +226,10 @@ export function RemainderPad({ value, onChange, onSubmit, disabled, young }: Pad
   useTyping(!disabled, (k) => {
     if (k === "r" || k === "R") {
       setFocus("r");
-      fields.current.r?.focus();
+      claim(fields.current.r);
     } else {
       press(k);
-      fields.current[focus]?.focus();
+      claim(fields.current[focus]);
     }
   }, onSubmit, /^[0-9rR]$/);
   const box = (field: "q" | "r", text: string, label: string) => (
@@ -226,6 +241,7 @@ export function RemainderPad({ value, onChange, onSubmit, disabled, young }: Pad
       onFocus={() => setFocus(field)}
       aria-label={`${label}: ${text || t("practice.empty")}`}
       aria-pressed={focus === field}
+      data-answer-target={focus === field ? "" : undefined}
       className={`grid min-w-20 place-items-center rounded-md border-2 bg-panel px-3 font-opmono tabular-nums ${young ? "h-16 text-3xl" : "h-14 text-2xl"} ${focus === field ? "border-accent" : "border-border"}`}
     >
       {text || <span className="text-muted/40">?</span>}
@@ -303,6 +319,7 @@ export function TextAnswer({ value, onChange, onSubmit, disabled, algebra, label
       <input
         ref={ref}
         aria-label={label}
+        data-answer-target=""
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value.slice(0, 80))}

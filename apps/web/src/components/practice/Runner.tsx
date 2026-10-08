@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { IconArrowRight, IconCheck, IconChat, IconLightbulb, IconX } from "@/components/icons";
 import { useTitle } from "@/components/LangSync";
 import { SkillResources } from "@/components/resources/ResourceList";
@@ -99,6 +99,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   const [picked, setPicked] = useState<number | undefined>();
   const [feedback, setFeedback] = useState<Feedback>(null);
   const shownAt = useRef(0);
+  const pad = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(index);
   if (current !== index) {
     const back = index !== undefined ? kept.get(index) : undefined;
@@ -170,13 +171,24 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     if (!item || index === undefined) return;
     logAct({ profileId: learner.id, kind, intent: "next-try-right", skillId: item.skillId, setId: set.id, ref: String(index), detail });
   };
-  const takeHint = () => {
+  /**
+   * Help hands Enter back to the answer: focus returns to the pad's answer target, so an answer typed
+   * before or after a hint is checked, never taken as a second hint. A tap leaves focus alone: a touch
+   * screen has no Enter to take, and a phone's keyboard would rise over the hint just asked for.
+   */
+  const toAnswer = (e: MouseEvent) => {
+    if ((e.nativeEvent as PointerEvent).pointerType === "touch") return;
+    pad.current?.querySelector<HTMLElement>("[data-answer-target]")?.focus({ preventScroll: true });
+  };
+  const takeHint = (e: MouseEvent) => {
     setHints(hints + 1);
     helpAct("hint", String(hints + 1));
+    toAnswer(e);
   };
-  const showSteps = () => {
+  const showSteps = (e: MouseEvent) => {
     setSteps(true);
     helpAct("steps");
+    toAnswer(e);
   };
 
   const submit = (response: string | number) => {
@@ -344,7 +356,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
             </div>
           )}
 
-          <div className="mt-6">
+          <div ref={pad} className="mt-6">
             {/* The pad stays on screen after a right answer, still showing what the learner did. */}
             <AnswerInput
               key={item.id}

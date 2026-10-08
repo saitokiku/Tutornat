@@ -31,6 +31,35 @@ async function seedSet(page: Page, set: { id: string; skillId: string; seed: num
 
 const setCount = (page: Page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).sets.length as number, STORE);
 
+/** The seeded fraction set's answers and hints, as this browser's store holds them. */
+const fractionEvidence = (page: Page) =>
+  page.evaluate((key) => {
+    const doc = JSON.parse(localStorage.getItem(key)!);
+    return { attempts: doc.attempts.filter((a: { setId: string }) => a.setId === "e2e-fraction"), hints: doc.acts.filter((a: { setId: string; kind: string }) => a.setId === "e2e-fraction" && a.kind === "hint") };
+  }, STORE);
+
+// Dogfood #5 in both orders, typed straight on the keyboard with no click on the pad: Enter checks the
+// answer once, and the one hint the learner asked for is the only help recorded.
+for (const order of ["hint_then_typed", "typed_then_hint"] as const) {
+  test(`${order}_then_enter_checks_once`, async ({ page }) => {
+    await family(page, `pr-order-${order}`, [["Ada", "3"]]);
+    await page.getByRole("button", { name: /Ada/ }).click();
+    await expect(page).toHaveURL(/\/home$/);
+    await seedSet(page, { id: "e2e-fraction", skillId: "m.frac.unit", seed: 11, level: 1 });
+    await page.goto("/practice/e2e-fraction");
+    await expect(page.locator("#problem")).toBeFocused();
+    const hint = page.getByRole("button", { name: /^Hint/ });
+    if (order === "hint_then_typed") await hint.click();
+    await page.keyboard.type("1/4");
+    if (order === "typed_then_hint") await hint.click();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Right, with help.")).toBeVisible();
+    const evidence = await fractionEvidence(page);
+    expect(evidence.attempts).toEqual([expect.objectContaining({ response: "1/4", correct: true, assisted: true })]);
+    expect(evidence.hints).toHaveLength(1);
+  });
+}
+
 for (const input of ["keyboard", "touch"] as const) {
   test(`hint_then_${input}_fraction_submits_once`, async ({ page }) => {
     await family(page, `pr-frac-${input}`, [["Ada", "3"]]);
@@ -53,10 +82,7 @@ for (const input of ["keyboard", "touch"] as const) {
       await page.getByRole("button", { name: "Check", exact: true }).click();
     }
     await expect(page.getByText("Right, with help.")).toBeVisible();
-    const evidence = await page.evaluate((key) => {
-      const doc = JSON.parse(localStorage.getItem(key)!);
-      return { attempts: doc.attempts.filter((a: { setId: string }) => a.setId === "e2e-fraction"), hints: doc.acts.filter((a: { setId: string; kind: string }) => a.setId === "e2e-fraction" && a.kind === "hint") };
-    }, STORE);
+    const evidence = await fractionEvidence(page);
     expect(evidence.attempts).toEqual([expect.objectContaining({ response: "1/4", correct: true, assisted: true })]);
     expect(evidence.hints).toHaveLength(1);
     await expect(page.getByRole("dialog")).toHaveCount(0);
