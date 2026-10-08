@@ -23,6 +23,17 @@ Every decision below serves one of those lines. Section 8 checks each one.
 > is a JudgmentResult whose abstain/unavailable never becomes a verdict; voice tokens are reserved
 > against the daily ceiling and handed back when the vendor fails; minors always take the cascade
 > (speech-to-text → safety screen → names out → one model call → text-to-speech).
+>
+> **Fix pass (2026-10-07, after the reviewers' findings).** A speculative reply now opens its voice
+> at the eager end but is heard only after the commit; TurnResumed takes it back in any phase; one
+> request at a time. Flux words are timed by the window they first showed in (no evenly spread
+> times), each socket keeps its own stream clock, an answer's early end is one turn (the
+> recognizer's own end of it is no longer a second one). The player catches a vendor that goes
+> quiet and keeps its one retry; iOS gets the playback session for every read-aloud. Tier B never
+> auto-reads a reply. The spoken precheck tells a try from "I don't know" and from talk. The
+> latency eval now renders the real hook on the real adapters with scripted vendor timelines and
+> judges turns on the script's truth (assumed segments listed in its report). Departures and the
+> P0 list: WIRING.md §6–7.
 
 **Where to work:** repo `/Users/man/Documents/GitHub/Tutornat`, app in `apps/web`. Branch from `foundation`.
 
@@ -1193,8 +1204,10 @@ Use `spotAttr(id, label?)`.
 
 > Status: blocked on keys. Built against fakes: the dialogue transport's messages
 > (`elevenlabs.ts` `openingMessage` / `sentenceMessage` / `closingMessage`), Flux's `TurnInfo`
-> parsing and URL (`deepgram.ts`), the `language_hint` format. The latency eval's end-of-turn delays
-> are assumed until the Flux fixtures exist. See WIRING.md §6 for the list.
+> parsing and URL (`deepgram.ts`), the `language_hint` format. The latency eval's Flux
+> Eager/EndOfTurn delays and per-message lag are assumed until the Flux fixtures exist, and Flux's
+> recognition lag (how far the window bound sits after a word's real end) must be measured before
+> the real-vendor gate is judged on Flux. See WIRING.md §6 for the list.
 - Does the single-use `tts_websocket` token open the Text to Dialogue socket with `eleven_v4_turbo`?
 - Does Flux `/v2/listen` accept the `/v1/auth/grant` token as Sec-WebSocket-Protocol bearer?
 - Confirm the `language_hint` format.
@@ -1221,7 +1234,10 @@ Use `spotAttr(id, label?)`.
 > Status: done (conversation.ts, Flux with Nova-3 bands, turn.ts, barge-in duck and echo by time,
 > addressee.ts, practice/spoken.ts and the server precheck, the voice prompt block, stopWhen, prompt
 > caching, per-turn metrics and `/api/voice/metric`, `evals/voice-latency.eval.ts` on mocks). The
-> real-vendor runs are blocked on keys.
+> real-vendor runs are blocked on keys. Mock eval after the fix pass (truth, answer turns, p50 /
+> p90): K–2 2.0 / 2.2 s, 3–5 1.44 / 1.69 s, 6–9 1.46 / 1.71 s on Flux; Nova fallback 1.5–1.7 s;
+> barge-in duck 130 ms, stop 720 ms (p90). The tools stay identical every turn for the prompt cache
+> (WIRING.md §7).
 - `conversation.ts`
 - Flux, Nova bands and `turn.ts`
 - Barge-in duck and echo by time
