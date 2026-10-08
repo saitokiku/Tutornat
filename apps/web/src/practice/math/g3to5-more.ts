@@ -1496,7 +1496,7 @@ type Box = [l: [number, number], w: [number, number], h: [number, number]];
 const COMPOSITES: { en: string; es: string; sizes: [Len, Box][] }[] = [
   { en: "A toy castle is made of two block towers.", es: "Un castillo de juguete está hecho de dos torres de bloques.", sizes: [[CM, [[4, 10], [4, 10], [6, 20]]], [IN, [[2, 5], [2, 5], [3, 9]]]] },
   { en: "A planter box is made of two rectangular parts.", es: "Una jardinera está hecha de dos partes rectangulares.", sizes: [[IN, [[10, 24], [6, 10], [6, 10]]], [FT, [[2, 6], [2, 3], [2, 3]]]] },
-  { en: "A stage is built from two rectangular platforms.", es: "Un escenario está hecho de dos plataformas rectangulares.", sizes: [[FT, [[4, 12], [4, 8], [1, 3]]]] },
+  { en: "A stage is built from two rectangular platforms.", es: "Un escenario está hecho de dos plataformas rectangulares.", sizes: [[FT, [[4, 12], [4, 8], [2, 4]]]] },
   { en: "An aquarium has two connected tanks shaped like boxes.", es: "Un acuario tiene dos tanques conectados con forma de caja.", sizes: [[IN, [[10, 24], [6, 12], [8, 16]]]] },
   { en: "A building is made of two rectangular blocks.", es: "Un edificio está formado por dos bloques rectangulares.", sizes: [[M, [[6, 20], [5, 15], [3, 12]]]] },
 ];

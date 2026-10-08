@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { linePoints } from "@/components/practice/pad-math";
 import { answerText, check } from "../answer";
 import { evaluate, parse } from "../expr";
 import { makeItem } from "../skills";
@@ -181,6 +182,79 @@ describe("grades 3–5 (more): the strand", () => {
       expect(n, `grade ${g}`).toBeLessThanOrEqual(16);
     }
   });
+
+  it("reads aloud like speech: a capital first, no ordered pairs, no ellipses, money in dollars and cents", () => {
+    for (const s of MATH_3_5_MORE)
+      for (const level of levels(s.id))
+        for (const locale of LOCALES)
+          for (const it of items(s.id, level, locale)) {
+            const where = `${s.id} L${level} ${locale}: ${it.say}`;
+            expect(it.say, where).toMatch(/^¿?[^\p{Ll}]/u);
+            expect(it.say, where).not.toMatch(/…|\([^()]*,[^()]*\)|\$|\d\.\d\d (?:dollars|dólares)/);
+            if (locale === "es") {
+              // "media taza", "medio pie", "media vuelta"; "un medio" only as a bare number.
+              expect(it.say, where).not.toMatch(/un medio de/);
+              expect(it.say, where).not.toMatch(/(?<![\d,.])1 (?:galones|pies|yardas|libras|horas|minutos|tazas|pintas|cuartos de galón)\b/);
+              expect(it.say, where).not.toMatch(/más masa|maqueta de cohete|modelo de cohete|cohete de modelo/);
+            }
+            for (const line of [it.say, ...it.hints, ...it.steps]) expect(line, where).not.toMatch(/(?<![\d,.])1 (?:steps|pasos)\b|\ba hour\b/);
+          }
+  });
+
+  it("says money the way people do", () => {
+    const money = items("m.dec.divide", 3).filter((it) => /stickers that cost/.test(text(it)));
+    expect(money.length).toBeGreaterThan(20);
+    for (const it of money) {
+      const [d, s] = (text(it).match(/\$\d+\.\d\d/g) ?? []).map((x) => Math.round(Number(x.slice(1)) * 100));
+      const said = (c: number) => (c % 100 === 0 ? `${c / 100} ${c === 100 ? "dollar" : "dollars"}` : c < 100 ? `${c} cents` : `${Math.floor(c / 100)} ${c < 200 ? "dollar" : "dollars"} and ${c % 100} cents`);
+      expect(it.say).toContain(`has ${said(d)} to spend`);
+      expect(it.say).toContain(`cost ${said(s)} each`);
+    }
+  });
+
+  it("tags only the wrong answers a touch pad can actually show", () => {
+    for (const s of MATH_3_5_MORE)
+      for (const level of levels(s.id))
+        for (const it of items(s.id, level)) {
+          if (!it.pad) continue;
+          const where = `${s.id} L${level}`;
+          const pad = it.pad;
+          const can =
+            pad.kind === "number-line"
+              ? (v: string) => linePoints(pad).some((p) => check({ kind: "number", value: p.value }, v).correct)
+              : pad.kind === "fraction-bar"
+                ? (v: string) => Array.from({ length: (pad.parts ?? pad.maxParts) + 1 }, (_, k) => `${k}/${pad.parts ?? pad.maxParts}`).some((x) => check({ kind: "number", value: shown(x) }, v).correct)
+                : (v: string) => minutes(v) % pad.stepMinutes === 0;
+          for (const w of it.wrong ?? []) expect(can(w.value), `${where} ${w.value} cannot be entered`).toBe(true);
+        }
+  });
+
+  it("keeps numbers true to the setting", () => {
+    // Kittens are small; measuring cups come in halves, thirds, fourths and eighths.
+    for (const it of items("m.mass.volume", 1)) {
+      const kitten = /A kitten has a mass of (\d+) kg/.exec(text(it));
+      if (kitten) expect(Number(kitten[1])).toBeLessThanOrEqual(2);
+    }
+    for (const it of items("m.frac.times.whole", 3)) if (/ cups? /.test(text(it))) expect([2, 3, 4, 8]).toContain(fracs(it)[0][1]);
+    // Rectangles are never thin strips: posters are poster-shaped, rugs at least half as wide as long.
+    const shapes = [
+      ...items("m.perimeter.missing", 2).filter((it) => /rectangular/.test(text(it))).map((it) => [text(it), ...nums(text(it)).slice(1), numberOf(it.answer)] as const),
+      ...items("m.area.word", 1).map((it) => [text(it), ...nums(text(it)).slice(0, 2)] as const),
+    ];
+    for (const [t, l, w] of shapes) {
+      const thin = /poster|game board/.test(t) ? 2 / 3 : /rug|patio|stage/.test(t) ? 1 / 2 : 1 / 4;
+      expect(w, t).toBeLessThan(l);
+      expect(w, t).toBeGreaterThanOrEqual(Math.max(2, thin * l));
+    }
+    // Stage platforms are low, buildings are measured in meters, and no part is a cube of 2s.
+    for (const level of [1, 2])
+      for (const it of items("m.volume.composite", level)) {
+        const t = text(it), n = nums(t);
+        const heights = level === 1 ? [n[2], n[5]] : [n[3], numberOf(it.answer)];
+        if (/stage/.test(t)) for (const h of heights) expect(h, t).toBeLessThanOrEqual(4);
+        if (/building/.test(t)) expect(t, t).toMatch(/\d+ m by/);
+      }
+  });
 });
 
 // ---------------- grade 3 ----------------
@@ -258,6 +332,20 @@ describe("m.mult.props", () => {
         const equal = it.choices!.filter((c) => shown(c.label) === target).map((c) => c.label);
         expect(equal).toEqual([choiceLabel(it)]);
       }
+  });
+  it("grouping items: the last hint regroups toward the box and never works out the missing product", () => {
+    let seen = 0;
+    for (const locale of LOCALES)
+      for (const it of items("m.mult.props", 2, locale)) {
+        const m = /^(\d+) × (\d+) × (\d+) = \1 × $/.exec(text(it));
+        if (!m) continue;
+        seen++;
+        const [a, b, c] = m.slice(1).map(Number), last = it.hints[2];
+        expect(last).toContain(`${a} × (${b} × ${c})`);
+        expect(last).not.toMatch(new RegExp(`= ${b * c}(?![\\d ×(])`));
+        for (const h of it.hints) for (const e of equations(h)) expect(e.right, h).not.toBe(b * c);
+      }
+    expect(seen).toBeGreaterThan(40);
   });
 });
 
@@ -822,6 +910,8 @@ describe("m.symmetry (draft bank)", () => {
       const seen = new Set(items("m.symmetry", level).map((it) => text(it)));
       expect(seen.size).toBeGreaterThanOrEqual(12);
     }
+    // "Deltoide" is right but rare for a 4th grader, so the Spanish says what it looks like.
+    expect(SYMMETRY_COUNT.find((e) => /kite/.test(e.shape.en))!.shape.es).toMatch(/deltoide \(con forma de cometa\)/);
   });
   it("every count in the bank matches a brute-force search for mirror lines", () => {
     for (const e of SYMMETRY_COUNT) {
