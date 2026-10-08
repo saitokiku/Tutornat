@@ -88,9 +88,14 @@ describe("topic → skill", () => {
   });
 
   it("a multiplication test links facts without also inventing an equal-groups topic", () => {
-    expect(matchSkills("multiplication", "math")).toEqual(["m.mult.facts"]);
+    // The facts come first and equal groups is never invented; with the full math map, other skills
+    // named "multiplication" (its properties) may follow.
+    const mult = matchSkills("multiplication", "math");
+    expect(mult[0]).toBe("m.mult.facts");
+    expect(mult).not.toContain("m.mult.groups");
     expect(matchSkills("equal groups", "math")[0]).toBe("m.mult.groups");
-    expect(matchSkills("repeated addition", "math")[0]).toBe("m.mult.groups");
+    // Grade 2's arrays-and-repeated-addition skill is the closer match now that it exists.
+    expect(["m.array.add", "m.mult.groups"]).toContain(matchSkills("repeated addition", "math")[0]);
   });
 
   it("finds nothing when nothing fits", () => {
