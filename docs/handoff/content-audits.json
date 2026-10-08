@@ -1175,7 +1175,7 @@
    },
    {
     "severity": "minor",
-    "where": "shared.ts build(): say for e.greek.latin.roots level 1 and e.analogies level 1",
+    "where": "shared.ts build(): say for e.root.clues level 1 and e.word.relationships level 1",
     "problem": "The shown word runs straight into the question with no punctuation, as in \u201cgeography What does the root \u201cgeo\u201d mean in this word?\u201d. The analogy pairs are read as \u201cfinger : hand How are these two words related?\u201d, where TTS may say \u201ccolon\u201d and has no pause.",
     "fix": "Join shown and ask with \u201c. \u201d when shown lacks end punctuation. Write analogy pairs as \u201cfinger and hand\u201d in say, or use a dedicated say field."
    },
@@ -1205,7 +1205,7 @@
    },
    {
     "severity": "minor",
-    "where": "Level hints: e.analogies level 2 hint 1; e.confused.words level 1 hint 2",
+    "where": "Level hints: e.word.relationships level 2 hint 1; e.confused.words level 1 hint 2",
     "problem": "A hint contains the answer word by coincidence.\n- For \u201cHot is to cold as tall is to ___\u201d (key: short), hint 1 says \u201cin a short sentence\u201d.\n- For the than/then item (key: then), hint 2 says \u201c\u2026, then pick the spelling\u201d.\nThis breaks rule 4 literally, and it can cue an alert child.",
     "fix": "Use \u201cin a few words\u201d and \u201c\u2026, and pick the spelling\u201d."
    },
@@ -1613,7 +1613,7 @@
    },
    {
     "severity": "minor",
-    "where": "apps/web/src/practice/english/reading-69.ts skill metadata (e.compare.texts RI.8.9, e.word.choice RL.6.4, e.inference.evidence RL.6.1, e.central.summary RI.6.2)",
+    "where": "apps/web/src/practice/english/reading-69.ts skill metadata (e.paired.texts RI.8.9, e.word.choice RL.6.4, e.inference.evidence RL.6.1, e.central.summary RI.6.2)",
     "problem": "The author already flagged the compare pairs. In fact several skills mix literary and informational passages under a single RL or RI code. The monarch pair (poem with article) and the coyote pair (story with article) fit RL/RI.x.9 genre comparison better than RI.8.9's conflicting-information comparison.",
     "fix": "Have a teacher choose the codes, or list both the RL and RI codes for these skills."
    }
