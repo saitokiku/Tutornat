@@ -10,10 +10,12 @@ import { ENGLISH_READING_6_9, POOLS, STRUCTURE_LABELS, TAG_TEXT } from "./readin
 // found in the passage, in the same paragraph in both languages; every phrase an ask quotes is really
 // in the text (and in the paragraph it names); choices that quote the passage either all do or none
 // do; the overall-structure answer agrees with signal words counted from an independent word list; the
-// right answer is not given away by its length (no length rank holds more than 40% of keys); theme and
-// comparison items do not all share one distractor template; hint 3 neither restates the key nor names
-// the structure; and every built item's key is re-found from the prompt text alone. Then it builds 240
-// seeds per level in both languages.
+// right answer is not given away by its length (no length rank holds more than 40% of keys, and in
+// comparisons the key is not usually the longer or the shorter of the two most alike choices); theme
+// statements cannot be solved by the shape of the choices alone; theme and comparison items do not all
+// share one distractor template; hint 3 neither restates the key nor names the structure; and every
+// built item's key is re-found from the prompt text alone. Then it builds 240 seeds per level in both
+// languages.
 
 const SEEDS = Array.from({ length: 240 }, (_, i) => i * 104729 + 11);
 const LOCALES = ["en", "es"] as const;
@@ -95,6 +97,35 @@ const lengthRanks = (right: string, wrong: string[]) => {
   // Ties count against the key: a guess that lands on any of the tied lengths finds it.
   return { fromLongest: span(longer), fromShortest: span(shorter) };
 };
+const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+/** Words that make a claim absolute, after accents are folded ("not only" / "no solo" are taken out first). */
+const ABSOLUTE: Record<L, RegExp> = {
+  en: /\b(always|never|every|everyone|everything|all|only|no one|nobody|nothing|none|cannot|can't|should|must|ever|completely|entirely|any)\b/,
+  es: /\b(siempre|nunca|todo|todos|toda|todas|cada|solo|nadie|nada|ningun|ninguna|ninguno|jamas|debe|deben|deberia|deberian|del todo)\b/,
+};
+/** Words that hedge a claim, after accents are folded. */
+const HEDGE: Record<L, RegExp> = {
+  en: /\b(can|could|may|might|deserve|deserves|sometimes|often|usually|tend|tends)\b/,
+  es: /\b(puede|pueden|podria|podrian|merece|merecen|a veces|suele|suelen|a menudo|tal vez|quiza|quizas)\b/,
+};
+/** A choice that names someone: a capitalized word after the first, or the speaker or narrator. */
+const namesSomeone = (s: string, l: L) => /\s\p{Lu}/u.test(s) || (l === "en" ? /\b(speaker|narrator)\b/ : /\b(voz poetica|narrador|narradora)\b/).test(fold(s));
+/**
+ * The chance that a learner who never reads the passage picks the key of a theme statement: drop topics
+ * of three words or fewer, choices that name someone, and absolute claims (each step only if something
+ * is left), then keep only the hedged choices, or only the firm ones, and guess among what remains.
+ */
+function blindOdds(x: Question, l: L, prefer: "hedged" | "firm") {
+  const [, right, wrong] = x[l];
+  let pool = [right, ...wrong];
+  const absolute = (c: string) => ABSOLUTE[l].test(fold(c).replace(/\b(not only|no solo)\b/g, ""));
+  for (const keep of [(c: string) => wordCount(c) > 3, (c: string) => !namesSomeone(c, l), (c: string) => !absolute(c), (c: string) => HEDGE[l].test(fold(c)) === (prefer === "hedged")]) {
+    const next = pool.filter(keep);
+    if (next.length) pool = next;
+  }
+  return pool.includes(right) ? 1 / pool.length : 0;
+}
+
 /** Words that name an overall structure; a hint that lists them hands over the category. */
 const NAMES_STRUCTURE = /\b(problem|solution|solv|caus|effect|compar|contrast|differ|soluci|resolv|efect|diferen)/i;
 
@@ -274,6 +305,18 @@ describe("grades 6–9 reading: questions", () => {
               expect(n / authored.length, `${f} L${i + 1} ${l}: the key is choice ${k + 1} ${side} in ${n} of ${authored.length}`).toBeLessThanOrEqual(0.4);
             }
           }
+        }
+      }
+    }
+  });
+
+  it("theme statements cannot be answered without reading: shape, names, absolutes and hedges find at most 40% of keys", () => {
+    for (const level of [1, 2]) {
+      const themes = PASSAGES.filter((p) => p.level === level).flatMap((p) => p.qs.filter((x) => x.ask === "theme.statement"));
+      for (const l of LOCALES) {
+        for (const prefer of ["hedged", "firm"] as const) {
+          const odds = themes.reduce((n, x) => n + blindOdds(x, l, prefer), 0) / themes.length;
+          expect(odds, `theme L${level} ${l}: preferring ${prefer} choices finds ${(odds * 100).toFixed(0)}% of keys`).toBeLessThanOrEqual(0.4);
         }
       }
     }

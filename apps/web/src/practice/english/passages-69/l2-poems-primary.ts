@@ -37,18 +37,18 @@ export const L2_POEMS_PRIMARY: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "plot-not-theme", "contradicts-text"],
+        ["topic-not-theme", "too-narrow", "contradicts-text"],
         [
           "Which statement best expresses a theme of the poem?",
           "Growing up can dull everyday wonder, but you can choose to find it again.",
-          ["Snow days", "The speaker's brother wakes the speaker on a snow day, and they go sledding on the hill behind the church.", "The world really does shrink as you get older, and a hill stays just a hill."],
+          ["Snow days", "Old things, like a pair of worn mittens, can bring back memories.", "Growing older can shrink the world back to its real size, and it stays that way."],
           ["a mountain again."],
           "The speaker has lost the old excitement about snow, but going out with the brother brings it back for a few seconds. The poem suggests wonder can be found again.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del poema?",
           "Crecer puede apagar el asombro por lo cotidiano, pero uno puede elegir recuperarlo.",
-          ["Días nevados", "El hermano de la voz poética la despierta en un día de nieve y bajan en trineo por la loma detrás de la iglesia.", "El mundo de verdad se encoge cuando uno crece, y una loma termina siendo solo una loma."],
+          ["Días nevados", "Las cosas viejas, como unos guantes gastados, pueden traer recuerdos.", "Crecer puede devolver el mundo a su tamaño real, y así se queda."],
           ["una montaña otra vez."],
           "La voz poética perdió la emoción de antes por la nieve, pero salir con su hermano se la devuelve por unos segundos. El poema sugiere que el asombro se puede recuperar.",
         ],
@@ -162,18 +162,18 @@ export const L2_POEMS_PRIMARY: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["plot-not-theme", "contradicts-text", "wrong-character"],
+        ["plot-not-theme", "contradicts-text", "too-narrow"],
         [
           "Which statement best expresses a theme of the poem?",
           "The people who do unseen work deserve to be noticed and honored.",
-          ["A baker, a bus driver, a nurse, and the speaker's mother all work while the city sleeps.", "Work done at night, when no one is watching, matters less than work done during the day.", "Doing a job well means that no one should ever notice you did it at all."],
+          ["A baker, a bus driver, a nurse, and the speaker's mother all work while the city sleeps.", "Work done at night, out of sight, matters less than work done during the day.", "Good work can be so smooth that people forget who did it."],
           ["someone, for once, will read it."],
           "The poem moves from night workers in general to the speaker's mother, whose work no one notices, and ends with the wish to make her name seen. That wish carries the message.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del poema?",
-          "Quienes hacen el trabajo que nadie ve merecen que se les note y se les honre.",
-          ["Un panadero, un chofer, una enfermera y la mamá de la voz poética trabajan mientras la ciudad duerme.", "El trabajo que se hace de noche, cuando nadie mira, importa menos que el que se hace de día.", "Hacer bien un trabajo significa que nadie debería notar nunca que tú lo hiciste."],
+          "Quienes hacen un trabajo invisible merecen que se les note y se les honre.",
+          ["Un panadero, un chofer, una enfermera y la mamá de la voz poética trabajan mientras la ciudad duerme.", "El trabajo que se hace de noche, sin que se vea, importa menos que el que se hace de día.", "Un buen trabajo puede salir tan bien que la gente olvida quién lo hizo."],
           ["alguien, por una vez, lo lea."],
           "El poema pasa de los trabajadores de la noche en general a la mamá de la voz poética, cuyo trabajo nadie nota, y termina con el deseo de que su nombre se vea. Ese deseo lleva el mensaje.",
         ],
@@ -288,15 +288,15 @@ export const L2_POEMS_PRIMARY: Passage[] = [
         ["plot-not-theme", "contradicts-text", "too-narrow"],
         [
           "Which statement best expresses a theme of the poem?",
-          "Two languages can be a gift, not a division.",
-          ["The speaker speaks Spanish at home and English at school and learns the words sobremesa and threshold.", "People who speak two languages never fully belong anywhere.", "Some words in one language have no single match in another."],
+          "Living between two languages adds to who you are instead of splitting you.",
+          ["The speaker speaks Spanish at home and English at school and learns the words sobremesa and threshold.", "People who speak two languages may feel out of place in both.", "Some words in one language have no exact match in another."],
           ["I do not feel cut in half."],
           "The speaker first feels like half of each language, then comes to see living between them as having more, not less. That change carries the message.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del poema?",
-          "Hablar dos idiomas puede ser un regalo y no una división.",
-          ["La voz poética habla español en casa e inglés en la escuela, y aprende las palabras sobremesa y threshold.", "Quienes hablan dos idiomas nunca pertenecen del todo a ningún lugar.", "Algunas palabras de un idioma no tienen una sola equivalente en otro."],
+          "Vivir entre dos idiomas te enriquece en lugar de partirte en dos.",
+          ["La voz poética habla español en casa e inglés en la escuela, y aprende las palabras sobremesa y threshold.", "Quienes hablan dos idiomas pueden sentirse fuera de lugar en los dos.", "Algunas palabras de un idioma no tienen un equivalente exacto en otro."],
           ["ya no me siento partida en dos."],
           "Al principio la voz poética se siente mitad de cada idioma, y luego llega a ver que vivir entre los dos es tener más, no menos. Ese cambio lleva el mensaje.",
         ],

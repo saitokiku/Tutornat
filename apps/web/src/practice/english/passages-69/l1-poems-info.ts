@@ -37,18 +37,18 @@ export const L1_POEMS_INFO: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["contradicts-text", "too-narrow", "wrong-character"],
+        ["contradicts-text", "too-narrow", "too-narrow"],
         [
           "Which statement best expresses a theme of the poem?",
           "A person can change on the outside and still stay the same underneath.",
-          ["Growing up means losing the person you used to be.", "Nature changes with each season of the year.", "Older people often feel left behind when children grow up."],
+          ["Growing up means losing the person you used to be.", "Nature changes with the seasons of the year.", "A grandparent can miss a grandchild who is growing up."],
           ["he will hear me underneath, still going"],
           "The river looks different every season but keeps flowing under the ice. The speaker says the same is true of them, which is the poem's message.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del poema?",
           "Una persona puede cambiar por fuera y seguir siendo la misma por dentro.",
-          ["Crecer significa perder a la persona que eras antes.", "La naturaleza cambia con cada estación del año.", "Los mayores a menudo se sienten olvidados cuando los niños crecen."],
+          ["Crecer significa perder a la persona que eras antes.", "La naturaleza cambia con las estaciones del año.", "Un abuelo puede extrañar a un nieto que está creciendo."],
           ["me oirá allá abajo, todavía en camino"],
           "El río se ve distinto en cada estación, pero sigue corriendo bajo el hielo. La voz poética dice que a ella le pasa lo mismo, y ese es el mensaje del poema.",
         ],
@@ -166,14 +166,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "Which statement best expresses a theme of the poem?",
           "Love shows in everyday care, not only in words.",
-          ["The grandmother makes tortillas, sews jeans, braids hair, and stays up with the speaker during a fever.", "People who truly love each other always say so out loud.", "Years of hard work leave marks on a person's hands that never fade."],
+          ["The grandmother makes tortillas, sews jeans, braids hair, and stays up with the speaker during a fever.", "People who truly love each other say so out loud.", "Years of hard work can leave lasting marks on a person's hands."],
           ["But I have learned to read her hands"],
           "The grandmother rarely says “I love you,” but every stanza shows her caring through work. The speaker learns to read that love in her hands.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del poema?",
           "El amor se muestra en el cuidado diario, no solo en palabras.",
-          ["La abuela hace tortillas, cose pantalones, trenza el pelo y se queda despierta cuando la voz poética tiene fiebre.", "Las personas que de verdad se quieren siempre lo dicen en voz alta.", "Los años de trabajo duro dejan en las manos marcas que nunca se borran."],
+          ["La abuela hace tortillas, cose pantalones, trenza el pelo y se queda despierta cuando la voz poética tiene fiebre.", "Las personas que de verdad se quieren lo dicen en voz alta.", "Los años de trabajo duro pueden dejar marcas duraderas en las manos."],
           ["Pero he aprendido a leer sus manos"],
           "La abuela casi nunca dice “te quiero”, pero cada estrofa muestra su cariño a través del trabajo. La voz poética aprende a leer ese amor en sus manos.",
         ],
@@ -183,14 +183,14 @@ export const L1_POEMS_INFO: Passage[] = [
         ["contradicts-text", "not-in-text", "off-point-evidence"],
         [
           "How does stanza 5 help develop the poem's theme?",
-          "She rarely says loving words, so her actions carry her love.",
+          "It shows that she rarely says loving words, so her actions carry her love.",
           ["It shows that the grandmother is too strict and busy to care much about the speaker.", "It shows that the grandmother can barely speak because she is sick.", "It describes the Sunday mornings when the grandmother makes tortillas for the whole family."],
           ["The words seem too small for her mouth"],
           "Stanza 5 says the grandmother almost never says “I love you.” That is why the rest of the poem looks for her love in what her hands do.",
         ],
         [
           "¿Cómo ayuda la estrofa 5 a desarrollar el mensaje del poema?",
-          "Casi no dice palabras de cariño; sus actos expresan su amor.",
+          "Muestra que casi no dice palabras de cariño, así que sus actos expresan su amor.",
           ["Muestra que la abuela es demasiado estricta y está muy ocupada para que le importe la voz poética.", "Muestra que la abuela casi no puede hablar porque está enferma.", "Describe las mañanas de domingo en que la abuela hace tortillas para toda la familia."],
           ["Las palabras parecen quedarle chicas"],
           "La estrofa 5 dice que la abuela casi nunca dice “te quiero”. Por eso el resto del poema busca su amor en lo que hacen sus manos.",
