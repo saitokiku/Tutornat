@@ -1,5 +1,5 @@
 import type { Grade, Subject } from "@/lib/types";
-import { getSkill, gradeIndex, skillsFor } from "@/practice/skills";
+import { getSkill, gradeIndex, makeItem, skillsFor } from "@/practice/skills";
 import type { Skill } from "@/practice/types";
 import type { Attempt, HelpExposure, PracticeSet, Slot } from "./types";
 
@@ -251,6 +251,33 @@ export const setSize = (grade: Grade) => (["K", "1", "2"].includes(grade) ? 6 : 
 type Seeds = () => number;
 
 /**
+ * Draws seeds so a set never shows the same problem twice while the skill has others. A hand-written bank
+ * of 13–19 questions a level would otherwise repeat a whole passage and question in most 10-problem sets,
+ * and a repeated check problem is not a fresh one. A main problem's level is only known as the set goes,
+ * so its seed must be new at every level of the skill. After 100 draws a repeat is allowed.
+ */
+function freshSeeds(seed: Seeds) {
+  const seen = new Set<string>();
+  const key = (skillId: string, level: number, s: number) => {
+    const it = makeItem(skillId, level, s, "en");
+    return JSON.stringify([skillId, it.level, it.passage, it.prompt, it.say, it.picture, it.visual]);
+  };
+  return (skillId: string, levels: number[]): number => {
+    if (!getSkill(skillId)) return seed();
+    let s = seed();
+    let keys = levels.map((l) => key(skillId, l, s));
+    for (let tries = 1; tries < 100 && keys.some((k) => seen.has(k)); tries++) {
+      s = seed();
+      keys = levels.map((l) => key(skillId, l, s));
+    }
+    for (const k of keys) seen.add(k);
+    return s;
+  };
+}
+
+const allLevels = (skillId: string) => Array.from({ length: getSkill(skillId)?.levels ?? 1 }, (_, i) => i + 1);
+
+/**
  * A practice set: mostly one skill, with up to two review problems interleaved (a proved skill due for
  * review, or a skill practiced in the last two weeks), the way spaced, mixed practice works best.
  */
@@ -262,28 +289,35 @@ export function buildPracticeSlots(opts: { skillId: string; grade: Grade; status
     ...reviewsDue(statuses, now, subject).map((s) => s.skillId),
     ...(opts.recent ?? []),
   ].filter((id, i, list) => id !== skillId && list.indexOf(id) === i).slice(0, size >= 10 ? 2 : 1);
-  const slots: Slot[] = Array.from({ length: size }, () => ({ skillId, seed: seed(), role: "main" as const }));
   const positions = size >= 10 ? [3, 7] : [3];
-  reviewSkills.forEach((id, i) => {
+  const fresh = freshSeeds(seed);
+  return Array.from({ length: size }, (_, k): Slot => {
+    const id = reviewSkills[positions.indexOf(k)];
+    if (id === undefined) return { skillId, seed: fresh(skillId, allLevels(skillId)), role: "main" };
     const s = getSkill(id)!;
-    slots[positions[i]] = { skillId: id, seed: seed(), role: "review", level: Math.min(statusOf(statuses, id).level || s.levels, s.levels) };
+    const level = Math.min(statusOf(statuses, id).level || s.levels, s.levels);
+    return { skillId: id, seed: fresh(id, [level]), role: "review", level };
   });
-  return slots;
 }
 
 /** A check: fresh problems at the top level, no help available. */
 export function buildCheckSlots(skillId: string, seed: Seeds): Slot[] {
   const top = getSkill(skillId)?.levels ?? 1;
-  return Array.from({ length: RULES.checkSize }, () => ({ skillId, seed: seed(), role: "check" as const, level: top }));
+  const fresh = freshSeeds(seed);
+  return Array.from({ length: RULES.checkSize }, () => ({ skillId, seed: fresh(skillId, [top]), role: "check" as const, level: top }));
 }
 
 /** A review set across several due skills (3 problems each, at most 9). */
 export function buildReviewSlots(skillIds: string[], statuses: Statuses, seed: Seeds): Slot[] {
   const ids = skillIds.filter((id) => getSkill(id)).slice(0, 3);
   const slots: Slot[] = [];
+  const fresh = freshSeeds(seed);
   // Interleaved: a, b, c, a, b, c…
   for (let k = 0; k < 3; k++)
-    for (const id of ids) slots.push({ skillId: id, seed: seed(), role: "review", level: Math.min(statusOf(statuses, id).level, getSkill(id)!.levels) });
+    for (const id of ids) {
+      const level = Math.min(statusOf(statuses, id).level, getSkill(id)!.levels);
+      slots.push({ skillId: id, seed: fresh(id, [level]), role: "review", level });
+    }
   return slots;
 }
 
@@ -292,9 +326,11 @@ export function buildMixedSlots(skillIds: string[], statuses: Statuses, grade: G
   const ids = skillIds.filter((id) => getSkill(id));
   if (!ids.length) return [];
   const size = setSize(grade);
+  const fresh = freshSeeds(seed);
   return Array.from({ length: size }, (_, i) => {
     const id = ids[i % ids.length];
-    return { skillId: id, seed: seed(), role: "main" as const, level: statusOf(statuses, id).level };
+    const level = statusOf(statuses, id).level;
+    return { skillId: id, seed: fresh(id, [level]), role: "main" as const, level };
   });
 }
 
