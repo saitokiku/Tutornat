@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Locale } from "@/lib/types";
 import { counterCell, isMarkable, layoutCounters } from "@/components/practice/MarkCounters";
-import { barText } from "@/components/practice/pad-math";
+import { barText, CLOCK_START } from "@/components/practice/pad-math";
 import { answerText, check, misconceptionOf } from "../answer";
 import { evaluate, parse } from "../expr";
 import { makeItem } from "../skills";
@@ -38,7 +38,7 @@ const PLAN = [
   ["m.money.count", "2", "2.MD.C.8", ["m.skip.count", "m.add.2digit"], 3, "computed"],
   ["m.time.5min", "2", "2.MD.C.7", ["m.time.set", "m.skip.count"], 3, "computed"],
   ["m.measure.ruler", "2", "2.MD.A.1", ["m.measure.units"], 3, "computed"],
-  ["m.data.chart", "2", "2.MD.D.10", ["m.data.picture", "m.sub.2digit"], 3, "computed"],
+  ["m.data.chart", "2", "2.OA.A.1", ["m.data.picture", "m.sub.2digit"], 3, "computed"],
   ["m.shares.thirds", "2", "2.G.A.3", ["m.shares.halves"], 3, "computed"],
 ] as const;
 
@@ -162,7 +162,7 @@ describe("K–2 math: every item", () => {
           expect(es.visual, `${where} visual differs by language`).toEqual(en.visual);
           expect([es.input, es.pad, es.markable, es.picture, es.wrong], `${where} pad differs by language`).toEqual([en.input, en.pad, en.markable, en.picture, en.wrong]);
           expect(es.choices?.map((c) => [c.why, c.picture]), `${where} choices differ by language`).toEqual(en.choices?.map((c) => [c.why, c.picture]));
-          variety.add(JSON.stringify([en.prompt, en.visual, en.picture, en.choices?.map((c) => c.label)]));
+          variety.add(JSON.stringify([en.prompt, en.visual, en.picture, en.choices?.map((c) => c.label).sort()]));
           for (const it of [en, es]) {
             const at = `${where} ${it === en ? "en" : "es"}`;
             expect(it.hints.length, `${at} hints`).toBe(3);
@@ -211,6 +211,9 @@ describe("K–2 math: every item", () => {
             expect(it.pad?.kind, `${at} pad`).toBe(PADDED.has(it.input) ? it.input : undefined);
             if (it.pad?.kind === "clock") {
               if (it.answer.kind !== "text") throw new Error(`${at} clock needs a text answer`);
+              // The pad starts at 12:00 and sends it untouched, so 12:00 is never the answer.
+              expect(it.answer.accept[0], `${at} right without touching the clock`).not.toBe(CLOCK_START);
+              expect(it.wrong?.length ?? 0, `${at} names no likely wrong setting`).toBeGreaterThanOrEqual(1);
               const m = /^(1[0-2]|[1-9]):([0-5]\d)$/.exec(it.answer.accept[0]);
               expect(m, `${at} clock answer ${it.answer.accept[0]}`).not.toBeNull();
               expect(Number(m![2]) % it.pad.stepMinutes, at).toBe(0);
@@ -231,7 +234,8 @@ describe("K–2 math: every item", () => {
             }
           }
         }
-        expect(variety.size, `${skill.id} L${level} variety`).toBeGreaterThanOrEqual(5);
+        // The brief's floor: 12 distinct items per level (choice order does not count), so a set is not memorized.
+        expect(variety.size, `${skill.id} L${level} variety`).toBeGreaterThanOrEqual(12);
       }
     }
   }, 60_000);
@@ -894,6 +898,7 @@ describe("m.place.1000", () => {
           const n = ints(t)[0];
           expect(readWords(keyLabel(it), locale)).toBe(n);
           for (const lab of wrongLabels(it)) expect(readWords(lab, locale)).not.toBe(n);
+          expect(it.choices!.length, `${n}: a guess between two`).toBeGreaterThanOrEqual(3);
         }
       }
   });
@@ -926,6 +931,7 @@ describe("m.odd.even", () => {
       let left = v.groups[0];
       while (left >= 2) left -= 2;
       expect(keyLabel(it)).toBe(left === 0 ? "Even" : "Odd");
+      for (const c of it.choices!) expect(["looked-at-the-tens-digit", "thought-zero-is-odd"]).not.toContain(c.why);
     }
     for (const it of items("m.odd.even", 2)) expect(keyLabel(it)).toBe(parity(ints(text(it))[0]));
     for (const it of items("m.odd.even", 3)) {

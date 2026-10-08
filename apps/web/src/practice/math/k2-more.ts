@@ -1294,8 +1294,9 @@ export const MATH_K_2_MORE: Skill[] = [
     content: "computed",
     levels: 3,
     generate(r, level, locale) {
-      const h = r.int(1, 12);
       const half = level === 2 || (level === 3 && r.bool());
+      // The clock pad starts at 12:00, so "show 12 o'clock" would be right untouched: o'clock skips 12.
+      const h = half ? r.int(1, 12) : r.int(1, 11);
       const digital = level < 3 && r.bool();
       const time = hh(h, half ? 30 : 0);
       const next = (h % 12) + 1;
@@ -1310,7 +1311,7 @@ export const MATH_K_2_MORE: Skill[] = [
         wrong: misses(time, half ? [[hh(next, 30), "used-the-next-hour"], [hh(h, 0), "put-the-long-hand-on-12"]] : [[hh(h, 30), "put-the-long-hand-on-6"], h === 6 ? ["12:30", "swapped-the-hands"] : null]),
         hints: [
           tr(locale, "The short hand shows the hour. The long hand shows the minutes.", "La manecilla corta marca la hora. La larga marca los minutos."),
-          half ? tr(locale, "For half past, the long hand points to 6.", "Para y media, la manecilla larga apunta al 6.") : tr(locale, "For o'clock, the long hand points to 12.", "Para en punto, la manecilla larga apunta al 12."),
+          half ? tr(locale, "For half past, the long hand points to 6.", "Para la media hora, la manecilla larga apunta al 6.") : tr(locale, "For o'clock, the long hand points to 12.", "Para la hora en punto, la manecilla larga apunta al 12."),
           half ? tr(locale, `Put the short hand halfway between ${h} and ${next}.`, `Pon la manecilla corta a la mitad entre el ${h} y el ${next}.`) : tr(locale, `Put the short hand on ${h}.`, `Pon la manecilla corta en el ${h}.`),
         ],
         steps: half
@@ -1827,6 +1828,8 @@ export const MATH_K_2_MORE: Skill[] = [
       if (rest >= 13 && rest <= 19) wrongs.push([h * 100 + (rest - 10) * 10, "teen-for-tens"]);
       if (o === 0 && t >= 2) wrongs.push([h * 100 + 10 + t, "teen-for-tens"]);
       wrongs.push([n + 100 <= 999 ? n + 100 : n - 100, "wrong-hundreds"]);
+      // Equal tens and ones (377) leave no swap: the tens off by one keeps it from being a 50/50 guess.
+      if (wrongs.length < 3) wrongs.push([t < 9 ? n + 10 : n - 10, "wrong-tens"]);
       const firstWord = tr(locale, `${EN_SMALL[h]} hundred`, ES_HUNDREDS[h]);
       return {
         prompt: [tr(locale, `Which words name ${n}?`, `¿Qué palabras nombran el ${n}?`)],
@@ -2005,7 +2008,9 @@ export const MATH_K_2_MORE: Skill[] = [
       const n = level === 1 ? r.int(4, 20) : r.int(3, 20);
       const even = n % 2 === 0;
       const k = Math.floor(n / 2);
-      const pick = choose(r, even ? EVEN : ODD, [{ ...(even ? ODD : EVEN), why: misleads(n) ?? (even ? "miscounted-pairs" : "missed-the-leftover") }]);
+      // A dot picture shows no digits, so digit slips (tens digit, zero) only fit the written number.
+      const slip = even ? "miscounted-pairs" : "missed-the-leftover";
+      const pick = choose(r, even ? EVEN : ODD, [{ ...(even ? ODD : EVEN), why: level === 1 ? slip : (misleads(n) ?? slip) }]);
       const verdict = even ? tr(locale, `${n} is even.`, `${n} es par.`) : tr(locale, `${n} is odd.`, `${n} es impar.`);
       if (level === 1)
         return {
@@ -2366,11 +2371,13 @@ export const MATH_K_2_MORE: Skill[] = [
         input: "clock",
         pad: { kind: "clock", stepMinutes: 5 },
         answer: { kind: "text", accept: [time] },
-        wrong: misses(time, [m >= 30 ? [hh(next, m), "used-the-next-hour"] : null, m === 5 || m === 10 ? [hh(h, m * 5), "pointed-at-the-minute-number"] : null, [hh(m / 5, (h * 5) % 60), "swapped-the-hands"]]),
+        // The next hour is a likely slip at any minute (the short hand has moved toward it), so every item
+        // names at least one wrong setting, even when swapping the hands gives the same time (4:20).
+        wrong: misses(time, [[hh(next, m), "used-the-next-hour"], m === 5 || m === 10 ? [hh(h, m * 5), "pointed-at-the-minute-number"] : null, [hh(m / 5, (h * 5) % 60), "swapped-the-hands"]]),
         hints: [
           tr(locale, "The short hand shows the hour. The long hand shows the minutes.", "La manecilla corta marca la hora. La larga marca los minutos."),
-          tr(locale, "For the long hand, each number is 5 minutes.", "Para la manecilla larga, cada número vale 5 minutos."),
-          tr(locale, `For ${m} minutes, the long hand points to ${m / 5}.`, `Para ${m} minutos, la manecilla larga apunta al ${m / 5}.`),
+          tr(locale, "For the long hand, each number is 5 minutes.", "En la manecilla larga, cada número vale 5 minutos."),
+          tr(locale, `For ${m} minutes, the long hand points to ${m / 5}.`, `Para marcar ${m} minutos, la manecilla larga apunta al ${m / 5}.`),
         ],
         steps: [
           tr(locale, `Long hand on ${m / 5}: ${m} minutes.`, `Manecilla larga en el ${m / 5}: ${m} minutos.`),
@@ -2490,8 +2497,10 @@ export const MATH_K_2_MORE: Skill[] = [
     id: "m.data.chart",
     subject: "math",
     grade: "2",
-    title: { en: "Solve problems with data", es: "Resolver problemas con datos" },
-    standard: "2.MD.D.10",
+    // The data is a table, not a bar graph, so the code is the word-problem standard the questions
+    // test (2.OA.A.1), not 2.MD.D.10, which asks for problems read from a bar graph.
+    title: { en: "Solve problems with data in a table", es: "Resolver problemas con datos de una tabla" },
+    standard: "2.OA.A.1",
     prereqs: ["m.data.picture", "m.sub.2digit"],
     content: "computed",
     levels: 3,
@@ -2511,9 +2520,9 @@ export const MATH_K_2_MORE: Skill[] = [
       const question = {
         more: tr(locale, `How many more ${unit} for ${B} than for ${S}?`, `¿Cuántos ${unit} más hay para ${B} que para ${S}?`),
         fewer: tr(locale, `How many fewer ${unit} for ${S} than for ${B}?`, `¿Cuántos ${unit} menos hay para ${S} que para ${B}?`),
-        pair: tr(locale, `How many ${unit} for ${X} and ${Y} together?`, `¿Cuántos ${unit} hay para ${X} y ${Y} juntos?`),
+        pair: tr(locale, `How many ${unit} for ${X} and ${Y} together?`, `¿Cuántos ${unit} hay en total para ${X} y ${Y}?`),
         all: tr(locale, `How many ${unit} in all?`, `¿Cuántos ${unit} hay en total?`),
-        together: tr(locale, `${cap(X)} and ${Y} together: how many more ${unit} than ${Z}?`, `${cap(X)} y ${Y} juntos: ¿cuántos ${unit} más que ${Z}?`),
+        together: tr(locale, `${cap(X)} and ${Y} together: how many more ${unit} than ${Z}?`, `Si sumas ${X} y ${Y}, ¿cuántos ${unit} más hay que para ${Z}?`),
         not: tr(locale, `How many ${unit} were not for ${X}?`, `¿Cuántos ${unit} no fueron para ${X}?`),
       }[q];
       const chart = [t2(locale, theme.title), ...names.map((nm, i) => `${cap(nm)}: ${c[i]}`)].join("\n");
@@ -2529,7 +2538,7 @@ export const MATH_K_2_MORE: Skill[] = [
       } else if (q === "pair") {
         key = c[xi] + c[yi];
         wrong = [[Math.abs(c[xi] - c[yi]), "subtracted-instead-of-added"], [c[xi], "gave-one-count"], [c[yi], "gave-one-count"]];
-        hints = [find(X, Y), tr(locale, "Together means add.", "Juntos quiere decir sumar."), `${cap(X)}: ${c[xi]}. ${cap(Y)}: ${c[yi]}.`];
+        hints = [find(X, Y), tr(locale, "Together means add.", "Para saber el total, suma."), `${cap(X)}: ${c[xi]}. ${cap(Y)}: ${c[yi]}.`];
         steps = [`${c[xi]} + ${c[yi]} = ${key}`];
       } else if (q === "all") {
         key = total;
@@ -2544,7 +2553,7 @@ export const MATH_K_2_MORE: Skill[] = [
       } else {
         key = total - c[xi];
         wrong = [[total, "did-only-one-step"], [c[xi], "gave-one-count"]];
-        hints = [tr(locale, "This takes two steps.", "Esto lleva dos pasos."), tr(locale, `Find the total. Then take away ${X}.`, `Busca el total. Luego quita ${X}.`), `${sum4} = ${total}`];
+        hints = [tr(locale, "This takes two steps.", "Esto lleva dos pasos."), tr(locale, `Find the total. Then take away ${X}.`, `Busca el total. Luego quita los ${unit} de ${X}.`), `${sum4} = ${total}`];
         steps = [`${sum4} = ${total}`, `${total} − ${c[xi]} = ${key}`];
       }
       return {
