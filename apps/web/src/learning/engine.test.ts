@@ -10,7 +10,7 @@ import {
   RULES,
   skillStatus,
 } from "./engine";
-import { makeItem } from "@/practice/skills";
+import { getSkill, makeItem } from "@/practice/skills";
 import type { Attempt, Mode, Slot } from "./types";
 
 const H = 3600_000, D = 24 * H;
@@ -165,6 +165,32 @@ describe("building sets", () => {
       for (const level of [1, 2]) expect(new Set(practice.map((s) => textOf(s, level))).size, `run ${run} level ${level}`).toBe(practice.length);
       const check = buildCheckSlots("e.text.features", seed);
       expect(new Set(check.map((s) => textOf(s, s.level!))).size, `run ${run} check`).toBe(RULES.checkSize);
+    }
+  });
+
+  it("a skill that asks the same question every time still gets different problems, told apart by their choices", () => {
+    // e.dictionary.order always asks which word comes first; only the choices change.
+    const lookAt = (s: Slot, level: number) => {
+      const it = makeItem(s.skillId, level, s.seed, "en");
+      return JSON.stringify([it.prompt, it.choices?.map((c) => c.label).sort()]);
+    };
+    expect(new Set(Array.from({ length: 20 }, (_, i) => makeItem("e.dictionary.order", 1, i + 1, "en").say)).size).toBe(1);
+    for (let run = 0; run < 10; run++) {
+      const practice = buildPracticeSlots({ skillId: "e.dictionary.order", grade: "3", statuses: {}, now: T0, seed });
+      for (const level of [1, 2]) expect(new Set(practice.map((s) => lookAt(s, level))).size, `run ${run} level ${level}`).toBe(practice.length);
+    }
+  });
+
+  it("a check skips the problems the learner just practiced while the skill has others", () => {
+    const textOf = (skillId: string, level: number, s: number) => JSON.stringify(makeItem(skillId, level, s, "en").passage);
+    for (const skillId of ["e.passage.words"]) {
+      const top = getSkill(skillId)!.levels;
+      for (let run = 0; run < 20; run++) {
+        const practice = buildPracticeSlots({ skillId, grade: "4", statuses: {}, now: T0, seed });
+        const seen = practice.map((s) => ({ skillId, level: top, seed: s.seed }));
+        const practiced = new Set(seen.map((a) => textOf(skillId, top, a.seed) + makeItem(skillId, top, a.seed, "en").say));
+        for (const slot of buildCheckSlots(skillId, seed, seen)) expect(practiced.has(textOf(skillId, top, slot.seed) + makeItem(skillId, top, slot.seed, "en").say), `${skillId} run ${run}`).toBe(false);
+      }
     }
   });
 
