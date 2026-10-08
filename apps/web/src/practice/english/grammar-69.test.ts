@@ -248,8 +248,8 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
   });
 
   it("roots: the root is inside the word; root words and senses point at a word in the sentence", () => {
-    each("e.greek.latin.roots", 1, ([shown, , , , , target]) => expect(lc(bare(shown))).toContain(lc(bare(target!))));
-    each("e.greek.latin.roots", 2, ([shown, , , , , target]) => {
+    each("e.root.clues", 1, ([shown, , , , , target]) => expect(lc(bare(shown))).toContain(lc(bare(target!))));
+    each("e.root.clues", 2, ([shown, , , , , target]) => {
       expect(shown).toBe("");
       expect(target).toMatch(/^\p{L}+$/u);
     });
@@ -331,11 +331,11 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
 
   it("analogies and formal style: pairs are two words; analogies keep their frame; the formal key has no slang marks", () => {
     for (const locale of LOCALES) {
-      const keys = bank("e.analogies", 1, locale).map((e) => e[1]);
-      for (const k of levels("e.analogies")[0].order![locale]) expect(keys.filter((x) => x === k).length, `${locale} ${k}`).toBeGreaterThanOrEqual(2);
+      const keys = bank("e.word.relationships", 1, locale).map((e) => e[1]);
+      for (const k of levels("e.word.relationships")[0].order![locale]) expect(keys.filter((x) => x === k).length, `${locale} ${k}`).toBeGreaterThanOrEqual(2);
     }
-    each("e.analogies", 1, ([shown]) => expect(shown).toMatch(/^[\p{L}]+ : [\p{L}]+$/u));
-    each("e.analogies", 2, ([shown], locale) => {
+    each("e.word.relationships", 1, ([shown]) => expect(shown).toMatch(/^[\p{L}]+ : [\p{L}]+$/u));
+    each("e.word.relationships", 2, ([shown], locale) => {
       expect(count(shown, "___"), shown).toBe(1);
       expect(shown, shown).toMatch(locale === "en" ? / is to .* as .* is to ___\.$/ : / es a .* como .* es a ___\.$/);
     });

@@ -79,7 +79,7 @@ describe("grades 6–9 reading: strand shape", () => {
       ["e.text.structure", "7", "RI.7.5", 2, "draft", "english"],
       ["e.theme.development", "7", "RL.7.2", 2, "draft", "english"],
       ["e.author.pov", "8", "RI.8.6", 2, "draft", "english"],
-      ["e.compare.texts", "8", "RI.8.9", 2, "draft", "english"],
+      ["e.paired.texts", "8", "RI.8.9", 2, "draft", "english"],
       ["e.argument.evaluate", "9", "RI.9-10.8", 2, "draft", "english"],
     ]);
   });

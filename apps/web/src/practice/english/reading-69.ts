@@ -312,7 +312,7 @@ export const ENGLISH_READING_6_9: Skill[] = [
     prereqs: ["e.inference.evidence", "e.word.choice"],
   }),
   reading("compare", {
-    id: "e.compare.texts",
+    id: "e.paired.texts",
     grade: "8",
     title: { en: "Compare two texts", es: "Comparar dos textos" },
     standard: "RI.8.9",

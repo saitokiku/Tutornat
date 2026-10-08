@@ -3,7 +3,7 @@ import { skill, type Bi, type Entry } from "./shared";
 // Grade 6: Greek and Latin roots; connotation; words with several meanings.
 
 // ---------------------------------------------------------------------------------------------------
-// e.greek.latin.roots — level 1: what one root means in a word; level 2: put the roots together to work
+// e.root.clues — level 1: what one root means in a word; level 2: put the roots together to work
 // out a whole word. Spanish uses the same Greek and Latin roots in Spanish words (geografía, termómetro,
 // portátil…). Tags: meaning-of-other-part (took the meaning of the other root), similar-root-mixup
 // (photo / phon, aud / vis), guessed-from-topic, opposite-root (ignored "in-", "de-", "mal-"…).
@@ -135,7 +135,7 @@ const ROOT_WORDS: Bi<Entry>[] = [
 ];
 
 const ROOTS = skill(
-  { id: "e.greek.latin.roots", grade: "6", title: { en: "Greek and Latin roots", es: "Raíces griegas y latinas" }, standard: "L.6.4b", prereqs: ["e.prefixes", "e.context.clues"] },
+  { id: "e.root.clues", grade: "6", title: { en: "Roots as clues to meaning", es: "Las raíces como pistas del significado" }, standard: "L.6.4b", prereqs: ["e.prefixes", "e.context.clues"] },
   [
     {
       bank: ROOT_MEANING,

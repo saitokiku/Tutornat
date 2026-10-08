@@ -153,7 +153,7 @@ const WORDINESS = skill(
 );
 
 // ---------------------------------------------------------------------------------------------------
-// e.analogies — level 1: name how two words are related (six relationships; four are shown); level 2:
+// e.word.relationships — level 1: name how two words are related (six relationships; four are shown); level 2:
 // complete an analogy. Tags on level 2: wrong-relationship, associated-word (goes with the topic but not
 // the pattern), reversed-order.
 
@@ -305,7 +305,7 @@ const ANALOGY: Bi<Entry>[] = [
 ];
 
 const ANALOGIES = skill(
-  { id: "e.analogies", grade: "7", title: { en: "Word relationships and analogies", es: "Relaciones entre palabras y analogías" }, standard: "L.7.5b", prereqs: ["e.synonyms"] },
+  { id: "e.word.relationships", grade: "7", title: { en: "Word relationships and analogies", es: "Relaciones entre palabras y analogías" }, standard: "L.7.5b", prereqs: ["e.synonyms"] },
   [
     {
       ...RELATION_PAIRS,
