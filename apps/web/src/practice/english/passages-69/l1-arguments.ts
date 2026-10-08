@@ -1,0 +1,491 @@
+import { type Passage, q } from "./types";
+
+// Level 1 arguments by student writers; some reasoning is weak on purpose, so it can be judged.
+export const L1_ARGUMENTS: Passage[] = [
+  {
+    id: "start-later",
+    level: 1,
+    genre: "argument",
+    en: [
+      {
+        title: "Our School Should Start Later",
+        paras: [
+          "Every school morning, my alarm goes off at 6:05. By the time I reach my first class at 7:20, I have been awake for over an hour, but my brain has not. I am not alone. Our district should move middle school start times to 8:30 a.m. or later.",
+          "The main reason is sleep. Doctors who study adolescents report that during the teen years, the body's internal clock shifts later, so most teenagers have trouble falling asleep before about 11 p.m. Sleep experts recommend that teenagers get eight to ten hours a night. With a 7:20 start, that is nearly impossible. In 2014, the American Academy of Pediatrics recommended that middle and high schools start no earlier than 8:30 a.m.",
+          "Later start times also seem to help in the classroom. When our student council surveyed 312 students last spring, 71 percent said they had trouble staying awake in first period. My cousin's school in another state starts at 9:00, and their basketball team won the state championship last year.",
+          "Some parents worry that a later start would mess up bus schedules and after-school sports. Those are real concerns. However, other districts have handled them by staggering bus routes and moving practices slightly later, and the benefits of rested students outweigh the inconvenience.",
+          "Students cannot learn if they cannot stay awake. Moving the first bell to 8:30 would give us what doctors say we need, and it would cost our district far less than the hours of learning we lose every morning.",
+        ],
+      },
+    ],
+    es: [
+      {
+        title: "Nuestra escuela debería empezar más tarde",
+        paras: [
+          "Cada mañana de clases, mi despertador suena a las 6:05. Cuando llego a mi primera clase a las 7:20, llevo más de una hora despierta, pero mi cerebro no. No soy la única. Nuestro distrito debería cambiar la hora de entrada de la escuela intermedia a las 8:30 de la mañana o más tarde.",
+          "La razón principal es el sueño. Los médicos que estudian a los adolescentes explican que en esos años el reloj interno del cuerpo se atrasa, así que a la mayoría le cuesta dormirse antes de las 11 de la noche. Los expertos en sueño recomiendan que los adolescentes duerman de ocho a diez horas cada noche. Con una entrada a las 7:20, eso es casi imposible. En 2014, la Academia Estadounidense de Pediatría recomendó que las escuelas intermedias y secundarias no empiecen antes de las 8:30 de la mañana.",
+          "Empezar más tarde también parece ayudar en el salón. Cuando el consejo estudiantil encuestó a 312 estudiantes la primavera pasada, el 71 por ciento dijo que le costaba mantenerse despierto en la primera clase. La escuela de mi primo, en otro estado, empieza a las 9:00, y su equipo de básquetbol ganó el campeonato estatal el año pasado.",
+          "A algunos padres les preocupa que una entrada más tarde desordene los horarios de los autobuses y de los deportes después de clases. Son preocupaciones reales. Sin embargo, otros distritos las han resuelto escalonando las rutas de autobús y moviendo un poco más tarde los entrenamientos, y los beneficios de tener estudiantes descansados pesan más que la molestia.",
+          "Los estudiantes no pueden aprender si no pueden mantenerse despiertos. Mover el primer timbre a las 8:30 nos daría lo que los médicos dicen que necesitamos, y le costaría a nuestro distrito mucho menos que las horas de aprendizaje que perdemos cada mañana.",
+        ],
+      },
+    ],
+    qs: [
+      q(
+        "argument.claim",
+        ["evidence-not-claim", "counterclaim-not-claim", "evidence-not-claim"],
+        [
+          "Which sentence states the author's main claim?",
+          "Our district should move middle school start times to 8:30 a.m. or later.",
+          ["Sleep experts recommend that teenagers get eight to ten hours a night.", "Some parents worry that a later start would mess up bus schedules and after-school sports.", "Every school morning, my alarm goes off at 6:05."],
+          ["Our district should move middle school start times to 8:30 a.m. or later."],
+          "This is the point the whole essay tries to prove. The other sentences are evidence for it or the other side's worry.",
+        ],
+        [
+          "¿Qué oración presenta la afirmación principal de la autora?",
+          "Nuestro distrito debería cambiar la hora de entrada de la escuela intermedia a las 8:30 de la mañana o más tarde.",
+          ["Los expertos en sueño recomiendan que los adolescentes duerman de ocho a diez horas cada noche.", "A algunos padres les preocupa que una entrada más tarde desordene los horarios de los autobuses y de los deportes después de clases.", "Cada mañana de clases, mi despertador suena a las 6:05."],
+          ["Nuestro distrito debería cambiar la hora de entrada de la escuela intermedia a las 8:30 de la mañana o más tarde."],
+          "Esta es la idea que todo el ensayo intenta probar. Las otras oraciones son evidencia a su favor o la preocupación de la otra postura.",
+        ],
+      ),
+      q(
+        "argument.evidence",
+        ["misjudges-relevance", "misjudges-relevance", "misjudges-relevance"],
+        [
+          "Which piece of evidence is irrelevant to the author's claim?",
+          "A school that starts at 9:00 won a basketball championship.",
+          ["Seventy-one percent of surveyed students had trouble staying awake in first period.", "Teenagers' body clocks shift later, so they fall asleep later.", "A group of doctors recommends that schools start no earlier than 8:30 a.m."],
+          ["their basketball team won the state championship last year"],
+          "A sports title says nothing about whether students are rested or learning. The survey, the body-clock research, and the doctors' advice all connect to sleep and school.",
+        ],
+        [
+          "¿Qué evidencia no tiene relación con la afirmación de la autora?",
+          "Una escuela que empieza a las 9:00 ganó un campeonato de básquetbol.",
+          ["El 71 por ciento de los estudiantes encuestados tenía problemas para mantenerse despierto en la primera clase.", "El reloj del cuerpo de los adolescentes se atrasa, así que se duermen más tarde.", "Un grupo de médicos recomienda que las escuelas no empiecen antes de las 8:30 de la mañana."],
+          ["su equipo de básquetbol ganó el campeonato estatal el año pasado"],
+          "Un campeonato deportivo no dice nada sobre si los estudiantes están descansados o aprendiendo. La encuesta, el estudio del reloj del cuerpo y la recomendación de los médicos tienen que ver con el sueño y la escuela.",
+        ],
+      ),
+      q(
+        "pov.response",
+        ["contradicts-text", "misses-author-stance", "not-in-text"],
+        [
+          "How does the author respond to people who worry about buses and sports?",
+          "The author admits the concerns are real, then argues they can be handled.",
+          ["The author ignores the concerns and never mentions the other side at all.", "The author agrees the concerns outweigh the benefits and drops the plan.", "The author says those parents do not care about students."],
+          ["Those are real concerns. However, other districts have handled them"],
+          "The author grants that the worries are real, then answers them with how other districts solved them and why the benefits matter more.",
+        ],
+        [
+          "¿Cómo responde la autora a quienes se preocupan por los autobuses y los deportes?",
+          "Reconoce que son preocupaciones reales y luego argumenta que tienen solución.",
+          ["Ignora las preocupaciones y nunca menciona la otra postura.", "Acepta que las preocupaciones pesan más que los beneficios y abandona su propuesta.", "Dice que a esos padres no les importan los estudiantes."],
+          ["Son preocupaciones reales. Sin embargo, otros distritos las han resuelto"],
+          "La autora acepta que las preocupaciones son reales y luego las responde con lo que hicieron otros distritos y por qué los beneficios importan más.",
+        ],
+      ),
+      q(
+        "central.idea",
+        ["too-narrow", "too-broad", "contradicts-text"],
+        [
+          "What is the central idea of the essay?",
+          "Middle school should start at 8:30 or later so students get the sleep they need.",
+          ["Many students in the student council survey had trouble staying awake during their first class of the day.", "Sleep is important for everyone's health.", "Bus routes matter more than when classes start."],
+          ["Moving the first bell to 8:30 would give us what doctors say we need"],
+          "Every paragraph supports one point: a later start would let students get the sleep that doctors recommend.",
+        ],
+        [
+          "¿Cuál es la idea central del ensayo?",
+          "La escuela intermedia debería empezar a las 8:30 o más tarde para que los estudiantes duerman lo que necesitan.",
+          ["Muchos estudiantes de la encuesta del consejo estudiantil tenían problemas para mantenerse despiertos en la primera clase del día.", "Dormir es importante para la salud de todos.", "Las rutas de autobús importan más que la hora de entrada."],
+          ["Mover el primer timbre a las 8:30 nos daría lo que los médicos dicen que necesitamos"],
+          "Cada párrafo apoya una sola idea: empezar más tarde permitiría que los estudiantes durmieran lo que recomiendan los médicos.",
+        ],
+      ),
+      q(
+        "structure.section",
+        ["wrong-section-role", "wrong-section-role", "contradicts-text"],
+        [
+          "What is the purpose of paragraph 4?",
+          "To answer a likely objection before the conclusion.",
+          ["To give the main scientific evidence about how much sleep teenagers need each night.", "To state the author's claim for the first time.", "To admit that a later start time is a bad idea."],
+          ["Some parents worry that a later start would mess up bus schedules and after-school sports."],
+          "Paragraph 4 brings up what opponents might say and answers it, which makes the argument stronger right before the final paragraph.",
+        ],
+        [
+          "¿Cuál es el propósito del párrafo 4?",
+          "Responder a una objeción probable antes de la conclusión.",
+          ["Dar la evidencia científica principal sobre cuántas horas necesitan dormir los adolescentes cada noche.", "Presentar por primera vez la afirmación de la autora.", "Admitir que empezar más tarde es una mala idea."],
+          ["A algunos padres les preocupa que una entrada más tarde desordene los horarios de los autobuses"],
+          "El párrafo 4 presenta lo que podrían decir quienes no están de acuerdo y lo responde, lo que fortalece el argumento justo antes del último párrafo.",
+        ],
+      ),
+    ],
+  },
+  {
+    id: "library-saturdays",
+    level: 1,
+    genre: "argument",
+    en: [
+      {
+        title: "Keep the Library Open on Saturdays",
+        paras: [
+          "To the members of the Elmwood City Council: I am writing about your plan to close the Elmwood Public Library on Saturdays to save money. I am in seventh grade, and I believe closing on Saturdays would be a serious mistake.",
+          "For many families, Saturday is the only day the library is useful. Most parents in my neighborhood work on weekdays until after the library closes at six. The library's own sign-in records, which the head librarian shared with our class, show that Saturday is its busiest day, with about twice as many visitors as an average weekday.",
+          "The library is also more than a building full of books. On Saturdays, it offers free homework help, a coding club, and the only public computers within walking distance of my apartment. My neighbor Mrs. Delgado used those computers to apply for the job she has now.",
+          "Some council members have said that people can simply use the library online. But you cannot get homework help from a website if your family has no internet at home. Closing on Saturdays would hurt the people who depend on the library most.",
+          "Libraries are the heart of a city, and only someone who has never been inside one would vote to close it on Saturdays. I urge you to find savings somewhere else and keep our library open.",
+        ],
+      },
+    ],
+    es: [
+      {
+        title: "Mantengan abierta la biblioteca los sábados",
+        paras: [
+          "A los miembros del Concejo Municipal de Elmwood: Les escribo sobre su plan de cerrar la Biblioteca Pública de Elmwood los sábados para ahorrar dinero. Estoy en séptimo grado y creo que cerrar los sábados sería un grave error.",
+          "Para muchas familias, el sábado es el único día en que la biblioteca les sirve. La mayoría de los padres de mi vecindario trabajan entre semana hasta después de que la biblioteca cierra a las seis. Los registros de entrada de la propia biblioteca, que la bibliotecaria principal compartió con nuestra clase, muestran que el sábado es su día más concurrido, con cerca del doble de visitantes que un día promedio entre semana.",
+          "La biblioteca también es más que un edificio lleno de libros. Los sábados ofrece ayuda gratis con la tarea, un club de programación y las únicas computadoras públicas a las que puedo llegar caminando desde mi apartamento. Mi vecina, la señora Delgado, usó esas computadoras para solicitar el trabajo que tiene ahora.",
+          "Algunos concejales han dicho que la gente simplemente puede usar la biblioteca en línea. Pero no se puede recibir ayuda con la tarea en un sitio web si tu familia no tiene internet en casa. Cerrar los sábados perjudicaría a quienes más dependen de la biblioteca.",
+          "Las bibliotecas son el corazón de una ciudad, y solo alguien que nunca ha entrado a una votaría por cerrarla los sábados. Les pido que busquen ahorros en otra parte y mantengan abierta nuestra biblioteca.",
+        ],
+      },
+    ],
+    qs: [
+      q(
+        "argument.evidence",
+        ["anecdote-as-proof", "opinion-as-evidence", "off-point-evidence"],
+        [
+          "Which evidence best supports the claim that closing on Saturdays would hurt many people?",
+          "Sign-in records show Saturday is the library's busiest day.",
+          ["A neighbor used the library's computers to apply for the job she has now.", "Libraries are the heart of every city.", "The writer of the letter is in seventh grade."],
+          ["show that Saturday is its busiest day, with about twice as many visitors as an average weekday"],
+          "The sign-in records count real visitors and show Saturday is the busiest day. One neighbor's story is only one person, and “the heart of every city” is an opinion.",
+        ],
+        [
+          "¿Qué evidencia apoya mejor la afirmación de que cerrar los sábados perjudicaría a mucha gente?",
+          "Los registros de entrada muestran que el sábado es el día más concurrido.",
+          ["Una vecina usó las computadoras de la biblioteca para solicitar el trabajo que tiene ahora.", "Las bibliotecas son el corazón de todas las ciudades.", "Quien escribe la carta está en séptimo grado."],
+          ["muestran que el sábado es su día más concurrido, con cerca del doble de visitantes que un día promedio entre semana"],
+          "Los registros cuentan visitantes reales y muestran que el sábado es el día más concurrido. La historia de una vecina es la de una sola persona, y “el corazón de todas las ciudades” es una opinión.",
+        ],
+      ),
+      q(
+        "argument.reasoning",
+        ["not-a-flaw", "not-a-flaw", "not-a-flaw"],
+        [
+          "Which part of the letter uses the weakest reasoning?",
+          "The claim that only someone who has never been inside a library would vote to close it.",
+          ["The sign-in records showing that Saturday is the library's busiest day of the week.", "The point that online services do not help families without internet.", "The fact that the library closes at six on weekdays."],
+          ["only someone who has never been inside one would vote to close it on Saturdays"],
+          "That claim attacks the council members instead of giving a reason. People can disagree about a budget and still value libraries.",
+        ],
+        [
+          "¿Qué parte de la carta usa el razonamiento más débil?",
+          "La afirmación de que solo alguien que nunca ha entrado a una biblioteca votaría por cerrarla.",
+          ["Los registros de entrada que muestran que el sábado es el día más concurrido de la biblioteca en toda la semana.", "La idea de que los servicios en línea no ayudan a las familias sin internet.", "El dato de que la biblioteca cierra a las seis entre semana."],
+          ["solo alguien que nunca ha entrado a una votaría por cerrarla los sábados"],
+          "Esa afirmación ataca a los concejales en lugar de dar una razón. La gente puede no estar de acuerdo sobre un presupuesto y aun así valorar las bibliotecas.",
+        ],
+      ),
+      q(
+        "pov.view",
+        ["confuses-speaker-author", "overstates-view", "misses-author-stance"],
+        [
+          "What is the author's point of view on the council's plan?",
+          "It would hurt the families who need the library most.",
+          ["The library should close on Saturdays so the city can save money for other things.", "The library should stay open every night until midnight.", "The author does not feel strongly either way about it."],
+          ["Closing on Saturdays would hurt the people who depend on the library most."],
+          "The author calls the plan “a serious mistake” and says it would hurt those who depend on the library most.",
+        ],
+        [
+          "¿Cuál es el punto de vista de quien escribe sobre el plan del concejo?",
+          "Perjudicaría a las familias que más necesitan la biblioteca.",
+          ["La biblioteca debería cerrar los sábados para que la ciudad ahorre dinero para otras cosas.", "La biblioteca debería abrir todas las noches hasta la medianoche.", "A quien escribe le da igual lo que pase."],
+          ["Cerrar los sábados perjudicaría a quienes más dependen de la biblioteca."],
+          "Quien escribe dice que el plan sería “un grave error” y que perjudicaría a quienes más dependen de la biblioteca.",
+        ],
+      ),
+      q(
+        "pov.response",
+        ["misses-author-stance", "overstates-view", "contradicts-text"],
+        [
+          "How does the author respond to the idea that people can use the library online?",
+          "By pointing out that families without internet at home cannot do that.",
+          ["By agreeing that online services can fully replace the library's Saturday hours.", "By saying the library should stop offering anything online.", "By ignoring the idea and moving on to something else."],
+          ["But you cannot get homework help from a website if your family has no internet at home."],
+          "The author names the council members' idea and answers it: an online library does not help families with no internet.",
+        ],
+        [
+          "¿Cómo responde quien escribe a la idea de que la gente puede usar la biblioteca en línea?",
+          "Señalando que las familias sin internet en casa no pueden hacerlo.",
+          ["Aceptando que los servicios en línea pueden reemplazar por completo el horario de los sábados.", "Diciendo que la biblioteca debería dejar de ofrecer cualquier cosa en línea.", "Ignorando la idea y pasando a otra cosa."],
+          ["Pero no se puede recibir ayuda con la tarea en un sitio web si tu familia no tiene internet en casa."],
+          "Quien escribe menciona la idea de los concejales y la responde: una biblioteca en línea no ayuda a las familias sin internet.",
+        ],
+      ),
+      q(
+        "words.figurative",
+        ["too-literal", "contradicts-text", "not-in-text"],
+        [
+          "The author calls libraries “the heart of a city.” What does this phrase suggest?",
+          "Libraries are central to city life and help keep it going.",
+          ["Libraries are always built in the exact middle of downtown.", "Libraries are buildings that a city could easily do without.", "Libraries are the oldest buildings in most cities."],
+          ["Libraries are the heart of a city"],
+          "The heart keeps a body alive. Calling libraries the heart of a city says they are central and vital to the people who live there.",
+        ],
+        [
+          "Quien escribe dice que las bibliotecas son “el corazón de una ciudad”. ¿Qué sugiere esta frase?",
+          "Las bibliotecas son centrales para la vida de la ciudad y la mantienen en marcha.",
+          ["Las bibliotecas siempre se construyen justo en el centro de la ciudad.", "Las bibliotecas son edificios de los que una ciudad podría prescindir fácilmente.", "Las bibliotecas son los edificios más antiguos de casi todas las ciudades."],
+          ["Las bibliotecas son el corazón de una ciudad"],
+          "El corazón mantiene vivo al cuerpo. Decir que las bibliotecas son el corazón de una ciudad significa que son centrales y vitales para la gente que vive ahí.",
+        ],
+      ),
+    ],
+  },
+  {
+    id: "teach-cooking",
+    level: 1,
+    genre: "argument",
+    en: [
+      {
+        title: "Every School Should Teach Cooking",
+        paras: [
+          "Most students can solve for x, name the parts of a cell, and write a five-paragraph essay. Far fewer can cook a simple, healthy dinner. That is a gap our schools should close. Every middle school should require a semester of cooking.",
+          "Cooking is a life skill that everyone eventually needs. Young adults who cannot cook often depend on fast food and packaged meals, which tend to cost more and contain more salt and sugar than food made at home. A student who learns to make rice, beans, and a vegetable stir-fry has learned something that will save money and protect health for decades.",
+          "Cooking also reinforces what students learn in other classes. Doubling a recipe is a lesson in fractions. Watching bread rise is a lesson in chemistry and living things, since yeast is a living organism. Reading a recipe carefully and following the steps in order is practice in reading directions.",
+          "Last year, Lincoln Middle School in our district tried a six-week cooking unit in its science classes. The teacher said that students were more excited about that unit than any other. This proves that a cooking class would raise test scores across the district.",
+          "Some people argue that schools are already too busy to add another class. It is true that schedules are full. But a single semester could replace one study hall, and the skills would last a lifetime. Schools teach students how to plan for their futures; they should also teach them how to feed themselves.",
+        ],
+      },
+    ],
+    es: [
+      {
+        title: "Todas las escuelas deberían enseñar a cocinar",
+        paras: [
+          "La mayoría de los estudiantes sabe despejar una x, nombrar las partes de una célula y escribir un ensayo de cinco párrafos. Muchos menos saben preparar una cena sencilla y saludable. Esa es una brecha que nuestras escuelas deberían cerrar. Todas las escuelas intermedias deberían exigir un semestre de cocina.",
+          "Cocinar es una habilidad para la vida que todos necesitan tarde o temprano. Los adultos jóvenes que no saben cocinar suelen depender de la comida rápida y de los platos empaquetados, que tienden a costar más y a tener más sal y azúcar que la comida hecha en casa. Un estudiante que aprende a preparar arroz, frijoles y verduras salteadas ha aprendido algo que le ahorrará dinero y cuidará su salud durante décadas.",
+          "Cocinar también refuerza lo que se aprende en otras clases. Duplicar una receta es una lección de fracciones. Ver cómo sube el pan es una lección de química y de seres vivos, porque la levadura es un organismo vivo. Leer una receta con cuidado y seguir los pasos en orden es práctica para leer instrucciones.",
+          "El año pasado, la Escuela Intermedia Lincoln de nuestro distrito probó una unidad de cocina de seis semanas en sus clases de ciencias. La maestra dijo que los estudiantes estaban más entusiasmados con esa unidad que con cualquier otra. Esto demuestra que una clase de cocina subiría los resultados de los exámenes en todo el distrito.",
+          "Algunas personas dicen que las escuelas ya están demasiado ocupadas para agregar otra clase. Es cierto que los horarios están llenos. Pero un solo semestre podría reemplazar una hora de estudio libre, y las habilidades durarían toda la vida. Las escuelas enseñan a los estudiantes a planear su futuro; también deberían enseñarles a alimentarse.",
+        ],
+      },
+    ],
+    qs: [
+      q(
+        "argument.claim",
+        ["evidence-not-claim", "counterclaim-not-claim", "evidence-not-claim"],
+        [
+          "Which sentence states the author's main claim?",
+          "Every middle school should require a semester of cooking.",
+          ["Doubling a recipe is a lesson in fractions.", "Some people argue that schools are already too busy to add another class.", "Far fewer can cook a simple, healthy dinner."],
+          ["Every middle school should require a semester of cooking."],
+          "This is the position the whole essay defends. The others are examples, a fact used as support, or the other side's view.",
+        ],
+        [
+          "¿Qué oración presenta la afirmación principal del autor?",
+          "Todas las escuelas intermedias deberían exigir un semestre de cocina.",
+          ["Duplicar una receta es una lección de fracciones.", "Algunas personas dicen que las escuelas ya están demasiado ocupadas para agregar otra clase.", "Muchos menos saben preparar una cena sencilla y saludable."],
+          ["Todas las escuelas intermedias deberían exigir un semestre de cocina."],
+          "Esta es la postura que defiende todo el ensayo. Las otras son ejemplos, un dato que sirve de apoyo o la postura contraria.",
+        ],
+      ),
+      q(
+        "argument.reasoning",
+        ["not-a-flaw", "not-a-flaw", "not-in-text"],
+        [
+          "What is the main flaw in the reasoning in paragraph 4?",
+          "It jumps from one class enjoying a unit to higher test scores everywhere.",
+          ["It names the real school in the district that tried the six-week cooking unit last year.", "It reports what the teacher observed during the unit.", "It reports that test scores fell after the unit."],
+          ["This proves that a cooking class would raise test scores across the district."],
+          "Students being excited in one school does not prove anything about test scores, let alone across a whole district. The conclusion goes far beyond the evidence.",
+        ],
+        [
+          "¿Cuál es la falla principal del razonamiento en el párrafo 4?",
+          "Salta de que una clase disfrutó una unidad a mejores resultados en todas partes.",
+          ["Nombra la escuela real del distrito que probó la unidad de cocina de seis semanas el año pasado.", "Cuenta lo que la maestra observó durante la unidad.", "Informa que los resultados de los exámenes bajaron después de la unidad."],
+          ["Esto demuestra que una clase de cocina subiría los resultados de los exámenes en todo el distrito."],
+          "Que los estudiantes de una escuela estuvieran entusiasmados no prueba nada sobre los exámenes, y menos en todo un distrito. La conclusión va mucho más allá de la evidencia.",
+        ],
+      ),
+      q(
+        "argument.evidence",
+        ["anecdote-as-proof", "off-point-evidence", "opinion-as-evidence"],
+        [
+          "Which new evidence would most strengthen the author's argument?",
+          "A study showing that students who took cooking classes ate healthier meals years later.",
+          ["A quote from one student at Lincoln Middle School who said the cooking unit was the most fun she had all year.", "A list of the author's favorite recipes.", "A statement that cooking is the most important subject of all."],
+          ["Cooking is a life skill that everyone eventually needs."],
+          "The essay claims cooking class builds lasting healthy habits. A study of many students over years tests that directly; one student's opinion or a recipe list does not.",
+        ],
+        [
+          "¿Qué evidencia nueva fortalecería más el argumento del autor?",
+          "Un estudio que muestre que quienes tomaron clases de cocina comían más sano años después.",
+          ["Una cita de una estudiante de la Escuela Intermedia Lincoln que dijo que la unidad de cocina fue lo más divertido de todo su año.", "Una lista de las recetas favoritas del autor.", "Una afirmación de que cocinar es la materia más importante de todas."],
+          ["Cocinar es una habilidad para la vida que todos necesitan tarde o temprano."],
+          "El ensayo afirma que la clase de cocina crea hábitos sanos que duran. Un estudio con muchos estudiantes durante años lo pone a prueba; la opinión de una estudiante o una lista de recetas no.",
+        ],
+      ),
+      q(
+        "pov.purpose",
+        ["wrong-purpose", "not-in-text", "contradicts-text"],
+        [
+          "Why does the author mention in paragraph 3 that yeast is a living organism?",
+          "To show that cooking connects to science lessons.",
+          ["To warn readers that homemade bread can be dangerous to eat.", "To prove that cooking is harder than science class.", "To argue that yeast should be kept out of school kitchens."],
+          ["Watching bread rise is a lesson in chemistry and living things, since yeast is a living organism."],
+          "Paragraph 3 is about how cooking supports other subjects. The yeast detail ties baking to what students learn about living things in science.",
+        ],
+        [
+          "¿Por qué el autor menciona en el párrafo 3 que la levadura es un organismo vivo?",
+          "Para mostrar que cocinar se conecta con las clases de ciencias.",
+          ["Para advertir que el pan hecho en casa puede ser peligroso.", "Para probar que cocinar es más difícil que la clase de ciencias.", "Para defender que la levadura no debería usarse en las cocinas escolares."],
+          ["Ver cómo sube el pan es una lección de química y de seres vivos, porque la levadura es un organismo vivo."],
+          "El párrafo 3 trata de cómo cocinar apoya otras materias. El dato de la levadura relaciona hornear pan con lo que se aprende sobre los seres vivos en ciencias.",
+        ],
+      ),
+      q(
+        "central.idea",
+        ["too-narrow", "too-broad", "contradicts-text"],
+        [
+          "What is the central idea of the essay?",
+          "Schools should teach cooking, a life skill that also supports other subjects.",
+          ["Doubling a recipe can teach students about fractions, and baking bread can teach chemistry.", "Healthy eating matters for people of all ages.", "Schools are already too busy to add any new classes."],
+          ["Every middle school should require a semester of cooking."],
+          "The essay argues for a cooking requirement and supports it with two main reasons: it is a lasting life skill, and it reinforces other classes.",
+        ],
+        [
+          "¿Cuál es la idea central del ensayo?",
+          "Las escuelas deberían enseñar a cocinar, una habilidad para la vida que también apoya otras materias.",
+          ["Duplicar una receta puede enseñar fracciones a los estudiantes, y hornear pan puede enseñarles química.", "Comer sano importa a cualquier edad.", "Las escuelas ya están demasiado ocupadas para agregar clases nuevas."],
+          ["Todas las escuelas intermedias deberían exigir un semestre de cocina."],
+          "El ensayo defiende que la cocina sea obligatoria y lo apoya con dos razones principales: es una habilidad para toda la vida y refuerza otras clases.",
+        ],
+      ),
+    ],
+  },
+  {
+    id: "middle-recess",
+    level: 1,
+    genre: "argument",
+    en: [
+      {
+        title: "Recess Belongs in Middle School",
+        paras: [
+          "In elementary school, recess was a given. Then we reached sixth grade, and it disappeared. At Hillcrest Middle School, students now go from 8:00 to 3:00 with only a twenty-minute lunch to break up the day. It is time to bring back recess for middle schoolers.",
+          "Children and teens need movement. The Centers for Disease Control and Prevention recommends that young people ages 6 to 17 get at least sixty minutes of physical activity each day. For students who ride the bus and spend their evenings on homework, a school recess may be the best chance to move.",
+          "A break also helps students focus. After sitting through four classes in a row, it is hard to pay attention to a fifth. Many teachers already know this; that is why some of them let us stand up and stretch halfway through a long lesson.",
+          "Recess teaches social skills, too. Middle school is when many students feel lonely or left out. Unstructured time to play a game of four square or just talk gives students a chance to make friends outside their usual group.",
+          "Some argue that recess would take time away from learning. But a fifteen-minute break would not have to come out of class time; it could come from trimming a few minutes from passing periods and homeroom. Besides, everyone knows that kids who have recess get better grades.",
+          "We are still kids. Fifteen minutes of fresh air is not too much to ask.",
+        ],
+      },
+    ],
+    es: [
+      {
+        title: "El recreo también es para la escuela intermedia",
+        paras: [
+          "En la primaria, el recreo estaba garantizado. Luego llegamos a sexto grado y desapareció. En la Escuela Intermedia Hillcrest, los estudiantes ahora van de 8:00 a 3:00 con solo veinte minutos de almuerzo para cortar el día. Es hora de devolverles el recreo a los estudiantes de la escuela intermedia.",
+          "Los niños y los adolescentes necesitan moverse. Los Centros para el Control y la Prevención de Enfermedades recomiendan que los jóvenes de 6 a 17 años hagan por lo menos sesenta minutos de actividad física al día. Para los estudiantes que viajan en autobús y pasan la tarde haciendo tarea, un recreo en la escuela puede ser su mejor oportunidad de moverse.",
+          "Un descanso también ayuda a concentrarse. Después de cuatro clases seguidas, es difícil prestar atención a una quinta. Muchos maestros ya lo saben; por eso algunos nos dejan pararnos y estirarnos a mitad de una lección larga.",
+          "El recreo también enseña a convivir. La escuela intermedia es cuando muchos estudiantes se sienten solos o excluidos. Un rato libre para jugar a la pelota o simplemente platicar les da la oportunidad de hacer amigos fuera de su grupo de siempre.",
+          "Algunos dicen que el recreo le quitaría tiempo al aprendizaje. Pero un descanso de quince minutos no tendría que salir del tiempo de clase; podría salir de recortar unos minutos a los cambios de salón y a la hora de registro. Además, todo el mundo sabe que los niños que tienen recreo sacan mejores calificaciones.",
+          "Todavía somos niños. Quince minutos de aire libre no es mucho pedir.",
+        ],
+      },
+    ],
+    qs: [
+      q(
+        "argument.evidence",
+        ["anecdote-as-proof", "opinion-as-evidence", "off-point-evidence"],
+        [
+          "Which evidence gives the strongest support for the claim that students need recess to move?",
+          "The CDC recommends at least sixty minutes of activity a day for young people.",
+          ["The author remembers feeling restless and unable to focus after sitting through four classes in a row.", "Everyone knows that kids who have recess get better grades.", "Elementary schools always have recess."],
+          ["The Centers for Disease Control and Prevention recommends that young people ages 6 to 17 get at least sixty minutes of physical activity each day."],
+          "A recommendation from a national health agency applies to all young people and is about movement. One person's feeling, a claim about “everyone,” and a fact about elementary schools do not prove the need.",
+        ],
+        [
+          "¿Qué evidencia apoya con más fuerza la afirmación de que los estudiantes necesitan recreo para moverse?",
+          "Los CDC recomiendan al menos sesenta minutos de actividad al día para los jóvenes.",
+          ["El autor recuerda que se sentía inquieto y sin poder concentrarse después de cuatro clases seguidas.", "Todo el mundo sabe que los niños que tienen recreo sacan mejores calificaciones.", "Las escuelas primarias siempre tienen recreo."],
+          ["Los Centros para el Control y la Prevención de Enfermedades recomiendan que los jóvenes de 6 a 17 años hagan por lo menos sesenta minutos de actividad física al día."],
+          "La recomendación de una agencia nacional de salud se aplica a todos los jóvenes y trata del movimiento. El sentimiento de una persona, una afirmación sobre “todo el mundo” y un dato sobre la primaria no prueban la necesidad.",
+        ],
+      ),
+      q(
+        "argument.reasoning",
+        ["not-a-flaw", "not-a-flaw", "not-a-flaw"],
+        [
+          "Which sentence relies on the weakest reasoning?",
+          "Besides, everyone knows that kids who have recess get better grades.",
+          ["Some argue that recess would take time away from learning.", "After sitting through four classes in a row, it is hard to pay attention to a fifth.", "Middle school is when many students feel lonely or left out."],
+          ["Besides, everyone knows that kids who have recess get better grades."],
+          "“Everyone knows” is not evidence. The sentence makes a big claim about grades and offers nothing to back it up.",
+        ],
+        [
+          "¿Qué oración se apoya en el razonamiento más débil?",
+          "Además, todo el mundo sabe que los niños que tienen recreo sacan mejores calificaciones.",
+          ["Algunos dicen que el recreo le quitaría tiempo al aprendizaje.", "Después de cuatro clases seguidas, es difícil prestar atención a una quinta.", "La escuela intermedia es cuando muchos estudiantes se sienten solos o excluidos."],
+          ["Además, todo el mundo sabe que los niños que tienen recreo sacan mejores calificaciones."],
+          "“Todo el mundo sabe” no es evidencia. La oración hace una afirmación grande sobre las calificaciones y no ofrece nada que la respalde.",
+        ],
+      ),
+      q(
+        "pov.response",
+        ["misses-author-stance", "overstates-view", "contradicts-text"],
+        [
+          "How does the author handle the argument that recess takes time from learning?",
+          "The author suggests the time could come from passing periods and homeroom.",
+          ["The author agrees and decides recess should stay in elementary school only.", "The author says that learning matters less than playing outside.", "The author never mentions this argument."],
+          ["it could come from trimming a few minutes from passing periods and homeroom"],
+          "The author states the objection and answers it with a plan: take the fifteen minutes from passing periods and homeroom instead of class time.",
+        ],
+        [
+          "¿Cómo maneja el autor el argumento de que el recreo le quita tiempo al aprendizaje?",
+          "Propone que el tiempo salga de los cambios de salón y de la hora de registro.",
+          ["Le da la razón y decide que el recreo debería quedarse solo en la primaria.", "Dice que aprender importa menos que jugar al aire libre.", "Nunca menciona ese argumento."],
+          ["podría salir de recortar unos minutos a los cambios de salón y a la hora de registro"],
+          "El autor presenta la objeción y la responde con un plan: tomar los quince minutos de los cambios de salón y de la hora de registro en lugar del tiempo de clase.",
+        ],
+      ),
+      q(
+        "structure.section",
+        ["wrong-section-role", "wrong-section-role", "wrong-section-role"],
+        [
+          "How does paragraph 1 set up the rest of the essay?",
+          "It describes a school day with no breaks and states the author's position.",
+          ["It gives the CDC's recommendation about how much physical activity young people need each day.", "It answers people who say recess wastes time.", "It explains why middle school students feel lonely."],
+          ["It is time to bring back recess for middle schoolers."],
+          "Paragraph 1 shows the problem, a long day with only a short lunch, and ends with the claim the other paragraphs support.",
+        ],
+        [
+          "¿Cómo prepara el párrafo 1 el resto del ensayo?",
+          "Describe un día escolar sin descansos y presenta la postura del autor.",
+          ["Da la recomendación de los CDC sobre cuánta actividad física necesitan los jóvenes cada día.", "Responde a quienes dicen que el recreo es una pérdida de tiempo.", "Explica por qué los estudiantes de la escuela intermedia se sienten solos."],
+          ["Es hora de devolverles el recreo a los estudiantes de la escuela intermedia."],
+          "El párrafo 1 muestra el problema, un día largo con solo un almuerzo corto, y termina con la afirmación que apoyan los demás párrafos.",
+        ],
+      ),
+      q(
+        "words.tone",
+        ["opposite-tone", "opposite-tone", "ignores-connotation"],
+        [
+          "Which word best describes the tone of the final paragraph?",
+          "Sincere",
+          ["Furious", "Playful", "Detached"],
+          ["Fifteen minutes of fresh air is not too much to ask."],
+          "“We are still kids” and “not too much to ask” are plain, honest appeals. The writer is neither angry nor joking, and the words carry real feeling.",
+        ],
+        [
+          "¿Qué palabra describe mejor el tono del último párrafo?",
+          "Sincero",
+          ["Furioso", "Juguetón", "Distante"],
+          ["Quince minutos de aire libre no es mucho pedir."],
+          "“Todavía somos niños” y “no es mucho pedir” son peticiones sencillas y honestas. El autor no está enojado ni bromeando, y sus palabras llevan sentimiento.",
+        ],
+      ),
+    ],
+  },
+];

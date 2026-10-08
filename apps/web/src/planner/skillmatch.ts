@@ -213,7 +213,7 @@ export function sameWord(a: string, b: string): boolean {
 
 /**
  * Everyday compounds whose words are also school words: "power plant" is not about plants or powers,
- * "prime minister" not about primes. They are taken out of a question before it is matched.
+ * "prime minister" not about primes. Each is read as one word that only matches itself.
  */
 const COMPOUNDS = [
   "power plant",
@@ -223,6 +223,13 @@ const COMPOUNDS = [
   "prime time",
   "cell phone",
   "cell tower",
+  "prison cell",
+  "jail cell",
+  "battery cell",
+  "solar cell",
+  "fuel cell",
+  "atom bomb",
+  "atomic bomb",
   "rock band",
   "rock music",
   "rock and roll",
@@ -234,6 +241,7 @@ const COMPOUNDS = [
   "planta electrica",
   "primer ministro",
   "telefono celular",
+  "celula solar",
   "musica rock",
   "banda de rock",
 ].map(tokens);
@@ -245,12 +253,16 @@ function contains(whole: string[], part: string[]): boolean {
   return false;
 }
 
-/** The words with every everyday compound taken out ("what is a power plant" → nothing to match). */
-function withoutCompounds(words: string[]): string[] {
+/**
+ * The words with every everyday compound joined into one ([power, plant] → ["power plant"]): it no longer
+ * matches "plant" or "power", only itself, and it still counts as something asked, so "how does a cell
+ * phone work" is not a question about "work".
+ */
+export function joinCompounds(words: string[]): string[] {
   const out = [...words];
   for (const c of COMPOUNDS)
-    for (let i = 0; i + c.length <= out.length; i++) if (c.every((w, j) => out[i + j] === w)) out.splice(i, c.length, "");
-  return out.filter(Boolean);
+    for (let i = 0; i + c.length <= out.length; i++) if (c.every((w, j) => out[i + j] === w)) out.splice(i, c.length, c.join(" "));
+  return out;
 }
 
 type Entry = { id: string; subject: Subject; grade: Grade; phrases: string[][]; title: string[][]; titleWords: Set<string> };
@@ -279,7 +291,7 @@ function entries(): Entry[] {
  * With `grade`, ties go to the skill closest to the learner's grade.
  */
 export function matchSkills(text: string, subject?: Subject, limit = 3, grade?: Grade): string[] {
-  const words = withoutCompounds(tokens(text));
+  const words = joinCompounds(tokens(text));
   if (!words.length || norm(text).length < 3) return [];
   const scored: [Entry, number][] = [];
   for (const e of entries()) {

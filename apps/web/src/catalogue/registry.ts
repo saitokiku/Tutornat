@@ -13,6 +13,54 @@ import changes from "./science-changes";
 import matter from "./science-matter";
 import moon from "./science-moon";
 import motion from "./science-motion";
+import numbersTo10 from "./math-numbers-to-10";
+import numbersTo10Es from "./math-numbers-to-10-es";
+import hundredsTensOnes from "./math-hundreds-tens-ones";
+import hundredsTensOnesEs from "./math-hundreds-tens-ones-es";
+import multiplication from "./math-multiplication";
+import multiplicationEs from "./math-multiplication-es";
+import multiplyBigger from "./math-multiply-bigger";
+import decimals from "./math-decimals";
+import ratios from "./math-ratios";
+import ratiosEs from "./math-ratios-es";
+import proportional from "./math-proportional";
+import equations from "./math-equations";
+import equationsEs from "./math-equations-es";
+import linearFunctions from "./math-linear-functions";
+import pythagorean from "./math-pythagorean";
+import pythagoreanEs from "./math-pythagorean-es";
+import rhymesSyllables from "./english-rhymes-syllables";
+import rhymesSyllablesEs from "./english-rhymes-syllables-es";
+import shortWords from "./english-short-words";
+import partsOfSpeech from "./english-parts-of-speech";
+import partsOfSpeechEs from "./english-parts-of-speech-es";
+import figurative from "./english-figurative";
+import figurativeEs from "./english-figurative-es";
+import factOpinion from "./english-fact-opinion";
+import paragraph from "./english-paragraph";
+import paragraphEs from "./english-paragraph-es";
+import contextClues from "./english-context-clues";
+import fallacies from "./english-fallacies";
+import fallaciesEs from "./english-fallacies-es";
+import themePov from "./english-theme-pov";
+import thesis from "./english-thesis";
+import thesisEs from "./english-thesis-es";
+import living from "./science-living";
+import livingEs from "./science-living-es";
+import lightSound from "./science-light-sound";
+import lifeCycles from "./science-life-cycles";
+import lifeCyclesEs from "./science-life-cycles-es";
+import energy from "./science-energy";
+import waterCycle from "./science-water-cycle";
+import waterCycleEs from "./science-water-cycle-es";
+import cells from "./science-cells";
+import weatherClimate from "./science-weather-climate";
+import ecosystems from "./science-ecosystems";
+import atoms from "./science-atoms";
+import heredity from "./science-heredity";
+import cellsEs from "./science-cells-es";
+import ecosystemsEs from "./science-ecosystems-es";
+import heredityEs from "./science-heredity-es";
 
 // Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
 export const REGISTRY: CatalogueEntry[] = [
@@ -29,4 +77,52 @@ export const REGISTRY: CatalogueEntry[] = [
   matter,
   moon,
   motion,
+  numbersTo10,
+  numbersTo10Es,
+  hundredsTensOnes,
+  hundredsTensOnesEs,
+  multiplication,
+  multiplicationEs,
+  multiplyBigger,
+  decimals,
+  ratios,
+  ratiosEs,
+  proportional,
+  equations,
+  equationsEs,
+  linearFunctions,
+  pythagorean,
+  pythagoreanEs,
+  rhymesSyllables,
+  rhymesSyllablesEs,
+  shortWords,
+  partsOfSpeech,
+  partsOfSpeechEs,
+  figurative,
+  figurativeEs,
+  factOpinion,
+  paragraph,
+  paragraphEs,
+  contextClues,
+  fallacies,
+  fallaciesEs,
+  themePov,
+  thesis,
+  thesisEs,
+  living,
+  livingEs,
+  lightSound,
+  lifeCycles,
+  lifeCyclesEs,
+  energy,
+  waterCycle,
+  waterCycleEs,
+  cells,
+  weatherClimate,
+  ecosystems,
+  atoms,
+  heredity,
+  cellsEs,
+  ecosystemsEs,
+  heredityEs,
 ];

@@ -1,0 +1,395 @@
+import type { CatalogueEntry } from "./types";
+
+const shortWords: CatalogueEntry = {
+  id: "english-short-words",
+  title: "Reading short words",
+  summary: "Blend letter sounds to read short words and sentences.",
+  subject: "english",
+  grade: "1",
+  locale: "en",
+  lessons: [
+    {
+      id: "sound-it-out",
+      title: "Sound it out",
+      summary: "Say the sound of each letter. Then blend the sounds.",
+      minutes: 10,
+      scenes: [
+        {
+          id: "s1",
+          kind: "slide",
+          title: "Letters stand for sounds",
+          blocks: [
+            { type: "text", text: "Each letter in a short word stands for a sound." },
+            { type: "text", text: "Cat has three letters and three sounds: c, a, t." },
+            {
+              type: "visual",
+              visual: { kind: "dots", groups: [1, 1, 1] },
+              alt: "Three dots: one each for c, a and t.",
+            },
+            { type: "text", text: "Touch a dot for each sound as you say it." },
+          ],
+        },
+        {
+          id: "s2",
+          kind: "slide",
+          title: "Blend the sounds",
+          blocks: [
+            { type: "text", text: "Say the sounds slowly: c, a, t." },
+            { type: "text", text: "Now say them faster and faster. You hear cat." },
+            { type: "points", items: ["Say each sound.", "Slide the sounds together.", "Listen for a word you know."] },
+          ],
+        },
+        {
+          id: "s3",
+          kind: "interactive",
+          title: "A or o?",
+          prompt: "Read each word. Look at the middle letter. Is it a or o?",
+          widget: {
+            kind: "sorter",
+            categories: ["a, as in cat", "o, as in dog"],
+            items: [
+              { id: "hat", text: "hat", answer: 0 },
+              { id: "mop", text: "mop", answer: 1 },
+              { id: "pan", text: "pan", answer: 0 },
+              { id: "hot", text: "hot", answer: 1 },
+              { id: "bag", text: "bag", answer: 0 },
+              { id: "fox", text: "fox", answer: 1 },
+            ],
+          },
+        },
+        {
+          id: "s4",
+          kind: "quiz",
+          title: "Check what you know",
+          questions: [
+            {
+              id: "q1",
+              prompt: "Blend the sounds s, u, n. What word is it?",
+              choices: ["sun", "sit", "sad"],
+              answer: 0,
+              hint: "Say s, then u, then n. Now say them fast.",
+              explain: "S, u and n blend to make sun.",
+            },
+            {
+              id: "q2",
+              prompt: "Which word says pig?",
+              choices: ["pig", "big", "peg"],
+              answer: 0,
+              hint: "Check the first letter. Then check the middle.",
+              explain: "P-i-g says pig. Big starts with b. Peg has e in the middle.",
+            },
+            {
+              id: "q3",
+              prompt: "How many sounds are in dog?",
+              choices: ["2", "3", "4"],
+              answer: 1,
+              hint: "Touch a dot for each sound: d, o, g.",
+              explain: "Dog has three sounds: d, o, g.",
+            },
+          ],
+        },
+        {
+          id: "s5",
+          kind: "project",
+          title: "Sound dots at home",
+          brief: "Use sound dots to read short words.",
+          steps: [
+            "Write cat, dog and sun on paper.",
+            "Draw a dot under each letter.",
+            "Touch each dot and say its sound.",
+            "Slide your finger under the word. Say it fast.",
+            "Read your words to someone at home.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "short-vowels",
+      title: "The middle sound",
+      summary: "Many short words have a vowel in the middle.",
+      minutes: 10,
+      scenes: [
+        {
+          id: "s1",
+          kind: "slide",
+          title: "Vowels in the middle",
+          blocks: [
+            { type: "text", text: "The letters a, e, i, o and u are vowels." },
+            { type: "text", text: "Many short words have one vowel in the middle." },
+            {
+              type: "points",
+              items: ["a, as in apple", "e, as in egg", "i, as in igloo", "o, as in octopus", "u, as in up"],
+            },
+          ],
+        },
+        {
+          id: "s2",
+          kind: "slide",
+          title: "One letter, a new word",
+          blocks: [
+            { type: "text", text: "Read these: bag, beg, big, bug." },
+            { type: "text", text: "Only the middle letter changes. Each one is a new word." },
+            { type: "text", text: "So look closely at the middle when you read." },
+          ],
+        },
+        {
+          id: "s3",
+          kind: "interactive",
+          title: "Sort by the middle sound",
+          prompt: "Read each word. Which vowel is in the middle?",
+          widget: {
+            kind: "sorter",
+            categories: ["a, as in apple", "i, as in igloo", "u, as in up"],
+            items: [
+              { id: "cap", text: "cap", answer: 0 },
+              { id: "sit", text: "sit", answer: 1 },
+              { id: "cup", text: "cup", answer: 2 },
+              { id: "map", text: "map", answer: 0 },
+              { id: "pig", text: "pig", answer: 1 },
+              { id: "bus", text: "bus", answer: 2 },
+            ],
+          },
+        },
+        {
+          id: "s4",
+          kind: "quiz",
+          title: "Check what you know",
+          questions: [
+            {
+              id: "q1",
+              prompt: "Change the middle of hat to o. What word do you get?",
+              choices: ["hot", "hit", "hut"],
+              answer: 0,
+              hint: "Keep the h and the t. Put o in the middle.",
+              explain: "H-o-t says hot.",
+            },
+            {
+              id: "q2",
+              prompt: "Which word has e in the middle, like egg?",
+              choices: ["bed", "bad", "bud"],
+              answer: 0,
+              hint: "Say each word slowly. Listen to the middle.",
+              explain: "Bed has e in the middle. Bad has a. Bud has u.",
+            },
+            {
+              id: "q3",
+              prompt: "Sam reads pin as pan. Which letter did he misread?",
+              choices: ["The first letter", "The middle letter", "The last letter"],
+              answer: 1,
+              hint: "Look at pin and pan. Which letter is different?",
+              explain: "Pin and pan differ only in the middle. Pin has i. Pan has a.",
+            },
+          ],
+        },
+        {
+          id: "s5",
+          kind: "project",
+          title: "Vowel switch",
+          brief: "Make new words by changing the middle letter.",
+          steps: [
+            "Write b, a space, and g on paper.",
+            "Put a in the space. Read the word: bag.",
+            "Now try e, i, o and u. Read each word.",
+            "A bog is a wet, muddy place. Did you know that one?",
+            "Pick one word. Say a sentence with it.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "word-families",
+      title: "Word families",
+      summary: "Words in a family share an end. Read one, read many.",
+      minutes: 10,
+      scenes: [
+        {
+          id: "s1",
+          kind: "slide",
+          title: "Same end, new start",
+          blocks: [
+            { type: "text", text: "Some words share the same end. They make a word family." },
+            { type: "text", text: "Cat, hat, mat and sat all end with at." },
+            { type: "text", text: "If you can read cat, you can read hat." },
+          ],
+        },
+        {
+          id: "s2",
+          kind: "slide",
+          title: "Swap the first letter",
+          blocks: [
+            { type: "text", text: "Start with op." },
+            { type: "text", text: "Put t in front: top. Put m in front: mop." },
+            { type: "text", text: "Put h in front: hop." },
+            { type: "points", items: ["Keep the end the same.", "Change the first letter.", "Read the new word."] },
+          ],
+        },
+        {
+          id: "s3",
+          kind: "interactive",
+          title: "Which family?",
+          prompt: "Read each word. Which word does it end like?",
+          widget: {
+            kind: "sorter",
+            categories: ["Ends like cat", "Ends like pig", "Ends like top"],
+            items: [
+              { id: "mat", text: "mat", answer: 0 },
+              { id: "dig", text: "dig", answer: 1 },
+              { id: "hop", text: "hop", answer: 2 },
+              { id: "bat", text: "bat", answer: 0 },
+              { id: "wig", text: "wig", answer: 1 },
+              { id: "pop", text: "pop", answer: 2 },
+            ],
+          },
+        },
+        {
+          id: "s4",
+          kind: "quiz",
+          title: "Check what you know",
+          questions: [
+            {
+              id: "q1",
+              prompt: "Which word is in the same family as sun?",
+              choices: ["run", "sit", "sad"],
+              answer: 0,
+              hint: "Look at the end of sun: u, n.",
+              explain: "Run and sun both end with un. They are in the same family.",
+            },
+            {
+              id: "q2",
+              prompt: "Start with ig. Put w in front. What word is it?",
+              choices: ["wig", "win", "wag"],
+              answer: 0,
+              hint: "Say w, then ig. Blend them.",
+              explain: "W and ig blend to make wig.",
+            },
+            {
+              id: "q3",
+              prompt: "Which word does not belong: hop, mop, top, map?",
+              choices: ["hop", "mop", "top", "map"],
+              answer: 3,
+              hint: "Look at the last two letters of each word.",
+              explain: "Hop, mop and top end with op. Map ends with ap.",
+            },
+          ],
+        },
+        {
+          id: "s5",
+          kind: "project",
+          title: "Word family strip",
+          brief: "Make one word family into many words.",
+          steps: [
+            "Write at on the right side of a card.",
+            "Write c, h, m, s and b on small slips.",
+            "Put each slip in front of at.",
+            "Read each word you make.",
+            "Try again with ug: bug, hug, mug, rug.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "read-sentences",
+      title: "Read a short sentence",
+      summary: "Read short words together to make sentences.",
+      minutes: 10,
+      scenes: [
+        {
+          id: "s1",
+          kind: "slide",
+          title: "Short words make sentences",
+          blocks: [
+            { type: "text", text: "Now read short words together." },
+            { type: "text", text: "The cat is on the mat." },
+            { type: "text", text: "Some words, like the and is, you know by sight." },
+            {
+              type: "points",
+              items: ["Read each word.", "Sound out a word you do not know.", "Read the whole sentence again, smoothly."],
+            },
+          ],
+        },
+        {
+          id: "s2",
+          kind: "slide",
+          title: "Read: Ben and the bug",
+          blocks: [
+            { type: "text", text: "Ben has a big bug." },
+            { type: "text", text: "The bug is in a box." },
+            { type: "text", text: "Ben lets the bug go." },
+          ],
+        },
+        {
+          id: "s3",
+          kind: "interactive",
+          title: "In the story or not?",
+          prompt: "Read each sentence. Does Ben's story say it?",
+          widget: {
+            kind: "sorter",
+            categories: ["In the story", "Not in the story"],
+            items: [
+              { id: "big-bug", text: "Ben has a big bug.", answer: 0 },
+              { id: "cup", text: "The bug is in a cup.", answer: 1 },
+              { id: "go", text: "Ben lets the bug go.", answer: 0 },
+              { id: "hat", text: "Ben has a red hat.", answer: 1 },
+              { id: "box", text: "The bug is in a box.", answer: 0 },
+              { id: "log", text: "The bug sits on a log.", answer: 1 },
+            ],
+          },
+        },
+        {
+          id: "s4",
+          kind: "quiz",
+          title: "Check what you know",
+          questions: [
+            {
+              id: "q1",
+              prompt: "Read: The pig can dig. What can the pig do?",
+              choices: ["dig", "sit", "run"],
+              answer: 0,
+              hint: "Find the word after can.",
+              explain: "The sentence says the pig can dig.",
+            },
+            {
+              id: "q2",
+              prompt: "Read: Meg has a wet dog. What is wet?",
+              choices: ["Meg", "the dog", "the hat"],
+              answer: 1,
+              hint: "Find the word wet. What word comes right after it?",
+              explain: "Wet comes right before dog. The dog is wet.",
+            },
+            {
+              id: "q3",
+              prompt: "Which sentence says the cat is on a mat?",
+              choices: ["The cat is on a mat.", "The cat is on a map.", "The bat is on a mat."],
+              answer: 0,
+              hint: "Check every word. Look at the first and last letters.",
+              explain: "Map ends with p, not t. Bat starts with b, not c.",
+            },
+          ],
+        },
+        {
+          id: "s5",
+          kind: "project",
+          title: "Build a sentence",
+          brief: "Make sentences from word cards.",
+          steps: [
+            "Get eight small cards. Write one word on each.",
+            "The words: the, a, cat, dog, sat, ran, on, mat.",
+            "Line up cards to make a sentence.",
+            "Read it out loud. Does it make sense?",
+            "Swap one card. Read your new sentence.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+export const practice: Record<string, string[]> = {
+  "sound-it-out": ["e.cvc.words"],
+  "short-vowels": ["e.cvc.words"],
+  "word-families": ["e.cvc.words", "e.rhyme"],
+  "read-sentences": ["e.cvc.words", "e.sight.words"],
+};
+
+export default shortWords;

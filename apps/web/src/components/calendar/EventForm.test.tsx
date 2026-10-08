@@ -59,7 +59,7 @@ describe("EventForm", () => {
     render(<EventForm profileId="p1" date="2026-10-12" classes={[]} locale="en" onDone={() => {}} />);
     await user.type(screen.getByLabelText("What"), "Fractions test");
     await user.type(screen.getByRole("searchbox", { name: "Find a skill" }), "equivalent");
-    await user.click(screen.getByRole("button", { name: /Equivalent fractions/i }));
+    await user.click(screen.getByRole("button", { name: "Equivalent fractions" }));
     await user.click(screen.getByRole("button", { name: "Remove: Name the fraction" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(eventsOf(read(), "p1")[0].skillIds).toEqual(["m.frac.equiv"]);

@@ -77,7 +77,7 @@ test("“what is a logical fallacy” in demo mode: a cited extract and the fall
   await expect(fact.getByText("Text from Wikipedia, CC BY-SA 4.0")).toBeVisible();
   const practice = board.getByRole("article", { name: "Practice: Spot the fallacy" });
   await expect(practice).toBeVisible();
-  await expect(board.getByRole("article", { name: "When appeals mislead" })).toBeVisible();
+  await expect(board.getByRole("article", { name: "Attacking the person, twisting the point" })).toBeVisible();
   // Said once, in the opening; not repeated in the answer.
   await expect(page.getByText(/I'm the demo tutor/)).toHaveCount(1);
   await noOverflow(page);
