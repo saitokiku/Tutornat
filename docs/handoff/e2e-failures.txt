@@ -1,3 +1,13 @@
+ALL FIXED IN T01 (Queue 4 step 0a: Codex ec7b776 code without its docs, plus its fix list). T01 is
+committed on branch worktree-wf_8bf8e121-43e-1 (c8dc7ab..df04156) and reaches foundation with step 0a.
+Until 0a lands, foundation still fails these. On ec7b776 every failure below passes at desktop and
+phone: Codex measured 174 passed / 0 failed / 16 skipped, and our review re-ran the affected specs
+(104 passed, 2 opt-in skips, 0 failed). T01 also fixes the four more failing scenarios in the fresh
+baseline (landing privacy heading, trust retention and review contrast, weekly email):
+docs/reviews/2026-10-07-baseline.json. The 16 skips are listed in
+docs/reviews/integrated-release-evidence.md. Step 0a's own gate goes in docs/STATUS.md. Kept below as
+the record of what failed.
+
 [desktop] › e2e/aiinfra.spec.ts:54:5 › over the daily cap the tutor says so kindly, in its own voice, and practice is one tap away 
     Error: expect(locator).toBeVisible() failed
     Expected: visible

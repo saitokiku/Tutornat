@@ -13,6 +13,11 @@ Each phase swaps what's behind the screens, not the screens. Status lives in [ST
 ## Next — make it real for families (launch blockers)
 
 The plan for 1.0: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md) (gap review in [plans/2026-10-07-real-product-plan.md](plans/2026-10-07-real-product-plan.md)).
+The order of work is STATUS Queue 4. Codex's review of 2026-10-07 is an input to it, not a new order:
+its [system audit](reviews/2026-10-07-system-audit.md) added repair steps (course-route safety screen,
+durable help and check evidence, account authority, the M5 accounts and consent step); its
+[workspace](specs/2026-10-07-one-learning-workspace.md) and [models, voice and Jev](specs/2026-10-07-models-voice-and-jev.md)
+specs and [plan](plans/2026-10-07-integrated-learning-release.md) are proposals mapped into the queue.
 
 1. **Accounts and a database.** Replace the bodies of `apps/web/src/lib/*.ts` with server calls;
    Postgres. Port trellis's invariants (append-only answers, assistance latch, 48 h clock) from
@@ -31,7 +36,12 @@ The plan for 1.0: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaiz
 
 - **Voice that feels natural:** streaming speech recognition and speech output (research in
   `modules/kaizenedu-tutor/docs/research/2026-09-30-natural-turn-taking.md`), barge-in, children's ASR.
-- **OpenMAIC stage parity:** whiteboard actions, narrated slides, sandboxed generated interactives
+  For minors the path stays recognizer → safety screen → name scrub → model → speech unless the owner
+  decides otherwise.
+- **Model and voice evaluation** on synthetic data, benchmark-led (owner: "use benchmarks to pick
+  models"), ending in a recommendation to the owner. Anthropic only in production until the owner
+  approves another vendor in writing.
+- **OpenMAIC stage parity, then beyond:** whiteboard actions, narrated slides, sandboxed generated interactives
   (`modules/openmaic-classroom`), behind the same quality gates.
 - **School systems:** Google Classroom / Canvas APIs (read-only) beyond calendar feeds; teacher
   share links.
@@ -41,5 +51,7 @@ The plan for 1.0: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaiz
 
 ## Later
 
-Adults (profiles already support it), more subjects, curated open curriculum with per-item rights checks
+Adults (profiles already support it; Codex proposed an adult acceptance story now, which awaits the
+owner, STATUS decision 16), a future tutor face and optional gaze help (camera off until separately
+evaluated and permissioned), website ornamentation, more subjects, curated open curriculum with per-item rights checks
 (`docs/history/discovery/delivery/fullstack/research/oer-20261003/`), human tutors as an add-on.

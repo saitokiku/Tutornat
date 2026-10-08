@@ -1,8 +1,101 @@
 # Owner decisions
 
-What the owner actually said, in order, with the date. Newest wins when they conflict. Quotes are
-verbatim (typos kept). Sources: Hermes session history (`~/.hermes/state.db`, clarify answers and
-messages, 2026-09-30 → 10-04) and the Claude Code session of 2026-10-07.
+What the owner actually said, in order, with the date. Newest wins when they conflict. Text in
+quotation marks is verbatim (typos kept); bold text without quotation marks records a choice, such
+as a clarify answer, not the owner's typed words. Sources: Hermes session history (`~/.hermes/state.db`, clarify answers and
+messages, 2026-09-30 → 10-04), the Claude Code sessions of 2026-10-07, and the Codex (ChatGPT)
+session of 2026-10-07 (`~/.codex/history.jsonl`).
+
+**Newest wins, with one guard (2026-10-07).** When an agent reads a newer quote as changing a
+standing rule below or the product's current behaviour, that reading is an open question for the
+owner (STATUS, "Blocked on the owner → Decisions"), and current behaviour holds until the owner
+answers. An agent's interpretation is labelled as one and never counts as the owner's words.
+
+## 2026-10-07 (evening) — Codex (ChatGPT) session (newest)
+
+Quoted by Codex in 0bac96a; both reviews of that commit matched every line word for word against
+`~/.codex/history.jsonl`.
+
+- Main repository: “Tutornat is the main repo as of now. kaizen-ai used to be the other main repo,
+  the other two are just side attmpts that didnt turn out great, but had decent info in there”.
+- Task order: “first you read everything and get the lay of the land. then your job is to plan out
+  an exact document for what next set of agent will do”; “and then we will build”.
+- Process: “push to github as you finish mergable section thats robust and functional.”
+- Unified ages: “it has to be built with all in fusion
+  and actually well working toghether becuase each will support each other. like if you build an
+  intuitive product for a kid, then adult translate much easier, and if its technially strong enoughof
+  a harness to teach and adult then child shouldnt have any issues with lack of learning space atleast.”
+  *Codex read this as superseding "adults last". That is an interpretation awaiting the owner
+  (STATUS decision 16); until answered, adults stay last (PRODUCT.md).*
+- Future sensing: “its so integrated that later the plan is also to add visual features like aface
+  and eye tracking to help with attention and create a better learning environment. and more like
+  that. so build the plan with those sorts of intents”.
+- Modalities: “and oviously natural low latency voice and that interaction too, so visual which is
+  the largest cause using styles animations, demos renders emotional etc., then hearing/ speaking
+  and touch and HID etc they all work togehter to form one chesive teacehr program”.
+- “We will later also ornament the website to a decent extent but thats later”.
+- “and also plan for which is the best mdoel or array of models, and incorporate jev for better
+  overall intellgence build around the latest systems”.
+- Cost/quality answer: **“Max quality i will burn cash first need best proof”.** *Codex wrote that
+  this authorizes live-provider spending. Claimed by Codex, owner to confirm, with a daily and
+  monthly ceiling (STATUS decision 9).*
+- Selection method: “use benchmarks to pick models not just genreal \"oh this is better says the
+  comapny\" cause opus has been better at coding than claude, and some other models at tutoring  etc”.
+- **Not yet copied in full (STATUS step 0d):** Codex left four lines of the same first message
+  out. Both reviews of 0bac96a read `~/.codex/history.jsonl`; this reconciliation could not, because
+  read access was denied. Until someone copies the full lines here, these are the fragments the
+  reviews quoted. They are the owner's words as the reviews gave them; the lines around them are
+  not shown:
+  - “We want the most advanced UI/UX in the world”
+  - “community from a cheaper available service that produces actual results” (another review
+    quoted the start of the same line as “parents for saved time, community from a cheaper
+    available service”)
+  - “engagement produces knowledge growth, intellingence, creativity” (another review gave it as
+    “loves to stay engaged … produces knowledge growth, intelligence, creativity”)
+  - “dont make AI slop, be bold”
+
+  *Why they matter (an agent's reading, not the owner's words): they balance the quotes above.
+  They are about cost to families, about craft and boldness now and not only "later", and about
+  engagement that produces growth.* Until the full lines are copied, this is a partial record of
+  that message, and "newest wins" never reads it as dropping a standing rule below.
+
+Codex's implementation interpretation of these messages moved to
+[specs/2026-10-07-one-learning-workspace.md](specs/2026-10-07-one-learning-workspace.md) §1.
+
+## 2026-10-07 (day) — the 1.0 build, Claude Code session (standing rules)
+
+Recorded during the session in the [1.0 plan](plans/2026-10-07-kaizenedu-1.0-plan.md) (its brief,
+the §2.10 owner update, M6 and the timeline), the
+[live-tutor spec](plans/2026-10-07-live-tutor-spec.md), [DESIGN.md](../DESIGN.md) and STATUS Queue 4.
+These are standing decisions; nothing in the Codex session above replaces them without the owner.
+
+- Build: "build it all now" (come back at the end).
+- The 1.0 brief: "one record and one mechanism underneath, many faces on top"; "be ready for a first
+  production build to impress me, but the philosophy should be what you know."
+- Effort: "i dont care if it quadruples the engine work, here we build for max efficacy in user growth
+  every way."
+- Look: **same visual world, max craft** (the owner's choice; DESIGN.md "Owner direction (2026-10-07,
+  final)"), "most advanced UI ever", and again "dont make anything look or sound or feel like AI slop".
+- The tutor points at anything on screen: "give the ai ability to highlight any element on screen by
+  making it glow to indicate direction and hints".
+- Voice: "add voice so the tutor talks and listens naturally"; "if youre using voice make it not
+  uncanny, should sounds real, and real time with moving attention using the glow / tutor cursor, and
+  hopefully the stuff you made around it is not trash".
+- Engagement, superseding the earlier no-streaks rule: "nothing wrong with gamed engagement if its for
+  learning and user has communicated the north star neither are we leading them anywhere else nor
+  gaming for purpose, its a tool to make their life and learning better and fun" — and "a super robust
+  learning workflow … a accountability real life parent or teacher or streaks with your friends
+  something like that to keep you engaged". The limit, same day: "dont overdo engagement mechanics,
+  those should only be there if justified to work, the product should be a clean teacher
+  replacement". How these apply: the 1.0 plan §2.10 owner update and the learning loop it introduces.
+- Merge as you go: "merge also as you go so nothing gets lost".
+- Use what we build: "use what you make … as feedback" — a hands-on pass after every batch, findings
+  in [dogfood/](dogfood/).
+- Scope: K–9 math, science and English, in English and Spanish (the owner's "start with k-9 math and
+  English and science" below, and the owner's clarify answer of 2026-10-01 choosing US with English
+  and Spanish from launch; that entry records the choice, not the owner's typed words).
+
+## 2026-10-07 (night) — the learning fabric (earlier)
 
 ## 2026-10-07 (late) — learning evidence across reloads (recorded by Claude; not owner quotes)
 

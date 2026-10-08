@@ -10,8 +10,10 @@ It serves four jobs in one product: **help right now** (homework, a test tomorro
 
 **Status:** works end to end in the browser on demo data. The AI tutor and lesson writer are built
 and switch on when the deployment has an AI provider; without one, a demo tutor uses vetted hints and
-worked examples. Server accounts, the database and the children's-privacy consent flow come next —
-see [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/STATUS.md](docs/STATUS.md).
+worked examples. Server accounts, the database and the children's-privacy consent flow come next.
+What is done, what is next and the latest test results: [docs/STATUS.md](docs/STATUS.md) (the build
+queue) and [docs/ROADMAP.md](docs/ROADMAP.md). Codex's [system audit](docs/reviews/2026-10-07-system-audit.md)
+of 2026-10-07 lists where the pieces don't yet connect; its fixes are in the queue.
 
 | | |
 |---|---|
@@ -46,9 +48,10 @@ KAIZEN_AI=gateway              # or, on Vercel, the deployment's own OIDC token 
 See `apps/web/.env.example`. On Vercel an Anthropic key is ignored unless `KAIZEN_AI=anthropic` is set,
 because the project still holds keys from earlier attempts; requests always go to Anthropic's own API.
 
-Settings shows which one is live. `npm run verify` runs lint, type check, 724 unit tests and a
-production build. `npm run e2e` runs six journeys and an accessibility audit at desktop and phone
-sizes (`CI=1 npm run e2e` when a dev server is already running).
+Settings shows which one is live. `npm run verify` runs lint, type check, the unit tests and a
+production build. `npm run e2e` runs the browser journeys and accessibility checks at desktop and
+phone sizes (`CI=1 npm run e2e` when a dev server is already running). Current counts are in
+[docs/STATUS.md](docs/STATUS.md).
 
 ## What's here
 
@@ -72,4 +75,7 @@ sizes (`CI=1 npm run e2e` when a dev server is already running).
   try, and calls tools for hints, checking and worked examples. No answer key is in its prompt.
 - **Safety before any model.** A crisis or abuse disclosure gets a fixed referral (988, Childhelp) and
   a note for the family. Names never reach a model. Transcripts are visible to grown-ups.
-- **No engagement tricks.** No streaks to lose, no points, no "come back" nudges.
+- **Engagement earns its place.** A game-like mechanic is fine when it serves the learner's own goal,
+  has evidence that it helps at that age, comes in its smallest form, and never fakes progress or
+  leads anywhere else. Nothing nags a child. With every option off, it is a calm, clean teacher
+  ([1.0 plan §2.10](docs/plans/2026-10-07-kaizenedu-1.0-plan.md)).

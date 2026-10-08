@@ -1,6 +1,7 @@
 {
  "requests": [
   {
+   "status": "DONE in T01 (Queue 4 step 0a, Codex ec7b776 code; on foundation once 0a lands, until then on branch worktree-wf_8bf8e121-43e-1): AppShell calls useWeeklyEmail(), so the weekly email goes out from every Parent view screen and never from a child's session; the e2e journey passes.",
    "file": "apps/web/src/components/shell/AppShell.tsx",
    "change": "Call `useWeeklyEmail();` once at the top of AppShell (`import { useWeeklyEmail } from \"@/lib/email/weekly\";`). It sends last week's email when a grown-up opens any Parent view screen. It does nothing for learners, or when the email is off or unconfirmed. Settings picks this up on its own (useSentFromParentView) and changes its copy from \"when a grown-up opens Settings\" to \"opens the Parent view\". The e2e journey \"opening the Family page after Sunday sends last week's email\" fails until this lands."
   },
@@ -55,7 +56,7 @@
  ],
  "followups": [
   "Skipped: the Practice page badge. practice/page.tsx is not trust's file, so it is a request. The approval copy still says the label disappears because the contract requires every \"Draft questions\" badge to use isReviewed(). The e2e review journey fails until the practice package does this.",
-  "Skipped: making the whole Parent view send the weekly email. AppShell is not trust's file, so it is a request. Until it lands, Settings says the email goes out when a grown-up opens Settings, and the e2e journey \"opening the Family page after Sunday sends last week's email\" is expected to fail. It is there to flag the missing step.",
+  "Done in T01 (ec7b776 code; on foundation once step 0a lands), no longer skipped: the whole Parent view sends the weekly email. Original note: Skipped: making the whole Parent view send the weekly email. AppShell is not trust's file, so it is a request. Until it lands, Settings says the email goes out when a grown-up opens Settings, and the e2e journey \"opening the Family page after Sunday sends last week's email\" is expected to fail. It is there to flag the missing step.",
   "Not run: Playwright, per the instructions. None of the e2e journeys or the 390/1440 axe audits in trust.spec.ts have been run. In particular, the new store-seeding helper (lastWeekDue) and the Practice search selectors are untested against the merged app.",
   "Partly done: revoking a weekly-email token. Tokens now expire after 120 days, are replaced on later sends, are left out of the export, and EMAIL_SECRET ends all of them at once. Revoking a single family's token on the server is not possible until accounts and a database exist.",
   "Not built: browser-side error capture. There is no instrumentation-client file and no error endpoint inside trust's paths. Ops tracking covers server errors only.",

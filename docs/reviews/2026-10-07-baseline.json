@@ -1,0 +1,154 @@
+{
+  "commit": "d8d81667f5331d087cc9f422ed4de7667e187e52",
+  "verify": {
+    "command": "npm run verify",
+    "exit": 0,
+    "testFiles": 132,
+    "testsPassed": 2372
+  },
+  "e2e": {
+    "command": "CI=1 E2E_PORT=3295 npx playwright test --workers=4 --reporter=json",
+    "stats": {
+      "startTime": "2026-10-07T21:41:00.040Z",
+      "duration": 118438.094,
+      "expected": 148,
+      "skipped": 16,
+      "unexpected": 22,
+      "flaky": 0
+    },
+    "failures": [
+      {
+        "file": "aiinfra.spec.ts",
+        "title": "over the daily cap the tutor says so kindly, in its own voice, and practice is one tap away",
+        "project": "desktop",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('log').getByText('A short set, help ready')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('log').getByText('A short set, help ready') with timeout 5000ms\n  - waiting for getByRole('log').getByText('A short set, help ready')\n"
+      },
+      {
+        "file": "aiinfra.spec.ts",
+        "title": "over the daily cap the tutor says so kindly, in its own voice, and practice is one tap away",
+        "project": "phone",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('log').getByText('A short set, help ready')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('log').getByText('A short set, help ready') with timeout 5000ms\n  - waiting for getByRole('log').getByText('A short set, help ready')\n"
+      },
+      {
+        "file": "family.spec.ts",
+        "title": "a skill gone stuck in test prep: the nudge hands over to Practice with that skill first",
+        "project": "desktop",
+        "error": "Error: expect(page).toHaveURL(expected) failed\n\nExpected pattern: /\\/practice\\?subject=math&again=m\\.frac\\.equiv$/\nReceived string:  \"http://localhost:3295/home\"\nTimeout: 5000ms\n\nCall log:\n  - Expect \"toHaveURL\" with timeout 5000ms\n    14 \u00d7 locator resolved to <html lang=\"en\" dir=\"ltr\" data-band=\"35\" class=\"jBW6Oq_variable _4WzKeW_variable IErB2G_variable\">\u2026</html>\n       - unexpected value \"http://localhost:3295/home\"\n"
+      },
+      {
+        "file": "family.spec.ts",
+        "title": "a skill gone stuck in test prep: the nudge hands over to Practice with that skill first",
+        "project": "phone",
+        "error": "Error: expect(page).toHaveURL(expected) failed\n\nExpected pattern: /\\/practice\\?subject=math&again=m\\.frac\\.equiv$/\nReceived string:  \"http://localhost:3295/home\"\nTimeout: 5000ms\n\nCall log:\n  - Expect \"toHaveURL\" with timeout 5000ms\n    14 \u00d7 locator resolved to <html lang=\"en\" dir=\"ltr\" data-band=\"35\" class=\"jBW6Oq_variable _4WzKeW_variable IErB2G_variable\">\u2026</html>\n       - unexpected value \"http://localhost:3295/home\"\n"
+      },
+      {
+        "file": "intake.spec.ts",
+        "title": "a typed test lands on an item page showing its skills' statuses and a prep button",
+        "project": "desktop",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('0 proved \u00b7 0 practicing \u00b7 1 not started')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByText('0 proved \u00b7 0 practicing \u00b7 1 not started') with timeout 5000ms\n  - waiting for getByText('0 proved \u00b7 0 practicing \u00b7 1 not started')\n"
+      },
+      {
+        "file": "intake.spec.ts",
+        "title": "a typed test lands on an item page showing its skills' statuses and a prep button",
+        "project": "phone",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('0 proved \u00b7 0 practicing \u00b7 1 not started')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByText('0 proved \u00b7 0 practicing \u00b7 1 not started') with timeout 5000ms\n  - waiting for getByText('0 proved \u00b7 0 practicing \u00b7 1 not started')\n"
+      },
+      {
+        "file": "journey.spec.ts",
+        "title": "a family's first evening",
+        "project": "desktop",
+        "error": "Error: locator.selectOption: Error: strict mode violation: getByLabel('Grade') resolved to 3 elements:\n    1) <select id=\"_r_5_\" class=\"k-input\">\u2026</select> aka locator('[id=\"_r_5_\"]')\n    2) <div data-ready=\"\" role=\"radiogroup\" aria-label=\"Grade\" class=\"k-segmented relative max-w-full rounded-full bg-panel2 p-1 inset-shadow-well inline-flex\">\u2026</div> aka getByText('K\u201323\u201356\u2013')\n    3) <section aria-labelledby=\"subjects\" class=\"border-t border-border\">\u2026</section> aka getByLabel('Kindergarten to grade 9, in')\n\nCall log:\n  - waiting for getByLabel('Grade')\n"
+      },
+      {
+        "file": "journey.spec.ts",
+        "title": "a family's first evening",
+        "project": "phone",
+        "error": "Error: locator.selectOption: Error: strict mode violation: getByLabel('Grade') resolved to 3 elements:\n    1) <select id=\"_r_3kt_\" class=\"k-input\">\u2026</select> aka getByRole('combobox')\n    2) <div data-ready=\"\" role=\"radiogroup\" aria-label=\"Grade\" class=\"k-segmented relative max-w-full rounded-full bg-panel2 p-1 inset-shadow-well inline-flex\">\u2026</div> aka getByText('K\u201323\u201356\u2013')\n    3) <section aria-labelledby=\"subjects\" class=\"border-t border-border\">\u2026</section> aka getByLabel('Kindergarten to grade 9, in')\n\nCall log:\n  - waiting for getByLabel('Grade')\n"
+      },
+      {
+        "file": "landing.spec.ts",
+        "title": "the privacy notice and the terms are real pages, from the parents' section and the footer",
+        "project": "desktop",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Privacy notice', level: 1 })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('heading', { name: 'Privacy notice', level: 1 }) with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Privacy notice', level: 1 })\n"
+      },
+      {
+        "file": "landing.spec.ts",
+        "title": "the privacy notice and the terms are real pages, from the parents' section and the footer",
+        "project": "phone",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Privacy notice', level: 1 })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('heading', { name: 'Privacy notice', level: 1 }) with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Privacy notice', level: 1 })\n"
+      },
+      {
+        "file": "stage.spec.ts",
+        "title": "the new manipulatives have no serious accessibility problems and fit the screen",
+        "project": "desktop",
+        "error": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 3\n\n- Array []\n+ Array [\n+   \"Blocks: color-contrast \u2014 .whitespace-nowrap.k-btn-ghost > span\",\n+ ]"
+      },
+      {
+        "file": "stage.spec.ts",
+        "title": "the new manipulatives have no serious accessibility problems and fit the screen",
+        "project": "phone",
+        "error": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 3\n\n- Array []\n+ Array [\n+   \"Blocks: color-contrast \u2014 .whitespace-nowrap.k-btn-ghost > span\",\n+ ]"
+      },
+      {
+        "file": "trust.spec.ts",
+        "title": "policies: privacy, terms and retention are public, marked draft, and readable in Spanish",
+        "project": "desktop",
+        "error": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 3\n\n- Array []\n+ Array [\n+   \"retention: color-contrast \u2014 a[href$=\\\"privacy\\\"]\",\n+ ]"
+      },
+      {
+        "file": "trust.spec.ts",
+        "title": "review: a teacher's approval in /review persists, and the skill reads as reviewed in /review and in Practice",
+        "project": "desktop",
+        "error": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 3\n\n- Array []\n+ Array [\n+   \"review-skill: color-contrast \u2014 div[aria-labelledby=\\\"_r_8_-en\\\"] > div:nth-child(5) > .space-y-1 > .bg-good\\\\/10.items-baseline.py-1 > .text-good.font-semibold.text-xs | div[aria-labelledby=\\\"_r_9_-es\\\"] > div:nth-child(5) > .space-y-1 > .bg-good\\\\/10.items-baseline.py-1 > .text-good.font-semibold.text-xs | div[aria-labelledby=\\\"_r_a_-en\\\"] > div:nth-child(5) > .space-y-1 > .bg-good\\\\/10.items-baseline.py-1 > .text-good.font-semibold.text-xs\",\n+ ]"
+      },
+      {
+        "file": "trust.spec.ts",
+        "title": "weekly email: opening the Family page after Sunday sends last week's email",
+        "project": "desktop",
+        "error": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 1\nReceived: 0\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+      },
+      {
+        "file": "trust.spec.ts",
+        "title": "policies: privacy, terms and retention are public, marked draft, and readable in Spanish",
+        "project": "phone",
+        "error": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 3\n\n- Array []\n+ Array [\n+   \"retention: color-contrast \u2014 a[href$=\\\"privacy\\\"]\",\n+ ]"
+      },
+      {
+        "file": "trust.spec.ts",
+        "title": "review: a teacher's approval in /review persists, and the skill reads as reviewed in /review and in Practice",
+        "project": "phone",
+        "error": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 3\n\n- Array []\n+ Array [\n+   \"review-skill: color-contrast \u2014 div[aria-labelledby=\\\"_r_8_-en\\\"] > div:nth-child(5) > .space-y-1 > .bg-good\\\\/10.items-baseline.py-1 > .text-good.font-semibold.text-xs | div[aria-labelledby=\\\"_r_9_-es\\\"] > div:nth-child(5) > .space-y-1 > .bg-good\\\\/10.items-baseline.py-1 > .text-good.font-semibold.text-xs | div[aria-labelledby=\\\"_r_a_-en\\\"] > div:nth-child(5) > .space-y-1 > .bg-good\\\\/10.items-baseline.py-1 > .text-good.font-semibold.text-xs\",\n+ ]"
+      },
+      {
+        "file": "trust.spec.ts",
+        "title": "weekly email: opening the Family page after Sunday sends last week's email",
+        "project": "phone",
+        "error": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 1\nReceived: 0\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+      },
+      {
+        "file": "tutor.spec.ts",
+        "title": "\u201cwhat is a logical fallacy\u201d in demo mode: a cited extract and the fallacies practice",
+        "project": "desktop",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' })\nExpected: visible\nError: strict mode violation: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' }) resolved to 2 elements:\n    1) <article tabindex=\"-1\" aria-label=\"Fallacy\" id=\"card-f8910f34-ff87-46aa-8e34-1f0976f54f78-0\" class=\"rounded-md border border-border bg-panel p-3.5 outline-none focus-visible:ring-2 focus-visible:ring-accent\">\u2026</article> aka getByRole('article', { name: 'Fallacy', exact: true })\n    2) <article tabindex=\"-1\" aria-label=\"Practice: Spot the fallacy\" id=\"card-f8910f34-ff87-46aa-8e34-1f0976f54f78-2\" class=\"rounded-md border border-border bg-panel p-3.5 outline"
+      },
+      {
+        "file": "tutor.spec.ts",
+        "title": "at 320px wide, Talk fits and a sentence that isn't a topic is never searched",
+        "project": "desktop",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' })\nExpected: visible\nError: strict mode violation: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' }) resolved to 2 elements:\n    1) <article tabindex=\"-1\" aria-label=\"Fallacy\" id=\"card-9c54ab25-397f-4a0c-a80a-46e9a3f6c14e-0\" class=\"rounded-md border border-border bg-panel p-3.5 outline-none focus-visible:ring-2 focus-visible:ring-accent\">\u2026</article> aka getByRole('article', { name: 'Fallacy', exact: true })\n    2) <article tabindex=\"-1\" aria-label=\"Practice: Spot the fallacy\" id=\"card-9c54ab25-397f-4a0c-a80a-46e9a3f6c14e-2\" class=\"rounded-md border border-border bg-panel p-3.5 outline"
+      },
+      {
+        "file": "tutor.spec.ts",
+        "title": "\u201cwhat is a logical fallacy\u201d in demo mode: a cited extract and the fallacies practice",
+        "project": "phone",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' })\nExpected: visible\nError: strict mode violation: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' }) resolved to 2 elements:\n    1) <article tabindex=\"-1\" aria-label=\"Fallacy\" id=\"card-e8d588e3-832a-493d-bad5-84bacd63f4bd-0\" class=\"rounded-md border border-border bg-panel p-3.5 outline-none focus-visible:ring-2 focus-visible:ring-accent\">\u2026</article> aka getByRole('article', { name: 'Fallacy', exact: true })\n    2) <article tabindex=\"-1\" aria-label=\"Practice: Spot the fallacy\" id=\"card-e8d588e3-832a-493d-bad5-84bacd63f4bd-2\" class=\"rounded-md border border-border bg-panel p-3.5 outline"
+      },
+      {
+        "file": "tutor.spec.ts",
+        "title": "at 320px wide, Talk fits and a sentence that isn't a topic is never searched",
+        "project": "phone",
+        "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' })\nExpected: visible\nError: strict mode violation: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' }) resolved to 2 elements:\n    1) <article tabindex=\"-1\" aria-label=\"Fallacy\" id=\"card-b27f0283-1507-4a03-85bd-ae340af2c5e5-0\" class=\"rounded-md border border-border bg-panel p-3.5 outline-none focus-visible:ring-2 focus-visible:ring-accent\">\u2026</article> aka getByRole('article', { name: 'Fallacy', exact: true })\n    2) <article tabindex=\"-1\" aria-label=\"Practice: Spot the fallacy\" id=\"card-b27f0283-1507-4a03-85bd-ae340af2c5e5-2\" class=\"rounded-md border border-border bg-panel p-3.5 outline"
+      }
+    ]
+  }
+}

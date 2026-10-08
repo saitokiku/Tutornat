@@ -1,3 +1,8 @@
+FIXED. content-merge was merged into foundation as d34f845 after root fixes (49cc979 one id per
+skill, 083ca6e tests with 61 courses, 5afb688, df9e110, 218eafd, b938901). All 11 files below pass
+at d34f845 (1,120 tests), and so does the full unit suite (143 files, 4,088 tests). Kept below as
+the record of what failed.
+
    1  FAIL  src/app/(app)/review/review.test.tsx
    2  FAIL  src/catalogue/catalogue.test.ts
    1  FAIL  src/components/calendar/EventForm.test.tsx
