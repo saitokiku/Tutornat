@@ -39,6 +39,8 @@ const PLAN = [
   ["m.money.count", "2", "2.MD.C.8", ["m.skip.count", "m.add.2digit"], 3, "computed"],
   ["m.time.5min", "2", "2.MD.C.7", ["m.time.set", "m.skip.count"], 3, "computed"],
   ["m.measure.ruler", "2", "2.MD.A.1", ["m.measure.units"], 3, "computed"],
+  ["m.measure.compare", "2", "2.MD.A.4", ["m.measure.ruler"], 2, "computed"],
+  ["m.measure.unitsize", "2", "2.MD.A.2", ["m.measure.ruler"], 2, "computed"],
   ["m.data.chart", "2", "2.OA.A.1", ["m.data.picture", "m.sub.2digit"], 3, "computed"],
   ["m.shares.thirds", "2", "2.G.A.3", ["m.shares.halves"], 3, "computed"],
 ] as const;
@@ -1173,36 +1175,86 @@ describe("m.time.5min", () => {
   });
 });
 
+/** Walks a ruler picture's thing from its start mark to its end mark, one space at a time. */
+function spaces(v: Extract<NonNullable<Item["visual"]>, { kind: "number-line" }>) {
+  const [from, to] = v.span!;
+  let n = 0;
+  for (let at = from; at < to; at++) n++;
+  return n;
+}
+/** The units are words in the sentence; the short form only follows the answer box. */
+function unitsInWords(it: Item, locale: Locale) {
+  const t = text(it);
+  expect(it.say, "unit abbreviation in say").not.toMatch(/\d\s*(in|cm|pulg)\b/);
+  expect(t.split("▢")[0], "unit abbreviation in the sentence").not.toMatch(/\d\s*(in|cm|pulg)\b/);
+  expect(t.split("▢")[1].trim()).toMatch(locale === "es" ? /^(pulg\.|cm)$/ : /^(in\.|cm)$/);
+}
+
 describe("m.measure.ruler", () => {
-  it("length is the end mark minus the start mark; the shorter length plus the answer is the longer; centimeters give the bigger count", () => {
-    for (const level of [1, 2])
-      for (const it of items("m.measure.ruler", level)) {
-        const s = Number(/starts at (\d+)/.exec(text(it))![1]);
-        const v = it.visual!;
-        if (v.kind !== "number-line") throw new Error("expected a ruler");
-        expect(v.marks).toEqual(Array.from({ length: v.max + 1 }, (_, i) => i));
-        expect(v.marker! - s).toBe(num(it.answer));
-        expect(v.marker! <= v.max && num(it.answer) >= 1).toBe(true);
-        expect(s === 0).toBe(level === 1);
-        // The thing is not drawn on the ruler, so the description must not say it is.
-        expect(it.alt).not.toMatch(/lies on|está encima/);
-      }
-    for (const locale of LOCALES)
-      for (const it of items("m.measure.ruler", 3, locale)) {
-        const t = text(it);
-        if (it.input === "keypad") {
-          const [a, b] = ints(t);
-          expect(b + num(it.answer)).toBe(a);
-          // Read aloud and in the sentence, units are words; the short form only follows the answer box.
-          expect(it.say, "unit abbreviation in say").not.toMatch(/\d\s*(in|cm|pulg)\b/);
-          expect(t.split("▢")[0], "unit abbreviation in the sentence").not.toMatch(/\d\s*(in|cm|pulg)\b/);
-          expect(t.split("▢")[1].trim()).toMatch(locale === "es" ? /^(pulg\.|cm)$/ : /^(in\.|cm)$/);
-        } else if (locale === "en") {
-          const m = /^(\w+) measures a [\w ]+ in (inches|centimeters)\. (\w+) measures it in (inches|centimeters)\./.exec(t)!;
-          expect(keyLabel(it)).toBe(m[2] === "centimeters" ? m[1] : m[3]);
-          expect(m[2]).not.toBe(m[4]);
+  it("the thing is drawn on the ruler, and its length is the spaces from its start mark to its end mark", () => {
+    for (const level of levelsOf("m.measure.ruler"))
+      for (const locale of LOCALES)
+        for (const it of items("m.measure.ruler", level, locale)) {
+          const v = it.visual!;
+          if (v.kind !== "number-line" || !v.span) throw new Error("expected a ruler with the thing on it");
+          expect(v.marks).toEqual(Array.from({ length: v.max + 1 }, (_, i) => i));
+          expect(num(it.answer)).toBe(spaces(v));
+          const [s, end] = v.span;
+          expect(s >= 0 && end <= v.max && num(it.answer) >= 2).toBe(true);
+          // Level 1 lays it at 0; level 2 also says the start; level 3 shows the start only on the ruler.
+          const said = /(?:starts at|Empieza en) (\d+)/.exec(text(it));
+          if (level === 1) expect([s, said]).toEqual([0, null]);
+          if (level === 2) expect(Number(said?.[1])).toBe(s);
+          if (level === 3) expect([s > 0, said, ints(text(it)).includes(s)]).toEqual([true, null, false]);
+          // The description says what is drawn, never where it starts or ends.
+          expect(it.alt).toMatch(/drawn along it|dibujad[ao] encima/);
+          expect(ints(it.alt!).filter((x) => x !== 0 && x !== v.max)).toEqual([]);
+          unitsInWords(it, locale);
         }
+  });
+});
+
+describe("m.measure.compare", () => {
+  it("the shorter length plus the answer is the longer, from words or from the ruler", () => {
+    for (const locale of LOCALES) {
+      for (const it of items("m.measure.compare", 1, locale)) {
+        const [a, b] = ints(text(it));
+        expect(b + num(it.answer)).toBe(a);
+        expect(/shorter|corta/.test(text(it)) || /longer|larga/.test(text(it))).toBe(true);
+        unitsInWords(it, locale);
       }
+      for (const it of items("m.measure.compare", 2, locale)) {
+        const v = it.visual!;
+        if (v.kind !== "number-line" || !v.span) throw new Error("expected a ruler with a strip on it");
+        expect(v.span[0]).toBe(0);
+        const measured = spaces(v), given = ints(text(it)).find((x) => x !== 0)!;
+        const longer = /longer|larga/.test(text(it));
+        expect(longer ? measured - num(it.answer) : measured + num(it.answer)).toBe(given);
+        // The measured length is never also the answer, so reading the ruler alone is not enough.
+        expect(num(it.answer)).not.toBe(measured);
+        unitsInWords(it, locale);
+      }
+    }
+  });
+});
+
+describe("m.measure.unitsize", () => {
+  // Unit lengths in centimeters, kept here: an inch is 2.54 cm, a foot 12 inches, a meter 100 cm.
+  const CM_PER: Record<string, number> = { inches: 2.54, centimeters: 1, feet: 30.48, meters: 100 };
+  it("the person using the shorter unit gets the bigger number", () => {
+    const pairs = new Set<string>();
+    for (const level of levelsOf("m.measure.unitsize"))
+      for (const it of items("m.measure.unitsize", level)) {
+        const m = /^(\w+) measures a [\w ]+ in (\w+)\. (\w+) measures it in (\w+)\. Who gets the (bigger|smaller) number\?$/.exec(text(it))!;
+        const [p, pu, q, qu, want] = [m[1], CM_PER[m[2]], m[3], CM_PER[m[4]], m[5]];
+        expect(pu).not.toBe(qu);
+        // Same length, so the count is length / unit: the shorter unit counts higher.
+        const bigger = pu < qu ? p : q;
+        expect(keyLabel(it)).toBe(want === "bigger" ? bigger : bigger === p ? q : p);
+        pairs.add([m[2], m[4]].sort().join("/"));
+        if (level === 1) expect([[m[2], m[4]].sort().join("/"), want]).toEqual(["centimeters/inches", "bigger"]);
+      }
+    expect([...pairs].sort()).toEqual(["centimeters/inches", "centimeters/meters", "feet/inches"]);
   });
 });
 
