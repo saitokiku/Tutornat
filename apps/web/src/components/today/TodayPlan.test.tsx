@@ -129,9 +129,8 @@ describe("TodayPlan", () => {
       );
     });
     render(<TodayPlan plan={plan(ada)} learner={ada} now={NOW} young={false} />);
-    // English was started, so it leads now as "pick up where you left off".
+    // English was started, so it leads now, and its button picks up where it was left.
     const next = within(document.getElementById("next")!);
-    expect(next.getByText("Pick up where you left off")).toBeInTheDocument();
     expect(next.getByRole("button", { name: /^Continue, English:/ })).toBeInTheDocument();
     expect(screen.getByText("Done")).toBeInTheDocument();
     expect(screen.getByText("1 of 3 done · 30 min a day")).toBeInTheDocument();
@@ -244,7 +243,6 @@ describe("TodayPlan lesson lines", () => {
     started(p, course({ id: "moon", profileId: "p1", ai: true }));
     render(<TodayPlan plan={plan(p)} learner={p} now={NOW} young={false} />);
     const next = within(document.getElementById("next")!);
-    expect(next.getByText("Pick up where you left off")).toBeInTheDocument();
     expect(next.getByText("Written by AI")).toBeInTheDocument();
     await userEvent.click(next.getByRole("button", { name: "Continue, Lesson a" }));
     expect(push).toHaveBeenLastCalledWith("/learn/moon/a");

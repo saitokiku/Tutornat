@@ -23,12 +23,10 @@ export function ComingUp({ events, classes, locale, now, limit = 6, times = true
   return (
     <section aria-labelledby="coming" className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2">
-          <h2 id="coming" className="font-brand text-t2 font-semibold text-ink">
-            {t("today.comingUp")}
-          </h2>
-          <BigHear text={t("today.comingUp")} />
-        </span>
+        {/* No speaker on the heading: each row reads its own item. */}
+        <h2 id="coming" className="font-brand text-t2 font-semibold text-ink">
+          {t("today.comingUp")}
+        </h2>
         <Link href="/calendar" className={`inline-flex items-center text-sm font-medium text-muted hover:text-accent ${young ? "min-h-14 px-2" : "min-h-11"}`}>
           {t("today.openCalendar")}
         </Link>
@@ -45,13 +43,13 @@ export function ComingUp({ events, classes, locale, now, limit = 6, times = true
                 <Link href={`/calendar/${e.id}`} className="group flex min-h-14 min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 sm:pl-5">
                   <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: cls?.color ?? "var(--color-muted)" }} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-ink">{e.title}</span>
-                    <span className="block truncate text-xs text-muted">
+                    <span className="line-clamp-2 break-words text-sm font-medium text-ink">{e.title}</span>
+                    <span className="k-meta block truncate">
                       {t(`event.${e.kind}`)}
                       {cls ? ` · ${cls.name}` : ""}
                     </span>
                   </span>
-                  <span className="shrink-0 font-opmono text-xs tabular-nums text-muted">{when}</span>
+                  <span className="k-meta shrink-0">{when}</span>
                   <IconChevronRight size={16} className="shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 <BigHear text={`${e.title}. ${t(`event.${e.kind}`)}. ${when}`} />

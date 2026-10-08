@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { IconArrowRight, IconBook, IconCheck, IconCheckCircle, IconChat, IconClock, IconLayers, IconRefresh } from "@/components/icons";
 import { whenLabel } from "@/components/practice/status";
+import { sentences } from "@/components/stage/hear";
 import { Badge, Button, SubjectDot, btn } from "@/components/ui";
 import { t as tr, useLocale, useT } from "@/i18n";
 import { lessonState } from "@/lib/activity";
@@ -118,14 +119,15 @@ export function TodayPlan({ plan, learner, now, young, grownUp = false, timeUp =
   // lines below carry their own count.
   const progress = t("plan.progress", { done: plan.lead.filter((i) => i.done).length, total: plan.lead.length });
   const more = t("plan.more", { n: plan.more.length });
+  const stop = !!next && timeUp && !grownUp;
+  // K–2 hear the plan's heading, its count and the time-up line with the card they belong to: one
+  // speaker for each thing to do, none on a heading or a counter.
+  const intro = sentences(`${t("plan.title")}: ${progress}`, stop ? t("today.timeUp") : "");
 
   const heading = (
-    <span className="flex items-center gap-2">
-      <h2 id="today" className="font-brand text-t2 font-semibold text-ink">
-        {t("plan.title")}
-      </h2>
-      <BigHear text={t("plan.title")} />
-    </span>
+    <h2 id="today" className="font-brand text-t2 font-semibold text-ink">
+      {t("plan.title")}
+    </h2>
   );
 
   if (!plan.lead.length && !plan.more.length)
@@ -134,31 +136,23 @@ export function TodayPlan({ plan, learner, now, young, grownUp = false, timeUp =
         {heading}
         <p className="flex items-center gap-2 text-sm text-muted">
           <span className="flex-1">{t("plan.empty")}</span>
-          <BigHear text={t("plan.empty")} />
+          <BigHear text={sentences(t("plan.title"), t("plan.empty"))} />
         </p>
       </section>
     );
 
   return (
     <section aria-labelledby="today" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         {heading}
-        <p className="flex items-center gap-2 font-opmono text-xs tabular-nums text-muted">
-          <span>
-            {progress}
-            {ctx.minutes && ` · ${t("plan.budget", { n: plan.budget })}`}
-          </span>
-          <BigHear text={progress} />
+        <p className="k-meta">
+          {progress}
+          {ctx.minutes && ` · ${t("plan.budget", { n: plan.budget })}`}
         </p>
       </div>
 
-      {next ? <NextCard item={next} ctx={ctx} /> : <DoneForToday tiles={tiles} more={plan.more.some((i) => !i.done)} />}
-      {next && timeUp && !grownUp && (
-        <p className="flex items-center gap-3 rounded-lg border border-border bg-panel2 px-5 py-3.5 text-sm text-ink">
-          <span className="flex-1">{t("today.timeUp")}</span>
-          <BigHear text={t("today.timeUp")} />
-        </p>
-      )}
+      {next ? <NextCard item={next} ctx={ctx} intro={intro} /> : <DoneForToday tiles={tiles} more={plan.more.some((i) => !i.done)} intro={intro} />}
+      {stop && <p className="rounded-lg border border-border bg-panel2 px-5 py-3.5 text-sm text-ink">{t("today.timeUp")}</p>}
 
       {rest.length > 0 && <Lines items={rest} ctx={ctx} />}
 
@@ -214,7 +208,10 @@ function Lines({ items, ctx, flush }: { items: PlanItem[]; ctx: Ctx; flush?: boo
  */
 function useLineFacts(item: PlanItem, ctx: Ctx) {
   const t = useT();
+  // "Draft questions" is for readers and grown-ups. A pre-reader's tile never shouts it; the family page,
+  // review and the runner's footer keep it honest for the grown-up.
   const draft = useStore((s) =>
+    !ctx.tiles &&
     item.skillIds.some((id) => {
       const skill = getSkill(id);
       return skill ? !isReviewed(s, skill) : false;
@@ -243,17 +240,13 @@ function TitleText({ item, title }: { item: PlanItem; title: string }) {
   );
 }
 
-function NextCard({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
-  const t = useT();
+/** The suggested start: its lift shadow marks it, so no label sits above its title. */
+function NextCard({ item, ctx, intro }: { item: PlanItem; ctx: Ctx; intro: string }) {
   const facts = useLineFacts(item, ctx);
-  const Icon = ICON[item.kind];
   const title = itemTitle(item, ctx.locale);
   const text = (
     <div className="min-w-0 flex-1">
-      <p className="flex items-center gap-2 text-sm font-medium text-muted">
-        <Icon size={16} /> {facts.resumes ? t("plan.pickUp") : t("plan.next")}
-      </p>
-      <p className="mt-1.5 font-brand text-t2 font-semibold text-ink sm:text-t1" lang={facts.lang}>
+      <p className="font-brand text-t2 font-semibold text-ink sm:text-t1" lang={facts.lang}>
         {item.subject && (
           <span className="mr-2 inline-block align-middle">
             <SubjectDot subject={item.subject} />
@@ -283,7 +276,7 @@ function NextCard({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <Actions item={item} ctx={ctx} title={title} resumes={facts.resumes} primary />
           <span className="ml-auto">
-            <BigHear text={title} />
+            <BigHear text={sentences(title, intro)} />
           </span>
         </div>
       )}
@@ -401,7 +394,7 @@ function PlanTile({ item, ctx }: { item: PlanItem; ctx: Ctx }) {
   );
 }
 
-function DoneForToday({ tiles, more }: { tiles: boolean; more: boolean }) {
+function DoneForToday({ tiles, more, intro }: { tiles: boolean; more: boolean; intro: string }) {
   const t = useT();
   const title = tiles ? t("today.allDoneYoung") : t("today.allDone");
   const body = tiles ? "" : more ? t("today.allDoneBody") : t("today.allDoneBodyNoMore");
@@ -412,7 +405,7 @@ function DoneForToday({ tiles, more }: { tiles: boolean; more: boolean }) {
         <p className="font-brand text-t2 font-semibold text-ink">{title}</p>
         {body && <p className="mt-1 text-sm text-muted">{body}</p>}
       </div>
-      <BigHear text={title} />
+      <BigHear text={sentences(title, intro)} />
     </div>
   );
 }

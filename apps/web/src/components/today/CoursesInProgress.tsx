@@ -45,14 +45,12 @@ export function CoursesInProgress({ points, locale, young, grownUp }: { points: 
   if (!points.length) return null;
   const tiles = young && !grownUp;
   const shown = shownPoints(points, tiles ? 4 : 3);
+  // No speaker on the heading: each tile reads its own course (one speaker per thing to open).
   const heading = (
     <div className="mb-3 flex items-center justify-between gap-3">
-      <span className="flex items-center gap-2">
-        <h2 id="in-progress" className="font-brand text-t2 font-semibold text-ink">
-          {t("home.yourCourses")}
-        </h2>
-        <BigHear text={t("home.yourCourses")} />
-      </span>
+      <h2 id="in-progress" className="font-brand text-t2 font-semibold text-ink">
+        {t("home.yourCourses")}
+      </h2>
       {!grownUp && (
         <Link href="/courses" className={`inline-flex items-center text-sm font-medium text-muted hover:text-accent ${tiles ? "min-h-14 px-2" : "min-h-11"}`}>
           {t("home.seeAll")}
@@ -111,10 +109,11 @@ export function CoursesInProgress({ points, locale, young, grownUp }: { points: 
                   </span>
                   <CourseTags course={p.course} locale={locale} />
                 </span>
-                <span className="mt-0.5 block text-xs text-muted">
-                  {t("today.courseNext", { lesson: p.lesson.title })}
+                <span className="k-meta mt-0.5 block">
+                  <span>{t("today.courseNext", { lesson: p.lesson.title })}</span>
+                  {" · "}
+                  <span>{t("courses.progress", { done: p.done, total: p.total })}</span>
                 </span>
-                <span className="mt-0.5 block font-opmono text-xs tabular-nums text-muted">{t("courses.progress", { done: p.done, total: p.total })}</span>
               </span>
               {!grownUp && (
                 <Link href={lessonHref(p)} className={btn("secondary")} aria-label={`${t(p.started ? "course.continue" : "course.start")}, ${p.course.title}`}>

@@ -102,7 +102,11 @@ export type TodayStatus = {
   left: number;
 };
 
-/** Minutes actually spent today: answer time (not tutor-help rows) plus lessons finished today. */
+/**
+ * Minutes actually spent today: answer time (not tutor-help rows) plus lessons finished today, rounded
+ * up as Growth and the family card round them, so a short set never reads as no time on one screen and
+ * a minute on another.
+ */
 export function minutesToday(s: StoreState, profileId: string, now: number) {
   const day = new Date(now);
   const from = day.setHours(0, 0, 0, 0);
@@ -111,7 +115,7 @@ export function minutesToday(s: StoreState, profileId: string, now: number) {
   let seconds = 0;
   for (const a of s.attempts) if (a.profileId === profileId && a.mode !== "tutor" && today(a.at)) seconds += a.seconds;
   for (const e of s.activity) if (e.profileId === profileId && e.type === "lesson_completed" && today(e.at)) seconds += e.seconds ?? 0;
-  return Math.round(seconds / 60);
+  return Math.ceil(seconds / 60);
 }
 
 export function todayStatus(s: StoreState, p: Profile, now: number): TodayStatus {

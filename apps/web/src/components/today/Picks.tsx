@@ -41,12 +41,10 @@ export function PickTiles({ entries, learner }: { entries: CatalogueEntry[]; lea
   if (!entries.length) return null;
   return (
     <section aria-labelledby="pick" className="space-y-4">
-      <div className="flex items-center gap-3">
-        <h2 id="pick" className="font-brand text-t2 font-semibold text-ink">
-          {t("home.pick")}
-        </h2>
-        <BigHear text={t("home.pick")} />
-      </div>
+      {/* No speaker on the heading: each tile reads its own course. */}
+      <h2 id="pick" className="font-brand text-t2 font-semibold text-ink">
+        {t("home.pick")}
+      </h2>
       <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {entries.map((entry) => (
           <li key={entry.id} className="relative">
@@ -77,7 +75,11 @@ export function PickTiles({ entries, learner }: { entries: CatalogueEntry[]; lea
   );
 }
 
-/** Grade 3+ with no lesson under way: one ready-made course to start with. */
+/**
+ * Grade 3+ with no lesson under way: one ready-made course to start with. The course is the heading; no
+ * label above it says it is a suggestion, and its button is secondary so the plan's Start stays the one
+ * ink action.
+ */
 export function SuggestCard({ entry, learner }: { entry: CatalogueEntry; learner: Profile }) {
   const t = useT();
   const start = useStartCourse(learner);
@@ -88,18 +90,15 @@ export function SuggestCard({ entry, learner }: { entry: CatalogueEntry; learner
           <CourseArt lessons={entry.lessons} subject={entry.subject} />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 id="suggest" className="text-sm font-medium text-muted">
-            {t("home.startHere")}
-          </h2>
-          <p className="mt-1 flex flex-wrap items-center gap-2 font-brand text-t2 font-semibold text-ink">
+          <h2 id="suggest" className="flex flex-wrap items-center gap-2 font-brand text-t2 font-semibold text-ink">
             <span lang={entry.locale}>{entry.title}</span>
             <LangTag course={entry.locale} learner={learner.locale} />
-          </p>
+          </h2>
           <p className="mt-1 text-sm text-muted" lang={entry.locale}>
             {entry.summary}
           </p>
         </div>
-        <Button variant="secondary" className="w-full sm:w-auto" onClick={() => start(entry)}>
+        <Button variant="secondary" className="w-full sm:w-auto" onClick={() => start(entry)} aria-label={`${t("home.startCta")}, ${entry.title}`}>
           {t("home.startCta")} <IconArrowRight size={16} />
         </Button>
       </div>

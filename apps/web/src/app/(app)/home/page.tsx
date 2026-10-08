@@ -9,7 +9,7 @@ import { useTitle } from "@/components/LangSync";
 import { IconArrowRight, IconChat, IconClock } from "@/components/icons";
 import { MagicBox } from "@/components/magic-box/MagicBox";
 import { Avatar } from "@/components/profiles/Avatar";
-import { HearContext } from "@/components/stage/hear";
+import { HearContext, sentences } from "@/components/stage/hear";
 import { BigHear } from "@/components/today/BigHear";
 import { ComingUp } from "@/components/today/ComingUp";
 import { CoursesInProgress } from "@/components/today/CoursesInProgress";
@@ -103,20 +103,18 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
       <HearContext.Provider value={{ hear: true, young: true, locale: learner.locale }}>
         <div className="space-y-10">
           <header className="space-y-5">
-            <div className="flex items-start gap-3">
-              <div className="min-w-0 flex-1">
-                <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{hello}</h1>
-                <p className="mt-1 text-sm text-muted">{date}</p>
-              </div>
-              {/* Read aloud without the name: speech voices can be a network service. */}
-              <BigHear text={t("today.helloSay", { date })} />
+            <div>
+              <h1 className="font-brand text-t1 font-semibold text-ink sm:text-d3">{hello}</h1>
+              <p className="mt-1 text-sm text-muted">{date}</p>
             </div>
-            {/* Little ones are offered the tutor first; it speaks first in Talk. */}
+            {/* Little ones are offered the tutor first; it speaks first in Talk. One speaker for the first
+                thing to do, and the greeting is read with it (without the name: speech voices can be a
+                network service). */}
             <div className="flex items-center gap-3">
               <Link href="/talk" className={btn("secondary", "md", "min-h-14 px-6 text-base")}>
                 <IconChat size={20} /> {t("talk.title")}
               </Link>
-              <BigHear text={t("talk.title")} />
+              <BigHear text={sentences(t("today.helloSay", { date }), t("talk.title"))} />
             </div>
             {strip}
           </header>
@@ -146,6 +144,10 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
 
   const hasLesson = [...plan.lead, ...plan.more].some((i) => i.kind === "lesson");
   const pick = points.length || hasLesson ? null : (band[0] ?? catalogueFor(learner.grade, learner.locale)[0]);
+  // The family's goals decide the order, never what is there: a family that came for homework and test
+  // help gets the box that takes the homework right under the greeting; one that wants to stay organized
+  // gets school first. The plan's Start stays the one ink action either way.
+  const help = goals?.includes("help");
   const organized = goals?.includes("organized");
   return (
     <div className="space-y-10">
@@ -156,8 +158,7 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
             <p className="mt-1 text-sm text-muted">{date}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {/* A family that came for help right now gets it as the raised action. */}
-            <Link href="/talk" className={btn(goals?.includes("help") ? "primary" : "secondary")}>
+            <Link href="/talk" className={btn("secondary")}>
               <IconChat size={16} /> {t("today.helpNow")}
             </Link>
             <Link href="/calendar?add=test" className={btn("secondary")}>
@@ -167,17 +168,25 @@ function Today({ learner, grownUp }: { learner: Profile; grownUp: boolean }) {
         </div>
         {strip}
       </header>
+      {help && (
+        // The box carries its own visible title ("What's going on?"); the region takes the same name.
+        <section aria-label={t("intake.label")}>
+          <MagicBox learner={learner} />
+        </section>
+      )}
       {organized && coming}
       {planView}
       {!organized && coming}
       {courses}
       {pick && <SuggestCard entry={pick} learner={learner} />}
-      <section aria-labelledby="learn-new" className="space-y-3">
-        <h2 id="learn-new" className="font-brand text-t2 font-semibold text-ink">
-          {t("today.learnNew")}
-        </h2>
-        <MagicBox learner={learner} />
-      </section>
+      {!help && (
+        <section aria-labelledby="learn-new" className="space-y-3">
+          <h2 id="learn-new" className="font-brand text-t2 font-semibold text-ink">
+            {t("today.learnNew")}
+          </h2>
+          <MagicBox learner={learner} />
+        </section>
+      )}
     </div>
   );
 }
