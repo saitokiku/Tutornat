@@ -95,8 +95,6 @@ These are standing decisions; nothing in the Codex session above replaces them w
   English and science" below, and the owner's clarify answer of 2026-10-01 choosing US with English
   and Spanish from launch; that entry records the choice, not the owner's typed words).
 
-## 2026-10-07 (night) — the learning fabric (earlier)
-
 ## 2026-10-07 (late) — learning evidence across reloads (recorded by Claude; not owner quotes)
 
 Finishing codex 02b84e3 (help and first answers kept across a reload). The mastery law's numbers
@@ -121,7 +119,7 @@ Finishing codex 02b84e3 (help and first answers kept across a reload). The maste
   time it stops mattering, and offers "Remove it from this device now". Older help no longer holds
   the copy. Question for the owner: on shared devices, should sign-out ask instead?
 
-## 2026-10-07 (night) — the learning fabric (current)
+## 2026-10-07 (night) — the learning fabric (earlier)
 
 - "okay let focus on getting the tutor part and dashboard and academic integration and calendar organizations, basically at home kumon with on demand practice gernetor and kumon at home generate lessons catered to you. and also talks and teaches naturally. and ai works to interface, help grow, track shadow work etc and keep your growth aligned and happening. ready all the ai strategy docs, now feel free to diverge and have full creative freedom, use old stuff as refernce. not bad on the demo but farrrrrr from a complete product."
 - "This product should also be marketed and catered for home schooling and parents who need homework/ test / tutoring help immediately and also students who are already good this should ease their life a lot either staying managed etc"
