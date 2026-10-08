@@ -650,6 +650,11 @@ describe("s.matter.mass", () => {
         const why = misfits(c.label, seen);
         expect(why.length, `${where} ${c.label} also fits: ${text}`).toBeGreaterThan(0);
         expect(why, `${where} ${c.label} tagged ${c.why}`).toContain(TAG_TEST[c.why!]);
+        // Looks decide only when no measurement could: a choice that differs from the key in a
+        // measured property is ruled out by a reported measurement.
+        const [p, q] = [PROPS[key], PROPS[c.label]];
+        const measurable = (["magnet", "conducts", "dissolves", "solution", "floats"] as const).some((t) => p[t] !== q[t]);
+        if (measurable) expect(why.some((t) => t !== "look"), `${where} ${c.label} ruled out by looks only: ${text}`).toBe(true);
       }
       // Hint 3 rules out a wrong choice that is shown, and never names the key.
       const wrongNames = en.choices!.filter((c) => c.label !== key).map((c) => c.label.toLowerCase());

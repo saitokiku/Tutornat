@@ -162,7 +162,7 @@ export function matterMass(r: Rng, level: number, locale: Locale): ItemBody {
 }
 
 // Identify a material from test results (5-PS1-3). Each result is a fixed property of the material.
-// An item reports, in a random order, only the tests needed to rule out both wrong choices (plus,
+// An item reports, in a random order, the tests needed to rule out both wrong choices (plus,
 // sometimes, one more), so the same key comes with different evidence from seed to seed.
 type Material = {
   en: string;
@@ -206,18 +206,18 @@ function ignored(t: Test, key: Material, m: Material): string {
 function identifyMaterial(r: Rng, locale: Locale): ItemBody {
   const key = r.pick(MATERIALS);
   const others = r.shuffle(MATERIALS.filter((m) => m !== key)).slice(0, 2);
-  // Take tests in a random order, keeping each one that rules out a choice not yet ruled out, until
-  // both wrong choices are out (every two materials differ in some test). Looks alone never decide
-  // it: a measured property is always reported. Sometimes one more test is added.
-  const order = r.shuffle<Test>(["look", "magnet", "conducts", "water"]);
-  const tests: Test[] = [];
-  const out = (m: Material) => tests.some((t) => !same(t, key, m));
-  for (const t of order) if (others.some((m) => !out(m) && !same(t, key, m))) tests.push(t);
-  const add = (t: Test | undefined) => {
-    if (t) tests.splice(r.int(0, tests.length), 0, t);
-  };
-  if (tests.every((t) => t === "look")) add(order.find((t) => t !== "look"));
-  if (r.bool()) add(order.find((t) => !tests.includes(t)));
+  // Take the measured tests in a random order, then how it looks, keeping each test that rules out a
+  // choice not yet ruled out, until both wrong choices are out (every two materials differ in some
+  // test). So looks decide only when no measurement can, and a measured result is always reported.
+  // Sometimes one more test is added; the results are reported in a random order.
+  const order: Test[] = [...r.shuffle<Test>(["magnet", "conducts", "water"]), "look"];
+  const chosen: Test[] = [];
+  const out = (m: Material) => chosen.some((t) => !same(t, key, m));
+  for (const t of order) if (others.some((m) => !out(m) && !same(t, key, m))) chosen.push(t);
+  if (!chosen.some((t) => t !== "look")) chosen.push(order[0]);
+  const extra = order.find((t) => !chosen.includes(t));
+  if (extra && r.bool()) chosen.push(extra);
+  const tests = r.shuffle(chosen);
   const result = (t: Test) => {
     if (t === "look") return tr(locale, ...key.look);
     if (t === "magnet") return key.magnet ? tr(locale, "A magnet pulls it.", "Un imán lo atrae.") : tr(locale, "A magnet does not pull it.", "Un imán no lo atrae.");
