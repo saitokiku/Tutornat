@@ -35,7 +35,7 @@ export type Question = {
   ev: Two;
   /** For a pair of texts: an exact quote from Text 2. */
   ev2?: Two;
-  /** Hint 2 written for this question, in place of the skill's general strategy (every text-feature and compare question has one). */
+  /** Hint 2 written for this question, in place of the skill's general strategy (every text-feature question has one). */
   how?: Two;
 };
 
