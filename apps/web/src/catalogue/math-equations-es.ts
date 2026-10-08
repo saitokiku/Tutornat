@@ -20,11 +20,15 @@ const ecuacionesEs: CatalogueEntry = {
           kind: "slide",
           title: "Qué dice una ecuación",
           blocks: [
-            { type: "text", text: "Una ecuación dice que dos expresiones valen lo mismo. x + 5 = 12 dice: un número más 5 es igual a 12." },
+            { type: "text", text: "Una bolsa tiene algunas canicas. Si metes 5 más, hay 12 en total. ¿Cuántas había en la bolsa?" },
+            {
+              type: "text",
+              text: "Una ecuación dice que dos expresiones valen lo mismo. Si llamas x al número que no conoces, la bolsa dice x + 5 = 12: un número más 5 es igual a 12.",
+            },
             {
               type: "visual",
               visual: { kind: "number-line", min: 0, max: 12, marks: [0, 7, 12], marker: 7 },
-              alt: "Una recta numérica de 0 a 12 con marcas en 0, 7 y 12, y un punto en 7. Un salto de 5 desde el 7 llega al 12.",
+              alt: "Una recta numérica de 0 a 12 con marcas en 0, 7 y 12, y un punto en 7. Del 7 al 12 hay 5.",
             },
             { type: "text", text: "Resolver es encontrar el valor de x que hace verdadera la ecuación. Aquí x = 7, porque 7 + 5 = 12." },
           ],
@@ -96,7 +100,7 @@ const ecuacionesEs: CatalogueEntry = {
               choices: ["c + 12 = 30", "12c = 30", "c − 12 = 30", "30 − c = 12"],
               answer: 2,
               hint: "Empieza con el número de canicas que no conoces, c. ¿Qué le pasó a ese número?",
-              explain: "Valeria empezó con c canicas, quitó 12 y le quedaron 30: c − 12 = 30. Suma 12 en ambos lados: c = 42.",
+              explain: "Valeria empezó con c canicas, regaló 12 y le quedaron 30: c − 12 = 30. Suma 12 en ambos lados: c = 42.",
             },
           ],
         },
@@ -208,7 +212,7 @@ const ecuacionesEs: CatalogueEntry = {
               prompt: "Un plan de teléfono cuesta $20 de inscripción más $15 al mes. ¿Después de cuántos meses habrás pagado $95 en total?",
               choices: ["4", "6", "75", "5"],
               answer: 3,
-              hint: "Escribe una ecuación con m para los meses: 15m + 20 = 95.",
+              hint: "¿Qué se paga una sola vez y qué se paga cada mes?",
               explain: "Resta 20: 15m = 75. Divide entre 15: m = 5 meses. Comprueba: 15 × 5 + 20 = 95.",
             },
             {
@@ -247,7 +251,11 @@ const ecuacionesEs: CatalogueEntry = {
           kind: "slide",
           title: "Junta los términos semejantes",
           blocks: [
-            { type: "text", text: "Los términos semejantes tienen la misma parte con letra. 3x y 2x son semejantes. 3x y 3 no lo son." },
+            {
+              type: "text",
+              text: "Imagina 3 bolsas de canicas y luego 2 bolsas más, todas con el mismo número de canicas, x. En total son 5 bolsas: 3x + 2x = 5x. Pero 3 bolsas y 3 canicas sueltas no se pueden contar como una sola cosa, así que 3x + 3 se queda como está.",
+            },
+            { type: "text", text: "Los términos semejantes tienen la misma parte variable. 3x y 2x son semejantes. 3x y 3 no lo son." },
             {
               type: "points",
               items: ["3x + 2x − 4 = 21 se convierte en 5x − 4 = 21.", "Suma 4 en ambos lados: 5x = 25.", "Divide ambos lados entre 5: x = 5."],
@@ -350,24 +358,12 @@ const ecuacionesEs: CatalogueEntry = {
     {
       id: "both-sides",
       title: "La variable en ambos lados",
-      summary: "Ecuaciones de varios pasos: junta los términos con x en un lado, resuelve, y reconoce cuándo no hay solución o sirve cualquier número.",
+      summary:
+        "Un paso hacia 8.º grado, con ecuaciones de varios pasos: junta los términos con x en un lado, resuelve y reconoce cuándo no hay solución o sirve cualquier número.",
       minutes: 15,
       scenes: [
         {
           id: "s1",
-          kind: "slide",
-          title: "x en los dos lados",
-          blocks: [
-            { type: "text", text: "En 5x + 3 = 2x + 15, x aparece en los dos lados. Primero junta los términos con x en un solo lado." },
-            {
-              type: "points",
-              items: ["Resta 2x en ambos lados: 3x + 3 = 15.", "Resta 3 en ambos lados: 3x = 12.", "Divide ambos lados entre 3: x = 4."],
-            },
-            { type: "text", text: "Comprueba: 5 × 4 + 3 = 23 y 2 × 4 + 15 = 23. Los dos lados coinciden." },
-          ],
-        },
-        {
-          id: "s2",
           kind: "slide",
           title: "¿Cuándo tendrán lo mismo?",
           blocks: [
@@ -375,15 +371,34 @@ const ecuacionesEs: CatalogueEntry = {
               type: "text",
               text: "Diego tiene $40 y ahorra $5 por semana. Sofía tiene $10 y ahorra $8 por semana. ¿Después de cuántas semanas, s, tendrán la misma cantidad?",
             },
+            { type: "text", text: "Diego empieza con $30 de ventaja, pero Sofía ahorra $3 más cada semana, así que la ventaja de Diego baja $3 por semana." },
+            {
+              type: "visual",
+              visual: { kind: "line-graph", points: [[0, 30], [2, 24], [4, 18], [6, 12], [8, 6], [10, 0]], xLabel: "Semanas", yLabel: "Ventaja de Diego ($)" },
+              alt: "La ventaja de Diego sobre Sofía: $30 al principio, que baja $3 cada semana, hasta llegar a $0 en la semana 10.",
+            },
             {
               type: "points",
               items: [
-                "Escríbelo: 40 + 5s = 10 + 8s.",
+                "Escríbelo: 40 + 5s = 10 + 8s. La incógnita está en los dos lados.",
                 "Resta 5s en ambos lados: 40 = 10 + 3s.",
-                "Resta 10: 30 = 3s. Divide entre 3: s = 10.",
-                "Comprueba: después de 10 semanas, Diego tiene 40 + 50 = $90 y Sofía tiene 10 + 80 = $90.",
+                "Resta 10: 30 = 3s. Son los $30 de ventaja y los $3 por semana de la gráfica.",
+                "Divide entre 3: s = 10. Comprueba: después de 10 semanas, Diego tiene 40 + 50 = $90 y Sofía tiene 10 + 80 = $90.",
               ],
             },
+          ],
+        },
+        {
+          id: "s2",
+          kind: "slide",
+          title: "x en los dos lados",
+          blocks: [
+            { type: "text", text: "En 5x + 3 = 2x + 15, x aparece en los dos lados. Igual que con los ahorros, primero junta los términos con x en un solo lado." },
+            {
+              type: "points",
+              items: ["Resta 2x en ambos lados: 3x + 3 = 15.", "Resta 3 en ambos lados: 3x = 12.", "Divide ambos lados entre 3: x = 4."],
+            },
+            { type: "text", text: "Comprueba: 5 × 4 + 3 = 23 y 2 × 4 + 15 = 23. Los dos lados coinciden." },
           ],
         },
         {

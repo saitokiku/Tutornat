@@ -20,11 +20,15 @@ const equations: CatalogueEntry = {
           kind: "slide",
           title: "What an equation says",
           blocks: [
-            { type: "text", text: "An equation says that two expressions have the same value. x + 5 = 12 says: some number plus 5 equals 12." },
+            { type: "text", text: "A bag holds some marbles. Put in 5 more, and there are 12 in all. How many were in the bag?" },
+            {
+              type: "text",
+              text: "An equation says that two expressions have the same value. Call the unknown number x, and the bag says x + 5 = 12: some number plus 5 equals 12.",
+            },
             {
               type: "visual",
               visual: { kind: "number-line", min: 0, max: 12, marks: [0, 7, 12], marker: 7 },
-              alt: "A number line from 0 to 12 with marks at 0, 7 and 12, and a dot at 7. A jump of 5 from 7 lands on 12.",
+              alt: "A number line from 0 to 12 with marks at 0, 7 and 12, and a dot at 7. From 7 it is 5 more to 12.",
             },
             { type: "text", text: "Solving means finding the value of x that makes the equation true. Here x = 7, because 7 + 5 = 12." },
           ],
@@ -96,7 +100,7 @@ const equations: CatalogueEntry = {
               choices: ["s + 12 = 30", "12s = 30", "s − 12 = 30", "30 − s = 12"],
               answer: 2,
               hint: "Start with the unknown number of stickers, s. What happened to it?",
-              explain: "Jo started with s, took away 12 and had 30 left: s − 12 = 30. Add 12 to both sides: s = 42.",
+              explain: "Jo started with s, gave away 12 and had 30 left: s − 12 = 30. Add 12 to both sides: s = 42.",
             },
           ],
         },
@@ -208,7 +212,7 @@ const equations: CatalogueEntry = {
               prompt: "A phone plan costs $20 to start plus $15 a month. After how many months will you have paid $95 in all?",
               choices: ["4", "6", "75", "5"],
               answer: 3,
-              hint: "Write an equation with m for the months: 15m + 20 = 95.",
+              hint: "What is paid once, and what is paid every month?",
               explain: "Subtract 20: 15m = 75. Divide by 15: m = 5 months. Check: 15 × 5 + 20 = 95.",
             },
             {
@@ -247,6 +251,10 @@ const equations: CatalogueEntry = {
           kind: "slide",
           title: "Combine like terms",
           blocks: [
+            {
+              type: "text",
+              text: "Picture 3 bags of marbles, then 2 more bags, all holding the same number, x. That's 5 bags in all: 3x + 2x = 5x. But 3 bags and 3 loose marbles can't be counted as one thing, so 3x + 3 stays as it is.",
+            },
             { type: "text", text: "Like terms have the same variable part. 3x and 2x are like terms. 3x and 3 are not." },
             {
               type: "points",
@@ -350,24 +358,11 @@ const equations: CatalogueEntry = {
     {
       id: "both-sides",
       title: "Variables on both sides",
-      summary: "Collect the x terms on one side, solve, and notice when an equation has no solution or every number works.",
+      summary: "A step into grade 8: collect the x terms on one side, solve, and notice when an equation has no solution or every number works.",
       minutes: 15,
       scenes: [
         {
           id: "s1",
-          kind: "slide",
-          title: "x on both sides",
-          blocks: [
-            { type: "text", text: "In 5x + 3 = 2x + 15, x is on both sides. Collect the x terms on one side first." },
-            {
-              type: "points",
-              items: ["Subtract 2x from both sides: 3x + 3 = 15.", "Subtract 3 from both sides: 3x = 12.", "Divide both sides by 3: x = 4."],
-            },
-            { type: "text", text: "Check: 5 × 4 + 3 = 23 and 2 × 4 + 15 = 23. The two sides match." },
-          ],
-        },
-        {
-          id: "s2",
           kind: "slide",
           title: "When will they match?",
           blocks: [
@@ -375,15 +370,34 @@ const equations: CatalogueEntry = {
               type: "text",
               text: "Aiden has $40 and saves $5 a week. Bea has $10 and saves $8 a week. After how many weeks, w, will they have the same amount?",
             },
+            { type: "text", text: "Aiden starts $30 ahead, but Bea saves $3 more each week, so his lead shrinks by $3 a week." },
+            {
+              type: "visual",
+              visual: { kind: "line-graph", points: [[0, 30], [2, 24], [4, 18], [6, 12], [8, 6], [10, 0]], xLabel: "Weeks", yLabel: "Aiden's lead ($)" },
+              alt: "Aiden's lead over Bea: $30 at the start, shrinking by $3 each week, down to $0 at week 10.",
+            },
             {
               type: "points",
               items: [
-                "Write it: 40 + 5w = 10 + 8w.",
+                "Write it: 40 + 5w = 10 + 8w. The unknown is on both sides.",
                 "Subtract 5w from both sides: 40 = 10 + 3w.",
-                "Subtract 10: 30 = 3w. Divide by 3: w = 10.",
-                "Check: after 10 weeks, Aiden has 40 + 50 = $90 and Bea has 10 + 80 = $90.",
+                "Subtract 10: 30 = 3w. That's the $30 lead and the $3 a week from the graph.",
+                "Divide by 3: w = 10. Check: after 10 weeks, Aiden has 40 + 50 = $90 and Bea has 10 + 80 = $90.",
               ],
             },
+          ],
+        },
+        {
+          id: "s2",
+          kind: "slide",
+          title: "x on both sides",
+          blocks: [
+            { type: "text", text: "In 5x + 3 = 2x + 15, x is on both sides. As with the savings, collect the x terms on one side first." },
+            {
+              type: "points",
+              items: ["Subtract 2x from both sides: 3x + 3 = 15.", "Subtract 3 from both sides: 3x = 12.", "Divide both sides by 3: x = 4."],
+            },
+            { type: "text", text: "Check: 5 × 4 + 3 = 23 and 2 × 4 + 15 = 23. The two sides match." },
           ],
         },
         {
@@ -482,7 +496,8 @@ const equations: CatalogueEntry = {
 export const practice: Record<string, string[]> = {
   "one-step": ["m.eq.onestep"],
   "two-step": ["m.eq.twostep"],
-  "simplify-first": ["m.expr.simplify", "m.eq.multistep"],
+  // m.eq.twostep level 2 includes p(x + q) = r; m.eq.multistep puts x on both sides, which waits for lesson 4.
+  "simplify-first": ["m.expr.simplify", "m.eq.twostep"],
   "both-sides": ["m.eq.multistep"],
 };
 
