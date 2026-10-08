@@ -22,6 +22,11 @@ export type SendInfo = {
   speculative: boolean;
   /** "Try again" after a lost connection: the same turn again. */
   retry: boolean;
+  /**
+   * The reply's voice, opened now (at the end of turn) so its socket is ready before the first
+   * token: write() each text delta into it, partDone() at each finished text part, end() at the end.
+   */
+  reply: ReplyFeed;
 };
 
 export type TutorVoiceOptions = {
@@ -54,7 +59,7 @@ export type TutorVoice = {
   confirmAgain(): void;
   /** "Try again" after "Lost the connection". */
   retry(): void;
-  /** Speak a tutor reply as it streams: write() its text (partDone() at each finished text part), end() when done. */
+  /** Speak a reply that didn't come from a spoken turn (a typed turn read aloud): a fresh feed. A spoken turn's feed comes with onSend. */
   reply(): ReplyFeed;
   /** The reply's first text arrived (latency log). */
   markFirstToken(): void;
@@ -92,6 +97,26 @@ export function useTutorVoice(opts: TutorVoiceOptions): TutorVoice {
   useEffect(() => {
     appRef.current = app;
   });
+  const feedRef = useRef<ReplyFeed | null>(null);
+
+  /** Opens the reply's voice now: a voice-mode sentence feed spoken through the app voice. */
+  const startReply = useCallback((): ReplyFeed => {
+    const { out, band } = appRef.current;
+    feedRef.current?.abort();
+    question.current = false;
+    const feed = sentenceFeed({
+      mode: "voice",
+      release: (s, i) => {
+        if (i === 0) marks.current.firstSentence = now();
+        question.current = /[?¿]["'”’)]*\s*$/.test(s);
+        return s;
+      },
+    });
+    const run = talk.current ? talk.current.say(feed.sentences, { kind: "reply", band }) : out.speak(feed.sentences, { kind: "reply", band });
+    replyRun.current = run.id;
+    feedRef.current = feed;
+    return feed;
+  }, []);
 
   const dispatch = useCallback(function dispatch(e: ConvEvent) {
     const r = convStep(sRef.current, e);
@@ -118,16 +143,23 @@ export function useTutorVoice(opts: TutorVoiceOptions): TutorVoice {
           input?.abort();
           break;
         case "send":
-        case "retry":
+        case "retry": {
           marks.current.requestSent = now();
           posted.current = false;
           logVoice("send", { speculative: fx.type === "send" && fx.speculative });
-          h.onSend(fx.text, { via: "voice", confidence: confidence.current, speculative: fx.type === "send" && fx.speculative, retry: fx.type === "retry" });
+          const reply = startReply();
+          h.onSend(fx.text, { via: "voice", confidence: confidence.current, speculative: fx.type === "send" && fx.speculative, retry: fx.type === "retry", reply });
           break;
+        }
         case "commit":
           h.onCommit?.();
           break;
         case "abort-request":
+          // The speculative reply goes too: nothing of it is spoken.
+          feedRef.current?.abort();
+          feedRef.current = null;
+          if (replyRun.current != null) out.cancel({ fadeMs: 0 });
+          replyRun.current = null;
           h.onAbortRequest?.();
           break;
         case "stop-reply":
@@ -140,7 +172,7 @@ export function useTutorVoice(opts: TutorVoiceOptions): TutorVoice {
           break;
       }
     }
-  }, []);
+  }, [startReply]);
 
   // A new learner, language or voice: start over.
   useEffect(() => {
@@ -250,20 +282,7 @@ export function useTutorVoice(opts: TutorVoiceOptions): TutorVoice {
     confirmSend: () => dispatch({ type: "confirm-send", at: now() }),
     confirmAgain: () => dispatch({ type: "confirm-again", at: now() }),
     retry: () => dispatch({ type: "retry", at: now() }),
-    reply() {
-      question.current = false;
-      const feed = sentenceFeed({
-        mode: "voice",
-        release: (s, i) => {
-          if (i === 0) marks.current.firstSentence = now();
-          question.current = /[?¿]["'”’)]*\s*$/.test(s);
-          return s;
-        },
-      });
-      const run = talk.current ? talk.current.say(feed.sentences, { kind: "reply", band: app.band }) : app.out.speak(feed.sentences, { kind: "reply", band: app.band });
-      replyRun.current = run.id;
-      return feed;
-    },
+    reply: startReply,
     markFirstToken: () => {
       marks.current.firstToken ??= now();
     },

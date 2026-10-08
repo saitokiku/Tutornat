@@ -176,7 +176,9 @@ describe("the talking tutor", () => {
     act(() => t.input.speechStart());
     expect(t.result.current.state.phase).toBe("hearing");
     act(() => t.input.endOfTurn("It's twelve.", { confidence: 0.92, lastWordEnd: performance.now() - 400 }));
-    expect(t.onSend).toHaveBeenCalledWith("It's twelve.", { via: "voice", confidence: 0.92, speculative: false, retry: false });
+    expect(t.onSend).toHaveBeenCalledWith("It's twelve.", expect.objectContaining({ via: "voice", confidence: 0.92, speculative: false, retry: false }));
+    // The reply's voice opens with the request, so its socket is ready before the first token.
+    expect(t.out.said).toHaveLength(1);
     expect(t.result.current.state.phase).toBe("thinking");
     expect(t.input.listening).toBe(false);
   });
@@ -190,7 +192,7 @@ describe("the talking tutor", () => {
     act(() => {
       t.result.current.markAck();
       t.result.current.markFirstToken();
-      feed = t.result.current.reply();
+      feed = t.onSend.mock.calls[0][1].reply;
       feed.write("Look at the top number. Now");
     });
     await flush();
@@ -213,7 +215,7 @@ describe("the talking tutor", () => {
     act(() => t.input.endOfTurn("seven", { confidence: 0.9 }));
     let feed!: ReturnType<typeof t.result.current.reply>;
     act(() => {
-      feed = t.result.current.reply();
+      feed = t.onSend.mock.calls[0][1].reply;
       feed.write("Seven dots. Can you count them again?");
       feed.end();
     });
@@ -229,7 +231,7 @@ describe("the talking tutor", () => {
     act(() => t.result.current.mic());
     act(() => t.input.endOfTurn("twelve", { confidence: 0.9 }));
     act(() => {
-      t.result.current.reply().write("Look at the top number. Now look at the bottom number. Which");
+      t.onSend.mock.calls[0][1].reply.write("Look at the top number. Now look at the bottom number. Which");
     });
     await flush();
     t.out.heard = 3;
@@ -260,7 +262,7 @@ describe("the talking tutor", () => {
     await flush();
     act(() => t.result.current.mic());
     act(() => {
-      t.result.current.reply().write("One. ");
+      t.result.current.reply().write("One. Two");
     });
     await flush();
     t.unmount();
