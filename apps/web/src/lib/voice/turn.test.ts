@@ -35,6 +35,10 @@ describe("how a turn ends", () => {
     expect(shapeOf("It's.")).toBe("hold");
     expect(shapeOf("I think it's.")).toBe("hold");
     expect(shapeOf("Creo que es.")).toBe("hold");
+    // Grades 6–9 too: the number comes after "is" (the documented departure: bare yes/no "It is." is done).
+    for (const t of ["The answer is.", "My answer is.", "I think it is.", "The total was.", "I think that is."]) expect(shapeOf(t), t).toBe("hold");
+    for (const t of ["It is.", "Yes it is.", "That is.", "No it is."]) expect(shapeOf(t), t).toBe("done");
+    expect(shapeOf("La respuesta es.")).toBe("hold");
     // Holding phrases.
     expect(shapeOf("wait")).toBe("holding");
     expect(shapeOf("Hold on.")).toBe("holding");

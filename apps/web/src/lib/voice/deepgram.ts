@@ -20,7 +20,15 @@ import { asVoiceError, emitter, metaOf, VoiceError, type Band, type HeardWord, t
 //    its interim and final words, with endpointing by band.
 // Both: word times (for echo matching by time) and confidence come with every turn; a complete
 // spoken answer to the waiting problem ends the turn after a short silence; "wait", "a ver" hold the
-// floor for 8 s and are never sent alone.
+// floor for 8 s and are never sent alone (not even at an eager end).
+//
+// Times: each socket's stream time 0 is the first sample sent on it (a reconnect starts again at 0),
+// mapped to the page clock by counting samples from the first one captured. Nova gives word times.
+// Flux gives none, only the audio window of each message: a Flux word is "coarse", timed by the
+// window it first appeared in, so the turn's last word ends at the latest by the end of the audio in
+// the message where the transcript last grew — not at EndOfTurn's window end, which includes Flux's
+// own end-of-turn silence. (How far that bound sits after the real word end is Flux's recognition
+// lag; P0 measures it on recorded fixtures.)
 
 const WS_FLUX = "wss://api.deepgram.com/v2/listen";
 const WS_NOVA = "wss://api.deepgram.com/v1/listen";
@@ -109,7 +117,7 @@ export type DeepgramOptions = {
   now?: () => number;
 };
 
-export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): () => void; dispose(): void; readonly model: "flux" | "nova" | null } {
+export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): () => void; dispose(): void; readonly model: "flux" | "nova" | null; onLevel: NonNullable<SpeechIn["onLevel"]> } {
   const f = o.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const WS = o.WebSocket ?? WebSocket;
   const capture = o.capture ?? micCapture;
@@ -123,6 +131,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
     resumed: emitter<[]>(),
     speech: emitter<[]>(),
     slow: emitter<[boolean]>(),
+    level: emitter<[number, number]>(),
     error: emitter<[VoiceError]>(),
   };
 
@@ -133,8 +142,14 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
   let flux = false;
   let tracker: TurnTracker | null = null;
   let opts: ListenOptions = {};
-  let buffered: ArrayBuffer[] = [];
-  let droppedSamples = 0;
+  /** Frames waiting for the socket, with the index of their first sample in this listening session. */
+  let buffered: { buf: ArrayBuffer; sample: number }[] = [];
+  /** Samples captured so far in this listening session (sent, buffered or dropped). */
+  let captured = 0;
+  /** The page time of the session's first sample, when the capture can't say. */
+  let firstAt: number | null = null;
+  /** The session sample at the current socket's stream time 0 (its first frame sent), or null before one. */
+  let socketBase: number | null = null;
   let stopping = false;
   let discard = false;
   let reconnects = 0;
@@ -147,6 +162,8 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
   // Flux: the turn so far, a held "wait …", and a pending early end for a complete answer.
   let fluxWords: HeardWord[] = [];
   let fluxText = "";
+  /** Per word of the current Flux turn: the end of the audio window it first appeared in (page ms). */
+  let fluxSeen: number[] = [];
   let held: { text: string; words: HeardWord[]; timer: ReturnType<typeof setTimeout> } | null = null;
   let answerTimer: ReturnType<typeof setTimeout> | undefined;
   let novaWords: HeardWord[] = [];
@@ -166,27 +183,45 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
     });
     spare = { at: now(), token };
   };
+  /**
+   * Takes the spare token (or fetches one), and once it is in hand fetches the next spare, so the
+   * next press and a reconnect never wait for one. (Not on a refusal: no hammering a route that says no.)
+   */
   const takeToken = () => {
     const s = spare;
     spare = null;
-    return s && now() - s.at < TOKEN_REFRESH_MS ? s.token : fetchToken();
+    const t = s && now() - s.at < TOKEN_REFRESH_MS ? s.token : fetchToken();
+    t.then(
+      () => spare ?? prefetch(),
+      () => {},
+    );
+    return t;
   };
 
-  /** Stream time (seconds since the first sample sent) → performance.now() ms. */
-  const streamAt = (sec: number) => (mic?.startedAt() ?? now()) + (droppedSamples / MIC_RATE) * 1000 + sec * 1000;
+  /** Page time (performance.now() ms) of a sample of this listening session. */
+  const sampleAt = (sample: number) => (mic?.startedAt() ?? firstAt ?? now()) + (sample / MIC_RATE) * 1000;
+  /** The current socket's stream time (seconds since the first sample sent on it) → performance.now() ms. */
+  const streamAt = (sec: number) => sampleAt(socketBase ?? 0) + sec * 1000;
 
-  const send = (pcm: Int16Array) => {
-    const buf = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength) as ArrayBuffer;
+  const sendFrame = (s: WebSocket, f: { buf: ArrayBuffer; sample: number }) => {
+    socketBase ??= f.sample; // this socket's stream time 0
+    s.send(f.buf);
+  };
+
+  const onFrame = (pcm: Int16Array) => {
+    firstAt ??= now() - (pcm.length / MIC_RATE) * 1000;
+    const f = { buf: pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength) as ArrayBuffer, sample: captured };
+    captured += pcm.length;
     if (ws?.readyState === 1) {
-      ws.send(buf);
+      sendFrame(ws, f);
       const isSlow = (ws.bufferedAmount ?? 0) > SLOW_BYTES;
       if (isSlow !== slow) {
         slow = isSlow;
         ev.slow.emit(slow);
       }
     } else if (!stopping) {
-      buffered.push(buf);
-      if (buffered.length > MAX_BUFFERED_FRAMES) droppedSamples += buffered.shift()!.byteLength / 2;
+      buffered.push(f);
+      if (buffered.length > MAX_BUFFERED_FRAMES) buffered.shift(); // dropped: the next socket starts after it
     }
   };
 
@@ -194,6 +229,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
     clearTimeout(answerTimer);
     fluxWords = [];
     fluxText = "";
+    fluxSeen = [];
   }
 
   function cleanup() {
@@ -210,7 +246,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
       s?.close(1000);
     } catch {}
     buffered = [];
-    droppedSamples = 0;
+    socketBase = null;
     listening = false;
     if (slow) {
       slow = false;
@@ -245,13 +281,18 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
 
   // ---- Flux
 
-  /** Flux gives no word times: spread the words over the audio window they came in. */
-  function fluxTimed(m: FluxTurn): HeardWord[] {
-    const ws0 = m.words ?? [];
-    const a = m.audio_window_start ?? 0;
-    const b = m.audio_window_end ?? a;
-    const step = ws0.length ? (b - a) / ws0.length : 0;
-    return ws0.map((w, i) => ({ word: w.word, start: streamAt(a + i * step), end: streamAt(a + (i + 1) * step), confidence: typeof w.confidence === "number" ? w.confidence : null }));
+  /**
+   * Flux gives no word times, only the audio window of each message. Each word gets the window it
+   * first appeared in (coarse): from the turn's start to the end of that message's audio. Never spread
+   * evenly: that would make the last word end at EndOfTurn's window end, silence included.
+   */
+  function fluxTimed(m: FluxTurn, text: string): HeardWord[] {
+    const ws0 = m.words?.length ? m.words : text.split(/\s+/).filter(Boolean).map((word) => ({ word, confidence: undefined }));
+    const a = streamAt(m.audio_window_start ?? 0);
+    const b = streamAt(m.audio_window_end ?? m.audio_window_start ?? 0);
+    fluxSeen.length = Math.min(fluxSeen.length, ws0.length); // a revised transcript can be shorter
+    while (fluxSeen.length < ws0.length) fluxSeen.push(b);
+    return ws0.map((w, i) => ({ word: w.word, start: a, end: Math.max(a, fluxSeen[i]), confidence: typeof w.confidence === "number" ? w.confidence : null, coarse: true }));
   }
 
   function fluxEnd(text: string, words: HeardWord[]) {
@@ -278,7 +319,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
 
   function onFlux(m: FluxTurn) {
     const text = (m.transcript ?? "").trim();
-    const words = fluxTimed(m);
+    const words = fluxTimed(m, text);
     if (m.event === "StartOfTurn") {
       clearTimeout(answerTimer);
       if (held) clearTimeout(held.timer);
@@ -289,13 +330,16 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
       ev.resumed.emit();
       return;
     }
+    const changed = text !== fluxText;
     if (text) {
       fluxText = text;
       fluxWords = words;
       ev.words.emit(words);
       ev.partial.emit([held?.text, text].filter(Boolean).join(" "));
     }
-    if (m.event === "EagerEndOfTurn" && text) ev.eager.emit(text, metaOf(words));
+    // An eager end of "wait" is never sent, even speculatively; after a held "wait …" the eager
+    // text carries it, the same way the turn will (so the commit matches).
+    if (m.event === "EagerEndOfTurn" && text && !isHolding(text, true)) ev.eager.emit([held?.text, text].filter(Boolean).join(" "), metaOf([...(held?.words ?? []), ...words]));
     if (m.event === "EndOfTurn") {
       if (text) ev.final.emit(text);
       if (!text) return;
@@ -307,10 +351,13 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
       }
       return;
     }
-    // A complete spoken answer: end the turn after a short silence, before Flux would.
+    // A complete spoken answer: end the turn after a short silence from its last word, before Flux
+    // would. Only a transcript that changed starts the clock again (Updates repeat during silence).
+    if (!text || !changed) return;
     clearTimeout(answerTimer);
     if (opts.turns === "auto" && text && opts.answer?.(text)) {
-      const wait = turnOptions(band()).answerMs ?? 500;
+      const lastEnd = words.at(-1)?.end ?? now();
+      const wait = Math.max(0, (turnOptions(band()).answerMs ?? 500) - Math.max(0, now() - lastEnd));
       answerTimer = setTimeout(() => {
         if (fluxText === text) fluxEnd(text, words);
       }, wait);
@@ -358,6 +405,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
     const s = new WS(url, ["bearer", t.token]);
     s.binaryType = "arraybuffer";
     ws = s;
+    socketBase = null; // a new socket's stream time starts at its own first frame
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new VoiceError("network", "connect timeout"));
@@ -388,7 +436,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
           .catch((e) => id === session && fatal(e));
       } else fatal(new VoiceError("network"));
     };
-    for (const b of buffered) s.send(b);
+    for (const f of buffered) sendFrame(s, f);
     buffered = [];
   }
 
@@ -433,7 +481,9 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
       discard = false;
       reconnects = 0;
       buffered = [];
-      droppedSamples = 0;
+      captured = 0;
+      firstAt = null;
+      socketBase = null;
       novaWords = [];
       fluxPast = [];
       clearFluxTurn();
@@ -443,7 +493,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
         onEnd: (text) => emitTurn(text, novaWords),
         now,
       });
-      const [token, cap] = await Promise.allSettled([takeToken(), capture({ onFrame: send, targetRate: MIC_RATE })]);
+      const [token, cap] = await Promise.allSettled([takeToken(), capture({ onFrame, onLevel: (level, at) => ev.level.emit(level, at), targetRate: MIC_RATE })]);
       if (id !== session) {
         // stop() or abort() came first
         if (cap.status === "fulfilled") cap.value.stop();
@@ -460,7 +510,6 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
         ev.error.emit(err);
         throw err;
       }
-      if (!refresh) prefetch(); // the reconnect, and the next press, have a token ready
       try {
         await connect(id, token.value);
       } catch (e) {
@@ -503,6 +552,7 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): ()
     onTurnResumed: ev.resumed.on,
     onSpeechStart: ev.speech.on,
     onSlow: ev.slow.on,
+    onLevel: ev.level.on,
     onError: ev.error.on,
   };
   return input;

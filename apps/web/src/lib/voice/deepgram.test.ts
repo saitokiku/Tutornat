@@ -245,8 +245,8 @@ describe("Deepgram live listening", () => {
     ws.receive(results("I think it's", true, false));
     ws.drop(1006);
     await flush();
-    // The token fetched ahead is used: no wait for a new one.
-    expect(s.fetch).toHaveBeenCalledTimes(2);
+    // The token fetched ahead is used: no wait for a new one (and the next one is fetched ahead in turn).
+    expect(s.fetch).toHaveBeenCalledTimes(3);
     const ws2 = FakeSocket.last();
     expect(ws2).not.toBe(ws);
     expect(ws2.protocols).toEqual(["bearer", "jwt2"]);
@@ -262,6 +262,60 @@ describe("Deepgram live listening", () => {
     expect(s.seen.errors).toEqual(["network"]);
     expect(s.seen.turns).toEqual(["I think it's twelve.", "and"]);
     expect(s.input.listening).toBe(false);
+  });
+
+  it("after a reconnect, word times count from the new socket's first frame, not the first socket's", async () => {
+    const s = setup();
+    const ws = await listening(s);
+    const heard: { word: string; start: number }[] = [];
+    s.input.onWords((ws0) => heard.push(...ws0));
+    for (let k = 0; k < 750; k++) s.mic.onFrame!(new Int16Array(1280), 0.1, 0.1); // 60 s of audio on the first socket
+    vi.setSystemTime(61_000);
+    ws.drop(1006);
+    await flush();
+    for (let k = 0; k < 5; k++) s.mic.onFrame!(new Int16Array(1280), 0.1, 0.1); // captured while reconnecting
+    const ws2 = FakeSocket.last();
+    ws2.open();
+    await flush();
+    expect(ws2.binary()).toHaveLength(5);
+    ws2.receive({ type: "Results", is_final: false, channel: { alternatives: [{ transcript: "I think", words: [{ word: "I", start: 0.3, end: 0.4 }, { word: "think", start: 0.45, end: 0.7 }] }] } });
+    // The words were said 60.3 s after the first sample (startedAt 1000), not 0.3 s after it.
+    expect(heard[0].start).toBeCloseTo(1000 + 60_000 + 300, 5);
+    expect(s.seen.turns).toEqual([]); // so this isn't "a minute of silence after 'I think'"
+  });
+
+  it("start() uses the token fetched ahead and fetches the next one, even while prepare() refreshes", async () => {
+    const s = setup();
+    const stop = s.input.prepare();
+    await flush();
+    expect(s.fetch).toHaveBeenCalledTimes(1);
+    const ws = await listening(s);
+    expect(ws.protocols).toEqual(["bearer", "jwt1"]);
+    await flush();
+    expect(s.fetch).toHaveBeenCalledTimes(2); // the next press has one ready
+    s.input.stop();
+    ws.drop(1000);
+    await flush();
+    const ws2 = await listening(s);
+    expect(ws2.protocols).toEqual(["bearer", "jwt2"]);
+    stop();
+  });
+
+  it("hands over each block's own level and capture time for barge-in", async () => {
+    let onLevel: ((l: number, at: number) => void) | undefined;
+    const capture: MicCapture = async (o) => {
+      onLevel = o.onLevel;
+      return { level: () => 0, startedAt: () => 0, stop: vi.fn() };
+    };
+    const input = deepgramSpeechIn({ locale: "en", consent: true, under13: false, fetch: vi.fn(async () => reply(200, { token: "t", expiresIn: 60, model: "nova-3", language: "en-US" })), WebSocket: asWebSocket(FakeSocket), capture });
+    const got: [number, number][] = [];
+    input.onLevel((l, at) => got.push([l, at]));
+    const started = input.start();
+    await flush();
+    FakeSocket.last().open();
+    await started;
+    onLevel!(0.7, 1234);
+    expect(got).toEqual([[0.7, 1234]]);
   });
 
   it("Spanish uses the language the server chose", () => {
@@ -356,6 +410,44 @@ describe("Deepgram Flux", () => {
     expect(s.seen.turns).toEqual(["it is twelve"]);
     expect(s.seen.metas[0].confidence).toBeCloseTo(0.8, 5);
     expect(s.seen.metas[0].lastWordEnd).toBeCloseTo(1000 + 1200, 5);
+  });
+
+  it("times the last word by the message where the transcript last grew, not by EndOfTurn's window (which has Flux's silence in it)", async () => {
+    const s = setup({ model: "flux-general-en" });
+    const ws = await listening(s);
+    const at = (event: string, transcript: string, end: number) => ({ ...turn(event, transcript), audio_window_end: end });
+    ws.receive(at("Update", "it", 0.24));
+    ws.receive(at("Update", "it is", 0.48));
+    ws.receive(at("Update", "it is twelve", 0.72));
+    ws.receive(at("Update", "it is twelve", 0.96)); // silence: nothing new
+    ws.receive(at("EndOfTurn", "it is twelve", 1.6));
+    expect(s.seen.metas[0].lastWordEnd).toBeCloseTo(1000 + 720, 5);
+    expect(s.seen.metas[0].words.every((w) => w.coarse && w.start === 1000)).toBe(true);
+  });
+
+  it("an eager end of 'wait' is never sent; after a held 'wait' the eager text carries it", async () => {
+    const s = setup({ model: "flux-general-en" });
+    const ws = await listening(s);
+    ws.receive(turn("EagerEndOfTurn", "wait"));
+    expect(s.seen.eager).toEqual([]);
+    ws.receive(turn("EndOfTurn", "wait"));
+    ws.receive(turn("StartOfTurn"));
+    ws.receive(turn("EagerEndOfTurn", "it's seven"));
+    expect(s.seen.eager).toEqual(["wait it's seven"]);
+    ws.receive(turn("EndOfTurn", "it's seven"));
+    expect(s.seen.turns).toEqual(["wait it's seven"]); // the same words: the speculative request stands
+  });
+
+  it("the early end for an answer runs from the last word, and repeated Updates don't push it back", async () => {
+    const s = setup({ model: "flux-general-en", band: "35" });
+    const ws = await listening(s, { turns: "auto", answer: (t) => t === "twelve" });
+    ws.receive({ ...turn("Update", "twelve"), audio_window_end: 0 }); // the word ended at 1000 (startedAt + 0)
+    for (let k = 0; k < 2; k++) {
+      await vi.advanceTimersByTimeAsync(240);
+      ws.receive({ ...turn("Update", "twelve"), audio_window_end: 0.24 * (k + 1) });
+    }
+    await vi.advanceTimersByTimeAsync(130);
+    expect(s.seen.turns).toEqual(["twelve"]); // 610 ms after the update, not 600 ms after the last one
   });
 
   it("'wait' holds the floor: never sent alone, sent with what follows", async () => {

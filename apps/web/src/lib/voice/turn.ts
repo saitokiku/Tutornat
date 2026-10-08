@@ -85,6 +85,18 @@ const STILL_GOING = new Set(["and", "but", "or", "because", "cause", "the", "an"
 /** The last word as written: lowercase, accents kept, apostrophes kept ("it's"). */
 const lastWord = (t: string) => /[\p{L}\p{N}'’]+(?=[^\p{L}\p{N}'’]*$)/u.exec(t.toLowerCase().normalize("NFC"))?.[0].replace(/^['’]+|['’]+$/g, "") ?? "";
 
+// "The answer is.", "I think it is.", "The total was.": the number comes next, whatever the full stop
+// says. Only the bare yes/no forms ("It is.", "Yes it is.") are finished.
+const ANSWERISH = new Set(["answer", "think", "guess", "mean", "total", "sum", "number", "result", "difference", "product"]);
+const PRONOUN = new Set(["it", "that", "this", "they"]);
+const YES_NO = new Set(["yes", "no", "yeah", "yep", "yup", "nope"]);
+function unfinishedIs(t: string): boolean {
+  const w = words(t);
+  if (w.length < 2 || !/^(is|are|was|were)$/.test(w[w.length - 1])) return false;
+  const before = w[w.length - 2];
+  return ANSWERISH.has(before) || (PRONOUN.has(before) && w.length > 2 && !YES_NO.has(w[0]));
+}
+
 export type TurnShape = "empty" | "filler" | "holding" | "hold" | "done" | "open";
 
 /** How the words so far end. `ignoreFullStop`: a final "." counts as no punctuation. */
@@ -98,7 +110,7 @@ export function shapeOf(text: string, { ignoreFullStop = false } = {}): TurnShap
   if (ignoreFullStop) t = t.replace(/(?<!\.)\.(["'”’)]*)$/, "$1");
   const last = lastWord(t);
   if (/[?!]["'”’)]*$/.test(t)) return "done";
-  if (/\.["'”’)]*$/.test(t)) return STILL_GOING.has(last) ? "hold" : "done";
+  if (/\.["'”’)]*$/.test(t)) return STILL_GOING.has(last) || unfinishedIs(t) ? "hold" : "done";
   return JOINERS.has(last) ? "hold" : "open";
 }
 

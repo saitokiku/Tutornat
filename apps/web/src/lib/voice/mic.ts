@@ -10,6 +10,8 @@ import { asVoiceError, VoiceError, type SpeechIn, type VoiceErrorCode } from "./
 /** Mono 16-bit PCM at 16 kHz, in 80 ms frames (1280 samples), the size Deepgram Flux asks for. */
 export const MIC_RATE = 16000;
 export const FRAME_MS = 80;
+/** The worklet hands over 20 ms blocks: levels come that often, frames are four blocks. */
+export const BLOCK_MS = 20;
 
 export type Capture = {
   /** Current input level 0..1. */
@@ -22,6 +24,12 @@ export type Capture = {
 export type CaptureOptions = {
   /** Each frame: the audio, the smoothed level for a meter, and this frame's own level (for judging). */
   onFrame: (pcm: Int16Array, level: number, frameLevel: number) => void;
+  /**
+   * Each 20 ms block as it is captured: its own level (not smoothed) and when its first sample was
+   * captured (performance.now() ms). Barge-in onset reads these: 120 ms of voice is six blocks, and
+   * one loud click is one.
+   */
+  onLevel?: (level: number, at: number) => void;
   targetRate?: number;
   mediaDevices?: Pick<MediaDevices, "getUserMedia">;
   /** The app's AudioContext (./audio sharedAudio by default). */
@@ -108,8 +116,55 @@ export function createResampler(from: number, to: number) {
   };
 }
 
+/**
+ * The worklet's 20 ms blocks (at the context's rate) → 80 ms frames at `targetRate` for the
+ * recognizer, handing over each block's own level and capture time on the way (onLevel). The meter's
+ * smoothed level and each frame's own level (for the self-test) follow the frames, as before.
+ */
+export function blocksToFrames({ inRate, targetRate, onFrame, onLevel, now }: { inRate: number; targetRate: number; onFrame: CaptureOptions["onFrame"]; onLevel?: CaptureOptions["onLevel"]; now: () => number }) {
+  const resample = createResampler(inRate, targetRate);
+  const frameLen = Math.round((targetRate * FRAME_MS) / 1000);
+  let acc = new Float32Array(frameLen * 2);
+  let accLen = 0;
+  let level = 0;
+  let first: number | null = null;
+  let seen = 0; // input samples so far
+  let energy = 0; // input energy since the last frame
+  let count = 0;
+  return {
+    push(block: Float32Array) {
+      // The block just finished: its first sample was captured one block ago.
+      first ??= now() - (block.length / inRate) * 1000;
+      onLevel?.(levelOf(rms(block)), first + (seen / inRate) * 1000);
+      seen += block.length;
+      for (let i = 0; i < block.length; i++) energy += block[i] * block[i];
+      count += block.length;
+      const r = resample(block);
+      if (accLen + r.length > acc.length) {
+        const grown = new Float32Array(Math.max(acc.length * 2, accLen + r.length));
+        grown.set(acc.subarray(0, accLen));
+        acc = grown;
+      }
+      acc.set(r, accLen);
+      accLen += r.length;
+      while (accLen >= frameLen) {
+        const frame = acc.slice(0, frameLen);
+        acc.copyWithin(0, frameLen, accLen);
+        accLen -= frameLen;
+        const frameLevel = levelOf(count ? Math.sqrt(energy / count) : 0);
+        energy = 0;
+        count = 0;
+        level = smoothLevel(level, frameLevel);
+        onFrame(toInt16(frame), level, frameLevel);
+      }
+    },
+    level: () => level,
+    startedAt: () => first,
+  };
+}
+
 /** Opens the microphone and streams frames until stop(). Rejects with a VoiceError. */
-export const micCapture: MicCapture = async ({ onFrame, targetRate = MIC_RATE, mediaDevices, audioContext, now = () => performance.now() }) => {
+export const micCapture: MicCapture = async ({ onFrame, onLevel, targetRate = MIC_RATE, mediaDevices, audioContext, now = () => performance.now() }) => {
   const md = mediaDevices ?? (typeof navigator !== "undefined" ? navigator.mediaDevices : undefined);
   if (!md?.getUserMedia || (!audioContext && typeof AudioContext === "undefined") || typeof AudioWorkletNode === "undefined") throw new VoiceError("unsupported");
   let stream: MediaStream;
@@ -140,25 +195,18 @@ export const micCapture: MicCapture = async ({ onFrame, targetRate = MIC_RATE, m
       }
     }
     const source = ctx.createMediaStreamSource(stream);
-    const size = Math.round((ctx.sampleRate * FRAME_MS) / 1000);
+    const size = Math.round((ctx.sampleRate * BLOCK_MS) / 1000);
     const node = new AudioWorkletNode(ctx, "kaizen-mic-tap", { processorOptions: { size } });
-    const resample = createResampler(ctx.sampleRate, targetRate);
-    let level = 0;
+    const frames = blocksToFrames({ inRate: ctx.sampleRate, targetRate, onFrame, onLevel, now });
     let stopped = false;
-    let first: number | null = null;
     node.port.onmessage = (e: MessageEvent<Float32Array>) => {
-      if (stopped) return;
-      // The frame just finished: its first sample was captured one frame ago.
-      first ??= now() - (e.data.length / ctx.sampleRate) * 1000;
-      const frameLevel = levelOf(rms(e.data));
-      level = smoothLevel(level, frameLevel);
-      onFrame(toInt16(resample(e.data)), level, frameLevel);
+      if (!stopped) frames.push(e.data);
     };
     source.connect(node);
     node.connect(ctx.destination); // the tap writes silence; connecting keeps it running everywhere
     return {
-      level: () => (stopped ? 0 : level),
-      startedAt: () => first,
+      level: () => (stopped ? 0 : frames.level()),
+      startedAt: () => frames.startedAt(),
       stop() {
         if (stopped) return;
         stopped = true;

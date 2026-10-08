@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import en from "@/i18n/en";
 import { fakeIn } from "./fakes";
 import {
+  blocksToFrames,
   createResampler,
   judgeLevels,
   levelOf,
@@ -50,6 +51,23 @@ describe("audio math", () => {
     expect(Math.abs(total - (10 * 2048) / 3)).toBeLessThanOrEqual(1);
     const out = r(new Float32Array(300).fill(0.25));
     expect(out.every((v) => Math.abs(v - 0.25) < 1e-6)).toBe(true);
+  });
+
+  it("20 ms blocks become 80 ms frames for the recognizer; each block's own level and capture time come on the way", () => {
+    let clock = 1000;
+    const levels: [number, number][] = [];
+    const frames: { n: number; frameLevel: number }[] = [];
+    const f = blocksToFrames({ inRate: 48000, targetRate: 16000, now: () => clock, onLevel: (l, at) => levels.push([l, at]), onFrame: (pcm, _l, frameLevel) => frames.push({ n: pcm.length, frameLevel }) });
+    for (let k = 0; k < 8; k++) {
+      clock += 20;
+      f.push(new Float32Array(960).fill(k === 0 ? 0.5 : 0.0001)); // one loud block, then quiet
+    }
+    expect(levels).toHaveLength(8);
+    expect(levels.map(([, at]) => at)).toEqual([1000, 1020, 1040, 1060, 1080, 1100, 1120, 1140]);
+    expect(levels[0][0]).toBeGreaterThan(0.5);
+    expect(levels[1][0]).toBe(0);
+    expect(frames.map((x) => x.n)).toEqual([1280, 1280]);
+    expect(f.startedAt()).toBe(1000);
   });
 
   it("downsamples 44.1 kHz too", () => {
@@ -227,19 +245,23 @@ describe("micCapture", () => {
   it("asks for echo-cancelled mono audio and streams 80 ms frames of 16 kHz audio with a level, on the shared context", async () => {
     const a = fakeAudio();
     const frames: Int16Array[] = [];
+    const levels: number[] = [];
     let clock = 5000;
-    const cap = await micCapture({ onFrame: (f) => frames.push(f), mediaDevices: { getUserMedia: a.getUserMedia }, audioContext: a.audioContext, now: () => clock });
+    const cap = await micCapture({ onFrame: (f) => frames.push(f), onLevel: (_, at) => levels.push(at), mediaDevices: { getUserMedia: a.getUserMedia }, audioContext: a.audioContext, now: () => clock });
     expect(a.getUserMedia).toHaveBeenCalledWith({ audio: expect.objectContaining({ echoCancellation: true, noiseSuppression: true, channelCount: 1 }) });
-    // 80 ms at 48 kHz in, 1280 samples at 16 kHz out.
-    expect(a.nodes[0].options?.processorOptions?.size).toBe(3840);
+    // 20 ms blocks at 48 kHz in; 80 ms frames of 1280 samples at 16 kHz out.
+    expect(a.nodes[0].options?.processorOptions?.size).toBe(960);
     expect(cap.startedAt()).toBeNull();
-    a.port.onmessage?.({ data: new Float32Array(3840).fill(0.1) } as MessageEvent<Float32Array>);
-    expect(cap.startedAt()).toBe(5000 - 80);
-    clock += 80;
-    a.port.onmessage?.({ data: new Float32Array(3840).fill(0.1) } as MessageEvent<Float32Array>);
-    expect(cap.startedAt()).toBe(5000 - 80);
+    a.port.onmessage?.({ data: new Float32Array(960).fill(0.1) } as MessageEvent<Float32Array>);
+    expect(cap.startedAt()).toBe(5000 - 20);
+    for (let k = 1; k < 8; k++) {
+      clock += 20;
+      a.port.onmessage?.({ data: new Float32Array(960).fill(0.1) } as MessageEvent<Float32Array>);
+    }
+    expect(cap.startedAt()).toBe(5000 - 20);
+    expect(levels).toEqual([4980, 5000, 5020, 5040, 5060, 5080, 5100, 5120]);
     expect(frames).toHaveLength(2);
-    expect(Math.abs(frames[0].length - 1280)).toBeLessThanOrEqual(1);
+    expect(frames[0].length).toBe(1280);
     expect(cap.level()).toBeGreaterThan(0.6);
     cap.stop();
     expect(a.track.stop).toHaveBeenCalled();
