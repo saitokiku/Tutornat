@@ -70,6 +70,26 @@ describe("reading worked steps aloud", () => {
     expect(speakableSteps(["|−7| = 7"])).toBe(false);
     expect(speakableSteps(["x^2 + 1"])).toBe(false);
   });
+
+  it("hints and steps are read from their spoken form when an item has one: Spanish says the letter y as ye", async () => {
+    await signUp({ email: `r${Math.random().toString(36).slice(2)}@example.test`, password: "longenough", displayName: "Sam" });
+    const p = createLearner({ nickname: "Ana", grade: "6", locale: "es" }) as Profile;
+    selectLearner(p.id);
+    // A reflection across the y-axis: its first hint and its steps name the letter at the start.
+    let seed = 1;
+    while (!makeItem("m.coord.plane", 3, seed, "es").hintsSay?.[0].startsWith("Reflejar sobre el eje ye")) seed++;
+    const item = makeItem("m.coord.plane", 3, seed, "es");
+    await show(setOf(p, "pick", [{ skillId: "m.coord.plane", seed, role: "main", level: 3 }]), p);
+    await userEvent.click(screen.getByRole("button", { name: /^Pista/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Otra pista/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Otra pista/ }));
+    const hints = screen.getByRole("list", { name: "Pistas" });
+    expect(within(hints).getByText(item.hints[0])).toBeInTheDocument();
+    expect(within(hints).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(item.hintsSay!.map((h) => `Leer en voz alta: ${h.slice(0, 60)}`));
+    await userEvent.click(screen.getByRole("button", { name: "Muéstrame cómo" }));
+    expect(screen.getByRole("button", { name: `Leer en voz alta: ${item.stepsSay!.join(" ").slice(0, 60)}` })).toBeInTheDocument();
+    expect(item.stepsSay![0]).toMatch(/^ye sigue siendo/);
+  });
 });
 
 describe("Runner", () => {

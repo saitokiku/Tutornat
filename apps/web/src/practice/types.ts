@@ -59,8 +59,12 @@ export type ItemBody = {
   answer: Answer;
   /** The hint ladder, smallest first: a nudge, a strategy, then the first step done. */
   hints: string[];
+  /** What a read-aloud says for each hint, when it differs from the hint as written (Spanish says the letter y as "ye"). */
+  hintsSay?: string[];
   /** A worked solution, shown after real attempts or on request (which marks the answer helped). */
   steps: string[];
+  /** What a read-aloud says for the steps, when it differs from the steps as written. */
+  stepsSay?: string[];
   /** A comfortable pace in seconds for a learner who knows this (Kumon's "standard time"), never a limit. */
   seconds: number;
 };

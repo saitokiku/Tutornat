@@ -124,6 +124,17 @@ function speak(s: string, locale: Locale) {
     .replace(/−(\d)/g, `${tr(locale, "negative", "menos")} $1`);
 }
 
+/**
+ * Hints and steps that name the letter y. A line is text, or a function of how the letter is written:
+ * "y" on screen, and "ye" in the Spanish read-aloud, where a lone "y" is heard as "and".
+ */
+type Lettered = string | ((Y: string) => string);
+function withY(locale: Locale, hints: Lettered[], steps: Lettered[]): Pick<ItemBody, "hints" | "hintsSay" | "steps" | "stepsSay"> {
+  const write = (lines: Lettered[], Y: string) => lines.map((l) => (typeof l === "string" ? l : l(Y)));
+  const body = { hints: write(hints, "y"), steps: write(steps, "y") };
+  return locale === "es" ? { ...body, hintsSay: write(hints, "ye"), stepsSay: write(steps, "ye") } : body;
+}
+
 // ---------- choices and tagged wrong values ----------
 
 function withChoices(r: Rng, right: Choice, wrong: Choice[]): Pick<ItemBody, "choices" | "input" | "answer"> {
@@ -532,19 +543,22 @@ function coordRead(r: Rng, locale: Locale): ItemBody {
       prompt: [tr(locale, `In which quadrant is the point ${pt(x, y)}?`, `¿En qué cuadrante está el punto ${pt(x, y)}?`)],
       say: tr(locale, `In which quadrant is the point ${sayPt(x, y, locale)}?`, `¿En qué cuadrante está el punto ${sayPt(x, y, locale)}?`),
       ...withChoices(r, choice(q), ["I", "II", "III", "IV"].filter((l) => l !== q).map(choice)),
-      hints: [
-        tr(locale, "Look at the signs. Is x positive or negative? Is y?", "Fíjate en los signos. ¿La x es positiva o negativa? ¿Y la y?"),
-        tr(
-          locale,
-          "The quadrants are numbered I, II, III, IV counterclockwise, starting at the top right, where x and y are both positive.",
-          "Los cuadrantes se numeran I, II, III, IV en sentido contrario a las manecillas del reloj, empezando arriba a la derecha, donde x e y son positivas.",
-        ),
-        tr(locale, `x = ${show(x)} is ${x < 0 ? "negative" : "positive"}, so the point is to the ${lr} of the y-axis.`, `x = ${show(x)} es ${x < 0 ? "negativa" : "positiva"}, así que el punto está a la ${lr} del eje y.`),
-      ],
-      steps: [
-        tr(locale, `x ${x < 0 ? "<" : ">"} 0: ${lr} of the y-axis. y ${y < 0 ? "<" : ">"} 0: ${ud} the x-axis.`, `x ${x < 0 ? "<" : ">"} 0: a la ${lr} del eje y. y ${y < 0 ? "<" : ">"} 0: ${ud} del eje x.`),
-        tr(locale, `The point is in quadrant ${q}.`, `El punto está en el cuadrante ${q}.`),
-      ],
+      ...withY(
+        locale,
+        [
+          (Y) => tr(locale, "Look at the signs. Is x positive or negative? Is y?", `Fíjate en los signos. ¿La x es positiva o negativa? ¿Y la ${Y}?`),
+          tr(
+            locale,
+            "The quadrants are numbered I, II, III, IV counterclockwise, starting at the top right, where x and y are both positive.",
+            "Los cuadrantes se numeran I, II, III, IV en sentido contrario a las manecillas del reloj, empezando arriba a la derecha, donde las dos coordenadas son positivas.",
+          ),
+          (Y) => tr(locale, `x = ${show(x)} is ${x < 0 ? "negative" : "positive"}, so the point is to the ${lr} of the y-axis.`, `x = ${show(x)} es ${x < 0 ? "negativa" : "positiva"}, así que el punto está a la ${lr} del eje ${Y}.`),
+        ],
+        [
+          (Y) => tr(locale, `x ${x < 0 ? "<" : ">"} 0: ${lr} of the y-axis. y ${y < 0 ? "<" : ">"} 0: ${ud} the x-axis.`, `x ${x < 0 ? "<" : ">"} 0: a la ${lr} del eje ${Y}. ${Y} ${y < 0 ? "<" : ">"} 0: ${ud} del eje x.`),
+          tr(locale, `The point is in quadrant ${q}.`, `El punto está en el cuadrante ${q}.`),
+        ],
+      ),
       seconds: 15,
     };
   }
@@ -563,16 +577,19 @@ function coordRead(r: Rng, locale: Locale): ItemBody {
     input: "text",
     answer,
     wrong: wrongFor(answer, [w(ptTyped(y, x), "swapped-x-and-y"), (x < 0 || y < 0) && w(ptTyped(Math.abs(x), Math.abs(y)), "dropped-the-negative-signs")]),
-    hints: [
-      tr(locale, "Start at the origin, (0, 0). Is the point to the left or right of it? Up or down?", "Empieza en el origen, (0, 0). ¿El punto está a la izquierda o a la derecha? ¿Arriba o abajo?"),
-      tr(locale, "The x-coordinate tells how far left or right; the y-coordinate tells how far up or down. Left and down are negative.", "La coordenada x dice cuánto a la izquierda o a la derecha; la coordenada y, cuánto arriba o abajo. Izquierda y abajo son negativos."),
-      tr(locale, `The point is ${units(Math.abs(x))} to the ${x < 0 ? "left" : "right"}, so x = ${show(x)}.`, `El punto está ${units(Math.abs(x))} a la ${x < 0 ? "izquierda" : "derecha"}, así que x = ${show(x)}.`),
-    ],
-    steps: [
-      tr(locale, `${units(Math.abs(x))} ${x < 0 ? "left" : "right"}: x = ${show(x)}`, `${units(Math.abs(x))} a la ${x < 0 ? "izquierda" : "derecha"}: x = ${show(x)}`),
-      tr(locale, `${units(Math.abs(y))} ${y < 0 ? "down" : "up"}: y = ${show(y)}`, `${units(Math.abs(y))} hacia ${y < 0 ? "abajo" : "arriba"}: y = ${show(y)}`),
-      pt(x, y),
-    ],
+    ...withY(
+      locale,
+      [
+        tr(locale, "Start at the origin, (0, 0). Is the point to the left or right of it? Up or down?", "Empieza en el origen, (0, 0). ¿El punto está a la izquierda o a la derecha? ¿Arriba o abajo?"),
+        (Y) => tr(locale, "The x-coordinate tells how far left or right; the y-coordinate tells how far up or down. Left and down are negative.", `La coordenada x dice cuánto a la izquierda o a la derecha; la coordenada ${Y}, cuánto arriba o abajo. Izquierda y abajo son negativos.`),
+        tr(locale, `The point is ${units(Math.abs(x))} to the ${x < 0 ? "left" : "right"}, so x = ${show(x)}.`, `El punto está ${units(Math.abs(x))} a la ${x < 0 ? "izquierda" : "derecha"}, así que x = ${show(x)}.`),
+      ],
+      [
+        tr(locale, `${units(Math.abs(x))} ${x < 0 ? "left" : "right"}: x = ${show(x)}`, `${units(Math.abs(x))} a la ${x < 0 ? "izquierda" : "derecha"}: x = ${show(x)}`),
+        (Y) => tr(locale, `${units(Math.abs(y))} ${y < 0 ? "down" : "up"}: y = ${show(y)}`, `${units(Math.abs(y))} hacia ${y < 0 ? "abajo" : "arriba"}: ${Y} = ${show(y)}`),
+        pt(x, y),
+      ],
+    ),
     seconds: 15,
   };
 }
@@ -621,7 +638,7 @@ function coordDistance(r: Rng, locale: Locale): ItemBody {
   const plain = (A: string, B: string) => tr(locale, `What is the distance between ${A} and ${B}?`, `¿Cuál es la distancia entre ${A} y ${B}?`);
   const textFor = (A: string, B: string) => (story ? tr(locale, story.en(A, B), story.es(A, B)) : plain(A, B));
   const sayP = (p: [number, number]) => tr(locale, `the point ${sayPt(p[0], p[1], locale)}`, `el punto ${sayPt(p[0], p[1], locale)}`);
-  const axis = sameY ? tr(locale, "y-axis", "eje y") : tr(locale, "x-axis", "eje x");
+  const axis = (Y: string) => (sameY ? tr(locale, "y-axis", `eje ${Y}`) : tr(locale, "x-axis", "eje x"));
   const answer: Answer = { kind: "number", value: d };
   const [big, small] = [Math.max(Math.abs(a), Math.abs(b)), Math.min(Math.abs(a), Math.abs(b))];
   return {
@@ -635,20 +652,23 @@ function coordDistance(r: Rng, locale: Locale): ItemBody {
       across ? w(big - small, "subtracted-instead-of-adding") : w(big + small, "added-instead-of-subtracting"),
       w(d + 1, "counted-the-grid-points"),
     ]),
-    hints: [
-      sameY
-        ? tr(locale, "Both points have the same y-coordinate, so they are on the same horizontal line.", "Los dos puntos tienen la misma coordenada y, así que están en la misma recta horizontal.")
-        : tr(locale, "Both points have the same x-coordinate, so they are on the same vertical line.", "Los dos puntos tienen la misma coordenada x, así que están en la misma recta vertical."),
-      across
-        ? tr(locale, `The points are on opposite sides of the ${axis}. Add their distances from it.`, `Los puntos están en lados opuestos del ${axis}. Suma sus distancias a ese eje.`)
-        : tr(locale, `The points are on the same side of the ${axis}. Subtract their distances from it.`, `Los puntos están del mismo lado del ${axis}. Resta sus distancias a ese eje.`),
-      tr(locale, `${pt(...P1)} is ${Math.abs(a)} from the ${axis}, and ${pt(...P2)} is ${Math.abs(b)} from it.`, `${pt(...P1)} está a ${Math.abs(a)} del ${axis} y ${pt(...P2)} está a ${Math.abs(b)}.`),
-    ],
-    steps: [
-      `|${show(a)}| = ${Math.abs(a)}, |${show(b)}| = ${Math.abs(b)}`,
-      across ? `${Math.abs(a)} + ${Math.abs(b)} = ${d}` : `${big} − ${small} = ${d}`,
-      story ? `${d} ${tr(locale, story.unit[0], story.unit[1])}` : tr(locale, `${d} units`, `${d} unidades`),
-    ],
+    ...withY(
+      locale,
+      [
+        sameY
+          ? (Y) => tr(locale, "Both points have the same y-coordinate, so they are on the same horizontal line.", `Los dos puntos tienen la misma coordenada ${Y}, así que están en la misma recta horizontal.`)
+          : tr(locale, "Both points have the same x-coordinate, so they are on the same vertical line.", "Los dos puntos tienen la misma coordenada x, así que están en la misma recta vertical."),
+        across
+          ? (Y) => tr(locale, `The points are on opposite sides of the ${axis(Y)}. Add their distances from it.`, `Los puntos están en lados opuestos del ${axis(Y)}. Suma sus distancias a ese eje.`)
+          : (Y) => tr(locale, `The points are on the same side of the ${axis(Y)}. Subtract their distances from it.`, `Los puntos están del mismo lado del ${axis(Y)}. Resta sus distancias a ese eje.`),
+        (Y) => tr(locale, `${pt(...P1)} is ${Math.abs(a)} from the ${axis(Y)}, and ${pt(...P2)} is ${Math.abs(b)} from it.`, `${pt(...P1)} está a ${Math.abs(a)} del ${axis(Y)} y ${pt(...P2)} está a ${Math.abs(b)}.`),
+      ],
+      [
+        `|${show(a)}| = ${Math.abs(a)}, |${show(b)}| = ${Math.abs(b)}`,
+        across ? `${Math.abs(a)} + ${Math.abs(b)} = ${d}` : `${big} − ${small} = ${d}`,
+        story ? `${d} ${tr(locale, story.unit[0], story.unit[1])}` : tr(locale, `${d} units`, `${d} unidades`),
+      ],
+    ),
     seconds: story ? 45 : 30,
   };
 }
@@ -668,22 +688,22 @@ function coordReflect(r: Rng, locale: Locale): ItemBody {
     mode === "both"
       ? tr(locale, `The point ${P} is reflected across the x-axis, and then that image is reflected across the y-axis. What are the coordinates of the final image?`, `El punto ${P} se refleja sobre el eje x y luego esa imagen se refleja sobre el eje ${Y}. ¿Cuáles son las coordenadas de la imagen final?`)
       : tr(locale, `The point ${P} is reflected across the ${mode}-axis. What are the coordinates of its image?`, `El punto ${P} se refleja sobre el eje ${mode === "y" ? Y : "x"}. ¿Cuáles son las coordenadas de su imagen?`);
-  const hints =
+  const hints: Lettered[] =
     mode === "x"
       ? [
           tr(locale, "Reflecting across the x-axis flips the point up or down. Which coordinate changes?", "Reflejar sobre el eje x voltea el punto hacia arriba o hacia abajo. ¿Qué coordenada cambia?"),
-          tr(locale, "Keep the x-coordinate and change the sign of the y-coordinate.", "Conserva la coordenada x y cambia el signo de la coordenada y."),
+          (Y) => tr(locale, "Keep the x-coordinate and change the sign of the y-coordinate.", `Conserva la coordenada x y cambia el signo de la coordenada ${Y}.`),
           tr(locale, `The x-coordinate stays ${show(x)}.`, `La coordenada x sigue siendo ${show(x)}.`),
         ]
       : mode === "y"
         ? [
-            tr(locale, "Reflecting across the y-axis flips the point left or right. Which coordinate changes?", "Reflejar sobre el eje y voltea el punto hacia la izquierda o la derecha. ¿Qué coordenada cambia?"),
-            tr(locale, "Keep the y-coordinate and change the sign of the x-coordinate.", "Conserva la coordenada y y cambia el signo de la coordenada x."),
-            tr(locale, `The y-coordinate stays ${show(y)}.`, `La coordenada y sigue siendo ${show(y)}.`),
+            (Y) => tr(locale, "Reflecting across the y-axis flips the point left or right. Which coordinate changes?", `Reflejar sobre el eje ${Y} voltea el punto hacia la izquierda o la derecha. ¿Qué coordenada cambia?`),
+            (Y) => tr(locale, "Keep the y-coordinate and change the sign of the x-coordinate.", `Conserva la coordenada ${Y} y cambia el signo de la coordenada x.`),
+            (Y) => tr(locale, `The y-coordinate stays ${show(y)}.`, `La coordenada ${Y} sigue siendo ${show(y)}.`),
           ]
         : [
             tr(locale, "Do one reflection at a time.", "Haz un reflejo a la vez."),
-            tr(locale, "Across the x-axis, y changes sign. Across the y-axis, x changes sign.", "Sobre el eje x, la y cambia de signo. Sobre el eje y, la x cambia de signo."),
+            (Y) => tr(locale, "Across the x-axis, y changes sign. Across the y-axis, x changes sign.", `Sobre el eje x, la ${Y} cambia de signo. Sobre el eje ${Y}, la x cambia de signo.`),
             tr(locale, `After the first reflection the point is at ${pt(x, -y)}.`, `Después del primer reflejo el punto está en ${pt(x, -y)}.`),
           ];
   return {
@@ -699,16 +719,18 @@ function coordReflect(r: Rng, locale: Locale): ItemBody {
         ? [w(ptTyped(x, -y), "reflected-only-once"), w(ptTyped(-x, y), "reflected-only-once"), w(ptTyped(iy, ix), "swapped-x-and-y")]
         : [w(mode === "x" ? ptTyped(-x, y) : ptTyped(x, -y), "reflected-across-the-wrong-axis"), w(ptTyped(-x, -y), "changed-both-signs"), w(ptTyped(iy, ix), "swapped-x-and-y")],
     ),
-    hints,
-    steps:
+    ...withY(
+      locale,
+      hints,
       mode === "both"
-        ? [tr(locale, `Across the x-axis: ${pt(x, y)} → ${pt(x, -y)}`, `Sobre el eje x: ${pt(x, y)} → ${pt(x, -y)}`), tr(locale, `Across the y-axis: ${pt(x, -y)} → ${pt(ix, iy)}`, `Sobre el eje y: ${pt(x, -y)} → ${pt(ix, iy)}`)]
+        ? [tr(locale, `Across the x-axis: ${pt(x, y)} → ${pt(x, -y)}`, `Sobre el eje x: ${pt(x, y)} → ${pt(x, -y)}`), (Y) => tr(locale, `Across the y-axis: ${pt(x, -y)} → ${pt(ix, iy)}`, `Sobre el eje ${Y}: ${pt(x, -y)} → ${pt(ix, iy)}`)]
         : [
             mode === "x"
-              ? tr(locale, `x stays ${show(x)}; y changes from ${show(y)} to ${show(iy)}.`, `x sigue siendo ${show(x)}; y cambia de ${show(y)} a ${show(iy)}.`)
-              : tr(locale, `y stays ${show(y)}; x changes from ${show(x)} to ${show(ix)}.`, `y sigue siendo ${show(y)}; x cambia de ${show(x)} a ${show(ix)}.`),
+              ? (Y) => tr(locale, `x stays ${show(x)}; y changes from ${show(y)} to ${show(iy)}.`, `x sigue siendo ${show(x)}; ${Y} cambia de ${show(y)} a ${show(iy)}.`)
+              : (Y) => tr(locale, `y stays ${show(y)}; x changes from ${show(x)} to ${show(ix)}.`, `${Y} sigue siendo ${show(y)}; x cambia de ${show(x)} a ${show(ix)}.`),
             pt(ix, iy),
           ],
+    ),
     seconds: mode === "both" ? 40 : 25,
   };
 }
@@ -730,11 +752,14 @@ const OP1_LABEL: Record<Op1, (v: string, c: number) => string> = {
   divVC: (v, c) => `${v} ÷ ${c}`,
   divCV: (v, c) => `${c} ÷ ${v}`,
 };
+/** A power read aloud the way a class says it: "k cubed", "t to the fifth" / "k al cubo", "t a la quinta". */
+const POW_EN: Partial<Record<number, string>> = { 2: "squared", 3: "cubed", 4: "to the fourth", 5: "to the fifth" };
+const POW_ES: Partial<Record<number, string>> = { 2: "al cuadrado", 3: "al cubo", 4: "a la cuarta", 5: "a la quinta" };
 function op1Say(op: Op1, v: string, c: number, locale: Locale) {
   return {
     add: tr(locale, `${v} plus ${c}`, `${v} más ${c}`),
     mul: tr(locale, `${c} times ${v}`, `${c} por ${v}`),
-    pow: tr(locale, `${v} to the power of ${c}`, `${v} elevado a la ${c}`),
+    pow: `${v} ${tr(locale, POW_EN[c] ?? `to the power of ${c}`, POW_ES[c] ?? `elevado a la potencia ${c}`)}`,
     subVC: tr(locale, `${v} minus ${c}`, `${v} menos ${c}`),
     subCV: tr(locale, `${c} minus ${v}`, `${c} menos ${v}`),
     divVC: tr(locale, `${v} divided by ${c}`, `${v} dividido entre ${c}`),
@@ -786,14 +811,16 @@ const PHRASES_1: Phrase1[] = [
 type Phrase2 = { en: (v: string, a: number, b: number) => string; es: (v: string, a: number, b: number) => string; ans: (v: string, a: number, b: number) => string; first: (v: string, a: number, b: number, locale: Locale) => string; wrong: [(v: string, a: number, b: number) => string, string][] };
 const sumFirst = (v: string, _a: number, b: number, locale: Locale) => tr(locale, `“The sum of ${v} and ${b}” is (${v} + ${b}).`, `“La suma de ${v} y ${b}” es (${v} + ${b}).`);
 const prodFirst = (v: string, a: number, _b: number, locale: Locale) => tr(locale, `“The product of ${a} and ${v}” is ${a}${v}.`, `“El producto de ${a} y ${v}” es ${a}${v}.`);
+/** "1 unidad", "3 unidades". */
+const unidades = (b: number) => (b === 1 ? "unidad" : "unidades");
 const PHRASES_2: Phrase2[] = [
   { en: (v, a, b) => `${a} times the sum of ${v} and ${b}`, es: (v, a, b) => `${a} por la suma de ${v} y ${b}`, ans: (v, a, b) => `${a}(${v} + ${b})`, first: sumFirst, wrong: [[(v, a, b) => `${a}${v} + ${b}`, "left-out-the-parentheses"]] },
   {
-    en: (v, a, b) => `${b} more than the product of ${a} and ${v}`, es: (v, a, b) => `${b} unidades más que el producto de ${a} y ${v}`, ans: (v, a, b) => `${a}${v} + ${b}`, first: prodFirst,
+    en: (v, a, b) => `${b} more than the product of ${a} and ${v}`, es: (v, a, b) => `${b} ${unidades(b)} más que el producto de ${a} y ${v}`, ans: (v, a, b) => `${a}${v} + ${b}`, first: prodFirst,
     wrong: [[(v, a, b) => `${a}(${v} + ${b})`, "grouped-the-wrong-part"], [(v, a, b) => `${b}${v} + ${a}`, "mixed-up-the-numbers"]],
   },
   {
-    en: (v, a, b) => `${b} less than the product of ${a} and ${v}`, es: (v, a, b) => `${b} unidades menos que el producto de ${a} y ${v}`, ans: (v, a, b) => `${a}${v} − ${b}`, first: prodFirst,
+    en: (v, a, b) => `${b} less than the product of ${a} and ${v}`, es: (v, a, b) => `${b} ${unidades(b)} menos que el producto de ${a} y ${v}`, ans: (v, a, b) => `${a}${v} − ${b}`, first: prodFirst,
     wrong: [[(v, a, b) => `${b} − ${a}${v}`, "reversed-the-subtraction-order"], [(v, a, b) => `${a}(${v} − ${b})`, "grouped-the-wrong-part"]],
   },
   {
@@ -888,8 +915,10 @@ function exprWrite(r: Rng, level: number, locale: Locale): ItemBody {
     const phrase = tr(locale, ph.en(v, c), ph.es(v, c));
     const choice = (op: Op1, why?: string): Choice => ({ label: OP1_LABEL[op](v, c), say: op1Say(op, v, c, locale), ...(why ? { why } : {}) });
     const order = ph.op.startsWith("sub") || ph.op.startsWith("div");
-    // Only one choice adds, so naming the operation would settle a sum: its third hint tries a number instead.
-    const at10 = tr(locale, ph.en("10", c), ph.es("10", c));
+    // Only one choice adds, so naming the operation would settle a sum: its third hint tries a number
+    // instead, one that is not c, so the learner can tell the number tried from the number in the words.
+    const tryV = c === 10 ? 20 : 10;
+    const tried = tr(locale, ph.en(String(tryV), c), ph.es(String(tryV), c));
     return {
       prompt: [tr(locale, "Which expression means ", "¿Qué expresión significa "), `“${phrase}”?`],
       say: tr(locale, `Which expression means: ${phrase}?`, `¿Qué expresión significa: ${phrase}?`),
@@ -902,7 +931,7 @@ function exprWrite(r: Rng, level: number, locale: Locale): ItemBody {
             ? tr(locale, `Find the operation. To check a choice, put a number in for ${v} and see whether it matches the words.`, `Busca la operación. Para comprobar una opción, pon un número en lugar de ${v} y mira si coincide con las palabras.`)
             : tr(locale, "Find the operation. Multiplying gives the same result in either order.", "Busca la operación. Multiplicar da el mismo resultado en cualquier orden."),
         ph.op === "add"
-          ? tr(locale, `Try ${v} = 10: “${phrase}” becomes “${at10}”.`, `Prueba con ${v} = 10: “${phrase}” se convierte en “${at10}”.`)
+          ? tr(locale, `Try ${v} = ${tryV}: “${phrase}” becomes “${tried}”.`, `Prueba con ${v} = ${tryV}: “${phrase}” se convierte en “${tried}”.`)
           : tr(locale, `“${ph.key[0]}” means ${OP_WORD[ph.op][0]}.`, `“${ph.key[1]}” significa ${OP_WORD[ph.op][1]}.`),
       ],
       steps: [op1Step(ph.op, v, c, locale), OP1_LABEL[ph.op](v, c)],
@@ -1172,10 +1201,11 @@ const PAD_STORIES: PadStory[] = [
     es: (c) => `En un juego de preguntas, un equipo sigue en la ronda mientras su puntaje sea de al menos ${c} ${c === "−1" ? "punto" : "puntos"}. ¿Cuál es el puntaje entero más bajo con el que el equipo sigue en la ronda?`,
   },
   {
-    // A winter sleeping bag is rated down to a temperature below 0 °C, so a boundary under freezing is real.
+    // A three-season sleeping bag is rated about −1 °C to −9 °C, so a boundary under freezing is real. (A
+    // winter bag, rated colder, would put the answer off the −10 to 10 line.)
     op: ">", range: [-9, -1],
-    en: (c) => `A winter sleeping bag keeps a camper warm on nights warmer than ${c}°C. What is the coldest whole-degree night temperature at which it keeps the camper warm?`,
-    es: (c) => `Una bolsa de dormir de invierno mantiene abrigado a un campista en noches con más de ${c} °C. ¿Cuál es la temperatura más baja, en grados enteros, a la que lo mantiene abrigado?`,
+    en: (c) => `A sleeping bag keeps a camper warm on nights warmer than ${c}°C. What is the coldest whole-degree night temperature at which it keeps the camper warm?`,
+    es: (c) => `Una bolsa de dormir mantiene abrigado a un campista en noches con más de ${c} °C. ¿Cuál es la temperatura más baja, en grados enteros, a la que lo mantiene abrigado?`,
   },
   {
     op: "≤", range: [-8, -2],
@@ -1688,14 +1718,15 @@ function statsCenter(r: Rng, level: number, locale: Locale): ItemBody {
  * Objects, the unit that suits each (an index into UNITS: 0 cm, 2 in, 3 ft) and the believable length of
  * an edge in that unit, from `lo` to `hi` whole units. Long-edged boxes (hi above 9) take one fractional
  * edge only, so their products stay workable by hand; `cubes` marks the boxes small enough to pack with
- * cubes of edge 1/2, 1/3 or 1/4 of a unit.
+ * cubes of edge 1/2, 1/3 or 1/4 of a unit. `edges` gives an object of a set shape its own range for the
+ * length, the width and the height (a brick is about 8 × 3 5/8 × 2 1/4 in).
  */
-type Box = { en: string; es: string; unit: number; lo: number; hi: number; cubes: boolean };
+type Box = { en: string; es: string; unit: number; lo: number; hi: number; cubes: boolean; edges?: [number, number][] };
 const BOXES: Box[] = [
   { en: "A gift box", es: "Una caja de regalo", unit: 2, lo: 3, hi: 9, cubes: false },
   { en: "A gift box", es: "Una caja de regalo", unit: 0, lo: 8, hi: 15, cubes: false },
   { en: "A jewelry box", es: "Un joyero", unit: 2, lo: 2, hi: 6, cubes: true },
-  { en: "A brick", es: "Un ladrillo", unit: 2, lo: 2, hi: 8, cubes: false },
+  { en: "A brick", es: "Un ladrillo", unit: 2, lo: 2, hi: 8, cubes: false, edges: [[7, 8], [3, 4], [2, 3]] },
   { en: "A block of clay", es: "Un bloque de arcilla", unit: 0, lo: 3, hi: 9, cubes: false },
   { en: "A block of clay", es: "Un bloque de arcilla", unit: 2, lo: 1, hi: 4, cubes: true },
   { en: "A small fish tank", es: "Una pecera pequeña", unit: 2, lo: 8, hi: 12, cubes: false },
@@ -1775,12 +1806,15 @@ function volumeFrac(r: Rng, level: number, locale: Locale): ItemBody {
     };
   }
   // Level 1: one fractional edge. Level 2: two or three. A whole-number volume is drawn again: the prompt
-  // asks for a fraction or a mixed number, and the fraction pad cannot send a whole number.
+  // asks for a fraction or a mixed number, and the skill is about fractional edges.
   const fracCount = level === 1 ? 1 : r.int(2, 3);
   let edges: Q[], V: Q;
   do {
     const which = r.shuffle([0, 1, 2]).slice(0, fracCount);
-    edges = [0, 1, 2].map((i) => edge(r, which.includes(i), box.lo, box.hi));
+    edges = [0, 1, 2].map((i) => {
+      const [lo, hi] = box.edges?.[i] ?? [box.lo, box.hi];
+      return edge(r, which.includes(i), lo, hi);
+    });
     V = qMul(qMul(edges[0], edges[1]), edges[2]);
   } while (V[1] === 1);
   const answer: Answer = { kind: "fraction", n: V[0], d: V[1] };
@@ -2040,7 +2074,7 @@ function ratAddSubFrac(r: Rng, locale: Locale, mixed: boolean): ItemBody {
     a = pick(r.bool(0.65));
     b = pick(r.bool(0.5));
     res = sub ? qSub(a, b) : qAdd(a, b);
-    // A whole-number result cannot be entered on the fraction pad, which always sends n/d or w n/d.
+    // A whole-number result is drawn again: these items practice a fraction answer in simplest form.
   } while ((a[0] > 0 && b[0] > 0 && !sub) || (a[0] > 0 && b[0] > 0 && sub && qLess(b, a)) || res[1] === 1 || (a[1] === b[1] && r.bool(0.7)));
   const answer: Answer = { kind: "fraction", n: res[0], d: res[1], simplest: true };
   const op = sub ? "−" : "+";
@@ -2226,7 +2260,7 @@ function ratMultDivFrac(r: Rng, locale: Locale): ItemBody {
     a = pick(sa);
     b = pick(sb);
     res = div ? qDiv(a, b) : qMul(a, b);
-    // A whole-number result cannot be entered on the fraction pad, which always sends n/d or w n/d.
+    // A whole-number result is drawn again: these items practice a fraction answer in simplest form.
   } while (Math.abs(res[0]) > 60 || res[1] > 60 || res[1] === 1);
   const answer: Answer = { kind: "fraction", n: res[0], d: res[1], simplest: true };
   const recip = qr(b[1], b[0]);
@@ -2402,12 +2436,15 @@ function propConstant(r: Rng, level: number, locale: Locale): ItemBody {
         option(`y = ${T}x`, `${y} ${eq} ${T} x`, "used-the-total-not-the-unit-rate"),
         option(`y = x + ${k}`, `${y} ${eq} x ${plus} ${k}`, "added-instead-of-multiplying"),
       ]),
-      hints: [
-        tr(locale, "What is the unit rate, the amount for 1?", "¿Cuál es la tasa unitaria, la cantidad que corresponde a 1?"),
-        tr(locale, "In y = kx, k is the unit rate. Divide the total by the number of items.", "En y = kx, k es la tasa unitaria. Divide el total entre el número de elementos."),
-        `k = ${T} ÷ ${n}`,
-      ],
-      steps: [`k = ${T} ÷ ${n} = ${k}`, `y = ${k}x`],
+      ...withY(
+        locale,
+        [
+          tr(locale, "What is the unit rate, the amount for 1?", "¿Cuál es la tasa unitaria, la cantidad que corresponde a 1?"),
+          (Y) => tr(locale, "In y = kx, k is the unit rate. Divide the total by the number of items.", `En ${Y} = kx, k es la tasa unitaria. Divide el total entre el número de elementos.`),
+          `k = ${T} ÷ ${n}`,
+        ],
+        [`k = ${T} ÷ ${n} = ${k}`, (Y) => `${Y} = ${k}x`],
+      ),
       seconds: 45,
     };
   }
@@ -2430,12 +2467,15 @@ function propConstant(r: Rng, level: number, locale: Locale): ItemBody {
       input: "keypad",
       answer,
       wrong: wrongFor(answer, [w(2 * k, "read-a-y-value-not-the-ratio"), w(6 * k, "read-a-y-value-not-the-ratio")]),
-      hints: [
-        tr(locale, "Pick a point on the line where you can read both coordinates.", "Elige un punto de la recta donde puedas leer las dos coordenadas."),
-        tr(locale, "k = y ÷ x for any point on the line except (0, 0). It is also the y-value where x = 1.", "k = y ÷ x para cualquier punto de la recta excepto (0, 0). También es el valor de y cuando x = 1."),
-        tr(locale, `The line passes through (2, ${2 * k}).`, `La recta pasa por (2, ${2 * k}).`),
-      ],
-      steps: [`${2 * k} ÷ 2 = ${k}`, `k = ${k} ${per}`],
+      ...withY(
+        locale,
+        [
+          tr(locale, "Pick a point on the line where you can read both coordinates.", "Elige un punto de la recta donde puedas leer las dos coordenadas."),
+          (Y) => tr(locale, "k = y ÷ x for any point on the line except (0, 0). It is also the y-value where x = 1.", `k = ${Y} ÷ x para cualquier punto de la recta excepto (0, 0). También es el valor de ${Y} cuando x = 1.`),
+          tr(locale, `The line passes through (2, ${2 * k}).`, `La recta pasa por (2, ${2 * k}).`),
+        ],
+        [`${2 * k} ÷ 2 = ${k}`, `k = ${k} ${per}`],
+      ),
       seconds: 30,
     };
   }
@@ -2467,12 +2507,15 @@ function propConstant(r: Rng, level: number, locale: Locale): ItemBody {
       inv !== null && w(inv, "divided-x-by-y"),
       kU * xs[0] - 100 * xs[0] > 0 && w(dv(kU * xs[0] - 100 * xs[0], 2), "subtracted-instead-of-dividing"),
     ]),
-    hints: [
-      tr(locale, "In a proportional relationship, y ÷ x is the same for every pair.", "En una relación proporcional, y ÷ x es igual para todos los pares."),
-      tr(locale, "Divide a y-value by its matching x-value. Check with a second pair.", "Divide un valor de y entre su valor de x correspondiente. Comprueba con otro par."),
-      tr(locale, `Use the first pair: ${ys[0]} ÷ ${xs[0]}.`, `Usa el primer par: ${ys[0]} ÷ ${xs[0]}.`),
-    ],
-    steps: [`${ys[0]} ÷ ${xs[0]} = ${k}`, `${ys[1]} ÷ ${xs[1]} = ${k}`, `k = ${k}`],
+    ...withY(
+      locale,
+      [
+        (Y) => tr(locale, "In a proportional relationship, y ÷ x is the same for every pair.", `En una relación proporcional, ${Y} ÷ x es igual para todos los pares.`),
+        (Y) => tr(locale, "Divide a y-value by its matching x-value. Check with a second pair.", `Divide un valor de ${Y} entre su valor de x correspondiente. Comprueba con otro par.`),
+        tr(locale, `Use the first pair: ${ys[0]} ÷ ${xs[0]}.`, `Usa el primer par: ${ys[0]} ÷ ${xs[0]}.`),
+      ],
+      [`${ys[0]} ÷ ${xs[0]} = ${k}`, `${ys[1]} ÷ ${xs[1]} = ${k}`, `k = ${k}`],
+    ),
     seconds: 40,
   };
 }

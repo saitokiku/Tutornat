@@ -426,7 +426,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
                 <li key={i} className="flex items-start gap-3 rounded-md border border-border bg-panel2 px-4 py-3 text-sm text-ink">
                   <IconLightbulb size={18} className="mt-0.5 shrink-0 text-warn" />
                   <span className="min-w-0 flex-1">{h}</span>
-                  <Hear text={h} className={hear} />
+                  <Hear text={item.hintsSay?.[i] ?? h} className={hear} />
                 </li>
               ))}
             </ol>
@@ -435,7 +435,7 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
             <div className="mt-4 rounded-md border border-border bg-panel px-4 py-4">
               <div className="flex items-start gap-3">
                 <p className="flex-1 text-sm font-semibold text-ink">{t("practice.howTitle")}</p>
-                {speakableSteps(item.steps) && <Hear text={item.steps.join(" ")} className={hear} />}
+                {speakableSteps(item.steps) && <Hear text={(item.stepsSay ?? item.steps).join(" ")} className={hear} />}
               </div>
               <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink">
                 {item.steps.map((s, i) => (

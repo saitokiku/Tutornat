@@ -119,8 +119,9 @@ const PHRASE_1: [RegExp, (v: string, c: string) => string][] = [
 const PHRASE_2: [RegExp, (m: RegExpExecArray) => string][] = [
   [/^(\d+) (?:times the sum of|por la suma de) ([a-z]) (?:and|y) (\d+)$/, (m) => `${m[1]}*(${m[2]} + ${m[3]})`],
   [/^(\d+) (?:times the difference of|por la diferencia de) ([a-z]) (?:and|y) (\d+)$/, (m) => `${m[1]}*(${m[2]} - ${m[3]})`],
-  [/^(\d+) (?:more than the product of|unidades más que el producto de) (\d+) (?:and|y) ([a-z])$/, (m) => `${m[2]}*${m[3]} + ${m[1]}`],
-  [/^(\d+) (?:less than the product of|unidades menos que el producto de) (\d+) (?:and|y) ([a-z])$/, (m) => `${m[2]}*${m[3]} - ${m[1]}`],
+  // "1 unidad", "3 unidades": the wording test below holds the number and the noun to agree.
+  [/^(\d+) (?:more than the product of|unidad(?:es)? más que el producto de) (\d+) (?:and|y) ([a-z])$/, (m) => `${m[2]}*${m[3]} + ${m[1]}`],
+  [/^(\d+) (?:less than the product of|unidad(?:es)? menos que el producto de) (\d+) (?:and|y) ([a-z])$/, (m) => `${m[2]}*${m[3]} - ${m[1]}`],
   [/^(?:the quotient of|el cociente de) ([a-z]) (?:and|entre) (\d+), (?:plus|más) (\d+)$/, (m) => `${m[1]}/${m[2]} + ${m[3]}`],
   [/^(?:the sum of|la suma de) ([a-z]) (?:and|y) (\d+), (?:divided by|dividida entre) (\d+)$/, (m) => `(${m[1]} + ${m[2]})/${m[3]}`],
   [/^(?:the product of|el producto de) (\d+) (?:and|y) ([a-z]), (?:decreased by|disminuido en) (\d+)$/, (m) => `${m[1]}*${m[2]} - ${m[3]}`],
@@ -916,9 +917,19 @@ describe("grades 6–7 math strand, part two: wording and believable numbers", (
   });
 
   it("m.expr.write: when the third hint names an operation, more than one choice uses it", () => {
-    each("m.expr.write", 1, (item, where) => {
+    each("m.expr.write", 1, (item, where, locale) => {
       for (const [word, uses] of OP_CHOICES)
         if (word.test(item.hints[2])) expect(item.choices!.filter((c) => uses.test(c.label)).length, `${where} ${item.hints[2]}`).toBeGreaterThanOrEqual(2);
+      // A sum's third hint tries a number that is not already in the words, put in for the variable.
+      const tried = /^(?:Try|Prueba con) ([a-z]) = (\d+): “(.+)” (?:becomes|se convierte en) “(.+)”\.$/.exec(item.hints[2]);
+      if (tried) {
+        const [, v, n, said, sub] = tried;
+        expect(nums(said), `${where} ${item.hints[2]}`).not.toContain(Number(n));
+        expect(said.replace(new RegExp(`(?<!\\p{L})${v}(?!\\p{L})`, "u"), n), where).toBe(sub);
+      }
+      // A power choice is read the way a class says it: "k cubed", "k al cubo".
+      for (const c of item.choices!)
+        if (/[²³⁴⁵]/.test(c.label)) expect(c.say, where).toMatch(locale === "es" ? /^[a-z] (?:al cuadrado|al cubo|a la cuarta|a la quinta)$/ : /^[a-z] (?:squared|cubed|to the fourth|to the fifth)$/);
       // The Spanish keeps the "less than" trap without reading as a comparison ("3 menos que k").
       expect(words(item), where).not.toMatch(/“\d+ (?:más|menos) que [a-z]”|“[a-z] menos que \d+”/);
     });
@@ -926,17 +937,24 @@ describe("grades 6–7 math strand, part two: wording and believable numbers", (
   });
 
   it("read-aloud and prompts agree in number and gender, and Spanish speech names the letter y", () => {
+    // Text-to-speech reads a lone "y" as "and": wherever the letter is meant, Spanish speech says "ye".
+    const LETTER_Y = /(?:eje|coordenada|valor de|costo|distancia|páginas|azúcar|comida) y\b|\b[Ll]a y\b|\by (?:es igual a|[=÷<>])|[=÷] y\b|(?:^|; )y (?:cambia|sigue)/;
     for (const s of MATH_6_7_MORE)
       for (let level = 1; level <= s.levels; level++)
         each(s.id, level, (item, where, locale) => {
-          // One degree, one point: singular (an angle written "3x + 1" is still "3 x plus 1 degrees").
-          for (const t of [item.say, words(item), ...(item.choices ?? []).map((c) => c.say ?? "")])
-            expect(t, where).not.toMatch(/(?<![\d.])(?<!x (?:plus|minus|más|menos) )1 (?:degrees|grados|points|puntos)\b|Tócala/);
-          if (locale === "es") {
-            // Text-to-speech reads a lone "y" as "and": the variable is spoken "ye".
-            expect(item.say, `${where} ${item.say}`).not.toMatch(/(?:eje|coordenada|costo|distancia|páginas|azúcar|comida) y\b|\by (?:es igual a|=)/);
-            for (const c of item.choices ?? []) expect(c.say ?? "", where).not.toMatch(/^y |\by$/);
+          // One degree, one point, one unit: singular (an angle written "3x + 1" is still "3 x plus 1 degrees").
+          // More than one: plural, "3 unidades", never "3 unidad".
+          for (const t of [item.say, words(item), ...(item.choices ?? []).map((c) => c.say ?? ""), ...item.hints, ...item.steps]) {
+            expect(t, where).not.toMatch(/(?<![\d.])(?<!x (?:plus|minus|más|menos) )1 (?:degrees|grados|points|puntos|units|unidades)\b|Tócala/);
+            for (const m of t.matchAll(/(?<![\d.])(\d+(?:\.\d+)?) (?:unit|unidad|point|punto|degree|grado)\b/g)) expect(m[1], `${where} ${t}`).toBe("1");
           }
+          if (locale === "es") {
+            for (const t of [item.say, ...(item.hintsSay ?? item.hints), ...(item.stepsSay ?? item.steps)]) expect(t, `${where} ${t}`).not.toMatch(LETTER_Y);
+            for (const c of item.choices ?? []) expect(c.say ?? "", where).not.toMatch(/^y |\by$/);
+            // The spoken hints and steps say what is written, with the letter named.
+            for (const [shown, said] of [[item.hints, item.hintsSay], [item.steps, item.stepsSay]] as const)
+              if (said) expect(said.map((l) => l.replace(/\bye\b/g, "y")), where).toEqual(shown);
+          } else expect(item.hintsSay ?? item.stepsSay, where).toBeUndefined();
           if (s.id === "m.surface.area") expect(item.say, where).not.toMatch(/\d+ (?:meters|inches|feet|centimeters) and \d+ \w+ sides/);
         });
   });
@@ -947,7 +965,13 @@ describe("grades 6–7 math strand, part two: wording and believable numbers", (
       if (/fish tank|pecera/.test(words(item))) for (const e of edges) expect(e, `${where} a tiny fish tank`).toBeGreaterThanOrEqual(8);
       if (/ cm /.test(words(item))) for (const e of edges) expect(e, `${where} a box under 3 cm`).toBeGreaterThanOrEqual(3);
     });
-    for (const level of [1, 2]) each("m.volume.frac", level, (item, where) => expect(values(item.prompt).slice(0, 3).every((e) => e >= 1), where).toBe(true));
+    for (const level of [1, 2])
+      each("m.volume.frac", level, (item, where) => {
+        const [l, w, h] = values(item.prompt).slice(0, 3);
+        expect([l, w, h].every((e) => e >= 1), where).toBe(true);
+        // A brick is long and flat, about 8 × 3 5/8 × 2 1/4 in, not a cube.
+        if (/brick|ladrillo/.test(words(item))) expect([l >= 7 && l <= 8, w >= 3 && w <= 4, h >= 2 && h <= 3], `${where} ${l} × ${w} × ${h} in brick`).toEqual([true, true, true]);
+      });
     each("m.rational.addsub", 3, (item, where) => {
       if (/°/.test(words(item))) for (const v of nums(words(item).replace(/6 a\. ?m\./, ""))) expect(near(Math.round(v * 10), v * 10), `${where} temperature in hundredths`).toBe(true);
     });
@@ -962,6 +986,8 @@ describe("grades 6–7 math strand, part two: wording and believable numbers", (
     each("m.ineq.graph", 3, (item, where) => {
       expect(words(item), where).not.toMatch(/seed|semillas/);
       if (/sleeping bag|bolsa de dormir/.test(words(item))) expect(nums(words(item))[0], `${where} a rating above freezing`).toBeLessThan(0);
+      // A winter bag is rated about −7 °C or colder; a milder rating is a three-season bag.
+      if (/winter|invierno/.test(words(item))) expect(nums(words(item))[0], `${where} a winter rating`).toBeLessThanOrEqual(-7);
     });
   });
 });
