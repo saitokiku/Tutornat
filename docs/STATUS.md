@@ -2,6 +2,14 @@
 
 > **Stopped 2026-10-07 (out of tokens). Start with [HANDOFF.md](HANDOFF.md).**
 
+> **Owner direction (2026-10-07): the tutor first, lessons are what it makes.** "id suggest wiring up the
+> tutor before making the lessons, the lessons are just an extension of the tutor itself and it will create
+> more and more, its the live theater and recording or replay able experiences will remain. use openmaic
+> generator its solid". So: Live Tutor (A then B) and the **tutor theater** (OpenMAIC's generator and
+> playback ported behind our stage: the tutor teaches live on the stage, every session is recorded and
+> replayable, lessons are saved or regenerated theater sessions) come before the learning-loop build and
+> before any new lesson authoring. Existing catalogue courses stay as seeds and get fixed, not extended.
+
 ## Queue 4 — the 1.0 build, in order (started 2026-10-07; owner: "build it all now", come back at the end)
 
 Plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md). One sequence, no side
