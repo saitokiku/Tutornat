@@ -329,8 +329,8 @@ const THINGS: readonly Thing[] = [
   { pic: "🧦", en: "sock", es: "calcetín", f: false, inch: [6, 9], cm: [13, 15] },
   { pic: "📘", en: "book", es: "libro", f: false, inch: [8, 11], cm: [13, 15] },
 ];
-const el = (t: Thing) => (t.f ? "la" : "el");
-const un = (t: Thing) => (t.f ? "una" : "un");
+const el = (t: { f: boolean }) => (t.f ? "la" : "el");
+const un = (t: { f: boolean }) => (t.f ? "una" : "un");
 /** Things long enough to line cubes along (1-inch cubes, so a cube count is the inch length). */
 const CUBE_THINGS = THINGS.filter((t) => t.inch[1] >= 4);
 /** Two different things, the first always the longer one in real life (its shortest beats the other's longest). */
@@ -343,6 +343,24 @@ type Unit = { abbr: Pair; one: Pair; many: Pair; max: number; key: "inch" | "cm"
 const INCH: Unit = { abbr: ["in.", "pulg."], one: ["inch", "pulgada"], many: ["inches", "pulgadas"], max: 12, key: "inch", f: true };
 const CM: Unit = { abbr: ["cm", "cm"], one: ["centimeter", "centímetro"], many: ["centimeters", "centímetros"], max: 15, key: "cm", f: false };
 const unitWord = (u: Unit, n: number, locale: Locale) => t2(locale, n === 1 ? u.one : u.many);
+/** A unit by name only, for comparing unit sizes. */
+type UnitName = Pick<Unit, "one" | "many" | "f">;
+const FOOT: UnitName = { one: ["foot", "pie"], many: ["feet", "pies"], f: false };
+const METER: UnitName = { one: ["meter", "metro"], many: ["meters", "metros"], f: false };
+/** [longer unit, shorter unit]. */
+const UNIT_PAIRS: readonly (readonly [UnitName, UnitName])[] = [[INCH, CM], [FOOT, INCH], [METER, CM]];
+/** Things long enough to measure in feet or meters. */
+const BIG_THINGS: readonly Pick<Thing, "pic" | "en" | "es" | "f">[] = [
+  { pic: "🚪", en: "door", es: "puerta", f: true },
+  { pic: "🛏️", en: "bed", es: "cama", f: true },
+  { pic: "🛋️", en: "couch", es: "sofá", f: false },
+  { pic: "🚌", en: "bus", es: "autobús", f: false },
+  { pic: "🪜", en: "ladder", es: "escalera", f: true },
+  { pic: "🏫", en: "classroom", es: "salón de clases", f: false },
+];
+/** Strips to compare (all feminine in Spanish) and colors that agree with them. */
+const STRIPS = [["ribbon", "cinta"], ["string", "cuerda"], ["paper strip", "tira de papel"]] as const;
+const COLORS = [["red", "roja"], ["blue", "azul"], ["green", "verde"], ["yellow", "amarilla"]] as const;
 
 // ---- Time ----
 
@@ -2551,98 +2569,178 @@ export const MATH_K_2_MORE: Skill[] = [
     content: "computed",
     levels: 3,
     generate(r, level, locale) {
-      if (level === 3) {
-        if (r.bool()) {
-          const u = r.bool() ? INCH : CM;
-          const thing = r.pick([["ribbon", "cinta"], ["string", "cuerda"], ["paper strip", "tira de papel"]] as const);
-          const colors = r.shuffle([["red", "roja"], ["blue", "azul"], ["green", "verde"], ["yellow", "amarilla"]] as const);
-          const [c1, c2] = colors;
-          const A = r.int(10, 40), B = r.int(5, A - 3), d = A - B;
-          const ab = t2(locale, u.abbr);
-          // Units in full in the sentence, so a read-aloud says "20 inches", never "20 in"; the short form
-          // sits only after the answer box.
-          const [wa, wb] = [unitWord(u, A, locale), unitWord(u, B, locale)];
-          const text = tr(
-            locale,
-            `A ${c1[0]} ${thing[0]} is ${A} ${wa} long. A ${c2[0]} ${thing[0]} is ${B} ${wb} long. How much longer is the ${c1[0]} ${thing[0]}?`,
-            `Una ${thing[1]} ${c1[1]} mide ${A} ${wa}. Una ${thing[1]} ${c2[1]} mide ${B} ${wb}. ¿Cuánto más larga es la ${thing[1]} ${c1[1]}?`,
-          );
-          const tf = tensFirst(A, "−", B, locale);
-          return {
-            prompt: [`${text} `, blank, ` ${ab}`],
-            say: text,
-            picture: "📏",
-            alt: tr(locale, "A ruler", "Una regla"),
-            input: "keypad",
-            answer: { kind: "number", value: d },
-            wrong: misses(d, [[A + B, "added-instead-of-compared"], [A, "gave-a-length"], [B, "gave-a-length"]]),
-            hints: [tr(locale, "Which is longer? By how much?", "¿Cuál es más larga? ¿Por cuánto?"), tr(locale, "Subtract the shorter length from the longer one.", "Resta la medida más corta de la más larga."), tf.hint],
-            steps: tf.steps,
-            seconds: 30,
-          };
-        }
-        const [n, m] = twoNames(r);
-        const o = r.pick(THINGS);
-        const cmFirst = r.bool();
-        const [inchName, cmName] = cmFirst ? [m, n] : [n, m];
-        const text = cmFirst
-          ? tr(locale, `${n} measures a ${o.en} in centimeters. ${m} measures it in inches. Who gets the bigger number?`, `${n} mide ${un(o)} ${o.es} en centímetros. ${m} ${o.f ? "la" : "lo"} mide en pulgadas. ¿Quién obtiene el número más grande?`)
-          : tr(locale, `${n} measures a ${o.en} in inches. ${m} measures it in centimeters. Who gets the bigger number?`, `${n} mide ${un(o)} ${o.es} en pulgadas. ${m} ${o.f ? "la" : "lo"} mide en centímetros. ¿Quién obtiene el número más grande?`);
-        const same = tr(locale, "Both get the same number", "Los dos obtienen el mismo número");
-        return {
-          prompt: [text],
-          say: text,
-          picture: o.pic,
-          alt: tr(locale, `A ${o.en}`, `${cap(un(o))} ${o.es}`),
-          ...choose(r, { label: cmName, say: cmName }, [{ label: inchName, say: inchName, why: "bigger-unit-bigger-number" }, { label: same, say: same, why: "unit-size-does-not-matter" }]),
-          hints: [
-            tr(locale, "Which unit is longer: an inch or a centimeter?", "¿Qué unidad es más larga: una pulgada o un centímetro?"),
-            tr(locale, "Think: which unit fits along it more times?", "Piensa: ¿qué unidad cabe más veces a lo largo?"),
-            tr(locale, "An inch is longer than a centimeter.", "Una pulgada es más larga que un centímetro."),
-          ],
-          steps: [
-            tr(locale, "A centimeter is shorter than an inch.", "Un centímetro es más corto que una pulgada."),
-            tr(locale, "More centimeters fit, so that number is bigger.", "Caben más centímetros, así que ese número es mayor."),
-            tr(locale, `${cmName} gets the bigger number.`, `${cmName} obtiene el número más grande.`),
-          ],
-          seconds: 30,
-        };
-      }
+      // The thing is drawn on the ruler as a bar from its start to its end. Level 1 lays it at 0;
+      // level 2 also says where it starts; level 3 shows the start only on the ruler.
       const u = r.bool() ? INCH : CM;
       const o = r.pick(THINGS);
       const [lo, hi] = o[u.key];
-      const len = r.int(lo, level === 1 ? hi : Math.min(hi, u.max - 1));
-      const s = level === 1 ? 0 : r.int(1, Math.min(3, u.max - len));
+      const len = r.int(Math.max(2, lo), level === 1 ? hi : Math.min(hi, u.max - 1));
+      const s = level === 1 ? 0 : r.int(1, Math.min(level === 2 ? 3 : 8, u.max - len));
       const end = s + len;
       const ab = t2(locale, u.abbr);
-      const text = tr(locale, `The ${o.en} starts at ${s}. It ends at the dot. How long is it?`, `${cap(el(o))} ${o.es} empieza en ${s}. Termina en el punto. ¿Cuánto mide?`);
+      const on = tr(locale, `The ${o.en} is on the ruler.`, `${cap(el(o))} ${o.es} está sobre la regla.`);
+      const where = level === 2 ? tr(locale, ` It starts at ${s}.`, ` Empieza en ${s}.`) : level === 3 ? tr(locale, " It does not start at 0.", " No empieza en 0.") : "";
+      const text = `${on}${where} ${tr(locale, "How long is it?", "¿Cuánto mide?")}`;
       return {
         prompt: [`${text} `, blank, ` ${ab}`],
         say: text,
         picture: o.pic,
-        visual: { kind: "number-line", min: 0, max: u.max, marks: Array.from({ length: u.max + 1 }, (_, i) => i), marker: end },
-        // What is drawn: the thing's picture, and a ruler with a dot where the thing ends.
-        alt: tr(locale, `A ${o.en}, and a ruler from 0 to ${u.max} ${t2("en", u.many)} with a dot on one mark`, `${cap(un(o))} ${o.es} y una regla del 0 al ${u.max} en ${t2("es", u.many)}, con un punto en una marca`),
+        visual: { kind: "number-line", min: 0, max: u.max, marks: Array.from({ length: u.max + 1 }, (_, i) => i), span: [s, end] },
+        // What is drawn: the thing's picture, and a ruler with the thing laid along it as a bar.
+        alt: tr(
+          locale,
+          `A ${o.en}, and a ruler from 0 to ${u.max} ${t2("en", u.many)} with the ${o.en} drawn along it as a bar`,
+          `${cap(un(o))} ${o.es} y una regla del 0 al ${u.max} en ${t2("es", u.many)}, con ${el(o)} ${o.es} ${o.f ? "dibujada" : "dibujado"} encima como una barra`,
+        ),
         input: "keypad",
         answer: { kind: "number", value: len },
         wrong: misses(len, level === 1 ? [[len + 1, "counted-the-marks"], [len - 1, "miscounted"]] : [[end, "read-the-end-number"], [len + 1, "counted-the-marks"]]),
         hints:
           level === 1
             ? [
-                tr(locale, "The ruler starts at 0.", "La regla empieza en 0."),
-                tr(locale, "Count spaces from 0 to the dot, not marks.", "Cuenta los espacios del 0 al punto, no las marcas."),
+                tr(locale, `The ${o.en} starts at 0.`, `${cap(el(o))} ${o.es} empieza en 0.`),
+                tr(locale, "Count the spaces under it, not the marks.", "Cuenta los espacios debajo, no las marcas."),
                 tr(locale, `Each space is 1 ${t2("en", u.one)}.`, `Cada espacio es 1 ${t2("es", u.one)}.`),
               ]
             : [
-                tr(locale, `The ${o.en} does not start at 0.`, `${cap(el(o))} ${o.es} no empieza en 0.`),
+                level === 2 ? tr(locale, `The ${o.en} does not start at 0.`, `${cap(el(o))} ${o.es} no empieza en 0.`) : tr(locale, `Find where the ${o.en} starts and ends.`, `Busca dónde empieza y dónde termina ${el(o)} ${o.es}.`),
                 tr(locale, "Subtract the start from the end.", "Resta el inicio del final."),
-                tr(locale, `The dot is at ${end}.`, `El punto está en el ${end}.`),
+                level === 2 ? tr(locale, `The ${o.en} ends at ${end}.`, `${cap(el(o))} ${o.es} termina en el ${end}.`) : tr(locale, `The ${o.en} starts at ${s}.`, `${cap(el(o))} ${o.es} empieza en el ${s}.`),
               ],
         steps:
           level === 1
-            ? [tr(locale, `The dot is at ${len}.`, `El punto está en el ${len}.`), tr(locale, `The ${o.en} is ${len} ${unitWord(u, len, "en")} long.`, `${cap(el(o))} ${o.es} mide ${len} ${unitWord(u, len, "es")}.`)]
+            ? [tr(locale, `The ${o.en} ends at ${len}.`, `${cap(el(o))} ${o.es} termina en el ${len}.`), tr(locale, `The ${o.en} is ${len} ${unitWord(u, len, "en")} long.`, `${cap(el(o))} ${o.es} mide ${len} ${unitWord(u, len, "es")}.`)]
             : [`${end} − ${s} = ${len}`, tr(locale, `The ${o.en} is ${len} ${unitWord(u, len, "en")} long.`, `${cap(el(o))} ${o.es} mide ${len} ${unitWord(u, len, "es")}.`)],
-        seconds: level === 1 ? 10 : 20,
+        seconds: level === 1 ? 10 : level === 2 ? 20 : 25,
+      };
+    },
+  },
+  {
+    id: "m.measure.compare",
+    subject: "math",
+    grade: "2",
+    title: { en: "How much longer? Compare two lengths", es: "¿Cuánto más largo? Comparar dos longitudes" },
+    standard: "2.MD.A.4",
+    prereqs: ["m.measure.ruler"],
+    content: "computed",
+    levels: 2,
+    generate(r, level, locale) {
+      const u = r.bool() ? INCH : CM;
+      const thing = r.pick(STRIPS);
+      const ab = t2(locale, u.abbr);
+      // Units in full in the sentence, so a read-aloud says "20 inches", never "20 in"; the short form
+      // sits only after the answer box.
+      if (level === 1) {
+        const [c1, c2] = r.shuffle(COLORS);
+        const A = r.int(10, 40), B = r.int(5, A - 3), d = A - B;
+        const longer = r.bool();
+        const [wa, wb] = [unitWord(u, A, locale), unitWord(u, B, locale)];
+        const ask = longer
+          ? tr(locale, `How much longer is the ${c1[0]} ${thing[0]}?`, `¿Cuánto más larga es la ${thing[1]} ${c1[1]}?`)
+          : tr(locale, `How much shorter is the ${c2[0]} ${thing[0]}?`, `¿Cuánto más corta es la ${thing[1]} ${c2[1]}?`);
+        const text = tr(
+          locale,
+          `A ${c1[0]} ${thing[0]} is ${A} ${wa} long. A ${c2[0]} ${thing[0]} is ${B} ${wb} long. ${ask}`,
+          `Una ${thing[1]} ${c1[1]} mide ${A} ${wa}. Una ${thing[1]} ${c2[1]} mide ${B} ${wb}. ${ask}`,
+        );
+        const tf = tensFirst(A, "−", B, locale);
+        return {
+          prompt: [`${text} `, blank, ` ${ab}`],
+          say: text,
+          picture: "📏",
+          alt: tr(locale, "A ruler", "Una regla"),
+          input: "keypad",
+          answer: { kind: "number", value: d },
+          wrong: misses(d, [[A + B, "added-instead-of-compared"], [A, "gave-a-length"], [B, "gave-a-length"]]),
+          hints: [tr(locale, "Which is longer? By how much?", "¿Cuál es más larga? ¿Por cuánto?"), tr(locale, "Subtract the shorter length from the longer one.", "Resta la medida más corta de la más larga."), tf.hint],
+          steps: tf.steps,
+          seconds: 30,
+        };
+      }
+      // Level 2: measure one strip on the ruler, then compare it with a length given in words.
+      const [n, m] = twoNames(r);
+      const A = r.int(2, u.max);
+      let B = r.int(1, u.max + 8);
+      // Never the same length, and never twice as long: then the answer would be the measured length.
+      while (B === A || B === 2 * A) B = r.int(1, u.max + 8);
+      const longer = A > B, d = Math.abs(A - B);
+      const mine = tr(locale, `${n}'s ${thing[0]}`, `la ${thing[1]} de ${n}`);
+      const text = tr(
+        locale,
+        `${cap(mine)} is on the ruler. ${m}'s ${thing[0]} is ${B} ${unitWord(u, B, "en")} long. How much ${longer ? "longer" : "shorter"} is ${mine}?`,
+        `${cap(mine)} está sobre la regla. La ${thing[1]} de ${m} mide ${B} ${unitWord(u, B, "es")}. ¿Cuánto más ${longer ? "larga" : "corta"} es ${mine}?`,
+      );
+      return {
+        prompt: [`${text} `, blank, ` ${ab}`],
+        say: text,
+        visual: { kind: "number-line", min: 0, max: u.max, marks: Array.from({ length: u.max + 1 }, (_, i) => i), span: [0, A] },
+        alt: tr(locale, `A ruler from 0 to ${u.max} ${t2("en", u.many)} with ${mine} drawn along it from 0`, `Una regla del 0 al ${u.max} en ${t2("es", u.many)}, con ${mine} dibujada encima desde el 0`),
+        input: "keypad",
+        answer: { kind: "number", value: d },
+        wrong: misses(d, [[A, "gave-a-length"], [A + B, "added-instead-of-compared"], [Math.abs(A + 1 - B), "counted-the-marks"]]),
+        hints: [
+          tr(locale, `First measure ${mine}.`, `Primero mide ${mine}.`),
+          tr(locale, "Subtract the shorter length from the longer one.", "Resta la medida más corta de la más larga."),
+          tr(locale, `${cap(mine)} ends at ${A}.`, `${cap(mine)} termina en el ${A}.`),
+        ],
+        steps: [
+          tr(locale, `${cap(mine)} is ${A} ${unitWord(u, A, "en")} long.`, `${cap(mine)} mide ${A} ${unitWord(u, A, "es")}.`),
+          `${Math.max(A, B)} − ${Math.min(A, B)} = ${d}`,
+        ],
+        seconds: 30,
+      };
+    },
+  },
+  {
+    id: "m.measure.unitsize",
+    subject: "math",
+    grade: "2",
+    title: { en: "Measure with two units", es: "Medir con dos unidades" },
+    standard: "2.MD.A.2",
+    prereqs: ["m.measure.ruler"],
+    content: "computed",
+    levels: 2,
+    generate(r, level, locale) {
+      // The same thing measured twice: the shorter unit fits more times, so it gives the bigger number.
+      // Level 1 is inches and centimeters; level 2 adds feet and meters and asks for either number.
+      const [big, small] = level === 1 ? UNIT_PAIRS[0] : r.pick(UNIT_PAIRS);
+      const o = big === INCH ? r.pick(THINGS) : r.pick(BIG_THINGS);
+      const askBig = level === 1 || r.bool();
+      const [n, m] = twoNames(r);
+      const smallFirst = r.bool();
+      const [first, second] = smallFirst ? [small, big] : [big, small];
+      const [smallName, bigName] = smallFirst ? [n, m] : [m, n];
+      const key = askBig ? smallName : bigName, other = askBig ? bigName : smallName;
+      const word = askBig ? tr(locale, "bigger", "grande") : tr(locale, "smaller", "pequeño");
+      const text = tr(
+        locale,
+        `${n} measures a ${o.en} in ${first.many[0]}. ${m} measures it in ${second.many[0]}. Who gets the ${word} number?`,
+        `${n} mide ${un(o)} ${o.es} en ${first.many[1]}. ${m} ${o.f ? "la" : "lo"} mide en ${second.many[1]}. ¿Quién obtiene el número más ${word}?`,
+      );
+      const same = tr(locale, "Both get the same number", "Los dos obtienen el mismo número");
+      const a = (u: UnitName, cap1 = false) => {
+        const s = tr(locale, `${u === INCH ? "an" : "a"} ${u.one[0]}`, `${u.f ? "una" : "un"} ${u.one[1]}`);
+        return cap1 ? cap(s) : s;
+      };
+      return {
+        prompt: [text],
+        say: text,
+        picture: o.pic,
+        alt: tr(locale, `A ${o.en}`, `${cap(un(o))} ${o.es}`),
+        ...choose(r, { label: key, say: key }, [{ label: other, say: other, why: askBig ? "bigger-unit-bigger-number" : "smaller-unit-smaller-number" }, { label: same, say: same, why: "unit-size-does-not-matter" }]),
+        hints: [
+          tr(locale, `Which unit is longer: ${a(big)} or ${a(small)}?`, `¿Qué unidad es más larga: ${a(big)} o ${a(small)}?`),
+          askBig ? tr(locale, "Think: which unit fits along it more times?", "Piensa: ¿qué unidad cabe más veces a lo largo?") : tr(locale, "Think: which unit fits along it fewer times?", "Piensa: ¿qué unidad cabe menos veces a lo largo?"),
+          tr(locale, `${a(big, true)} is longer than ${a(small)}.`, `${a(big, true)} es más ${big.f ? "larga" : "largo"} que ${a(small)}.`),
+        ],
+        steps: [
+          tr(locale, `${a(small, true)} is shorter than ${a(big)}.`, `${a(small, true)} es más ${small.f ? "corta" : "corto"} que ${a(big)}.`),
+          askBig
+            ? tr(locale, `More ${small.many[0]} fit, so that number is bigger.`, `Caben más ${small.many[1]}, así que ese número es mayor.`)
+            : tr(locale, `Fewer ${big.many[0]} fit, so that number is smaller.`, `Caben menos ${big.many[1]}, así que ese número es menor.`),
+          tr(locale, `${key} gets the ${word} number.`, `${key} obtiene el número más ${word}.`),
+        ],
+        seconds: 30,
       };
     },
   },
