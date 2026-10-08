@@ -43,6 +43,24 @@ const livingEs: CatalogueEntry = {
         },
         {
           id: "s3",
+          kind: "interactive",
+          title: "¿Ser vivo o no?",
+          prompt: "¿Es un ser vivo? Toca Ser vivo o No vivo en cada uno.",
+          widget: {
+            kind: "sorter",
+            categories: ["Ser vivo", "No vivo"],
+            items: [
+              { id: "rock", text: "Una piedra", answer: 1 },
+              { id: "cat", text: "Un gato", answer: 0 },
+              { id: "tree", text: "Un árbol", answer: 0 },
+              { id: "spoon", text: "Una cuchara", answer: 1 },
+              { id: "ball", text: "Una pelota", answer: 1 },
+              { id: "butterfly", text: "Una mariposa", answer: 0 },
+            ],
+          },
+        },
+        {
+          id: "s4",
           kind: "slide",
           title: "Los seres vivos se reproducen",
           blocks: [
@@ -58,7 +76,7 @@ const livingEs: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
+          id: "s5",
           kind: "slide",
           title: "Una piedra no es un ser vivo",
           blocks: [
@@ -66,26 +84,6 @@ const livingEs: CatalogueEntry = {
             { type: "text", text: "Una piedra nunca tiene piedritas bebé. No es un ser vivo." },
             { type: "text", text: "Un carrito de juguete se mueve. Pero no crece. No es un ser vivo." },
           ],
-        },
-        {
-          id: "s5",
-          kind: "interactive",
-          title: "¿Ser vivo o no?",
-          prompt: "¿Es un ser vivo? Toca Ser vivo o No vivo en cada uno.",
-          widget: {
-            kind: "sorter",
-            categories: ["Ser vivo", "No vivo"],
-            items: [
-              { id: "cat", text: "Un gato", answer: 0 },
-              { id: "rock", text: "Una piedra", answer: 1 },
-              { id: "tree", text: "Un árbol", answer: 0 },
-              { id: "spoon", text: "Una cuchara", answer: 1 },
-              { id: "butterfly", text: "Una mariposa", answer: 0 },
-              { id: "ball", text: "Una pelota", answer: 1 },
-              { id: "sunflower", text: "Un girasol en el jardín", answer: 0 },
-              { id: "pencil", text: "Un lápiz", answer: 1 },
-            ],
-          },
         },
         {
           id: "s6",
@@ -97,22 +95,22 @@ const livingEs: CatalogueEntry = {
               prompt: "¿Cuál es un ser vivo?",
               choices: ["Una piedra", "Un perro", "Una cuchara"],
               answer: 1,
-              hint: "¿Cuál come, bebe y crece?",
+              hint: "Pregúntate por cada uno. ¿Crece? ¿Necesita comida?",
               explain: "Un perro come, bebe y crece. Puede tener cachorros. Es un ser vivo.",
             },
             {
               id: "q2",
               prompt: "Un gatito está más grande cada semana. ¿Qué le pasa?",
-              choices: ["Está creciendo", "Se está derritiendo", "Está durmiendo"],
-              answer: 0,
+              choices: ["Está durmiendo", "Se está derritiendo", "Está creciendo"],
+              answer: 2,
               hint: "Tú también estás más grande cada año.",
               explain: "El gatito está creciendo. Los seres vivos crecen.",
             },
             {
               id: "q3",
               prompt: "¿Qué necesitan las plantas y los animales?",
-              choices: ["Agua y aire", "Juguetes", "Zapatos"],
-              answer: 0,
+              choices: ["Tierra y piedras", "Agua y aire", "Pasto y semillas"],
+              answer: 1,
               hint: "Piensa en una planta y en un gato. ¿Qué necesitan los dos?",
               explain: "Plantas y animales necesitan agua y aire para vivir.",
             },
@@ -124,7 +122,7 @@ const livingEs: CatalogueEntry = {
           title: "A buscar seres vivos",
           brief: "Busca seres vivos y cosas sin vida, adentro o afuera.",
           steps: [
-            "Sal a caminar con una persona adulta.",
+            "Da una vuelta con una persona adulta.",
             "Encuentra 3 seres vivos. Dibújalos.",
             "Encuentra 3 cosas que no son seres vivos. Dibújalas también.",
             "Para cada ser vivo, di cómo lo sabes.",
@@ -163,6 +161,24 @@ const livingEs: CatalogueEntry = {
         },
         {
           id: "s3",
+          kind: "interactive",
+          title: "Casos difíciles",
+          prompt: "Estos son difíciles. ¿Cada uno es un ser vivo o no?",
+          widget: {
+            kind: "sorter",
+            categories: ["Ser vivo", "No vivo"],
+            items: [
+              { id: "cactus", text: "Un cactus", answer: 0 },
+              { id: "robot", text: "Un robot", answer: 1 },
+              { id: "wind", text: "El viento", answer: 1 },
+              { id: "mushroom", text: "Un hongo", answer: 0 },
+              { id: "river", text: "Un río", answer: 1 },
+              { id: "snail", text: "Un caracol", answer: 0 },
+            ],
+          },
+        },
+        {
+          id: "s4",
           kind: "slide",
           title: "Semillas dormidas",
           blocks: [
@@ -173,7 +189,7 @@ const livingEs: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
+          id: "s5",
           kind: "slide",
           title: "El fuego y las nubes",
           blocks: [
@@ -182,26 +198,6 @@ const livingEs: CatalogueEntry = {
             { type: "text", text: "El fuego y las nubes no son seres vivos." },
             { type: "text", text: "Nunca toques el fuego. Te puede quemar." },
           ],
-        },
-        {
-          id: "s5",
-          kind: "interactive",
-          title: "Casos difíciles",
-          prompt: "Estos son difíciles. ¿Cada uno es un ser vivo o no?",
-          widget: {
-            kind: "sorter",
-            categories: ["Ser vivo", "No vivo"],
-            items: [
-              { id: "seed", text: "Una semilla", answer: 0 },
-              { id: "robot", text: "Un robot", answer: 1 },
-              { id: "mushroom", text: "Un hongo", answer: 0 },
-              { id: "cloud", text: "Una nube", answer: 1 },
-              { id: "campfire", text: "Una fogata", answer: 1 },
-              { id: "snail", text: "Un caracol", answer: 0 },
-              { id: "wind", text: "El viento", answer: 1 },
-              { id: "cactus", text: "Un cactus", answer: 0 },
-            ],
-          },
         },
         {
           id: "s6",
@@ -227,9 +223,9 @@ const livingEs: CatalogueEntry = {
             {
               id: "q3",
               prompt: "¿Cuál es un ser vivo, pero no puede caminar?",
-              choices: ["Un árbol", "Un carro", "El viento"],
-              answer: 0,
-              hint: "¿Cuál crece más alto cada año?",
+              choices: ["Un carro", "El viento", "Un árbol"],
+              answer: 2,
+              hint: "¿Cuál da semillas?",
               explain: "Un árbol se queda en su lugar. Igual crece y da semillas. Es un ser vivo.",
             },
           ],
@@ -278,6 +274,24 @@ const livingEs: CatalogueEntry = {
         },
         {
           id: "s3",
+          kind: "interactive",
+          title: "¿Plantas, animales o los dos?",
+          prompt: "¿Quién hace esto? ¿Las plantas, los animales o los dos?",
+          widget: {
+            kind: "sorter",
+            categories: ["Plantas", "Animales", "Los dos"],
+            items: [
+              { id: "water", text: "Necesita agua", answer: 2 },
+              { id: "makes-food", text: "Hace su propia comida", answer: 0 },
+              { id: "eats", text: "Come alimentos", answer: 1 },
+              { id: "air", text: "Necesita aire", answer: 2 },
+              { id: "hunts", text: "Camina, nada o vuela para buscar comida", answer: 1 },
+              { id: "roots", text: "Tiene raíces", answer: 0 },
+            ],
+          },
+        },
+        {
+          id: "s4",
           kind: "slide",
           title: "Un lugar seguro",
           blocks: [
@@ -289,26 +303,6 @@ const livingEs: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
-          kind: "interactive",
-          title: "¿Plantas, animales o los dos?",
-          prompt: "¿Quién hace esto? ¿Las plantas, los animales o los dos?",
-          widget: {
-            kind: "sorter",
-            categories: ["Plantas", "Animales", "Los dos"],
-            items: [
-              { id: "eats", text: "Come alimentos", answer: 1 },
-              { id: "makes-food", text: "Hace su propia comida", answer: 0 },
-              { id: "water", text: "Necesita agua", answer: 2 },
-              { id: "air", text: "Necesita aire", answer: 2 },
-              { id: "light", text: "Usa la luz para hacer comida", answer: 0 },
-              { id: "grows", text: "Crece", answer: 2 },
-              { id: "roots", text: "Tiene raíces", answer: 0 },
-              { id: "hunts", text: "Camina, nada o vuela para buscar comida", answer: 1 },
-            ],
-          },
-        },
-        {
           id: "s5",
           kind: "quiz",
           title: "Comprueba lo que sabes",
@@ -316,15 +310,15 @@ const livingEs: CatalogueEntry = {
             {
               id: "q1",
               prompt: "¿Qué recibe una planta del Sol?",
-              choices: ["Luz", "Tierra", "Agua"],
-              answer: 0,
+              choices: ["Tierra", "Agua", "Luz"],
+              answer: 2,
               hint: "¿Qué ves cuando sale el Sol?",
               explain: "El Sol les da luz a las plantas. Con la luz hacen su comida.",
             },
             {
               id: "q2",
               prompt: "¿De dónde saca su comida una planta?",
-              choices: ["La hace ella misma", "Come tierra", "Come pan"],
+              choices: ["La hace ella misma", "Come tierra", "Bebe agua de lluvia"],
               answer: 0,
               hint: "¿Una planta tiene boca?",
               explain: "Las hojas hacen comida con luz, aire y agua. Las plantas no comen tierra.",
@@ -332,8 +326,8 @@ const livingEs: CatalogueEntry = {
             {
               id: "q3",
               prompt: "Un pájaro hace un nido. ¿Qué le da el nido?",
-              choices: ["Un lugar seguro", "Comida", "Agua"],
-              answer: 0,
+              choices: ["Comida para comer", "Un lugar seguro", "Agua para beber"],
+              answer: 1,
               hint: "¿Qué pone el pájaro en su nido?",
               explain: "El nido es un refugio. Protege los huevos y los pollitos.",
             },
@@ -390,6 +384,24 @@ const livingEs: CatalogueEntry = {
         },
         {
           id: "s3",
+          kind: "interactive",
+          title: "¿Quién hizo el cambio?",
+          prompt: "Mira cada cambio. ¿Lo hizo un ser vivo?",
+          widget: {
+            kind: "sorter",
+            categories: ["Un ser vivo", "No fue un ser vivo"],
+            items: [
+              { id: "puddle", text: "Un charco después de la lluvia", answer: 1 },
+              { id: "nut-hole", text: "Un hoyo donde una ardilla escondió una nuez", answer: 0 },
+              { id: "pond", text: "Un estanque detrás de la presa de un castor", answer: 0 },
+              { id: "leaf-pile", text: "Hojas que el viento juntó en un montón", answer: 1 },
+              { id: "snow", text: "Nieve amontonada después de una tormenta", answer: 1 },
+              { id: "ant-tunnels", text: "Túneles que cavaron las hormigas", answer: 0 },
+            ],
+          },
+        },
+        {
+          id: "s4",
           kind: "slide",
           title: "Las plantas también cambian los lugares",
           blocks: [
@@ -399,7 +411,7 @@ const livingEs: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
+          id: "s5",
           kind: "slide",
           title: "Las personas también",
           blocks: [
@@ -407,26 +419,6 @@ const livingEs: CatalogueEntry = {
             { type: "points", items: ["Construimos casas y calles.", "Cortamos árboles.", "Sembramos huertos y árboles."] },
             { type: "text", text: "Podemos elegir cambios que ayuden a otros seres vivos." },
           ],
-        },
-        {
-          id: "s5",
-          kind: "interactive",
-          title: "¿Quién hizo el cambio?",
-          prompt: "Mira cada cambio. ¿Lo hizo un ser vivo?",
-          widget: {
-            kind: "sorter",
-            categories: ["Un ser vivo", "No fue un ser vivo"],
-            items: [
-              { id: "nut-hole", text: "Un hoyo donde una ardilla escondió una nuez", answer: 0 },
-              { id: "puddle", text: "Un charco después de la lluvia", answer: 1 },
-              { id: "pond", text: "Un estanque detrás de la presa de un castor", answer: 0 },
-              { id: "leaf-pile", text: "Hojas que el viento juntó en un montón", answer: 1 },
-              { id: "ant-tunnels", text: "Túneles que cavaron las hormigas", answer: 0 },
-              { id: "sidewalk", text: "Una acera rota por las raíces de un árbol", answer: 0 },
-              { id: "snow", text: "Nieve amontonada después de una tormenta", answer: 1 },
-              { id: "garden", text: "Un huerto que sembró una familia", answer: 0 },
-            ],
-          },
         },
         {
           id: "s6",
@@ -444,8 +436,8 @@ const livingEs: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Las raíces de un árbol rompieron la acera. ¿Qué hizo el cambio?",
-              choices: ["Un ser vivo", "El viento", "La lluvia"],
-              answer: 0,
+              choices: ["Un viento fuerte", "Una tormenta de lluvia", "Un ser vivo"],
+              answer: 2,
               hint: "Las raíces son parte de algo. ¿De qué?",
               explain: "Las raíces son parte del árbol. El árbol es un ser vivo. Un ser vivo hizo el cambio.",
             },
@@ -462,10 +454,10 @@ const livingEs: CatalogueEntry = {
         {
           id: "s7",
           kind: "project",
-          title: "Detectives de cambios",
+          title: "Busca cambios hechos por seres vivos",
           brief: "Busca cambios hechos por seres vivos cerca de tu casa.",
           steps: [
-            "Sal afuera con una persona adulta.",
+            "Sal con una persona adulta.",
             "Busca hoyos, nidos, hojas mordidas o huellas.",
             "Busca una acera rota por raíces.",
             "Dibuja un cambio. ¿Quién lo hizo?",

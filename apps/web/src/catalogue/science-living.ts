@@ -37,6 +37,24 @@ const living: CatalogueEntry = {
         },
         {
           id: "s3",
+          kind: "interactive",
+          title: "Living or not living?",
+          prompt: "Is it living? Tap Living or Not living for each one.",
+          widget: {
+            kind: "sorter",
+            categories: ["Living", "Not living"],
+            items: [
+              { id: "rock", text: "A rock", answer: 1 },
+              { id: "dog", text: "A dog", answer: 0 },
+              { id: "tree", text: "A tree", answer: 0 },
+              { id: "spoon", text: "A spoon", answer: 1 },
+              { id: "ball", text: "A ball", answer: 1 },
+              { id: "fish", text: "A fish", answer: 0 },
+            ],
+          },
+        },
+        {
+          id: "s4",
           kind: "slide",
           title: "Living things make more",
           blocks: [
@@ -45,7 +63,7 @@ const living: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
+          id: "s5",
           kind: "slide",
           title: "A rock is not living",
           blocks: [
@@ -53,26 +71,6 @@ const living: CatalogueEntry = {
             { type: "text", text: "A rock never makes baby rocks. So a rock is not living." },
             { type: "text", text: "A toy car can move. But it does not grow. It is not living." },
           ],
-        },
-        {
-          id: "s5",
-          kind: "interactive",
-          title: "Living or not living?",
-          prompt: "Is it living? Tap Living or Not living for each one.",
-          widget: {
-            kind: "sorter",
-            categories: ["Living", "Not living"],
-            items: [
-              { id: "dog", text: "A dog", answer: 0 },
-              { id: "rock", text: "A rock", answer: 1 },
-              { id: "tree", text: "A tree", answer: 0 },
-              { id: "spoon", text: "A spoon", answer: 1 },
-              { id: "fish", text: "A fish", answer: 0 },
-              { id: "ball", text: "A ball", answer: 1 },
-              { id: "flower", text: "A flower growing in a garden", answer: 0 },
-              { id: "shoe", text: "A shoe", answer: 1 },
-            ],
-          },
         },
         {
           id: "s6",
@@ -84,22 +82,22 @@ const living: CatalogueEntry = {
               prompt: "Which one is living?",
               choices: ["A rock", "A cat", "A spoon"],
               answer: 1,
-              hint: "Which one eats, drinks and grows?",
+              hint: "Ask about each one. Does it grow? Does it need food?",
               explain: "A cat eats, drinks and grows. It can have kittens. A cat is living.",
             },
             {
               id: "q2",
               prompt: "A puppy gets bigger every week. What is it doing?",
-              choices: ["Growing", "Melting", "Sleeping"],
-              answer: 0,
+              choices: ["Sleeping", "Melting", "Growing"],
+              answer: 2,
               hint: "You get bigger every year, too.",
               explain: "The puppy is growing. Living things grow.",
             },
             {
               id: "q3",
               prompt: "What do plants and animals both need?",
-              choices: ["Water and air", "Toys", "Shoes"],
-              answer: 0,
+              choices: ["Soil and rocks", "Water and air", "Grass and seeds"],
+              answer: 1,
               hint: "Think of a plant and a cat. What do both need?",
               explain: "Plants and animals both need water and air to live.",
             },
@@ -147,6 +145,24 @@ const living: CatalogueEntry = {
         },
         {
           id: "s3",
+          kind: "interactive",
+          title: "Tricky sort",
+          prompt: "These are tricky. Is each one living or not living?",
+          widget: {
+            kind: "sorter",
+            categories: ["Living", "Not living"],
+            items: [
+              { id: "tree", text: "A tall tree", answer: 0 },
+              { id: "robot", text: "A robot", answer: 1 },
+              { id: "wind", text: "The wind", answer: 1 },
+              { id: "mushroom", text: "A mushroom", answer: 0 },
+              { id: "river", text: "A river", answer: 1 },
+              { id: "snail", text: "A snail", answer: 0 },
+            ],
+          },
+        },
+        {
+          id: "s4",
           kind: "slide",
           title: "Sleeping seeds",
           blocks: [
@@ -157,7 +173,7 @@ const living: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
+          id: "s5",
           kind: "slide",
           title: "Fire and clouds",
           blocks: [
@@ -166,26 +182,6 @@ const living: CatalogueEntry = {
             { type: "text", text: "Fire and clouds are not living." },
             { type: "text", text: "Never touch fire. Fire can burn you." },
           ],
-        },
-        {
-          id: "s5",
-          kind: "interactive",
-          title: "Tricky sort",
-          prompt: "These are tricky. Is each one living or not living?",
-          widget: {
-            kind: "sorter",
-            categories: ["Living", "Not living"],
-            items: [
-              { id: "seed", text: "A seed", answer: 0 },
-              { id: "robot", text: "A robot", answer: 1 },
-              { id: "mushroom", text: "A mushroom", answer: 0 },
-              { id: "cloud", text: "A cloud", answer: 1 },
-              { id: "campfire", text: "A campfire", answer: 1 },
-              { id: "tree", text: "A tall tree", answer: 0 },
-              { id: "wind", text: "The wind", answer: 1 },
-              { id: "snail", text: "A snail", answer: 0 },
-            ],
-          },
         },
         {
           id: "s6",
@@ -211,9 +207,9 @@ const living: CatalogueEntry = {
             {
               id: "q3",
               prompt: "Which one is living, but cannot walk?",
-              choices: ["A tree", "A car", "The wind"],
-              answer: 0,
-              hint: "Which one grows taller every year?",
+              choices: ["A car", "The wind", "A tree"],
+              answer: 2,
+              hint: "Which one makes seeds?",
               explain: "A tree stays in one place. It still grows and makes seeds. It is living.",
             },
           ],
@@ -262,15 +258,6 @@ const living: CatalogueEntry = {
         },
         {
           id: "s3",
-          kind: "slide",
-          title: "A safe place",
-          blocks: [
-            { type: "text", text: "Many animals need a safe place to rest. It is called a shelter." },
-            { type: "points", items: ["A bird builds a nest for its eggs.", "A fox digs a den.", "Some bears sleep in caves in winter."] },
-          ],
-        },
-        {
-          id: "s4",
           kind: "interactive",
           title: "Plants, animals or both?",
           prompt: "Who does this? Plants, animals, or both?",
@@ -278,16 +265,23 @@ const living: CatalogueEntry = {
             kind: "sorter",
             categories: ["Plants", "Animals", "Both"],
             items: [
-              { id: "eats", text: "Eats food", answer: 1 },
-              { id: "makes-food", text: "Makes its own food", answer: 0 },
               { id: "water", text: "Needs water", answer: 2 },
+              { id: "makes-food", text: "Makes its own food", answer: 0 },
+              { id: "eats", text: "Eats food", answer: 1 },
               { id: "air", text: "Needs air", answer: 2 },
-              { id: "light", text: "Uses light to make food", answer: 0 },
-              { id: "grows", text: "Grows", answer: 2 },
-              { id: "roots", text: "Has roots", answer: 0 },
               { id: "hunts", text: "Walks, swims or flies to find food", answer: 1 },
+              { id: "roots", text: "Has roots", answer: 0 },
             ],
           },
+        },
+        {
+          id: "s4",
+          kind: "slide",
+          title: "A safe place",
+          blocks: [
+            { type: "text", text: "Many animals need a safe place to rest. It is called a shelter." },
+            { type: "points", items: ["A bird builds a nest for its eggs.", "A fox digs a den.", "Some bears sleep in caves in winter."] },
+          ],
         },
         {
           id: "s5",
@@ -297,15 +291,15 @@ const living: CatalogueEntry = {
             {
               id: "q1",
               prompt: "What does a plant get from the Sun?",
-              choices: ["Light", "Soil", "Water"],
-              answer: 0,
+              choices: ["Soil", "Water", "Light"],
+              answer: 2,
               hint: "What do you see when the Sun comes up?",
               explain: "The Sun gives plants light. Plants use light to make food.",
             },
             {
               id: "q2",
               prompt: "Where does a plant get its food?",
-              choices: ["It makes its own food", "It eats soil", "It eats bread"],
+              choices: ["It makes it", "It eats soil", "It drinks rain"],
               answer: 0,
               hint: "Does a plant have a mouth?",
               explain: "Leaves use light, air and water to make food. Plants do not eat soil.",
@@ -313,8 +307,8 @@ const living: CatalogueEntry = {
             {
               id: "q3",
               prompt: "A bird builds a nest. What does the nest give it?",
-              choices: ["A safe place", "Food", "Water"],
-              answer: 0,
+              choices: ["Food to eat", "A safe place", "Water to drink"],
+              answer: 1,
               hint: "What does a bird put in its nest?",
               explain: "A nest is a shelter. It keeps eggs and chicks safe.",
             },
@@ -364,6 +358,24 @@ const living: CatalogueEntry = {
         },
         {
           id: "s3",
+          kind: "interactive",
+          title: "Who made the change?",
+          prompt: "Look at each change. Did a living thing make it?",
+          widget: {
+            kind: "sorter",
+            categories: ["A living thing", "Not a living thing"],
+            items: [
+              { id: "puddle", text: "A puddle after the rain", answer: 1 },
+              { id: "nut-hole", text: "A hole where a squirrel hid a nut", answer: 0 },
+              { id: "pond", text: "A pond behind a beaver dam", answer: 0 },
+              { id: "leaf-pile", text: "Leaves blown into a pile by the wind", answer: 1 },
+              { id: "snow", text: "Snow piled up after a storm", answer: 1 },
+              { id: "ant-tunnels", text: "Tunnels dug by ants", answer: 0 },
+            ],
+          },
+        },
+        {
+          id: "s4",
           kind: "slide",
           title: "Plants change places, too",
           blocks: [
@@ -373,7 +385,7 @@ const living: CatalogueEntry = {
           ],
         },
         {
-          id: "s4",
+          id: "s5",
           kind: "slide",
           title: "People change places, too",
           blocks: [
@@ -381,26 +393,6 @@ const living: CatalogueEntry = {
             { type: "points", items: ["People build houses and roads.", "People cut down trees.", "People plant gardens and trees."] },
             { type: "text", text: "We can choose changes that help other living things." },
           ],
-        },
-        {
-          id: "s5",
-          kind: "interactive",
-          title: "Who made the change?",
-          prompt: "Look at each change. Did a living thing make it?",
-          widget: {
-            kind: "sorter",
-            categories: ["A living thing", "Not a living thing"],
-            items: [
-              { id: "nut-hole", text: "A hole where a squirrel hid a nut", answer: 0 },
-              { id: "puddle", text: "A puddle after the rain", answer: 1 },
-              { id: "pond", text: "A pond behind a beaver dam", answer: 0 },
-              { id: "leaf-pile", text: "Leaves blown into a pile by the wind", answer: 1 },
-              { id: "ant-tunnels", text: "Tunnels dug by ants", answer: 0 },
-              { id: "sidewalk", text: "A sidewalk cracked by tree roots", answer: 0 },
-              { id: "snow", text: "Snow piled up after a storm", answer: 1 },
-              { id: "garden", text: "A garden that a family planted", answer: 0 },
-            ],
-          },
         },
         {
           id: "s6",
@@ -418,8 +410,8 @@ const living: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Tree roots cracked a sidewalk. What made the change?",
-              choices: ["A living thing", "The wind", "The rain"],
-              answer: 0,
+              choices: ["A strong wind", "A heavy rainstorm", "A living thing"],
+              answer: 2,
               hint: "Roots are part of something. What is it?",
               explain: "Roots are part of a tree. A tree is living. So a living thing made the change.",
             },
@@ -436,7 +428,7 @@ const living: CatalogueEntry = {
         {
           id: "s7",
           kind: "project",
-          title: "Change detectives",
+          title: "Find changes living things made",
           brief: "Find changes that living things made near your home.",
           steps: [
             "Go outside with a grown-up.",
