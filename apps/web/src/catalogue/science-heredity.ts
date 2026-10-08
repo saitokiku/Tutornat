@@ -58,14 +58,14 @@ const heredity: CatalogueEntry = {
             kind: "sorter",
             categories: ["Inherited", "Acquired"],
             items: [
+              { id: "scar", text: "A scar from a fall", answer: 1 },
               { id: "blood", text: "Your blood type", answer: 0 },
               { id: "coat", text: "A dog's coat color", answer: 0 },
-              { id: "stripes", text: "A tiger's stripes", answer: 0 },
-              { id: "eyes", text: "Natural eye color", answer: 0 },
-              { id: "scar", text: "A scar from a fall", answer: 1 },
               { id: "bike", text: "Being able to ride a bike", answer: 1 },
+              { id: "stripes", text: "A tiger's stripes", answer: 0 },
               { id: "language", text: "The language you speak", answer: 1 },
               { id: "muscles", text: "Strong muscles from swimming every day", answer: 1 },
+              { id: "eyes", text: "Natural eye color", answer: 0 },
             ],
           },
         },
@@ -77,16 +77,16 @@ const heredity: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Which of these is an acquired trait?",
-              choices: ["Blood type", "A tattoo", "Natural hair color"],
-              answer: 1,
+              choices: ["Blood type", "Natural hair color", "A tattoo"],
+              answer: 2,
               hint: "Acquired traits come from experience or surroundings, not from genes.",
               explain: "A tattoo is added during a person's life, so it is acquired. Blood type and natural hair color are inherited through genes.",
             },
             {
               id: "q2",
               prompt: "A mouse loses its tail in an accident. Will its babies be born without tails?",
-              choices: ["Yes, the babies take after the parent.", "No. Losing a tail doesn't change the genes passed to offspring."],
-              answer: 1,
+              choices: ["No. A lost tail doesn't change the genes it passes on.", "Yes. The babies take after the parent, so they will have no tails."],
+              answer: 0,
               hint: "Is a lost tail written in the mouse's genes?",
               explain:
                 "Losing a tail is an acquired change, and it doesn't change the mouse's genes. In the 1880s, the biologist August Weismann cut the tails off mice for several generations, and every new generation was still born with tails.",
@@ -94,7 +94,7 @@ const heredity: CatalogueEntry = {
             {
               id: "q3",
               prompt: "Identical twins grow up in different countries. As adults, one is 3 cm taller. What best explains the difference?",
-              choices: ["They have different genes.", "Environment, such as food and health, also affects height.", "Height is only an acquired trait."],
+              choices: ["They must have different genes after all.", "Their food and health growing up were different.", "Height is an acquired trait, not an inherited one."],
               answer: 1,
               hint: "Identical twins share the same genes.",
               explain: "Identical twins have the same genes, so a difference in height must come from their environments, such as diet and health while growing.",
@@ -108,7 +108,7 @@ const heredity: CatalogueEntry = {
           brief: "Test whether the environment changes a trait when the genes stay the same. You need a ruler and a tree or bush with a sunny side and a shady side.",
           steps: [
             "Find a tree or bush that gets sun on one side and shade on the other.",
-            "With permission, pick 5 leaves from the sunny side and 5 from the shady side.",
+            "With permission, pick 5 leaves from the sunny side and 5 from the shady side. Pick only from a plant a grown-up says is safe to touch, and wash your hands afterward.",
             "Measure the length of each leaf, then find the average length for each side.",
             "All the leaves grew on one plant, so they have the same genes. What does any difference tell you?",
             "Write one sentence about a trait that depends on genes and one about a trait that depends on the environment.",
@@ -199,11 +199,11 @@ const heredity: CatalogueEntry = {
             kind: "sorter",
             categories: ["DNA", "Gene", "Allele", "Chromosome"],
             items: [
-              { id: "code", text: "The molecule that carries the code in A, T, C and G", answer: 0 },
-              { id: "ladder", text: "Shaped like a twisted ladder", answer: 0 },
               { id: "section", text: "A section of DNA with the instructions for one protein", answer: 1 },
-              { id: "version", text: "One version of a gene, such as the one for white pea flowers", answer: 2 },
+              { id: "code", text: "The molecule that carries the code in A, T, C and G", answer: 0 },
               { id: "coiled", text: "One long, tightly coiled DNA molecule", answer: 3 },
+              { id: "version", text: "One version of a gene, such as the one for white pea flowers", answer: 2 },
+              { id: "ladder", text: "Shaped like a twisted ladder", answer: 0 },
               { id: "pairs", text: "Most human cells have 23 pairs of these", answer: 3 },
             ],
           },
@@ -216,16 +216,16 @@ const heredity: CatalogueEntry = {
             {
               id: "q1",
               prompt: "How many chromosomes are in a human sperm cell?",
-              choices: ["46", "23", "92"],
-              answer: 1,
+              choices: ["23", "46", "92"],
+              answer: 0,
               hint: "Sex cells carry one chromosome from each pair.",
               explain: "A sperm cell carries 23 chromosomes, one from each pair. Joined with an egg's 23, the new cell has 46.",
             },
             {
               id: "q2",
               prompt: "What is a gene?",
-              choices: ["A whole chromosome", "A section of DNA with the instructions for one product, usually a protein", "A kind of cell"],
-              answer: 1,
+              choices: ["A whole chromosome, coiled up tight", "A tiny cell that carries one trait", "One section of a DNA molecule"],
+              answer: 2,
               hint: "Genes are smaller than chromosomes. Each chromosome holds many of them.",
               explain: "A gene is a section of DNA. A chromosome is a whole DNA molecule, and it holds many genes.",
             },
@@ -233,8 +233,8 @@ const heredity: CatalogueEntry = {
               id: "q3",
               prompt: "Why are brothers and sisters with the same parents not exactly alike?",
               choices: [
-                "Their genes change as they grow up.",
-                "Each egg and sperm gets a random mix of chromosomes, so each child gets a different combination.",
+                "Their genes change as they grow up in different ways.",
+                "Each child gets a different random mix of chromosomes.",
                 "Only the oldest child gets genes from both parents.",
               ],
               answer: 1,
@@ -322,12 +322,12 @@ const heredity: CatalogueEntry = {
             kind: "sorter",
             categories: ["Dominant trait", "Recessive trait"],
             items: [
-              { id: "PP", text: "PP", answer: 0 },
               { id: "Pp", text: "Pp", answer: 0 },
               { id: "pp", text: "pp", answer: 1 },
               { id: "TT", text: "TT", answer: 0 },
-              { id: "Tt", text: "Tt", answer: 0 },
               { id: "tt", text: "tt", answer: 1 },
+              { id: "PP", text: "PP", answer: 0 },
+              { id: "Tt", text: "Tt", answer: 0 },
             ],
           },
         },
@@ -469,8 +469,8 @@ const heredity: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Two Tt pea plants are crossed (T = tall, t = short). What fraction of the offspring are expected to be short?",
-              choices: ["1/4", "1/2", "3/4", "0"],
-              answer: 0,
+              choices: ["0", "1/4", "1/2", "3/4"],
+              answer: 1,
               hint: "Draw the square. Which boxes have two lowercase t's?",
               explain: "The boxes are TT, Tt, Tt and tt. Only tt is short: 1 of the 4 boxes, or 1/4.",
             },
@@ -485,11 +485,8 @@ const heredity: CatalogueEntry = {
             {
               id: "q3",
               prompt: "Two Pp plants make 4 seeds, and none of them grow white flowers. Does that mean the Punnett square was wrong?",
-              choices: [
-                "Yes. Exactly 1 of the 4 should have been white.",
-                "No. Each seed had a 1 in 4 chance of being white, so getting none in only 4 seeds is quite possible.",
-              ],
-              answer: 1,
+              choices: ["No. Each seed only had a 1 in 4 chance of being white.", "Yes. With 4 seeds, exactly 1 of them had to be white."],
+              answer: 0,
               hint: "Is a 1 in 4 chance a promise that exactly 1 of 4 will happen?",
               explain:
                 "A Punnett square gives chances. The chance that all 4 seeds are purple is (3/4)⁴, about 32%, so it happens often. With hundreds of seeds, close to 1/4 would be white.",
@@ -514,9 +511,12 @@ const heredity: CatalogueEntry = {
   ],
 };
 
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+/**
+ * Practice on the skill map that fits each lesson (lesson id → skill ids). "genes-dna" has none yet:
+ * s.cells is organelle jobs, and s.genetics needs the Punnett squares of the last two lessons.
+ */
 export const practice: Record<string, string[]> = {
-  "genes-dna": ["s.cells"],
+  traits: ["s.traits.inherited"],
   "dominant-recessive": ["s.genetics"],
   punnett: ["s.genetics"],
 };
