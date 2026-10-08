@@ -1,0 +1,541 @@
+{
+ "read:pbl": {
+  "summary": "I mapped OpenMAIC's project-based learning (PBL v2). It works as two layers.\n\n1. A planner makes a frozen design: one call to the model, which code then validates and fills in.\n2. A runtime runs that design with three model agents (Instructor, Evaluator, Simulator) over a code state machine.\n\nThe structure is worth porting as patterns, rewritten in our code with MIT credit. Three parts must not come over:\n- the readiness gate, which is a model score;\n- the proficiency engine, which is fed by model scores;\n- the UI.\n\n**How a project is structured** (packages/@openmaic/dsl/src/pbl.ts:3-149; lib/pbl/v2/types.ts:47-554)\n- **Project:** title, description (the outcome), learningObjective, gains (3-5 things the learner gains), proficiency tier, language, exactly one Instructor role, milestones, and an optional `scenario` for role-play.\n- **Milestone:** title, description, briefing (what the Instructor says to open it), completionCriteria, debrief (what it says to close it). An optional `synthesisCheck.coreConcept` goes on 1-2 stages, and code normalizes this. Status is locked, active or completed.\n- **Microtask:** title, a description that is the \"done\" contract, 1-3 hints that guide and never solve, and a status.\n  - Role-play beats add four fields: a hidden `successWhen`, a private `characterObjective`, `skillFocus` and `learnerBrief`.\n- **Rubrics:** there is no rubric object. \"Done\" is written into each microtask's description. The planner classifies each task as convergent, gradable-open (must state what separates strong from weak) or open-reflective, and names its delivery form: artifact, argument or performance (planner-single-call-system.md:84-92).\n- **Deliverables:** text, file or link submissions (types.ts:105-124).\n\n**Generation**\n- The outline stage emits `pblConfig`: at most one per course, 15-30 minutes, with an optional `scenarioRoleplay` (requirements-to-outlines/system.md:201-227).\n- The single-call planner runs first: prompt \u2192 JSON \u2192 structural validation \u2192 one repair retry with the gaps listed \u2192 ids, status and order assigned in code. A tool loop is the fallback (scene-generator.ts:1075-1157; planner-single-call.ts:173-578).\n- The ordinary prompt has 16 hard rules and a self-check (planner-single-call-system.md:48-104). The role-play prompt fixes the stage order (prep \u2192 roleplay \u2192 wrapup), allows exactly one character, and forbids spoilers (planner-scenario-single-call-system.md:5-75).\n\n**Agent guidance**\n- The Instructor's system prompt is built from blocks in a fixed order (instructor.ts:803-876). It has three phases: greeting, setup, instructing.\n- It has only two tools: `record_observation` and `adjust_difficulty` (instructor.ts:1422-1483).\n- It uses a hint ladder from L0 (\"why\") to L3 (\"the literal answer\"). Code decides whether the answer may be released yet, per tier (instructor.ts:419-492; tier-guidance.ts:40-90).\n- Its teaching rules include no false either/or questions, at most one closing question, and \"bind first, ask second\" (instructor-base-rules.md:63-234).\n- The Evaluator writes a task score from 0 to 100, and a score of 60 or more unlocks the Done button (evaluator-task.md:30-38; task-completion.ts:18-26; submission.tsx:531-560). It also writes star ratings for each milestone and a final report.\n\n**How it runs across sessions**\n- The server is stateless: the client posts the whole project on every turn and applies the patches that come back (app/api/pbl/v2/instructor/route.ts:4-14).\n- When a lesson is saved, the learner's progress is stripped out and only the design template is kept (document-persistence.ts:14-49; learner-state.ts:126-178).\n- On load, progress is rebuilt from a store of records: ordered by sequence number, duplicates removed, with resets and snapshots handled (fold.ts:323-382; hydration.ts:234-328).\n- Re-entry reopens the active task, and the Instructor speaks first (progress.ts:75-186; open-task/route.ts).\n- A finished milestone waits for an explicit Continue tap, and a finished task waits for a Done tap. Nothing advances on its own (progress.ts:463-812).\n- Older chat is compressed in code, with no model call (instructor-memory.ts:13-29).\n- The design target is still one sitting of 15-45 minutes (planner-single-call-system.md:58). Coming back later is resumption, not a planned multi-day project.\n\n**Mapping to K-9 at-home projects with a grown-up**\n- Our current project scene is only `{title, brief, steps}` with checkboxes held in memory. Nothing is saved or recorded (apps/web/src/components/stage/scenes.tsx:280-322).\n- Grow it, and keep the 238 catalogue project scenes working by lifting each into a single stage in code:\n  - milestone \u2192 a stage, one stage per sitting, with \"Next time\" tied to the existing planner `project` kind (planner/plan.ts:83-84);\n  - briefing and debrief \u2192 read aloud through the theater's code script, never a greeting;\n  - microtask \u2192 a step, with optional code checks;\n  - submissions \u2192 a photo kept on the device, typed words, or \"told the tutor\";\n  - the Instructor \u2192 our one live tutor, through a project block in the tutor prompt;\n  - the grown-up \u2192 a real human role: a card per stage with materials, safety and how to help, plus a sign-off that needs the existing grown-up gate (lib/store.ts:40).\n- Replace the Evaluator gate:\n  - convergent steps are checked by code, which is the only evidence;\n  - open and reflective steps are completed by a learner tap or a grown-up tap, recorded as activity, never mastery;\n  - AI feedback is an ordinary live tutor turn, labelled, with no score or stars.\n- The theater spec's \u00a75.3 lists `pbl/*` under \"never comes over\" (spec line 347). It needs an explicit amendment.\n- Role-play (the Simulator) belongs behind the same button as the multi-agent classroom.",
+  "files": [
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/dsl/src/pbl.ts",
+    "what": "Saved project contract, with no dependencies. :3-16 status, role and tier enums. :18-24 PBLRole. :31-47 PBLMicrotask: hints, completionCriteria and the role-play fields successWhen, characterObjective, skillFocus, narration, learnerBrief. :61-75 PBLMilestone: briefing, completionCriteria, debrief, synthesisCheck {coreConcept}, scenarioStage. :77-102 role-play config with characters and sceneVisual. :122-149 PBLProject.",
+    "port": "pattern only: rewrite as a smaller ProjectStage/ProjectStep extension of our ProjectScene (apps/web/src/lib/types.ts:127)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/types.ts",
+    "what": "App runtime layer on top of the contract. :47-51 internalAssessment (hidden from the learner). :57-78 engagement summary. :105-124 PBLSubmission (text/file/link, fileUrl). :156-184 PBLEvaluation (score 0-100, stars, whatYouBuilt/Learned/Next, actGoals). :191-211 engagement event kinds. :253-320 runtime event ledger. :400-429 proficiency assessment. :455-479 chat message (roleType, characterId). :500-527 PBLHandover and PBLPendingTaskCompletion. :539-554 PBLProjectV2. :570-607 planner input, which carries user.nickname and bio at :581-587. :658-685 the 'is it runnable' check.",
+    "port": "pattern for submission, handover and pending-done only; never score, stars, proficiency, internalAssessment or the nickname/bio fields"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/prompts-pbl/planner-single-call-system.md",
+    "what": "Main planner prompt. :5-11 the five failure modes (answer leak, worksheet fragmentation, fake deliverable, no judgeable done, invisible resource). :27-35 text-only workspace rule. :37-46 what to produce. :48-94 hard rules 1-16: guide-not-solve :66-71, agency :73, right-sized steps :75-78, a closing step that pulls the project together :80, build phases not chapters :82, done-definition by task nature :84-88, delivery form :90-92, text-only grounding :94. :58 one sitting of 15-45 min. :96-104 self-check. :110-136 JSON shape, with ids, status and order assigned by code.",
+    "port": "adapt: rewrite as PROJECT_RULES constants in lib/ai/project.ts (EN/ES, K-9 home, safety, grown-up role, band sizes) with a golden test; drop the Chinese and coding examples and the 15-45 min single-sitting rule; MIT header and THIRD_PARTY_NOTICES"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/prompts-pbl/planner-system.md",
+    "what": "Tool-loop version of the planner prompt. :82 scope rule. :87-100 hint ban with many examples. :110-117 rules 16-17 (task nature, no fake deliverable). :119-130 tool workflow (set_project_info, add_role, add_milestone, add_microtask, mark_design_complete).",
+    "port": "reference only (the single-call path wins)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/prompts-pbl/planner-scenario-single-call-system.md",
+    "what": "Role-play planner. :5-9 three failure modes (spoilers in visible text, a thin successWhen, a prep stage that gates). :35-41 scenario block, exactly one character at :40. :43-48 fixed prep \u2192 roleplay \u2192 wrapup order. :50-59 beat fields; successWhen is hidden and is the advance gate. :67-69 no spoilers; the character never coaches.",
+    "port": "pattern only, behind the multi-agent-classroom button; grades 6-9; grown-up consent"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/pbl/planner-single-call.ts",
+    "what": "One call \u2192 parse \u2192 validateLLMOutput \u2192 one targeted retry listing the gaps \u2192 fill in ids \u2192 normalize \u2192 completion gate. :56-81 checklist in the user prompt. :173-301 structural validation; topic and language are deliberately not policed (:244-250). :314-350 hydrateScenario keeps one character (:330). :352-462 hydrateProject assigns ids, status (first milestone active) and order in code. :477-578 entry point.",
+    "port": "pattern only: writeProject = Output.object(ProjectSchema) + gateProject + one repair through lib/ai/retry.ts"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/pbl/planner-core.ts",
+    "what": ":61-125 emptyProject computes the starting tier from outline, bio and prior quizzes. :131-180 prompt slots. :188-244 role-play design block. :246-256 hidden-documents check. :270-285 instructor project anchor. :323-394 plannerCompletionGaps. :400-487 normalizeSynthesisChecks: code guarantees 1-2 'core' stages, using token-overlap ranking. :262-268 newId uses Math.random.",
+    "port": "pattern: fold the completion gaps and the 'at most 1-2 core stages' normalization into gateProject; never the emptyProject proficiency seeding"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/agents/planner.ts",
+    "what": "Agentic tool loop (MAX_PLANNER_STEPS 80 at :76; tools :198-726). Used only as a fallback after the single call fails.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/scene-generator.ts",
+    "what": ":1075-1157 generatePBLSceneContent: single call first, then the loop fallback, skipping it on provider errors and aborts. :1663-1700 buildPBLProjectSummary (title, driving goal, objective, gains, milestone list), which feeds the intro-speech prompt. Related: outline-types.ts:97-104 (pblConfig), outline-type.ts:54-70 (fallback pblConfig built from keyPoints), outline-generator.ts:229-234 (PBL falls back to a slide), templates/requirements-to-outlines/system.md:201-227 and :341-365.",
+    "port": "pattern only: the project summary feeds courseContext() for stage-opening scripts; our 'project is last scene' rule (lib/ai/build.ts:162) already matches OpenMAIC's one PBL per course"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/templates/pbl-actions/system.md",
+    "what": "Teacher's intro speech for a PBL scene. :20 greets on the first page. :23 'same session, never last class'. :25-29 introduce the goal, preview milestones, invite in. :31 one teacher voice.",
+    "port": "adapt into a project variant of SCRIPT_RULES (theater spec \u00a75.1); drop the greeting per spec \u00a72.2 #16"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/agents/instructor.ts",
+    "what": "Runtime tutor. :58-102 greeting/setup/instructing phases; :75 'welcome them by name\u2026 nickname' (stale, conflicts with our rules). :108-156 project, milestone, microtask and anchor blocks. :376-412 roadmap. :419-424 per-tier release threshold. :455-492 code-computed RELEASE/HOLD line. :498-540 runtime brief and teaching contract (chat never completes a task). :549-560 hard rules. :573-599 left/center/right workspace orientation. :649-664 optional end-of-stage check question. :683-801 role-play awareness. :803-876 block order. :1301-1746 turn: tools only while instructing (:1513-1515), wrapup auto-complete (:1681-1703), hardcoded Chinese error (:1664), memory compression (:1737-1743).",
+    "port": "pattern: a project block plus context fields in our lib/ai/prompts.ts and lib/ai/context.ts, one model call per turn; never the turn loop, streamLLM, the phase openers or the tools"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/prompts/instructor-base-rules.md",
+    "what": "Teaching rules. :51-61 the task text is a seed, not a script. :63-78 closed vs open tasks and the open-task ladder. :80-87 style. :111-148 stay on the active task, 'bind first, ask second'. :150-159 don't do the work. :161-193 rhythm and questioning discipline. :195-202 question integrity (no false either/or). :204-214 when to skip the closing question. :216-234 the platform marks completion, chat never does. Not portable: :1-8 identity, :26-49 workspace and external IDE tools, :89-109 warm openers (exclamatory), :236-244 markdown and language.",
+    "port": "adapt the selected sections as constants under a golden test (MIT header); drop the rest"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/agents/tier-guidance.ts",
+    "what": "Hint ladder L0 why \u2192 L1 how \u2192 L2 partial or analogous example \u2192 L3 literal answer (:40-47), with an open-task mapping (:46). Per-tier opening rung and release speed (:49-90).",
+    "port": "adapt: key it to grade band (K-2/3-5/6-9) and our hint rungs, not to a proficiency tier"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/agents/evaluator.ts",
+    "what": "Three model evaluators. :129-248 shared streaming and tail parse. :250-315 persistEvaluation (task score; milestone 'learned' items and stars; final report). :349-353 grades image submissions with a vision model. Prompts: lib/pbl/v2/prompts/evaluator-task.md:30-38 (score \u226560 lets the learner continue), evaluator-milestone.md:41-54 (stars), evaluator-final.md, evaluator-final-scenario.md.",
+    "port": "never as a grader; at most the strengths/improvements shape as labelled, non-gating feedback inside a normal live tutor turn"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/pbl/operations/kernel/task-completion.ts",
+    "what": ":18-26 TASK_EVAL_PASS_SCORE = 60, a model score gating completion. :53-84 a pending completion is staged, then the learner taps Done. :86-102 hardcoded 'ready' text in 6 languages.",
+    "port": "never the gate; keep the pattern of two explicit steps (ready, then the learner taps Done)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/scene-renderers/pbl/v2/submission.tsx",
+    "what": ":523 the model score feeds the proficiency engine. :531-560 a passing score \u2192 setPendingTaskCompletion plus the ready message. :248-250 taskEvaluationCanAdvance.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/pbl/operations/kernel/progress.ts",
+    "what": "State machine. :53-65 current milestone and task. :75-159 normalizeProjectRuntime reopens one active task on load. :172-186 hasStartedProject (Start vs Continue). :203-276 reset keeps the structure and the tier. :424-458 startMicrotask. :463-636 advanceMicrotask, with a milestone handover at :586-610. :652-758 completeRoleplayAct with an 'act was played' check (:673-678). :761-812 continueAfterHandover. :814-969 chat divider messages with hardcoded labels.",
+    "port": "pattern: a pure ~60-line lib/projects.ts (current stage, mark step, finish stage, next time) with re-specified test cases"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/pbl/operations/kernel/engagement.ts",
+    "what": ":28 ledger cap of 500. :67-168 per-task rollup of turns, errors, repeat errors, concepts and questions. :170-185 milestoneSynthesisSatisfied.",
+    "port": "pattern only: count from our own records (Take moves, hint use); drop the observation tags the model writes"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/pbl/operations/kernel/proficiency.ts",
+    "what": "Proficiency engine: a smoothed score with tier hysteresis (:60-105). analyzeBio (:297). signalFromSubmissionScore (:570). computeInitialAssessment (:673). Fed by lib/pbl/v2/operations/runtime/dynamic-signals.ts:163 (model score) and by model-written observations.",
+    "port": "never (our learner model and the mastery law own this; bio is a profile field)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/runtime/learner-state.ts",
+    "what": "Design template and learner state are kept apart. :84-124 extractLearnerState. :126-178 stripToDesignTemplate. :180+ applyLearnerState. Siblings: fold.ts:323-382 (ordered by sequence, duplicates removed by event id, resets and snapshots handled); hydration.ts:234-328 (rebuild from records or repair from the document); drain.ts:1-20 and :433 (device-scoped watermarks); record-payloads.ts:17-27 and :62-72 (snapshot); document-persistence.ts:14-49.",
+    "port": "pattern only (already covered by our Take/TakeRecord, spec \u00a75.2); never the @openmaic/storage machinery"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/agents/instructor-memory.ts",
+    "what": "Chat compression in pure code, no model call: compress at 30 messages, keep the last 16, summary of at most 4,500 characters, cut on user-turn boundaries (:13-29).",
+    "port": "pattern only, and only if project threads outgrow the tutor history; not 1.0"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/operations/runtime/completion-stats.ts",
+    "what": "End-of-project stats computed in code. :28-52 standard stats (concepts, independenceRate, errors, turns, duration, toughest milestone). :55-87 role-play stats. :124-130 entry. :176 act-goals scaffold.",
+    "port": "pattern for a code-built 'what you made' recap for the grown-up; drop independenceRate and the toughest-milestone line (invented metrics)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/pbl/v2/agents/simulator.ts",
+    "what": "Role-play character and narrator. :69 one speaking character. :91-121 separate histories for the character and the director. :205-255 narrator pass that can output NONE. :381 turn. Prompts: lib/pbl/v2/prompts/simulator-system.md:5-23 (stays in character, never coaches, grades or hints) and simulator-narrator-system.md:1-20.",
+    "port": "pattern only, behind the multi-agent button with the multi-agent classroom"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/app/api/pbl/v2/task/update/route.ts",
+    "what": "Deterministic actions with no model: start, continue_handover, complete_pending_task, enter_scenario, complete_act (:61-158). The sibling routes instructor/open-task/evaluate/simulator are stateless SSE and resolve models through lib/server/resolve-model (instructor/route.ts:4-14 and :55).",
+    "port": "never the routes (they reach the OAuth adapter, spec \u00a75.3); the deterministic actions become pure functions in lib/projects.ts"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/scene-renderers/pbl-renderer.tsx",
+    "what": "Hero \u2192 workspace \u2192 completion phases. Plus pbl/v2/* (~8.4k lines): a dark, glowing three-column desktop layout (workspace.tsx:436-613), a scale-to-fit hero (pbl/v2/fit-scale.ts:18-40), star ratings.",
+    "port": "never; rebuild inside our Stage at 320 px"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/skills/agent-runtime/stage-dsl/references/pbl.md",
+    "what": "The clearest field-by-field reference for projectV2 (:61-200), including which fields are runtime-owned and which are hidden.",
+    "port": "reference"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/tests/pbl/v2/progress.test.ts",
+    "what": "Behaviours worth re-specifying: current lookups (:84-100), manual Done gate (:102-187), runtime repair (:189-210). Also planner-single-call.test.ts:154-317 (retry, malformed fields), fold.test.ts:128-423 (ordering, duplicates, reset), instructor-question-integrity.test.ts:27-64.",
+    "port": "re-specify as our own tests (no code copied)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/apps/web/src/components/stage/scenes.tsx",
+    "what": "Our ProjectView (:280-322): the brief plus a step checklist held in useState. It is not saved, records nothing, and has no grown-up role. Related target files: lib/types.ts:127 ProjectScene and :160-179 ActivityEvent/ParentNote; lib/ai/schemas.ts:139 (2-5 steps); lib/ai/build.ts:162 (project is the last scene); components/stage/narration.tsx:75-79 projectSegments; planner/types.ts:6 and planner/plan.ts:83-84 (the 'project' kind gets a 25-minute line); lib/store.ts:40 session.unlocked (grown-up gate); lib/ai/tools.ts:135 note_for_grownup; lib/blobs.ts:96 putBlob (device IndexedDB).",
+    "port": "target (ours)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/docs/plans/2026-10-07-tutor-theater-spec.md",
+    "what": "\u00a75.3 line 347 lists `pbl/*` under 'never comes over' and needs amending. \u00a77.1 item 3 (line 444): a project gets brief and step beats with no pointing cues. \u00a713 invariants 3-4 and 9 bind here. docs/STATUS.md:126-130 records the owner's decision amending this spec.",
+    "port": "amend: add \u00a75.1/\u00a75.2 rows, \u00a76 files, \u00a713 invariants, and a \u00a715 phase slot after the HTML phase"
+   }
+  ],
+  "contracts": "A. OPENMAIC AS IT IS (citations above)\n- **Project:** title, description (the outcome), learningObjective, gains (3-5), proficiency tier, roles (exactly one Instructor: a learner-facing name and description, plus a hidden persona prompt), milestones, optional scenario.\n- **Milestone (one stage):** briefing (Instructor's opening script), completionCriteria, debrief (closing script), optional synthesisCheck.coreConcept (code allows 1-2), status locked, active or completed.\n- **Microtask:** description is the \"done\" contract by task nature (convergent / gradable-open with stated criteria / open-reflective) and by delivery form (artifact / argument / performance). Hints: 1-3, guide and never solve.\n- **Runtime:**\n  - submissions (text, file or link);\n  - task evaluation by the model, 0-100, with 60 or more unlocking Done;\n  - stars per milestone and a final report;\n  - an engagement ledger and a runtime event ledger, each capped at 500;\n  - a hidden proficiency score;\n  - pendingHandover (Continue) and pendingTaskCompletion (Done).\n- **Server:** stateless; the client posts the whole project each turn.\n- **Persistence:** design template and learner state are separate; progress is rebuilt from ordered, de-duplicated records.\n\nB. PROPOSED CONTRACT (ours, apps/web/src)\nKeep the 238 flat catalogue project scenes valid: `stages` is optional, and code lifts a flat scene into one stage `{steps: steps.map(text => ({text}))}`.\n\n```ts\ntype ProjectScene = { id; kind: \"project\"; title; brief /* outcome */; steps: string[]; gains?: string[] /* 3-5 */; stages?: ProjectStage[] };\ntype ProjectStage = {             // OpenMAIC milestone = one sitting\n  title; why /* briefing */; doneWhen /* completionCriteria, shown */; wrap?: string /* debrief */;\n  steps: ProjectStep[] /* 2-4 */; minutes: number /* K-2 \u226415, 3-5 \u226425, 6-9 \u226440 */;\n  materials?: string[]; safety?: string[];\n  core?: string /* coreConcept, \u22641 per project, normalized in code; an optional 'say it your way' tutor turn, never a gate */;\n  strong?: string[] /* rubric: 2-4 'strong work usually\u2026' lines for open steps, shown to learner and grown-up, no score */;\n};\ntype ProjectStep = {\n  text /* the done-definition */; hints?: string[] /* \u22642 */;\n  make?: \"photo\" | \"words\" | \"tell\" | \"none\" /* delivery form */;\n  check?: { kind: \"number\"; prompt; answer; tolerance? }\n        | { kind: \"own-data\"; prompt; count }  /* code checks the arithmetic on the learner's own entries */\n        | { kind: \"widget\"; widget: Widget };\n  grownUp?: string /* what the grown-up does */;\n};\n// StoreState.projectRuns (synced like attempts):\ntype ProjectRun = { id; profileId; courseId; lessonId; sceneId; stage: number;\n  done: Record<\"stage.step\", { at; by: \"learner\" | \"grown-up\"; blobId?; words?; verdict?: \"right\" | \"not-yet\"; assisted?: true }>;\n  nextOn?: \"YYYY-MM-DD\"; finishedAt? };\n// ActivityEvent.type gains \"project_stage_done\".\n```\n\nC. MAPPING\n- **Roles:** OpenMAIC's roles \u2192 our one live tutor, with no invented guide name. The grown-up is a new human role: a card per stage, and a sign-off that requires session.unlocked.\n- **Continue handover** \u2192 \"Next time\", with an optional planner day.\n- **Briefing and debrief** \u2192 read aloud by codeScript (by: \"code\"), or written by writeScript once the project variant of SCRIPT_RULES exists (theater T6).\n- **Microtask status** \u2192 ProjectRun.done.\n- **Submissions** \u2192 blobs kept on the device, or typed words passed through screen() and withoutNames.\n- **Task score gate** \u2192 a code check for convergent steps (the only evidence); a learner tap or grown-up tap for open and reflective steps (activity, never mastery).\n- **Evaluator feedback** \u2192 an optional live tutor turn with the step in `stage` context, labelled \"Written by AI\", with no effect on progress.\n- **Stars and final report** \u2192 a recap built in code from ProjectRun: stages done, things made, checks right or not yet.\n- **Engagement and runtime ledgers** \u2192 TakeRecords (scene, move, learner) plus ProjectRun.\n- **Proficiency** \u2192 none; grade band, TeachingPrefs and our hint rungs.\n- **Role-play (scenario and Simulator)** \u2192 only behind the multi-agent button, grades 6-9, never graded.\n\nD. GENERATION\nwriteProject(lesson or goal, grade, locale):\n1. One call: Output.object(ProjectSchema), with PROJECT_RULES adapted from planner-single-call-system.md rules 2-3 and 5-16, plus home safety, the grown-up's role, band sizes and langLine.\n2. gateProject runs in code. It rejects:\n   - stage or step counts outside the band;\n   - a missing final \"show it\" step;\n   - more than one `core`;\n   - hints that contain a check's answer (mentions/numbers.ts);\n   - unsafe steps without a grown-up flag (heat, sharp, chemicals, going out alone, online accounts, buying things; EN/ES list);\n   - praiseIn, languageOf and suitable() failures.\n3. One repair attempt with the reasons.\n4. Ids, status and order are assigned in code.\n5. Order of guards: limited \u2192 Zod \u2192 screen() \u2192 daily cap \u2192 spendGate \u2192 model \u2192 retry.\n\nE. INVARIANTS (add to spec \u00a713)\n1. No model output changes ProjectRun.done or a verdict.\n2. Photos never reach a model in 1.0.\n3. A grown-up sign-off requires the grown-up gate; otherwise it is labelled as done by the learner.\n4. A hint shown on a check step marks it assisted. So does a tutor turn while a check step is open (D-2).\n5. AI-written projects carry \"Written by AI\".\n6. In demo mode, catalogue projects play on codeScript and writeProject returns 503.\n7. Every string goes through t(), EN and ES.\n8. Targets are 44 px (56 px for K-2) with keyboard parity; the layout works at 320 px.",
+  "risks": [
+   "The core of OpenMAIC's project loop is model-graded: a task score of 60 or more unlocks Done (task-completion.ts:18-26; submission.tsx:531-560; evaluator-task.md:30-38). Porting it as-is breaks AGENTS.md rule 8 and theater spec \u00a713.4. It has to be replaced (code checks, or learner and grown-up taps), not adapted, and the milestone stars and final 'what you learned' report are invented metrics under rule 1.",
+   "The proficiency engine is fed by model scores and by observations the model writes (dynamic-signals.ts:163; instructor.ts:1466), and it reads profile bio (proficiency.ts:297). Porting it would create a second, hidden learner model beside the mastery law.",
+   "The theater spec \u00a75.3 (line 347) says `pbl/*` never comes over, and check-forbidden bans @openmaic imports. Without an explicit spec amendment, porting looks like a violation and invites copying the routes, which reach the OAuth adapter through lib/server/resolve-model.",
+   "Prompts are built for adults in one sitting: 15-45 minutes, external IDEs and Tableau, Chinese and coding examples, a left/center/right workspace (planner-single-call-system.md:58; instructor-base-rules.md:26-49). They need a rewrite for K-9 multi-day home projects, not a translation. Their warm-opener examples are exclamatory praise that our praiseIn and no-slop rules reject.",
+   "COPPA and privacy. Photo deliverables can show a child's face or home. OpenMAIC sends image submissions to a vision model (evaluator.ts:349-353). The greeting phase tells the model to use the learner's nickname (instructor.ts:75), and the planner input carries nickname and bio (types.ts:581-587). Default should be photos on device only, nothing from the profile sent, and an owner or counsel decision before any AI feedback on photos.",
+   "At-home physical safety: model-written steps could propose heat, sharp tools, chemicals, going outside alone or online sign-ups. That needs a code gate plus a grown-up safety card. OpenMAIC has no such gate (its text-only rule covers missing resources, not safety).",
+   "Role-play: the Simulator voices an AI character with emotions and private secrets to a child (simulator-system.md). That is high risk for 'feels like AI' and for safety with under-13s. Keep it behind the multi-agent button, grades 6-9, with grown-up consent and no grading of act goals.",
+   "Persistence over-engineering: OpenMAIC's fold, drain and hydration (~1,200 lines plus @openmaic/storage) solves a document-versus-runtime split we don't have. Porting it would duplicate Take/TakeRecord and StoreState sync; a small ProjectRun is enough.",
+   "Catalogue compatibility: 238 flat project scenes (some with 6 steps, above the AI schema's maximum of 5) must keep rendering, narrating (narration.tsx:75-79) and passing existing tests while the staged form arrives.",
+   "Hardcoded strings: kernel 'ready' text and divider labels in six languages, and a Chinese error at instructor.ts:1664. None of it may come over; everything goes through t() with ES parity.",
+   "Help accounting: hints and live tutor turns on code-checked project steps must mark them assisted, or project checks will overstate independent success in the Family view."
+  ]
+ },
+ "read:multiagent": {
+  "summary": "Map of OpenMAIC's multi-agent classroom (modules/openmaic-classroom, abbreviated OM/) and what an opt-in \"classroom mode\" behind a button would need in apps/web. I only read code. Nothing was run: upstream has no node_modules and no latency instrumentation (OM/eval/orchestration has quality judges only). The cost and latency figures below are estimates worked out from the code's call structure, the prompt sizes and our price table. None of them were measured.\n\nHOW IT WORKS UPSTREAM. There are two director paths.\n(1) The legacy path is OM/app/api/chat/route.ts. It calls lib/orchestration/stateless-generate.ts:392, which runs a LangGraph with the shape START\u2192director\u2192agent_generate\u2192END. Each request runs exactly one director\u2192agent cycle (director-graph.ts:479-496). The browser repeats requests until the director says USER or END, or until there are two empty turns. There is no cap on the number of turns (lib/chat/agent-loop.ts:150-268).\n  - With 2 or more agents, the director is a non-streaming model call that returns {\"next_agent\": id|\"USER\"|\"END\"} (director-graph.ts:150-222; director-prompt.ts:216-239; prompt template lib/prompts/templates/director/system.md).\n  - With 1 agent, the director is code only: it sends the agent once and then cues the learner (director-graph.ts:115-132).\n  - In a discussion's first turn, the trigger agent skips the director call (director-graph.ts:135-148).\n  - Each agent call streams a JSON array of text and actions, parsed with partial-json (stateless-generate.ts:136-381; director-graph.ts:313-391). Actions are filtered by role (registry/types.ts:83-95, tool-schemas.ts:16-21).\n(2) The Pi path is OM/app/api/chat/pi/route.ts \u2192 lib/chat/pi/director-loop.ts. It is on by default (lib/config/feature-flags.ts:99-100; the client switches to it at components/chat/use-chat-sessions.ts:1263).\n  - One request runs the whole round on the server. The director is a tool-using agent with read_scene, call_agent, cue_user and close_session.\n  - Caps: at most 6 agent turns and 8 actions per agent (pi/config.ts:5-8), and at most 18 director tool calls (director-loop.ts:79).\n  - If the director stops without choosing, the learner is cued automatically (director-loop.ts:270-272).\n\nROSTER AND ROLES.\n  - There are six default agents: teacher, assistant, and four students. The class clown persona uses \"pop culture references, memes\" (registry/store.ts:96-119). The other display names are in Chinese (store.ts:74,98,122,146,170).\n  - The teacher persona says \"Encourage students by name\" (store.ts:59).\n  - Each course also gets an LLM-generated roster: at least 2 agents, exactly 1 teacher (app/api/generate/agent-profiles/route.ts:299-313).\n  - Speech length targets by role: teacher about 100 characters, assistant about 80, student about 50 (prompt-builder.ts:181-204).\n  - A peer-context block stops repeated greetings (summarizers/peer-context.ts:21-31).\n  - Other agents' messages are re-labelled as the user's, with the sender's name attached (summarizers/message-converter.ts:49-57). An interrupted message gets a marker (message-converter.ts:96-105).\n\nTURN-TAKING WITH THE LEARNER.\n  - Director rule 13 forces the teacher to answer an unanswered learner turn first. It is enforced only in the prompt text (director/system.md:25-34).\n  - cue_user ends the client loop (agent-loop.ts:246-249) and the UI shows \"Your turn\".\n  - The learner can interrupt at any point (use-chat-sessions.ts:1408-1475, 1565-1630).\n  - Generated slides end with a `discussion` action whose agentId is a student (OM/packages/@openmaic/generation/templates/slide-actions/system.md:97-117; OM/packages/@openmaic/dsl/src/action.ts:196-201).\n  - That action shows a ProactiveCard that skips itself after 5 seconds (lib/choreography/timing.ts:31; components/chat/proactive-card.tsx:96-117). \"Listen\" starts a discussion in which a student agent speaks first, unprompted (prompt-builder.ts:107-113).\n\nUI.\n  - components/roundtable/index.tsx (2,201 lines): avatars around a table, speech bubble, \"Your turn\", thinking state, voice input. It uses framer-motion 52 times, including 20 infinite animations, with no reduced-motion check and no aria-live.\n  - components/chat/chat-area.tsx: Lecture and Chat tabs (lines 290-301).\n  - components/chat/chat-session.tsx: one bubble per sender.\n  - lib/buffer/stream-buffer.ts: reveals text at 30 ms per character (about 33 characters a second, lines 208-209). Q&A and discussion add 1.2 s after text and 0.8 s per action (use-chat-sessions.ts:924).\n  - lib/hooks/use-discussion-tts.ts: a separate TTS voice per agent.\n\nCOST AND LATENCY PER TURN (estimates).\n  - Legacy path, k speakers: k+1 director calls plus k agent calls = 2k+1 model calls, run one after another, over k+1 HTTP requests.\n  - Prompt sizes: each agent system prompt is about 32-35 KB, roughly 8-9K tokens. That covers agent-system 7.9 KB, the whiteboard reference snippet 17.4 KB, action descriptions and state. Each director prompt is about 2K tokens.\n  - For k=2 at the Sonnet 5.5 list price in our apps/web/src/lib/server/budget.ts:63 ($2 in / $10 out per million tokens): about 24K input and 300 output tokens, roughly $0.05 per learner message without caching. Against the default $1 per learner per day (budget.ts:50) that is about 20 messages a day. If every HTTP request counts as a turn (budget.ts:18), it is about 16 messages a day against the 50-turn cap (budget.ts:49).\n  - First word: the director call is not streamed and must finish first, adding a full model round trip. That is about +0.6-1.0 s, over the live tutor spec's 3-9 gate of p50 \u2264 1.6 s (docs/plans/2026-10-07-live-tutor-spec.md:386).\n  - Between speakers: the browser waits for the text reveal and the 1.2 s pause before it sends the next request (agent-loop.ts:234-235), then pays another director call and another first-token wait. That is about 2-3 s of silence plus TTS.\n  - Pi path, for k=2: about 3-4 director steps plus 2 child calls, with the Pi director prompt re-sent at every step. The first word still waits for the director to emit call_agent.\n\nHOW soloTutor NARROWS IT.\n  - Only the Kaizen route sets it (app/kaizen/course/[id]/page.tsx:32 \u2192 ClassroomSurface.tsx:64,131 \u2192 lib/classroom/load-classroom.ts:196-207 \u2192 registry/agent-selection.ts:59-72).\n  - It picks the teacher by registry role, never by list position. With no teacher, the selection is empty. isUserSet is always false.\n  - Legacy path: this gives the code-only director and 1 model call per learner message.\n  - Pi path (the default): the roster is the teacher alone (pi/config.ts:10-25), but the director model still runs. There is no single-agent shortcut, so it is still at least 2-3 calls and the director round trip before the first word.\n  - soloTutor is a selection made at load time, not an invariant. Three gaps:\n    (a) startDiscussion puts the scripted student agentId back into the roster (use-chat-sessions.ts:1951-1958). That id comes through PlaybackChromeRoot.tsx:1044-1051, the agent is in the registry (store.ts:355-386), and its config is sent with the request (use-chat-sessions.ts:1254-1261). A scripted discussion therefore brings a peer voice into a Kaizen lesson.\n    (b) Sending a message replaces an empty selection with ['default-1'] (use-chat-sessions.ts:1812-1813). That contradicts the \"fails loudly\" note at agent-selection.ts:62-64.\n    (c) Any later roster write widens the selection again (lib/store/stage.ts:734-737).\n  - The test (tests/classroom/kaizen-solo-tutor-selection.test.ts) covers restoreAgentSelection only.\n\nTHINGS WE MUST NEVER INHERIT.\n  - The nickname and bio go to the model: director-prompt.ts:61-68; prompt-builder.ts:82-87 (\"Address them by name\"); pi/prompts.ts:209,267. They are sent from use-chat-sessions.ts:1682-1685, 1877-1880, 2001-2004.\n  - app/api/chat/route.ts:46-92 has no safety screen, no rate limit and no spend gate.\n  - After a quiz is submitted, the prompt prints the correct answers and the AI grader's comment (summarizers/state-context.ts:176-211). The full scenes, keys included, travel in the request body (lib/types/chat.ts:344-346).\n  - The model plumbing reaches the forbidden lib/ai/llm.ts: ai-sdk-adapter.ts:15 and lib/agent/runtime/stream-fn.ts:37.\n\nCONFLICTS WITH OUR SPECS.\n  - The theater spec says \"the directors and chat\" never come over (\u00a70.6, docs/plans/2026-10-07-tutor-theater-spec.md:35-40) and lists OM/lib/orchestration/*, OM/components/chat/* and OM/components/roundtable/* as never coming over (\u00a75.3, :326-329).\n  - The owner's \"maybe add the multi agent classroom out it behind a button\" therefore needs a spec amendment. My recommendation is to amend it as \"pattern only, no code copied\".\n\nWHAT CLASSROOM MODE NEEDS. My recommendation is the minimum that keeps every current gate:\n  - A fixed roster in code: the tutor plus at most 2 peers, never generated by a model.\n  - Turn order decided in code, with no LLM director: the tutor always speaks first, then at most one peer line, then it is the learner's turn. Peers never talk to each other in rounds.\n  - Still one model call per turn. The peer line is a new echo-only board tool `peer_says`, written after the tutor's words and checked in code by `gatePeer`. It reuses the existing BOARD_TOOLS stopWhen pattern (apps/web/src/lib/ai/tools.ts:116-138; components/tutor/cards.ts:32-40).\n  - `Beat.who` so recordings and replays keep each speaker.\n  - Demo mode keeps working: vetted, code-written peer lines live in apps/web/src/lib/tutor-demo.ts.\n  - Labels and accessibility: an \"AI classmate\" label on every peer bubble, an aria-pressed toggle, the speaker name as text, and aria-live.\n  - Rough cost: about +60-150 output tokens per turn when a peer speaks, about $0.001-0.002, plus a cached roster block of about 300 tokens. The tutor's first sound is unchanged.\n  - Placement: a new phase after T7, behind a KAIZEN_CLASSROOM flag. It depends on T1 (voice), T2 (Beat and recording), T4 (publicObservation) and T5 (the Board director verbs).\n  - Blocked on the owner: peer voices. The live tutor spec has one voice for the whole app (:145) and Turbo allows one registered voice per connection (:273). The owner also needs to decide grades, defaults, consent for under-13s, the peer personas, and whether a peer may voice a deliberate mistake.\n\nPROJECT-BASED LEARNING. OpenMAIC's PBL has its own multi-role chat, separate from lib/orchestration: roles instructor, evaluator, mentor, collaborator and simulator (OM/packages/@openmaic/dsl/src/pbl.ts:6-13), served by OM/app/api/pbl/v2/{instructor,simulator,evaluate}. Its evaluator grades with a model, so it can never stand as proof of a skill. Later, a classroom peer could play the \"collaborator\" role in our 238 project scenes.",
+  "files": [
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/director-graph.ts",
+    "what": "LangGraph director\u2192agent cycle, one per request. :115-132 single-agent director is code only (dispatch once, then cue the learner). :135-148 the discussion trigger skips the director call. :150-222 multi-agent director is a non-streaming model call (adapter._generate at :179). :235-429 the agent's streaming call: action filter at :349, events agent_start/text_delta/action/agent_end. :502-547 initial state from the request (userProfile at :539).",
+    "port": "never (LangGraph + lib/ai/llm.ts). Pattern only: turn order and stop rules, rewritten as code in lib/ai/classroom gate."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/director-prompt.ts",
+    "what": "Director prompt builder. :34-36 agent list. :38-47 who has already responded. :61-68 STUDENT PROFILE WITH NICKNAME AND BIO GOES TO THE MODEL. :216-239 parseDirectorDecision, which ends the round on a parse failure.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/prompts/templates/director/system.md",
+    "what": "Director rules. Rule 6: 1-2 agents is usually enough. Rule 7: the USER cue. Rule 13 (:25-34): the teacher must answer an unanswered learner turn first, enforced only by the prompt. :36-40: role diversity, no duplicate content, greet once. Contains Chinese frustration examples.",
+    "port": "pattern only. Rule 13 becomes a code invariant (the tutor's words always come first). The greet-once rule folds into gatePeer."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/prompt-builder.ts",
+    "what": "Per-agent system prompt. :18-43 role guidelines. :82-87 'Address them by name naturally' (a name leak). :107-113 the discussion initiator speaks first unprompted. :181-204 length targets by role (teacher about 100 characters, assistant about 80, student about 50). Pulls in the whiteboard reference snippet, 17.4 KB.",
+    "port": "pattern only: the role length targets become band limits for peer_says. Everything else: never."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/summarizers/peer-context.ts",
+    "what": ":9-33 'already spoke this round' block: do not re-greet, do not repeat, add something new.",
+    "port": "pattern only: one sentence in the classroom prompt block."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/summarizers/message-converter.ts",
+    "what": ":49-57 other agents' messages re-labelled as user messages with [name]: attribution. :96-105 interrupted marker.",
+    "port": "pattern only. The interrupt marker is already in the theater spec's `said` field (\u00a78.3). Peer beats go into history as tutor-side beats tagged with `who`."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/summarizers/state-context.ts",
+    "what": ":136-271 builds the state context. :176-211 PRINTS CORRECT ANSWERS AND THE AI GRADER'S COMMENT after a quiz is submitted. :220-239 the quiz-restraint rules before submission.",
+    "port": "never for :176-211. :220-238 is pattern only, already in theater spec \u00a75.2."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/summarizers/conversation-summary.ts",
+    "what": ":35-69 director summary: the last 10 messages, each cut to 200 characters, labelled Student (Human) or Agent.",
+    "port": "never (no LLM director)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/stateless-generate.ts",
+    "what": ":136-381 incremental partial-json parser for interleaved [{type:text|action}] arrays. :392-509 the generator: builds DirectorState and the done event.",
+    "port": "never (we use AI SDK tool parts or Output.object partials)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/ai-sdk-adapter.ts",
+    "what": "LangChain BaseChatModel wrapper. :15 imports callLLM/streamLLM from @/lib/ai/llm, which is on the forbidden list in theater spec \u00a75.3.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/registry/types.ts",
+    "what": "AgentConfig {id,name,role,persona,avatar,color,allowedActions,priority,voiceConfig,voiceDesign,isGenerated,boundStageId} at :9-29. ROLE_ACTIONS (teacher: slide + whiteboard; others: whiteboard only) at :83-95.",
+    "port": "pattern only: our PEERS constant is {id, nameKey, voice, persona EN/ES}. No actions; peers point at nothing."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/registry/store.ts",
+    "what": "Zustand registry persisted to localStorage. Six default personas (:47-192): the teacher is told to encourage students by name (:59), the class clown uses memes and pop culture (:96-119), display names are in Chinese. agentsToParticipants reads the nickname from the user-profile store (:323-326). applyGeneratedAgentsToRegistry loads every generated agent whatever soloTutor says (:355-400).",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/registry/agent-selection.ts",
+    "what": "restoreAgentSelection. :59-72 is soloTutor: it picks the teacher by registry role, never by position. With no teacher the selection is empty. isUserSet is always false.",
+    "port": "pattern only: choose by role, never by position. The roster becomes a constant the server checks on every request, not a selection kept in the browser."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/tool-schemas.ts",
+    "what": ":16-21 strips slide-only actions outside slides. :29-72 action descriptions for spotlight, laser, wb_* and play_video, about 5 KB.",
+    "port": "never (anchors and board cards replace these)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/orchestration/summarizers/whiteboard-ledger.ts",
+    "what": "Replays the whiteboard ledger into a virtual whiteboard state for prompts. whiteboard-conflicts.ts and code-line-budget.ts do the same kind of work.",
+    "port": "never (no whiteboard in 1.0)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/chat/agent-loop.ts",
+    "what": "Browser-driven loop. :150-153 no turn cap. :180-188 the body carries userProfile. :234-235 waits for the onIterationEnd drain before the next request. Exits: cue_user (:247-249), END (:252-254), two empty turns (:257-264).",
+    "port": "never. Pattern: always end on the learner's turn; stop after empty output."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/app/api/chat/route.ts",
+    "what": "POST /api/chat, SSE output. :46-92 validates agentIds and calls resolveModel (model-config, OAuth-reachable). No screen(), no rate limit, no spend gate. 15 s heartbeat at :106-127.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/chat/pi/director-loop.ts",
+    "what": "Default Pi path. Tools at :138-215: read_scene, call_agent, close_session, cue_user. :79 at most 18 director tool calls. :245 terminates when the session closes or the learner is cued. :270-272 cues the learner automatically. No shortcut for a single agent.",
+    "port": "never (pi-agent-core, @/lib/agent/*)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/chat/pi/config.ts",
+    "what": ":5-8 at most 6 agent turns and 8 actions per agent. :10-25 resolveAgentConfigs reads only config.agentIds.",
+    "port": "never. Pattern: hard caps live in code."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/chat/pi/prompts.ts",
+    "what": "Pi director and child prompts. :101-113 tells the director the turn limit. :123-129 the teacher answers first. :209 and :267 'User nickname: \u2026' SENT TO THE MODEL. Contains Chinese examples.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/types/chat.ts",
+    "what": "Wire contracts. SessionType qa|discussion|lecture (:14). DirectorState {turnCount, agentResponses, whiteboardLedger} (:304-308). StatelessChatRequest (:340-440): full scenes in storeState, config.agentIds, agentConfigs, discussionTopic, triggerAgentId, userProfile{nickname,bio}, apiKey. StatelessEvent (:457-510): agent_start, agent_end, text_delta, action, thinking, cue_user, done, error.",
+    "port": "never (reference only)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/chat/use-chat-sessions.ts",
+    "what": "Client sessions (2,249 lines). :354-364 fetchStatelessChat. :924 pacing of 1.2 s after text and 0.8 s per action. :1254-1261 attaches the generated agent configs. :1263-1299 switches to Pi. :1408-1475 and :1565-1630 interrupt markers. :1682-1685, :1877-1880, :2001-2004 SEND THE NICKNAME. :1812-1813 an empty selection becomes ['default-1']. :1951-1958 startDiscussion PUTS THE TRIGGER AGENT BACK INTO THE ROSTER (breaks soloTutor).",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/roundtable/index.tsx",
+    "what": "Classroom UI (2,201 lines). Props at :46-116: speakingAgentId, isCueUser, softClose, discussionRequest. 'Your turn' at :927, :1624, :2190. Thinking state at :953. framer-motion used 52 times, 20 infinite animations, no reduced-motion check, no aria-live.",
+    "port": "never. Pattern only: a speaker label and avatar on each bubble, plus a 'your turn' cue."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/chat/proactive-card.tsx",
+    "what": "Discussion invitation anchored to the agent's avatar. Listen, Skip and Pause. Skips itself after DISCUSSION_AUTO_SKIP_MS = 5000 (lib/choreography/timing.ts:31; :96-117).",
+    "port": "never (a timed auto-dismiss; theater \u00a74.3 maps discussion to `wait`)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/chat/chat-area.tsx",
+    "what": "Lecture and Chat tabs (:151, :207, :290-301). chat-session.tsx renders bubbles by senderName and senderAvatar (:244, :312) and shows InlineActionTag.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/buffer/stream-buffer.ts",
+    "what": "Text is the clock: tickMs 30, 1 character per tick (:208-209), plus post-text and per-action delays (:210-211).",
+    "port": "never (theater spec \u00a75.3: the voice clock drives us)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/hooks/use-discussion-tts.ts",
+    "what": "594 lines. A per-agent TTS queue with prefetch, using resolveAgentVoice and agent-voice.ts.",
+    "port": "never (one SpeechOut; peer voices are an owner and vendor question)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/classroom/load-classroom.ts",
+    "what": ":80-81 and :119 thread soloTutor through. :192 every generated agent goes into the registry. :196-216 the selection is restored once, at load.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/classroom/ClassroomSurface.tsx",
+    "what": ":61-76 soloTutor prop (default false). :131 passes it to runClassroomLoad.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/app/kaizen/course/[id]/page.tsx",
+    "what": ":32 the only caller with soloTutor set.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/store/stage.ts",
+    "what": "setStageAgents :720-768. When agentSelectionIsUserSet is false, it resets the selection to the full roster (:736-737), which can widen soloTutor again.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/config/feature-flags.ts",
+    "what": ":99-100 isPiChatEnabled is on by default, so the Pi director is the live path upstream.",
+    "port": "never"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/dsl/src/pbl.ts",
+    "what": ":6-13 PBL role types: instructor, evaluator, mentor, collaborator, simulator. A separate multi-role chat under app/api/pbl/v2/{instructor,simulator,evaluate}. The evaluator grades with a model.",
+    "port": "never (theater \u00a75.3 pbl/*). Adjacent: a classroom peer could later play 'collaborator' in our project scenes."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/apps/web/src/lib/ai/tutor.ts",
+    "what": ":104-131 tutorTurn: screen() at :110-116, ONE streamText, stopWhen isStepCount(5) (:128), maxOutputTokens 700.",
+    "port": "changed: when ctx.classroom is set, add the classroom prompt block and the peer_says tool. Still one call."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/apps/web/src/lib/ai/tools.ts",
+    "what": "Echo-only board tool pattern: show_visual and note_for_grownup (:116-138).",
+    "port": "changed: add an echo-only `peer_says` to BOARD_TOOLS, only when ctx.classroom is set. Its execute runs gatePeer."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/apps/web/src/components/tutor/cards.ts",
+    "what": ":32-40 cardsOf maps tool parts to board cards.",
+    "port": "changed: tool-peer_says renders as a labelled peer bubble ('AI classmate'), not a board card"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/apps/web/src/lib/classroom/roster.ts",
+    "what": "Does not exist yet. A fixed tutor plus at most 2 peers, persona constants in EN and ES, names through t().",
+    "port": "new (pattern from OM registry/types.ts + agent-selection.ts; no code copied; cited in THIRD_PARTY_NOTICES)"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/apps/web/src/lib/server/budget.ts",
+    "what": ":18 one request counts as one turn. :49-50 caps of 50 turns and $1 per learner per day. :63 Sonnet 5.5 at $2 in / $10 out per million tokens.",
+    "port": "unchanged if classroom mode stays one call per turn; this is the cost gate"
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/apps/web/src/lib/tutor-demo.ts",
+    "what": "Demo tutor (648 lines).",
+    "port": "changed: vetted, code-written peer lines keyed by misconception tag, by: 'demo', so the button works with KAIZEN_AI=off"
+   }
+  ],
+  "contracts": "UPSTREAM WIRE CONTRACTS (reference only, never ported):\n- Request: StatelessChatRequest (OM/lib/types/chat.ts:340-440) = {messages, storeState{stage, scenes (full, keys included), currentSceneId, mode, whiteboardOpen, quizResults?}, config{agentIds, sessionType, discussionTopic, discussionPrompt, triggerAgentId, agentConfigs[], piMax*}, directorState?, userProfile?{nickname, bio}, apiKey, model?}.\n- Events: StatelessEvent (:457-510) = agent_start | text_delta | action | agent_end | thinking | cue_user | done{totalAgents, agentHadContent, cueUserReceived, directorState} | error.\n- Director decision: the JSON {\"next_agent\": \"<id>\"|\"USER\"|\"END\"}. Anything that fails to parse becomes END (director-prompt.ts:216-239).\n- soloTutor: config.agentIds = [the teacher's id]. Upstream this is a client-side selection, not a check on the server.\n\nPROPOSED OUR-SIDE CONTRACT FOR CLASSROOM MODE (one model call per turn, no director model, no code copied):\n```ts\n// lib/classroom/roster.ts\nexport type PeerId = \"asks\" | \"tries\";            // curious peer; peer who tries it out loud\nexport const PEERS: Record<PeerId, { nameKey: string; voice: \"peer1\" | \"peer2\"; persona: { en: string; es: string } }>; // golden-snapshot tested\n// lib/ai/context.ts  TutorContext gains\nclassroom?: { peers: PeerId[] }                    // 1..2, checked against PEERS on the server; absent = solo (default)\n// lib/theater/types.ts  Beat gains\nwho?: \"tutor\" | PeerId                             // default \"tutor\"; recorded and replayed as-is\n// lib/ai/tools.ts  (echo-only, in BOARD_TOOLS, offered only when ctx.classroom is set)\npeer_says: { peer: PeerId; say: string /* \u2264140 chars; K\u20132 \u226480 */ } \u2192 { shown: boolean; problems?: string[] }\n```\n- Turn order is decided in code: the tutor's words, then at most 1 peer_says, then the learner's turn.\n  - The peer line must end with a question to the learner.\n  - No peer-to-peer rounds and no LLM director.\n  - stopWhen stays [isStepCount(5), last step board-only].\n- gatePeer runs in code. It rejects any peer line that:\n  - has a peer that is not in ctx.classroom, or is a second line in the same turn;\n  - fails `languageOf === locale`;\n  - contains praise (`praiseIn` is not empty) or a greeting word;\n  - fails `screen(say)`;\n  - contains a learner name (`withoutNames` changes it);\n  - contains choice text or explain text (`mentions()`) or any answer value in digits or words (numbers.ts, EN and ES) while any check is open;\n  - gives any verdict on the learner's answer (right, wrong, correct, bien, mal and the like);\n  - is over the band's sentence limits.\n  - A rejected line is dropped silently, and the turn ends on the tutor.\n- Recording: the peer line becomes its own `tutor` TakeRecord with beat.who = peer. Replay shows the same speakers and writes nothing.\n- Help: while a scene check is open, a classroom turn counts as help, the same as a live turn (theater spec \u00a713.3).\n- Labels: every peer bubble shows \"AI classmate\" plus its name as text. The toggle button has aria-pressed and a 44 px target (56 px in K\u20132), works by keyboard, and is off by default. New lines are announced through aria-live polite with the speaker's name. With reduced motion there is no speaking animation. At 320 px the layout is a single-column transcript.\n- Demo mode: peer lines come from tutor-demo.ts (by: \"demo\").\n- Latency gates:\n  - the tutor's first sound has a p50 delta \u2264 50 ms against T1;\n  - the peer bubble renders \u2264 100 ms after its tool input completes;\n  - tutor last word \u2192 peer first sound \u2264 the band's sentence pause + 100 ms;\n  - the 3\u20139 live turn stays p50 \u2264 1.6 s.\n- Cost gate: a classroom turn is 1 request, so it counts as 1 turn in budget.ts, and output tokens rise by p50 \u2264 150 over a solo turn.\n- Spec amendments needed:\n  - theater \u00a70.6 and \u00a75.3: move the named orchestration patterns to \u00a75.2 (pattern only) and cite them in THIRD_PARTY_NOTICES;\n  - \u00a713: add the peer invariants;\n  - a new phase after T7, behind KAIZEN_CLASSROOM;\n  - live tutor spec \u00a72.5 is untouched (still one call);\n  - live tutor spec :145 and :273 (one voice) need an owner exception for the peer voices.",
+  "risks": [
+   "The theater spec forbids this module outright: \u00a70.6 says the directors and chat never come over (docs/plans/2026-10-07-tutor-theater-spec.md:35-40), and \u00a75.3 lists OM/lib/orchestration/*, OM/components/chat/* and OM/components/roundtable/* (:326-329). The owner's 'maybe \u2026 behind a button' needs an explicit spec amendment, and so far it is only a 'maybe'. Escalate it as D-7. Do not decide it silently.",
+   "A faithful port breaks the latency and cost gates. The LLM director adds a full non-streaming round trip before every speaker (director-graph.ts:176-182). Between speakers the browser waits for the text reveal at about 33 characters a second plus a 1.2 s pause before it sends the next request (stream-buffer.ts:208-209; use-chat-sessions.ts:924; agent-loop.ts:234-235). k speakers cost 2k+1 model calls, about $0.05 per learner message uncached at k=2. The 3\u20139 gate of p50 \u2264 1.6 s (live-tutor-spec.md:386) would fail. These figures are estimates, not measurements.",
+   "soloTutor does not hold even upstream. startDiscussion puts the scripted student agentId back into the roster (use-chat-sessions.ts:1951-1958), and that agentId comes from the generator prompt (generation/templates/slide-actions/system.md:115). An empty selection silently becomes the stock 'default-1' teacher (use-chat-sessions.ts:1812-1813). Roster writes widen the selection again (stage.ts:734-737). On the default Pi path the director model still runs for a single agent (feature-flags.ts:99-100; there is no single-agent shortcut in pi/director-loop.ts). Lesson for us: the roster must be a constant the server checks on every request, never a client-side selection.",
+   "Names reach the model upstream: director-prompt.ts:61-68, prompt-builder.ts:82-87 ('Address them by name'), pi/prompts.ts:209 and :267, sent from use-chat-sessions.ts:1682-1685, 1877-1880 and 2001-2004. Any persona or prompt text copied from here could carry a name instruction back in. The guard: golden-snapshot the persona constants and add a model-call spy test.",
+   "Answer leaks through peers. A 'tries' peer that says a wrong value on an open multiple-choice check rules out an option. Upstream itself treats ruling out options as a leak (state-context.ts:234). Upstream also prints the correct answers after submission (state-context.ts:176-211). Peers must never state a value while a check is open, never give a verdict, and never see a key. Allow deliberate-mistake lines only in concept talk on Talk.",
+   "Voice. The live tutor spec builds one voice for the whole app (:145), and Turbo allows one registered voice per connection (:273). Peers need distinct, natural EN/ES voices, which means an audition and possibly a second socket opened ahead of time. Device voices for peers would sound uncanny, which the owner ruled out. This is blocked on the owner and needs a P0 vendor check.",
+   "Slop and child safety. Upstream personas include a meme-driven class clown and teacher praise by name (store.ts:59, 96-119), and the generated rosters come from a model (agent-profiles route). AI peers that present as children raise parasocial and COPPA-perception concerns. Every peer must carry an 'AI classmate' label, use reviewed personas, and pass praiseIn and greeting checks. Turning it on for under-13s probably needs a grown-up's consent, which is an owner decision.",
+   "Accessibility debt if the UI is copied. The roundtable has 20 infinite framer-motion animations, no reduced-motion handling and no aria-live (components/roundtable/index.tsx). ProactiveCard dismisses itself after 5 s (timing.ts:31). The UI has to be rebuilt in our Talk bubbles with text speaker labels.",
+   "Budget accounting. If classroom mode ever makes several requests per learner message, the way the upstream client loop does, each one counts as a turn against the 50-a-day cap (budget.ts:18, :49). Keep it to one request.",
+   "Model plumbing contamination. Both director paths reach the forbidden lib/ai/llm.ts (ai-sdk-adapter.ts:15; lib/agent/runtime/stream-fn.ts:37), and the chat route runs without screen(), a rate limit or a spend gate (app/api/chat/route.ts:46-92). Port patterns only. check-forbidden and the ESLint ban (theater spec \u00a75.4) must land first.",
+   "Unverified upstream behaviour. Its tests and evals were not run (there are no node_modules), and nothing in the repo instruments latency. Every number here is derived from the code and has to be re-measured behind our own tests and evals."
+  ]
+ },
+ "read:html": {
+  "summary": "Bottom line: OpenMAIC's interactive branch is a good teaching generator inside a weak container. The prompts and the observation contract are worth porting. The live host is not safe for children as written, and it fails our 320 px and keyboard rules. \"Take the html\" can ship only behind a new host we write ourselves: null-origin, no network, no popups or forms, responsive, in-flow, with gates in code. The HTML may teach and let learners explore. It never grades.\n\nHOW IT WORKS\n1. Outline. Interactive Mode (`app/page.tsx:598-602`, toggle `components/generation/interactive-mode-button.tsx`) swaps in `lib/prompts/templates/interactive-outlines/*`, which prefers widgets: about 70% interactive, at least 2 simulations, at least 1 game (`user.md:42-55`). The route is `app/api/generate/scene-outlines-stream/route.ts:430-463`. The parked Kaizen adapter forces `interactiveMode: true` and strips the nickname (`lib/kaizen/client/course-request.ts:141-149`).\n2. Content. `generateSceneContent` sends every interactive outline to `generateWidgetContent` (`packages/@openmaic/generation/src/scene-generator.ts:256-281`, `1204-1356`). That picks one of six prompts: simulation, diagram, code, game, visualization3d, procedural-skill (the last only when vocational mode is on, `outline-generator.ts:208-236`). It makes one free-text model call (`:1329`), takes the first `<!DOCTYPE` through the last `</html>` (`:1163-1197`), compile-checks classic inline scripts (`interactive-script-validator.ts:145-156`, `node:vm` compile-only, never run), reads `<script type=application/json id=widget-config>` (`:1361-1379`), and runs `postProcessInteractiveHtml`, which converts LaTeX and injects KaTeX from jsdelivr with `trust:true` (`interactive-post-processor.ts:71-86`).\n3. Script. `generateSceneActions`, interactive branch (`:1785-1825`): an element inventory parsed from the HTML (`:1386-1488`, caps of 60 ids, 30 classes, 30 data attributes, 120 chars per value) feeds the interactive-actions prompt. That prompt returns speech plus four verbs, `widget_highlight/setState/annotation/reveal` (`templates/interactive-actions/system.md:59-88`). The parser keeps only those verbs (`action-parser.ts:148-159`), but never checks selectors or state keys against the inventory or config.\n\nHOW THE APP HOSTS IT\n- A placeholder (`components/scene-renderers/interactive-renderer.tsx`) registers the HTML in an LRU pool of 3 (`lib/store/interactive-iframe-pool.ts:27`, `120-154`).\n- `InteractiveIframeHost` portals the iframes to `document.body`, `position:fixed` over the slot, scaled down from a fixed 1280\u00d7720 page (`InteractiveIframeHost.tsx:178-195`, `424-452`; `lib/interactive/logical-viewport.ts:4-28`).\n- The sandbox is `allow-scripts allow-forms allow-popups`, with no `allow-same-origin` (`:451`, rationale `:215-225`, test `tests/security/iframe-sandbox.test.ts`).\n- There is no CSP on the frame. The app header sets only `frame-ancestors` (`next.config.ts:62-78`).\n- The host injects four shims before the page: error capture with a buffer it can replay, in-memory localStorage, an element picker, and the observation responder (`lib/utils/iframe.ts:24-110`, `390-411`).\n\nTEACHER INTO THE PAGE\n1. `ActionEngine` maps the four verbs to `HIGHLIGHT_ELEMENT`, `SET_WIDGET_STATE`, `ANNOTATE_ELEMENT` and `REVEAL_ELEMENT` and waits 300 ms each (`lib/action/engine.ts:275-283`, `862-901`; `lib/choreography/timing.ts:58`).\n2. The send callback is looked up per scene at send time (`components/edit/PlaybackChromeRoot.tsx:769-783`). Messages queue until the iframe's `load` (`lib/store/widget-iframe.ts:114-148`), then go by `postMessage(..., '*')` (`Host:314-319`).\n3. The page's own listener does the work. It is model-written from a template that runs `querySelector(target)` and never checks `event.source` (`templates/simulation-content/system.md:32-101`).\n\nLEARNER OUT OF THE PAGE\n- No event stream comes out, and no verdicts. procedural-skill even forbids `window.parent.postMessage` (`system.md:253`).\n- What does come out:\n  - runtime errors (`iframe.ts:66-110`, matched on `e.source`, `Host:350-381`), shown raw to the learner (`InteractiveRuntimeErrorBanner.tsx:34-36`);\n  - picker picks (Pro mode only);\n  - the observation contract. The page publishes an inert `<script type=application/json data-maic-observation>` inside `#experiment` (`snippets/interactive-observation.md`). The host reads it on demand, with identity checks (scene, scope, document and instance ids), an 800 ms timeout, a 32 KB cap, depth \u2264 64, and frozen results (`lib/interactive/observation-bridge.ts:35-224`, `observation.ts:4-95`). The chat route frames it for the model as untrusted evidence (`lib/chat/pi/interactive-state-evidence.ts:162`, `200-243`). The whole path is behind a flag that is off by default (`chat-observation.ts:30`, `feature-flags.ts:107-109`).\n\nFAILURE HANDLING\n- Bad HTML, or a classic script that won't parse, gives `onFailure('invalid-model-output')`, then a 500 from the route (`app/api/generate/scene-content/route.ts:346-354`), then the client marks the scene failed and pauses the batch (`lib/hooks/use-scene-generator.ts:869-887`). There is no repair call and no stand-in scene.\n- If the script call fails, the fallback narration is in Chinese (`scene-generator.ts:2019-2028`).\n- There is no size cap anywhere on generated HTML: `maxOutputTokens` is the whole output window (`route.ts:154`, `169`; DSL `validate.ts:188-198`).\n\nWHAT MAKES IT GOOD (keep)\n- Craft rules in the prompts:\n  - reset returns to the exact start;\n  - an explicit running / paused / ended state;\n  - a fair start (no instant fail);\n  - controls never cover the canvas;\n  - 44 px targets, keyboard shortcuts, presets;\n  - procedural-skill: Done can't be the only interaction, wrong choices show consequences, retry without a full reset;\n  - game: you learn by doing it, not by answering.\n- The observation contract, which is close to our `publicObservation` and `onState`.\n- The inventory-first selector rule, with attribute values cleaned so a label can't forge prompt lines (`:1496-1502`).\n- parse5 plus a compile-only syntax gate.\n- Messages queued until load.\n- Error buffer and replay.\n- The null-origin rationale and its test.\n- The offline packager used by video export (`lib/video-export-app/prepare-interactive-html.ts:30-35`, `211-285`): it inlines remote assets, rejects any URL it can't inline, injects `<meta CSP default-src 'none'; connect-src 'none'; frame-src 'none'; worker-src 'none'\u2026>` first in `<head>`, caps size and hashes the result. That is the right shape for our host.\n\nWHAT IS UNSAFE FOR CHILDREN, OR BREAKS OUR RULES\n1. The network is open. Pages and the KaTeX injection pull from cdn.tailwindcss.com, unpkg (Three), jsdelivr (KaTeX), Pyodide, CodeMirror and Monaco. They can also fetch or beacon anywhere, which sends a child's IP and user agent to third parties (COPPA) and opens a supply-chain risk.\n2. With `allow-popups` and `allow-forms`, a page can open any website or submit a form off-site. A page can also navigate its own frame to any URL (the sandbox doesn't stop that), and the host keeps posting to whatever loaded. The `url` field loads any external page directly (`interactive-renderer.tsx:39`, `Host:448`).\n3. Validation only proves that the scripts parse. It never runs `screen()`, `suitable()`, a language check, a praise check, or a reading-level, alt-text or reduced-motion check. Module scripts, meaning every 3D widget, are skipped entirely (`validator:117-120`).\n4. Model-written grading:\n   - the code widget embeds `testCases` and `solution` in the page and shows pass or fail (`code-content/system.md:13-25`);\n   - games add scores, emoji achievements, time bonuses and high scores (`game-content/system.md:99-117`, `273-281`);\n   - `widgetConfig`, solution included, is sent to the script model (`scene-generator.ts:1801`), so a key reaches a prompt;\n   - `widget_setState` and `widget_reveal` can show the answer state.\n5. Accessibility:\n   - at 320 px the 1280\u00d7720 scale is 0.25, so 16 px text renders at 4 px and 44 px targets at 11 px;\n   - the page's own mobile CSS never applies, because the frame is always 1280 CSS px wide;\n   - the frame sits at the end of `<body>` and the placeholder is `aria-hidden`, so focus order and reading order are wrong;\n   - the frame title is English and contains the id (`Host:450`);\n   - no template mentions reduced motion, and they ask for \"OBVIOUS\" animation and an infinite pulse (`simulation-content/system.md:63`, `206-217`);\n   - canvas content has no text equivalent;\n   - the 3D template hard-codes `lang=\"zh-CN\"` (`:175`).\n6. Language and tone: Chinese button-text examples (`simulation-content/system.md:139-184`), a greeting on the first page (`interactive-actions/system.md:98`, `prompt-formatters.ts:30`), and the achievement slop.\n7. Names: upstream puts the nickname and bio into the outline prompt (`scene-outlines-stream/route.ts:326-329`), and `userProfile` reaches the script route (`scene-actions/route.ts:49`, `166`). The observation can carry text the learner typed into the page straight to the model, with no scrub and no screen.\n8. Live JavaScript also runs inside every thumbnail (`ThumbnailInteractive/index.tsx:82-88`). KaTeX's `trust:true` turns on links. The parser's spread of the model's params can override an action's `type` (`action-parser.ts:113-117`).\n\nPORT VERDICT\n- Rewrite the host and the bridge.\n- Copy or adapt the syntax validator, `extractHtml`, `extractWidgetConfig`, the inventory and the observation parser and bridge.\n- Adapt the simulation, diagram and procedural-skill prompts, and rewrite the game prompt without scoring.\n- Drop the code widget, the CDN post-processor, the 1280 viewport, the picker, the `url` fallback, and the Interactive Mode quotas and toggle.\n- Model-written HTML becomes an \"explore\" scene labelled \"Written by AI \u00b7 for exploring, not counted\". Proof stays with a code-checked widget, quiz or project check next to it. The PBL fit: our `ProjectScene` (`apps/web/src/lib/types.ts:127`) already exists, and an explore scene can be a project's investigate step.\n- Our app has no CSP today (`apps/web/next.config.ts`), so the meta CSP inside the frame is the only wall.",
+  "files": [
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/scene-generator.ts",
+    "what": "Interactive content branch: routing :256-281; extractHtml :1163-1197; generateWidgetContent :1204-1356 (one free-text model call :1329, syntax gate :1339-1346, config plus post-process :1349-1355); extractWidgetConfig :1361-1379; extractInteractiveElements plus helpers :1386-1661 (caps :1419-1421, cleanAttrValue :1496-1502); script branch :1785-1825 (widgetConfig sent to the prompt :1801); processActions validates only spotlight and discussion :1918-1969; Chinese default narration :2019-2028; legacy interactiveConfig inference :136-223",
+    "port": "Adapt extractHtml (add a truncation check), generateWidgetContent (our widget types, our gates, a repair call), extractWidgetConfig (copy) and extractInteractiveElements (inventory of data-spot ids only). Rewrite the script branch inside writeScript. Drop :67-72 as a free verb list, :136-223 and :2019-2028."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/interactive-script-validator.ts",
+    "what": "parse5 plus node:vm compile-only syntax gate for classic inline scripts. Skips module, src and data scripts (:117-120). 156 lines.",
+    "port": "Copy and extend: also parse type=module scripts (acorn with sourceType module) and fail on any script with src. Remove it from spec \u00a75.3's never list (line 343)."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/interactive-post-processor.ts",
+    "what": "LaTeX delimiter conversion; injects KaTeX 0.16.9 from jsdelivr with trust:true and a 2 s innerText polling interval (:71-127).",
+    "port": "Drop. Render math to HTML on the server at package time with our own KaTeX copy, CSS inlined, trust off."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/src/action-parser.ts",
+    "what": "Parses the JSON array into actions with jsonrepair and partial-json; the model's params spread can override type (:113-117); allowlist filter (:148-159); no selector or state-key validation.",
+    "port": "Pattern only. Our ScriptOut is a Zod object; anchors are [[spot:html.<id>]] checked against the inventory; pose keys and ranges checked against widget-config variables."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/templates/simulation-content/system.md",
+    "what": "Simulation prompt. Good: reset, state machine, no overlap, 44 px, keyboard, presets, quality checklist. Bad: the listener never checks event.source (:38); querySelector on the model's target (:59-88); infinite pulse (:63); Tailwind classes (:122-135); Chinese button text (:139-184); 'OBVIOUS' animation (:206-217). Includes the observation snippet (:320).",
+    "port": "Adapt into our prompt constants: keep the craft rules; replace the listener block with 'the host injects the bridge, do not write a listener'; add EN/ES, band, reduced-motion, no-network, no-links, no-text-input and data-spot rules."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/templates/game-content/system.md",
+    "what": "Game prompt. Good: learning through play (:5-76) and a fair start (:121-150). Bad: scoring, achievements, time bonus and localStorage high scores (:99-117, :273-281); inline onclick (:307-320); Tailwind CDN (:324-339).",
+    "port": "Rewrite as 'challenge' explore pages: no score, timer, achievement or praise; the outcome is shown as a consequence, not a verdict."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/templates/procedural-skill-content/system.md",
+    "what": "Procedural practice prompt: Done can't be the only interaction, consequence feedback, retry without reset, stable step ids, no parent.postMessage (:5-17, :59, :253, :294-310).",
+    "port": "Adapt as the 'steps' explore kind for projects (fits the owner's project-based learning). Its completion check is never recorded as a verdict."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/templates/diagram-content/system.md",
+    "what": "SVG node and edge diagram with reveal order, separate position and animation groups, and node id conventions (:1-161).",
+    "port": "Adapt (low risk: SVG, little JS)."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/templates/visualization3d-content/system.md",
+    "what": "Three.js 0.160 via an importmap from unpkg in a module script (:10, :355-366); lang=zh-CN (:175); its module scripts are never syntax-checked.",
+    "port": "Defer. Allow later only with a self-hosted, inlined Three (about 600 KB per scene, so the size cap must allow it). Not in the first cut."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/templates/code-content/system.md",
+    "what": "Pyodide, Babel, CodeMirror and Monaco from CDNs (:6-9, :126); solution and testCases embedded in the page, with pass/fail (:13-25, :129).",
+    "port": "Drop: model-graded, CDN-bound, about 10 MB of runtime."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/templates/interactive-actions/system.md",
+    "what": "Interactive narration prompt: four verbs (:59-70); inventory-first targets (:88); one teacher voice (:94); greeting on page 1 (:98); guide-then-explore principles (:105-112).",
+    "port": "Adapt into the interactive section of SCRIPT_RULES (spec \u00a75.1 already lists it): verbs become anchors and pose; drop the greeting and annotation; reveal only for data-reveal ids."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/packages/@openmaic/generation/snippets/interactive-observation.md",
+    "what": "The learner-state-out contract: #experiment scope, an inert JSON node, summary, state and rendered, publish after every semantic change, 32 KB and depth-64 caps, a publishState helper (:1-56).",
+    "port": "Copy with edits: numbers, booleans and enums only (no free text); a lower cap of 4 KB; summary \u2264 160 chars in the lesson language."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/scene-renderers/InteractiveIframeHost.tsx",
+    "what": "Live host: portal to body (:178-195); sandbox allow-scripts allow-forms allow-popups (:451); no CSP; postMessage with '*' (:316, :379); e.source matching (:352); 1280\u00d7720 scale (:424-433); src url fallback (:448); English title with id (:450); raw error banner (:453-458).",
+    "port": "Pattern only: rewrite as components/stage/ExploreFrame.tsx: in-flow, responsive width, sandbox='allow-scripts' only, allow='' and referrerpolicy=no-referrer, a second load event means fail and fall back, localized title, text equivalent beside it."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/components/scene-renderers/interactive-renderer.tsx",
+    "what": "Placeholder: registers the HTML or url in the pool, rAF rect tracking, aria-hidden slot (:36-64).",
+    "port": "Drop (we render in-flow; there is no Pro-mode remount to survive)."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/utils/iframe.ts",
+    "what": "Shims: in-memory storage (:24-45), error capture with buffer and replay (:66-110), element picker (:113-372), patchHtmlForIframe (:390-411).",
+    "port": "Adapt the error and storage shims; drop the picker; add our own bridge shim (ring and annotation drawn by the host shim, SET_WIDGET_STATE routing, height reporting, a state-changed ping)."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/interactive/observation-bridge.ts",
+    "what": "Responder serialized into the frame plus the host capture session: identity (scene, scope, document, instance), 800 ms timeout, pagehide invalidation, escapes '<' when serializing (:35-243).",
+    "port": "Adapt: this is the learner-out channel feeding publicObservation, onState, move records and replay snapshots."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/interactive/observation.ts",
+    "what": "parseObservation with a byte cap and an iterative depth check; freezeEvidence (:4-95).",
+    "port": "Copy."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/store/widget-iframe.ts",
+    "what": "Per-scene send registry; pending queue flushed on load; document-token reset (:64-148).",
+    "port": "Pattern only (a ~30-line queue inside ExploreFrame)."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/store/interactive-iframe-pool.ts",
+    "what": "Keep-alive LRU of 3 documents with ownership-safe claim and release (:27, :96-208).",
+    "port": "Optional pattern, only if scene switches must preserve the learner's state without a replay snapshot."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/interactive/logical-viewport.ts",
+    "what": "Fixed 1280\u00d7720 logical page, contain-fit scale (:4-28).",
+    "port": "Drop. It breaks 320 px, 44/56 px targets and the page's own media queries."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/video-export-app/prepare-interactive-html.ts",
+    "what": "Offline packager: CSP meta first in head (:35), inline assets then reject unresolved (:233-257), size cap (:18, :259-272), sha256 (:274).",
+    "port": "Pattern for our server-side packHtml(): the same CSP plus form-action 'none'; caps around 150 KB authored and 400 KB packaged; the hash becomes spotsVersion."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/export/html-asset-inventory.ts",
+    "what": "parse5, srcset and CSS reference inventory of every external asset reference (329 lines).",
+    "port": "Adapt as the URL scanner in gateHtml (any http(s) or protocol-relative reference fails)."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/chat/pi/interactive-state-evidence.ts",
+    "what": "Server-side packet validation (42,000 B, schema, html hash, freshness 3 s / 30 s) and the untrusted-evidence prompt framing (:162-243).",
+    "port": "Pattern for how StageObservation from an explore frame is framed in the tutor prompt."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/action/engine.ts",
+    "what": "Verb to message mapping (:275-283, :862-901), WIDGET_MS 300 (lib/choreography/timing.ts:58).",
+    "port": "Never (spec \u00a75.3). Our player sends typed StageCmd over the bridge."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/lib/prompts/templates/interactive-outlines/system.md",
+    "what": "Interactive Mode outline prompt: widget selection guide (:57-170); the quota in user.md:42-55; userProfile slot (user.md:11).",
+    "port": "Pattern only: the selection guide informs which scenes writeLesson makes explore scenes. Drop the quotas, the userProfile and the mode toggle (app/page.tsx:598-602, components/generation/interactive-mode-button.tsx)."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/app/api/generate/scene-content/route.ts",
+    "what": "Content route: maxDuration 300 (:39), maxOutputTokens = full window (:154, :169), 500 on failure (:346-354); reaches the OAuth adapter through resolve-model.",
+    "port": "Never (spec \u00a75.3). Ours is /api/ai/explore through lib/ai/config.ts."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/modules/openmaic-classroom/tests/security/iframe-sandbox.test.ts",
+    "what": "Source-scan test banning allow-scripts together with allow-same-origin (:28-60).",
+    "port": "Pattern: our test also bans allow-popups, allow-forms, allow-modals and allow-top-navigation, and requires the CSP meta to be first in a packed document."
+   },
+   {
+    "path": "/Users/man/Documents/GitHub/Tutornat/docs/plans/2026-10-07-tutor-theater-spec.md",
+    "what": "Clauses the owner's 'take the html' decision now contradicts: \u00a70 item 6 (line 37), \u00a73 D-1 (line 138), \u00a75.3 (lines 343, 347-348, 351), \u00a711 (line 815), \u00a713 invariant 10 (line 863). The one-workspace spec \u00a76 ('the model cannot run JavaScript\u2026') and \u00a77 ('arbitrary generated interactive code' is future work) also conflict.",
+    "port": "Spec edit and an escalation note: record the owner's words, scope the exception to the sandboxed explore frame, rewrite invariant 10 as 'Generated JavaScript runs only in the network-less, null-origin explore frame; no third-party CDNs or fonts anywhere'."
+   }
+  ],
+  "contracts": "Proposed contracts for our port. Theirs are cited so each change is visible.\n\n1. SCENE TYPE (lib/types.ts)\n   ExploreScene = { id; kind: \"explore\"; title; prompt; html: string /*packed, \u2264400 KB*/; hash: string /*sha256 = spotsVersion*/; kind2: \"sim\"|\"diagram\"|\"steps\"|\"challenge\"; config: { vars: {name,label,min,max,step,start,unit?}[]; reveal?: string[]; spots: {id,label}[] }; describe: string /*code-built text equivalent*/; by: \"ai\"|\"people\"; script?: Script }.\n   - Label: \"Written by AI \u00b7 for exploring, not counted\".\n   - It is never a check scene. Proof stays with widget check(), the quiz index, practice check or spoken.ts (AGENTS.md #8).\n\n2. FRAME (ours, replacing InteractiveIframeHost.tsx:437-452)\n   <iframe srcdoc={html} sandbox=\"allow-scripts\" allow=\"\" referrerpolicy=\"no-referrer\" title={t(\"stage.explore.frame\",{title})} loading=\"lazy\">.\n   - It sits in-flow inside the scene, never portaled, at the slot's real CSS width (no 1280\u00d7720 scale).\n   - Height comes from the shim's {k:\"size\",h} message, clamped to 240\u20131600.\n   - A second `load` event (self-navigation) unmounts the frame and shows the fallback.\n   - Beside it: a visible text equivalent (`describe` plus the current observation summary) and a \"Skip this activity\" control.\n   - Bans: allow-same-origin, allow-popups, allow-forms, allow-modals, allow-top-navigation, allow-downloads.\n\n3. PACKING (server, modeled on prepare-interactive-html.ts:35)\n   The first node in <head> is:\n   <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; frame-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'\">.\n   - Then the error shim, storage shim and bridge shim (from iframe.ts:24-110, rewritten), then the authored HTML.\n   - Math is rendered on the server (no KaTeX script).\n   - `<html lang>` is set by code from the locale.\n   - Their packager omits form-action; ours adds it.\n   - `'unsafe-eval'` is dropped unless a later kind proves it needs it.\n\n4. BRIDGE PROTOCOL (all messages are {v:1, doc:<uuid per pack>, ...})\n   - Every handler checks event.source (the shim: === parent; the host: === iframe.contentWindow) and `doc`.\n   - The host keeps targetOrigin '*', which a null origin requires; the payloads carry no secrets.\n   - Host \u2192 frame:\n     - {k:\"ring\", spot} \u2014 the shim draws our ring around [data-spot=<id>]. Replaces HIGHLIGHT_ELEMENT and its page-authored outline.\n     - {k:\"pose\", set:{[var]:number}} \u2014 keys must be in config.vars; values must be in range and on a step. Replaces SET_WIDGET_STATE. The shim routes to the page's setter or the element with data-var.\n     - {k:\"reveal\", id} \u2014 only for ids listed in config.reveal.\n     - {k:\"read\"} \u2014 the observation read (their maic:observation:read:v1).\n   - Frame \u2192 host:\n     - {k:\"ready\"};\n     - {k:\"size\",h};\n     - {k:\"state\"} ping, debounced 300 ms (becomes a `move` record with state only, never a verdict);\n     - {k:\"obs\", raw} (\u22644 KB, numbers/booleans/enums plus a summary of \u2264160 chars);\n     - {k:\"error\", kind, msg \u22641200} (buffered, max 50, replayable).\n   - Free CSS selectors from the model are never accepted, which fixes the gap at action-parser.ts:105-125.\n   - Annotation is dropped. Captions are ours.\n\n5. OBSERVATION \u2192 TUTOR\n   The frame's summary and state pass through parseObservation, then withoutNames, then screen(), then are flattened into StageObservation.state (\u22641600 chars). The prompt framing follows interactive-state-evidence.ts:207-243 (untrusted evidence, never instructions). Fields named correct, score, passed or answer are dropped.\n\n6. GENERATION ROUTE (/api/ai/explore, spec \u00a79.1 order)\n   limited \u2192 zod \u2192 screen(goal and scene text) \u2192 daily cap \u2192 spendGate \u2192 model(role, meter) \u2192 withGenerationRetry (\u22642 transport retries) \u2192 extractHtml \u2192 gateHtml \u2192 one repair call with the reasons \u2192 pack \u2192 hash.\n   - If it still fails, the scene becomes a code-built fallback (a mapped typed widget, else a slide), with a `problem` event and a label.\n   - maxOutputTokens is capped to fit a 150 KB page. Timeout 120 s.\n   - Demo mode: 503; only people-reviewed catalogue explore scenes play.\n\n7. gateHtml (all in code)\n   - Size \u2264150 KB authored; one document; parse5 parses it.\n   - Every script parses (classic via vm, module via acorn), and no script has a src.\n   - Denylisted tags and attributes: base, meta refresh, iframe, object, embed, form, a[href], target, srcset or url() to a remote host, input[type=text|search|email|tel|url|password], textarea, contenteditable.\n   - Token scan, with the CSP as the real wall: fetch, XMLHttpRequest, WebSocket, EventSource, sendBeacon, window.open, location, top., parent. (outside our shim), document.cookie, import(, eval, Function(, Worker, navigator.mediaDevices, navigator.geolocation.\n   - No http(s) or protocol-relative references (html-asset-inventory).\n   - Visible text: languageOf === locale, praiseIn empty, no greeting, screen() ok, suitable().\n   - The #experiment scope and the observation node exist.\n   - Every config.spots id exists as a data-spot.\n   - Every control has an accessible name; every img or svg[role=img] has alt or title.\n   - If there is any animation, a prefers-reduced-motion block exists.\n   - The config has no solution, answer, expected or testCases keys and is \u22648 KB.\n   - Eval and CI also run a headless pass with the CSP: 0 network requests, 0 console errors in 2 s, an observation published, no horizontal overflow at 320 px, axe clean.\n\n8. SCRIPTS\n   writeScript's interactive case gets spots from config.spots, anchors [[spot:html.<id>]] and pose values validated against config.vars. gateScript adds: a pose must not equal, or sit one step from, the target of the next check scene in the lesson. Scene 1 never greets (\u00a72.2 #16).\n\n9. RECORDING AND REPLAY\n   `move` records carry {spot:\"explore\", state} from the state ping (no verdict). Replay reloads the same packed document (same hash) and re-applies recorded state through `pose`. Seek is disabled past a learner change if the page fails the pose round-trip check.\n\n10. BANDS\n    3\u20139 first. K\u20132 explore scenes only with tap-only controls (\u22643) and 56 px targets, after the dogfood pass.\n\n11. LICENCE\n    Every adapted file carries the \u00a75.1 THU-MAIC MIT header and is listed in apps/web/THIRD_PARTY_NOTICES.md. No @openmaic or modules/ imports (check-forbidden).",
+  "risks": [
+   "Spec conflict, not just a port: the owner's 'take the html' reverses tutor-theater \u00a73 D-1 (line 138), \u00a70.6 (37), \u00a75.3 (343, 347-348, 351), \u00a711 (815) and invariant 13.10 (863), plus one-workspace \u00a76 ('the model cannot run JavaScript\u2026') and \u00a77 ('arbitrary generated interactive code' is future work). Escalate and record the owner's words. Don't silently edit the invariants.",
+   "Network wall: srcdoc frames inherit the parent's CSP, and apps/web sets none. If the packed meta CSP is ever missing, misplaced (it must come before any script) or stripped by a later rewrite, generated JS can reach any host: child IP and user agent go to third parties (COPPA), and arbitrary code can load. Needs a test that every stored ExploreScene.html starts with the CSP meta, plus re-packing on the server for anything a client posts.",
+   "CSP does not govern navigation: a page can still set location to an external site inside its own frame, and the sandbox allows that. Counting a second `load` event and unmounting is the only runtime defence; the gate's location/window.open scan is a second layer. A page that asks the child to type something and then navigates would leak it, which is why free-text inputs are banned in pages.",
+   "Model-written grading leaks into proof: games, code and procedural-skill pages compute right/wrong in model JS. Any path that turns the frame's state into an Attempt, a verdict on a `move`, mastery or 'help' accounting breaks AGENTS.md #8. Fields named correct/score/passed must be dropped at the bridge, and the not-counted label must always be visible.",
+   "Answer leaks through narration or poses: upstream sends widgetConfig, solution included, into the script prompt (scene-generator.ts:1801), and widget_setState/reveal can display the answer. Strip keys from the config at the gate, and add the gateScript pose-vs-next-check rule.",
+   "Accessibility regressions: upstream's 1280\u00d7720 scale and body-portal fail 320 px, 44/56 px targets, focus order and screen readers outright. Generated pages are also unreliable on reduced motion, alt text and keyboard parity even with prompt rules, so the headless axe/320 px eval must gate any prompt change, and the text equivalent must carry the lesson on its own.",
+   "Quality and latency: one free-text HTML call for a 30\u2013150 KB page is slow (upstream allows 300 s) and often fails the gates. The repair call doubles the cost. Generation must stay in the background with a code fallback ready, and the T7 tap-to-Ready p50 \u2264 45 s bar will likely need explore scenes to arrive after scene 1.",
+   "Validator gap: upstream skips module scripts, so every 3D widget is unchecked. Self-hosting Three costs about 600 KB per scene and fights the size cap. Keep visualization3d out of the first cut.",
+   "Prompt heritage: Chinese UI examples, first-page greetings, 'OBVIOUS' animation, achievements and emoji, Tailwind CDN, and a forced 70% interactive quota. Each needs rewriting under golden tests. praiseIn, languageOf and the greeting check have to run on the page's visible text, not just on narration.",
+   "Privacy through observation: page-reported state goes to the tutor model verbatim upstream. Without withoutNames + screen() + a numbers/enums-only rule, any learner-typed text inside a page (or a malicious imported page) is a name-leak and prompt-injection channel.",
+   "Untrusted HTML at rest: upstream renders imported classroom JSON HTML as-is, and the `url` fallback loads any external page. Never accept explore HTML from the client without re-running gateHtml and packing on the server, and never port the `url` field.",
+   "Scope: the owner also asked for project-based learning (upstream `pbl/*`, also on spec \u00a75.3's never list, line 347) and the multi-agent classroom behind a button. Those are separate mappings. Explore scenes should fit the existing ProjectScene (apps/web/src/lib/types.ts:127) as its investigate step rather than spawn a second project model.",
+   "Upstream tests were not run here (no node_modules, spec \u00a71.8). Port the validator, inventory and observation behaviour behind our own vitest cases, not on trust."
+  ]
+ }
+}

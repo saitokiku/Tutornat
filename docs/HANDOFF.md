@@ -1,4 +1,57 @@
-# Handoff — KaizenEDU 1.0 build (updated 2026-10-07, evening, after the Codex review)
+# Handoff — KaizenEDU 1.0 build (closed out 2026-10-08)
+
+Start here. Then [STATUS.md](STATUS.md) (owner-blocked list at the top, then Queue 4) and the plans:
+[1.0 plan](plans/2026-10-07-kaizenedu-1.0-plan.md) · [live tutor spec](plans/2026-10-07-live-tutor-spec.md) ·
+[tutor theater spec](plans/2026-10-07-tutor-theater-spec.md).
+
+## State at close-out
+
+- **GitHub `main` = `foundation`**, all green: lint, typecheck, 5,032 unit tests (166 files), production
+  build, browser suite 185 passed / 0 failed / 17 skipped (skips need keys or a database).
+- **Live:** www.kaizenedu.net (Vercel project `kaizenedu`, demo mode until keys are added). Redeployed at close-out.
+- **On `main`:** all 13 feature packages; design system, shell, landing; spotlight engine; the 19 content
+  packages (≈ 390 skills, ≈ 90 reading passages, 61 courses, ≈ 110 sources) with the audit fixes for
+  every strand (12 fully re-verified, 7 partly — below); Codex's T01 journeys/focus fixes, safety screens on
+  every AI route, durable learning evidence, its audit and specs as inputs; Live Tutor phase A (voice library:
+  number speller EN/ES, voice tiers, one app voice, spoken answers checked in code, one model call per spoken
+  turn, latency eval) — not wired into screens yet; the learning-loop design (plan §2.10); the tutor theater spec.
+
+## Interrupted long tasks — how to resume each (none of this work is lost)
+
+| Task | What is done | What is left | Where |
+|---|---|---|---|
+| **Content audit fixes** | 19 strands fixed and merged; 12 re-verified clean | 7 strands' re-fix was cut off: math-k2 (6 open items), eng-reading-35 (9), cat-eng-k5 (7), eng-reading-69 (12), cat-math-69 (3), cat-sci-69 (7), sci-69 (11) | open items with fixes: [handoff/content-refix-open.json](handoff/content-refix-open.json); original findings: [handoff/content-audits.json](handoff/content-audits.json). Fix on `main`, then one checker per strand. |
+| **Polish batch 1** | only "a topic word links the skills at the learner's grade" (intake) landed | practice, Today/family/growth, learn/stage K–2 visuals, intake/calendar/shell/auth | inputs: [dogfood/2026-10-07.md](dogfood/2026-10-07.md) (#5 fixed), [handoff/requests/design.json](handoff/requests/design.json) (critics' findings), [handoff/requests/*.json](handoff/requests/), [reviews/2026-10-07-system-audit.md](reviews/2026-10-07-system-audit.md). Tutor-screen items go to Live Tutor B. |
+| **Theater amendment** (owner: take OpenMAIC's HTML interactives, project-based learning, multi-agent classroom behind a button) | OpenMAIC maps + the amended spec, as a draft | the three attacks (browser sandbox security, child safety/privacy, teaching value) and the final spec | draft: [plans/2026-10-07-tutor-theater-amendment-draft.md](plans/2026-10-07-tutor-theater-amendment-draft.md); maps: [handoff/theater-amendment-maps.json](handoff/theater-amendment-maps.json). Attack, finalize, replace the theater spec. |
+| **Live Tutor phase B** | phase A merged; wiring steps written | VoiceRoot in the root layout, every speaker through it, the tutor cursor + attention scheduler, `point_at` + data-spot ids on every screen, Talk/drawer/stage/K–2 Today states, e2e | `apps/web/src/lib/voice/WIRING.md`, live tutor spec P3–P5, `docs/spotlight.md` |
+| **Account authority (Codex T03)** | archived on `origin/codex/account-authority` | finish as the M5 accounts/consent step per [handoff/codex-review-2026-10-07.md](handoff/codex-review-2026-10-07.md) | after Live Tutor B |
+
+## Next, in order
+
+1. Finish the 7 content strands' open items.
+2. Polish batch 1 (four areas), then a hands-on pass (owner rule: use it and feed it back).
+3. Theater amendment attacks → final theater spec.
+4. Live Tutor phase B (screens, voice, glow and cursor together).
+5. Tutor theater T0–T9 (the tutor directs; every session is recorded; lessons multiply; HTML interactives sandboxed, projects, classroom mode behind a button).
+6. Learning-loop build packages (plan §2.10).
+7. Account authority / consent (M5), cross-cutting review, deploy, report.
+
+How the build ran (reuse it): packages in isolated git worktrees from a fixed SHA; build → adversarial
+reviews → fix; cherry-pick onto `foundation` with `-x`; `npm run verify` and
+`CI=1 E2E_PORT=3291 npx playwright test` from `apps/web` before every push; `main` fast-forwards to `foundation`.
+Agents clone node_modules (`cp -cR`), commit as they go and write big files in pieces.
+
+## Blocked on the owner
+
+Keys (Anthropic + `KAIZEN_AI=anthropic`, Neon `DATABASE_URL`, Resend, ElevenLabs + voice ids EN/ES,
+Deepgram, Vercel Blob), hygiene (rotate the six leaked keys; delete stale Vercel env vars), the decisions
+listed at the top of STATUS (vendors, spend ceilings, voice pick, help-counting policy, …), counsel for
+COPPA, teacher and Spanish reviewers, pilot families.
+
+---
+
+## Earlier handoff (2026-10-07 evening), kept for detail
+
 
 Read this first, then [STATUS.md](STATUS.md) (the owner-blocked list at the top, then Queue 4's
 "Next, in order") and [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md).
