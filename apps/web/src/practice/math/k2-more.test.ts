@@ -1170,6 +1170,12 @@ describe("m.money.count", () => {
   /** The same coins, valued by a child who thinks a nickel is 10¢ and a dime 5¢. */
   const SWAPPED: Record<string, number> = { ...COIN, nickel: 10, nickels: 10, dime: 5, dimes: 5 };
   const swappedEn = (s: string) => [...s.matchAll(/(\d+) (pennies|penny|nickels?|dimes?|quarters?)\b/g)].reduce((t, m) => t + Number(m[1]) * SWAPPED[m[2]], 0);
+  // A Spanish voice reads the names as spelled, so Spanish read-aloud lines spell them as they sound.
+  const HEARD: Record<string, number> = { péni: 1, pénies: 1, níquel: 5, níqueles: 5, daim: 10, daims: 10, cuórter: 25, cuórters: 25 };
+  const heardEs = (s: string) => {
+    expect(s, "an English coin name read by a Spanish voice").not.toMatch(/\b(pennies|penny|nickels?|dimes?|quarters?)\b/);
+    return [...s.matchAll(/(\d+) (pénies|péni|níqueles|níquel|daims?|cuórters?)(?![\p{L}])/gu)].reduce((t, m) => t + Number(m[1]) * HEARD[m[2]], 0);
+  };
   const billsEn = (s: string) => [...s.matchAll(/(one|\d+) \$(\d+) bills?/g)].reduce((t, m) => t + (m[1] === "one" ? 1 : Number(m[1])) * Number(m[2]), 0);
   const billsEs = (s: string) => [...s.matchAll(/(un|\d+) billetes? de \$(\d+)/g)].reduce((t, m) => t + (m[1] === "un" ? 1 : Number(m[1])) * Number(m[2]), 0);
   it("adds the coin and bill values named on screen, in both languages", () => {
@@ -1180,6 +1186,8 @@ describe("m.money.count", () => {
           const target = Number(/make (\d+)¢/.exec(te)![1]);
           expect(coinsEn(keyLabel(en))).toBe(target);
           expect(coinsEs(keyLabel(es))).toBe(target);
+          // Each Spanish choice is heard as the same coins it shows.
+          for (const c of es.choices!) expect(heardEs(c.say!), c.label).toBe(coinsEs(c.label));
           for (const w of wrongLabels(en)) expect(coinsEn(w), `${w} also makes ${target}¢`).not.toBe(target);
           // The swap tag sits on exactly the set a nickel-dime swapper would pick, and nowhere else.
           for (const c of en.choices!) if (c.why) expect(swappedEn(c.label) === target, `${c.label} tagged ${c.why} for ${target}¢`).toBe(c.why === "swapped-nickel-and-dime");
@@ -1192,6 +1200,7 @@ describe("m.money.count", () => {
           expect(level).toBe(3);
         } else {
           expect([coinsEn(te), coinsEs(ts)]).toEqual([num(en.answer), num(en.answer)]);
+          expect([coinsEn(en.say), heardEs(es.say)]).toEqual([num(en.answer), num(en.answer)]);
           expect(/quarter/.test(te)).toBe(level === 2);
           expect(num(en.answer)).toBeLessThan(100);
           const swapped = en.wrong?.find((w) => w.why === "swapped-nickel-and-dime");
