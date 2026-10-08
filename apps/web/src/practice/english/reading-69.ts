@@ -251,10 +251,11 @@ function itemFor({ passage, question }: Entry, r: Rng, level: number, locale: Lo
   const [h1, h2] = lang(locale, HINTS[question.ask]);
   const ruleOut = `${tr(locale, "Rule out", "Descarta")} ${qEnd(locale, wrong[0])} ${lang(locale, TAG_TEXT[question.tags[0]])}`;
   // When the choices are quotes from the passage, pointing at the evidence would hand over the key; so
-  // it would when the key mostly restates the evidence and no wrong choice comes as close to it.
+  // it would when the key mostly restates the evidence and no wrong choice restates it more (a mirror
+  // that swaps the two texts restates it just as much, and the evidence is what tells them apart).
   const quoted = inPassage(passage, locale, right);
   const near = repeats(right, evidence.join(" "));
-  const restated = near >= 0.4 && wrong.every((w) => repeats(w, evidence.join(" ")) < near);
+  const restated = near >= 0.4 && wrong.every((w) => repeats(w, evidence.join(" ")) <= near);
   const and = tr(locale, " and ", " y ");
   const last = evidence.length - 1;
   const reread = `${tr(locale, "Reread", "Vuelve a leer")} ${evidence.map((e, i) => `${locate(passage, e, locale, true)}: ${i === last ? qEnd(locale, e) : qMid(e)}`).join(and)}`;
