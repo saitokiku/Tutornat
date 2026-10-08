@@ -13,6 +13,17 @@
 
 Every decision below serves one of those lines. Section 8 checks each one.
 
+> **Status, phase A (2026-10-07).** Library and server parts of P1 and all of P2 are built in
+> `apps/web/src/lib/voice/**`, `practice/spoken.ts`, `lib/ai/{tutor,prompts,context}.ts`,
+> `app/api/voice/metric` and `evals/voice-*`, against fakes; no screen is wired yet (phase B,
+> steps in `apps/web/src/lib/voice/WIRING.md`). P0 is blocked on keys: the v4 Turbo dialogue
+> socket, Flux's message shapes and the token-as-bearer handshake are built from this spec and
+> unverified (§9 P0). Folded in from the models spec: turn latency is measured last word → first
+> sound (the vendor's own time to first audio is one segment, never the total); the spoken precheck
+> is a JudgmentResult whose abstain/unavailable never becomes a verdict; voice tokens are reserved
+> against the daily ceiling and handed back when the vendor fails; minors always take the cascade
+> (speech-to-text → safety screen → names out → one model call → text-to-speech).
+
 **Where to work:** repo `/Users/man/Documents/GitHub/Tutornat`, app in `apps/web`. Branch from `foundation`.
 
 ---
@@ -537,6 +548,10 @@ Measure silence from word end timestamps, not from when a message arrives.
 - `say()` queues until ready; it never silently drops.
 
 ### 2.7 Wiring the app voice
+
+> Status: `VoiceRoot`, `VoiceProvider`, `useAppVoice`, `useSpeak`, `appSay` (`lib/voice/root.tsx`),
+> the app's one SpeechOut (`app-out.ts`) and `useTutorVoice` (`tutor-voice.ts`) are built and tested.
+> The per-file wiring for phase B is in `apps/web/src/lib/voice/WIRING.md`.
 
 **`VoiceRoot`** (client component in `app/layout.tsx`, next to `SpotlightLayer`):
 - Reads the current learner from the store.
@@ -1175,6 +1190,11 @@ Use `spotAttr(id, label?)`.
 ## 9. Order of work, and what's blocked on the owner
 
 ### P0: vendor checks (half a day; needs keys)
+
+> Status: blocked on keys. Built against fakes: the dialogue transport's messages
+> (`elevenlabs.ts` `openingMessage` / `sentenceMessage` / `closingMessage`), Flux's `TurnInfo`
+> parsing and URL (`deepgram.ts`), the `language_hint` format. The latency eval's end-of-turn delays
+> are assumed until the Flux fixtures exist. See WIRING.md §6 for the list.
 - Does the single-use `tts_websocket` token open the Text to Dialogue socket with `eleven_v4_turbo`?
 - Does Flux `/v2/listen` accept the `/v1/auth/grant` token as Sec-WebSocket-Protocol bearer?
 - Confirm the `language_hint` format.
@@ -1184,6 +1204,10 @@ Use `spotAttr(id, label?)`.
 - Without keys, build against fakes and mark P0 as blocked on keys.
 
 ### P1: sounds real
+
+> Status: done in the library (numbers.ts + golden table, voices.ts tiers, audio.ts, player.ts, the
+> transport fixes, server voice-id rules, VoiceRoot and hooks). Left for phase B: routing every
+> speaker through it and deleting `useVoice.ts`, `voiceFor`, `claimVoice`.
 - `numbers.ts` and `speakable`
 - `voices.ts` tiers
 - `audio.ts` and `player.ts`
@@ -1193,6 +1217,11 @@ Use `spotAttr(id, label?)`.
 - Server voice-id rules
 
 ### P2: real time
+
+> Status: done (conversation.ts, Flux with Nova-3 bands, turn.ts, barge-in duck and echo by time,
+> addressee.ts, practice/spoken.ts and the server precheck, the voice prompt block, stopWhen, prompt
+> caching, per-turn metrics and `/api/voice/metric`, `evals/voice-latency.eval.ts` on mocks). The
+> real-vendor runs are blocked on keys.
 - `conversation.ts`
 - Flux, Nova bands and `turn.ts`
 - Barge-in duck and echo by time
