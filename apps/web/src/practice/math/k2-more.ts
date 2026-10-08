@@ -1634,7 +1634,8 @@ export const MATH_K_2_MORE: Skill[] = [
           break;
         }
         case "take-add": {
-          const a = r.int(30, 80), b = r.int(5, a - 10), c = r.int(5, Math.min(40, 99 - (a - b)));
+          // No more come back than left (books borrowed, sheep in the barn); a − b + c stays at most a.
+          const a = r.int(30, 80), b = r.int(5, a - 10), c = r.int(5, b);
           x = [a, b, c];
           ops = [[a, "−", b], [a - b, "+", c]];
           break;
@@ -1666,8 +1667,8 @@ export const MATH_K_2_MORE: Skill[] = [
           "change-take": [tr(locale, "You know the start and the end.", "Sabes cuántos había al inicio y al final."), tr(locale, `Think: ${x[0]} − ? = ${x[1]}. Subtract to find it.`, `Piensa: ${x[0]} − ? = ${x[1]}. Resta para encontrarlo.`)],
           "start-add": [tr(locale, "The start is missing.", "Falta el número del inicio."), tr(locale, `Think: ? + ${x[0]} = ${x[1]}. Subtract to find it.`, `Piensa: ? + ${x[0]} = ${x[1]}. Resta para encontrarlo.`)],
           compare: [tr(locale, "Compare the two amounts.", "Compara las dos cantidades."), tr(locale, "Find the difference: subtract.", "Busca la diferencia: resta.")],
-          fewer: [tr(locale, `Fewer means less than ${x[0]}.`, `Menos quiere decir menos que ${x[0]}.`), tr(locale, `Subtract ${x[1]} from ${x[0]}.`, `Resta ${x[1]} a ${x[0]}.`)],
-          more: [tr(locale, `More means more than ${x[0]}.`, `Más quiere decir más que ${x[0]}.`), tr(locale, `Add ${x[1]} to ${x[0]}.`, `Suma ${x[1]} a ${x[0]}.`)],
+          fewer: [tr(locale, `Fewer means a number less than ${x[0]}.`, `Menos quiere decir un número menor que ${x[0]}.`), tr(locale, `Subtract ${x[1]} from ${x[0]}.`, `Resta ${x[1]} a ${x[0]}.`)],
+          more: [tr(locale, `More means a number bigger than ${x[0]}.`, `Más quiere decir un número mayor que ${x[0]}.`), tr(locale, `Add ${x[1]} to ${x[0]}.`, `Suma ${x[1]} a ${x[0]}.`)],
         };
         hints = [...nudge[kind], tf.hint];
         steps = tf.steps;
