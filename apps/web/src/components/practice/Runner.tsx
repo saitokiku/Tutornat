@@ -19,7 +19,7 @@ import { logAct } from "@/lib/acts";
 import { answersIn, finishSet, openPracticeAttempt, paceOf, practiceSource, recordAnswer, setStart, settingsOf, statusesOf, wholeMinutes } from "@/lib/practice";
 import { attemptFor, evidenceProblem, recordFirstMiss, recordHelp } from "@/lib/evidence";
 import { isReviewed } from "@/lib/review";
-import { read, reload, update, useStore } from "@/lib/store";
+import { read, reload, storeHealth, update, useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { check, misconceptionOf, type Verdict } from "@/practice/answer";
 import { randomSeed } from "@/practice/rng";
@@ -370,6 +370,8 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
 
         <main className="mx-auto max-w-3xl px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
           <div className="mb-5 space-y-3 empty:hidden">
+            {/* A K–2 learner can't read the grown-up's notice: they hear that a grown-up is needed. */}
+            {young && problem !== "storage" && storeHealth() === "memory" && <SaveNotice problem="unsaved" young locale={learner.locale} />}
             <StoreHealthNotice />
             {problem && <SaveNotice problem={problem} young={young} locale={learner.locale} />}
           </div>

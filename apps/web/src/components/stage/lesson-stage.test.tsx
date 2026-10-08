@@ -119,6 +119,21 @@ describe("Stage", () => {
     expect(read().activity.filter((e) => e.type === "quiz_answered")).toEqual([expect.objectContaining({ correct: true, assisted: false })]);
   });
 
+  it("K–2, storage full: the learner hears that a grown-up is needed, and the grown-up reads why", async () => {
+    const speech = installSpeech();
+    render(<Stage course={{ ...course, profileId: "p2" }} lesson={lesson1} learner={little} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Full", "QuotaExceededError");
+    });
+    await userEvent.click(screen.getByLabelText("The Sun"));
+    await userEvent.click(screen.getByRole("button", { name: "Check" }));
+    const young = "This device can't save your work right now. Please get a grown-up.";
+    expect(screen.getByText(young)).toBeInTheDocument();
+    expect(screen.getByText("This browser isn't letting KaizenEDU save. Work will be lost when the tab closes.")).toBeInTheDocument();
+    await vi.waitFor(() => expect(speech.spoken.map((u) => u.text)).toContain(young));
+  });
+
   it("an answer for a learner removed in another tab isn't taken, and the page reads the change", async () => {
     const interactive: Lesson = { ...lesson1, scenes: [{ id: "f", kind: "interactive", title: "Shade", prompt: "Make three fourths.", widget: { kind: "fraction-bar", parts: 4, shaded: 2, target: { parts: 4, shaded: 3 } } }] };
     render(<Stage course={course} lesson={interactive} learner={learner} />);

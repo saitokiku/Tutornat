@@ -121,6 +121,42 @@ describe("Runner", () => {
     expect(speech.spoken.map((u) => u.text)).toContain("This device can't save your work right now. Please get a grown-up.");
   });
 
+  it("a K–2 learner practising when storage fills hears that a grown-up is needed; the grown-up reads why", async () => {
+    const p = await learner("1");
+    const seed = seedWhere("m.add.5", 1, (it) => it.hints.length > 0);
+    const set = setOf(p, "pick", [{ skillId: "m.add.5", seed, role: "main", level: 1 }]);
+    await show(set, p);
+    const speech = installSpeech();
+    const young = "This device can't save your work right now. Please get a grown-up.";
+    expect(screen.queryByText(young)).toBeNull();
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Full", "QuotaExceededError");
+    });
+    await userEvent.click(screen.getByRole("button", { name: /^Hint/ }));
+    // The hint still shows (practice keeps working in memory); nothing was refused, so no "try again".
+    expect(screen.getByText(makeItem("m.add.5", 1, seed, "en").hints[0])).toBeInTheDocument();
+    expect(screen.getByText(young)).toBeInTheDocument();
+    expect(screen.getByText("This browser isn't letting KaizenEDU save. Work will be lost when the tab closes.")).toBeInTheDocument();
+    expect(screen.queryByText(/Free some space/)).toBeNull();
+    await waitFor(() => expect(speech.last()?.text).toBe(young));
+  });
+
+  it("a K–2 learner on a device that already isn't saving hears that first, after the problem is read", async () => {
+    const p = await learner("K");
+    const seed = seedWhere("m.add.5", 1, () => true);
+    const set = setOf(p, "pick", [{ skillId: "m.add.5", seed, role: "main", level: 1 }]);
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Full", "QuotaExceededError");
+    });
+    update((s) => void (s.prefs.locale = "en"));
+    const speech = installSpeech();
+    await show(set, p);
+    const young = "This device can't save your work right now. Please get a grown-up.";
+    expect(screen.getByText(young)).toBeInTheDocument();
+    await waitFor(() => expect(speech.last()?.text).toBe(young));
+    expect(speech.spoken.map((u) => u.text)).toContain(makeItem("m.add.5", 1, seed, "en").say);
+  });
+
   it("a question another tab pinned at another difficulty is loaded again, at that difficulty", async () => {
     const p = await learner("3");
     const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main" }]);

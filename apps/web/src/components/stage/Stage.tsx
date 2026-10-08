@@ -12,7 +12,7 @@ import { SaveNotice } from "@/components/practice/SaveNotice";
 import type { HelpGate } from "@/components/tutor/TutorChat";
 import { checkMemory, lessonAnswerId, lessonState, record, sceneAttemptSource } from "@/lib/activity";
 import { attemptFor, evidenceProblem, recordHelp } from "@/lib/evidence";
-import { read, reload, useStore } from "@/lib/store";
+import { read, reload, storeHealth, useStore } from "@/lib/store";
 import type { Course, Lesson, Profile, Scene } from "@/lib/types";
 import { InteractiveView, ProjectView, QuizView, SlideView, type OnAnswer, type QuizProgress } from "./scenes";
 import { useTitle } from "@/components/LangSync";
@@ -292,6 +292,8 @@ export function Stage({ course, lesson, learner }: { course: Course; lesson: Les
 
         <main className="min-w-0">
           <div className="mb-4 space-y-3 empty:hidden">
+            {/* A K–2 learner can't read the grown-up's notice: they hear that a grown-up is needed. */}
+            {young && problem !== "storage" && storeHealth() === "memory" && <SaveNotice problem="unsaved" young locale={learner.locale} />}
             <StoreHealthNotice />
             {problem && <SaveNotice problem={problem} young={young} locale={learner.locale} />}
           </div>
