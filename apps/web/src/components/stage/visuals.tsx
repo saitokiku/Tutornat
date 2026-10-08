@@ -23,7 +23,7 @@ const LINE = "var(--color-border)";
 export function VisualView({ visual, alt, tint = "var(--color-math)" }: { visual: Visual; alt: string; tint?: string }) {
   switch (visual.kind) {
     case "fraction":
-      return <FractionVisual parts={visual.parts} shaded={visual.shaded} alt={alt} tint={tint} />;
+      return <FractionVisual parts={visual.parts} shaded={visual.shaded} sizes={visual.sizes} alt={alt} tint={tint} />;
     case "number-line":
       return <NumberLineVisual {...visual} alt={alt} tint={tint} />;
     case "particles":
@@ -59,16 +59,20 @@ export function VisualView({ visual, alt, tint = "var(--color-math)" }: { visual
   }
 }
 
-export function FractionVisual({ parts, shaded, alt, tint }: { parts: number; shaded: number; alt: string; tint: string }) {
-  const w = 320, h = 56, gap = 3, seg = (w - gap * (parts - 1)) / parts;
+/** A bar cut into `parts`, the first `shaded` filled; `sizes` gives each part's relative width when the parts are not equal. */
+export function FractionVisual({ parts, shaded, sizes, alt, tint }: { parts: number; shaded: number; sizes?: number[]; alt: string; tint: string }) {
+  const w = 320, h = 56, gap = 3;
+  const rel = sizes?.length === parts ? sizes : Array<number>(parts).fill(1);
+  const unit = (w - gap * (parts - 1)) / rel.reduce((a, b) => a + b, 0);
+  const lefts = rel.map((_, i) => rel.slice(0, i).reduce((a, b) => a + b, 0) * unit + i * gap);
   return (
     <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={alt} className="w-full max-w-sm">
-      {Array.from({ length: parts }, (_, i) => (
+      {rel.map((size, i) => (
         <rect
           key={i}
-          x={i * (seg + gap)}
+          x={lefts[i]}
           y={0}
-          width={seg}
+          width={size * unit}
           height={h}
           rx={i === 0 || i === parts - 1 ? 10 : 3}
           fill={i < shaded ? tint : "var(--color-panel2)"}
@@ -96,6 +100,7 @@ export function NumberLineVisual({
   alt,
   tint,
   marker,
+  span,
 }: {
   min: number;
   max: number;
@@ -104,6 +109,8 @@ export function NumberLineVisual({
   alt: string;
   tint: string;
   marker?: number;
+  /** A thing laid along the line (a ribbon on a ruler), drawn as a bar just above it from one value to the other. */
+  span?: [number, number];
 }) {
   const w = 360, pad = 20, y = 34;
   const x = (v: number) => pad + ((v - min) / (max - min)) * (w - pad * 2);
@@ -123,6 +130,7 @@ export function NumberLineVisual({
           </text>
         </g>
       ))}
+      {span && <rect x={x(Math.min(...span))} y={y - 18} width={Math.abs(x(span[1]) - x(span[0]))} height={12} rx={2} fill={tint} />}
       {marker !== undefined && <circle cx={x(marker)} cy={y} r={8} fill={tint} stroke="var(--color-panel)" strokeWidth={3} />}
     </svg>
   );

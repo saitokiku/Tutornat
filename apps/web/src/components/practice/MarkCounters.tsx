@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { IconCheck } from "@/components/icons";
 import { Hear } from "@/components/stage/hear";
-import { crossPath, dotsPerRow } from "@/components/stage/visuals-practice";
+import { crossPath, dotsPerRow, labelWidth } from "@/components/stage/visuals-practice";
 import { useT } from "@/i18n";
 import type { Visual } from "@/lib/types";
 import { hearSize } from "./targets";
@@ -31,7 +31,10 @@ export type Counter = {
   crossed: boolean;
 };
 
-export type CounterLayout = { width: number; height: number; cell: number; counters: Counter[] };
+/** A group's name or picture, centred under the group (`x` is the centre, `y` the text baseline). */
+export type GroupLabel = { x: number; y: number; group: number; text: string };
+
+export type CounterLayout = { width: number; height: number; cell: number; counters: Counter[]; labels: GroupLabel[]; font: number };
 
 const PAD = 2;
 /** The smallest touch target anywhere in the product. */
@@ -43,10 +46,11 @@ export const counterCell = (young?: boolean) => (young ? 56 : 46);
  * Lays the picture out on a grid of `cell`-px squares. Groups (or ten-frames) sit side by side and
  * wrap onto the next line when the width runs out, so each counter keeps a full-size touch target;
  * when even one group's row is wider than the room, its squares shrink to fit, never below 44 px.
- * Only an array, which must keep its shape, shrinks further (never below 28 px).
+ * Only an array, which must keep its shape, shrinks further (never below 28 px). Labelled groups
+ * get their label centred under them, so a group wrapped onto its own line keeps its name.
  */
 export function layoutCounters(v: MarkableVisual, maxWidth: number, cell: number): CounterLayout {
-  type Spec = { count: number; perRow: number; kind: Counter["kind"]; filled: (i: number) => boolean; crossed: (i: number) => boolean };
+  type Spec = { count: number; perRow: number; kind: Counter["kind"]; filled: (i: number) => boolean; crossed: (i: number) => boolean; label?: string };
   let specs: Spec[];
   let size = cell;
   if (v.kind === "dots") {
@@ -57,6 +61,7 @@ export function layoutCounters(v: MarkableVisual, maxWidth: number, cell: number
       kind: "dot",
       filled: () => true,
       crossed: (i) => g === last && i >= n - (v.crossed ?? 0),
+      label: v.labels?.[g],
     }));
   } else if (v.kind === "ten-frame") {
     specs = Array.from({ length: v.frames ?? 1 }, (_, f) => ({ count: 10, perRow: 5, kind: "box", filled: (i) => f * 10 + i < v.filled, crossed: () => false }));
@@ -70,29 +75,36 @@ export function layoutCounters(v: MarkableVisual, maxWidth: number, cell: number
   }
   const gap = v.kind === "ten-frame" ? 16 : Math.round(size * 0.6);
   const room = Math.max(maxWidth - PAD * 2, 1);
+  // Labels sit on one baseline under each line of groups, in type that scales with the counters.
+  const font = Math.round(size * 0.32);
+  const labelH = specs.some((sp) => sp.label) ? font + 14 : 0;
 
-  // Place groups into lines.
-  const lines: { groups: { spec: Spec; g: number; w: number; h: number; x: number }[]; w: number; h: number }[] = [];
+  // Place groups into lines. A label wider than its group widens the group's slot.
+  const lines: { groups: { spec: Spec; g: number; w: number; dw: number; h: number; x: number }[]; w: number; h: number }[] = [];
   specs.forEach((spec, g) => {
     const cols = Math.max(1, Math.min(spec.count, spec.perRow));
-    const w = cols * size, h = Math.max(1, Math.ceil(spec.count / spec.perRow)) * size;
+    const dw = cols * size, h = Math.max(1, Math.ceil(spec.count / spec.perRow)) * size;
+    const w = Math.max(dw, spec.label ? Math.ceil(labelWidth(spec.label, font)) : 0);
     let line = lines.at(-1);
     if (!line || (line.groups.length > 0 && line.w + gap + w > room)) lines.push((line = { groups: [], w: 0, h: 0 }));
     const x = line.groups.length ? line.w + gap : 0;
-    line.groups.push({ spec, g, w, h, x });
+    line.groups.push({ spec, g, w, dw, h, x });
     line.w = x + w;
     line.h = Math.max(line.h, h);
   });
 
   const width = Math.max(...lines.map((l) => l.w)) + PAD * 2;
   const counters: Counter[] = [];
+  const labels: GroupLabel[] = [];
   let y = PAD;
   for (const line of lines) {
     const shift = PAD + (width - PAD * 2 - line.w) / 2;
-    for (const { spec, g, x } of line.groups)
+    for (const { spec, g, x, w, dw } of line.groups) {
+      const left = shift + x + (w - dw) / 2;
+      if (spec.label) labels.push({ x: left + dw / 2, y: y + line.h + font + 6, group: g, text: spec.label });
       for (let i = 0; i < spec.count; i++)
         counters.push({
-          x: shift + x + (i % spec.perRow) * size,
+          x: left + (i % spec.perRow) * size,
           y: y + Math.floor(i / spec.perRow) * size,
           group: g,
           row: Math.floor(i / spec.perRow),
@@ -101,9 +113,10 @@ export function layoutCounters(v: MarkableVisual, maxWidth: number, cell: number
           filled: spec.filled(i),
           crossed: spec.crossed(i),
         });
-    y += line.h + gap;
+    }
+    y += line.h + labelH + gap;
   }
-  return { width, height: y - gap + PAD, cell: size, counters };
+  return { width, height: y - gap + PAD, cell: size, counters, labels, font };
 }
 
 type Props = { visual: MarkableVisual; alt: string; tint?: string; young?: boolean };
@@ -171,6 +184,11 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
     <div ref={box} className="w-full">
       <div className="relative mx-auto" style={{ width: layout.width, height: layout.height }}>
         <svg width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="img" aria-label={alt} className="block">
+          {layout.labels.map((l) => (
+            <text key={`l${l.group}`} x={l.x} y={l.y} textAnchor="middle" fontSize={layout.font} fill="var(--color-ink)">
+              {l.text}
+            </text>
+          ))}
           {counters.map((c, i) => {
             const cx = c.x + cell / 2, cy = c.y + cell / 2;
             if (c.kind === "box")

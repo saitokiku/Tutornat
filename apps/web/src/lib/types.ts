@@ -70,13 +70,18 @@ export type Block =
 
 /** Static teaching pictures drawn in SVG (not text rendered into an image). Shared by lessons, practice and the tutor. */
 export type Visual =
-  | { kind: "fraction"; parts: number; shaded: number }
-  | { kind: "number-line"; min: number; max: number; marks: number[]; denominator?: number; marker?: number }
+  /** `sizes`: relative part widths, for a whole cut into parts that are not equal (default: equal parts). */
+  | { kind: "fraction"; parts: number; shaded: number; sizes?: number[] }
+  /** `span`: a thing laid along the line from one value to another (a ribbon on a ruler). */
+  | { kind: "number-line"; min: number; max: number; marks: number[]; denominator?: number; marker?: number; span?: [number, number] }
   | { kind: "particles"; state: "solid" | "liquid" | "gas" }
   | { kind: "moon"; phase: number } // 0 = new, 0.5 = full, 0..1
   | { kind: "line-graph"; points: [number, number][]; xLabel: string; yLabel: string }
-  /** Groups of counters in tidy rows of five; `crossed` counters in the last group are taken away. */
-  | { kind: "dots"; groups: number[]; crossed?: number }
+  /**
+   * Groups of counters in tidy rows of five; `crossed` counters in the last group are taken away.
+   * `labels`: a name or picture under each group, so a question names a group, never "left" or "right".
+   */
+  | { kind: "dots"; groups: number[]; crossed?: number; labels?: string[] }
   | { kind: "ten-frame"; filled: number; frames?: 1 | 2 }
   | { kind: "base-ten"; hundreds?: number; tens: number; ones: number }
   | { kind: "clock"; h: number; m: number }
