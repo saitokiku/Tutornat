@@ -8,14 +8,14 @@ import { bi, e, m, mx, type Bank } from "./shared";
 export const PERIODIC_TRENDS: Bank = {
   nudge: bi("Is the question about a column (group) or a row (period) of the periodic table?", "¿La pregunta trata de una columna (grupo) o de una fila (período) de la tabla periódica?"),
   strategy: bi(
-    "Elements in a group have the same number of valence electrons, so they react alike. Going down a group, atoms get bigger and metals get more reactive. Going across a period from left to right, atoms get smaller and the elements change from metals to nonmetals.",
-    "Los elementos de un grupo tienen el mismo número de electrones de valencia, así que reaccionan de forma parecida. Al bajar por un grupo, los átomos son más grandes y los metales más reactivos. Al avanzar por un período de izquierda a derecha, los átomos son más pequeños y los elementos pasan de metales a no metales.",
+    "Find the elements on the table first. For a trend, ask what changes from one box to the next, down a column or across a row, and how that changes the pull on the outer electrons.",
+    "Primero ubica los elementos en la tabla. Para una tendencia, pregúntate qué cambia de una casilla a la siguiente, al bajar por una columna o al avanzar por una fila, y cómo cambia eso la atracción sobre los electrones externos.",
   ),
   seconds: 25,
   items: [
     e(
-      bi("Elements in the same group (column) of the periodic table have the same number of what?", "Los elementos del mismo grupo (columna) de la tabla periódica tienen el mismo número de ¿qué?"),
-      bi("Valence electrons (electrons in the outer shell)", "Electrones de valencia (electrones de la capa externa)"),
+      bi("Elements in the same group (column) of the periodic table have the same number of what?", "¿De qué tienen la misma cantidad los elementos del mismo grupo (columna) de la tabla periódica?"),
+      bi("Valence electrons", "Electrones de valencia"),
       [
         m("confused-subatomic", "Protons", "Protones"),
         m("confused-subatomic", "Neutrons", "Neutrones"),
@@ -25,10 +25,10 @@ export const PERIODIC_TRENDS: Bank = {
       bi("Main-group elements in one column share the same number of outer electrons, which is why they react in similar ways.", "Los elementos de los grupos principales de una columna tienen el mismo número de electrones externos, por eso reaccionan de forma parecida."),
     ),
     e(
-      bi("Elements in the same period (row) have the same number of what?", "Los elementos del mismo período (fila) tienen el mismo número de ¿qué?"),
-      bi("Occupied electron shells (energy levels)", "Capas de electrones ocupadas (niveles de energía)"),
+      bi("Elements in the same period (row) have the same number of what?", "¿De qué tienen la misma cantidad los elementos del mismo período (fila)?"),
+      bi("Occupied electron shells", "Capas de electrones ocupadas"),
       [
-        m("group-period-mixup", "Valence electrons", "Electrones de valencia"),
+        m("group-period-mixup", "Valence electrons in the outer shell", "Electrones de valencia en la capa externa"),
         m("confused-subatomic", "Protons", "Protones"),
         m("confused-subatomic", "Neutrons", "Neutrones"),
       ],
@@ -37,10 +37,10 @@ export const PERIODIC_TRENDS: Bank = {
     ),
     e(
       bi("Why do sodium (Na) and potassium (K) react in similar ways?", "¿Por qué el sodio (Na) y el potasio (K) reaccionan de forma parecida?"),
-      bi("They are in the same group, so each has 1 valence electron.", "Están en el mismo grupo, así que cada uno tiene 1 electrón de valencia."),
+      bi("Each has 1 valence electron.", "Cada uno tiene 1 electrón de valencia."),
       [
         m("mass-not-electrons", "They have almost the same mass.", "Tienen casi la misma masa."),
-        m("group-period-mixup", "They are in the same period.", "Están en el mismo período."),
+        m("group-period-mixup", "They are in the same period of the table.", "Están en el mismo período de la tabla."),
         m("metal-nonmetal-mixup", "They are both gases.", "Los dos son gases."),
       ],
       bi("Find them in the first column.", "Búscalos en la primera columna."),
@@ -96,7 +96,7 @@ export const PERIODIC_TRENDS: Bank = {
       bi("Where are the metals on the periodic table?", "¿Dónde están los metales en la tabla periódica?"),
       bi("On the left side and in the middle", "En el lado izquierdo y en el centro"),
       [
-        m("metal-nonmetal-mixup", "On the right side", "En el lado derecho"),
+        m("metal-nonmetal-mixup", "On the right side, past the zigzag line", "En el lado derecho, después de la línea en zigzag"),
         m("ignores-trend", "Only in the top row", "Solo en la fila de arriba"),
         m("group-mixup", "Only in the last column", "Solo en la última columna"),
       ],
@@ -119,7 +119,7 @@ export const PERIODIC_TRENDS: Bank = {
       bi("He predicted elements that had not been discovered yet.", "Predijo elementos que todavía no se habían descubierto."),
       [
         m("misreads-history", "He forgot some elements he knew about.", "Olvidó algunos elementos que conocía."),
-        m("misreads-history", "Those elements were too dangerous to list.", "Esos elementos eran demasiado peligrosos para incluirlos."),
+        m("misreads-history", "Those elements were too dangerous to list in a printed table.", "Esos elementos eran demasiado peligrosos para incluirlos en una tabla impresa."),
         m("misreads-history", "He ran out of room on the page.", "Se le acabó el espacio en la página."),
       ],
       bi("Later, gallium and germanium were found with properties close to what he described.", "Después se encontraron el galio y el germanio con propiedades parecidas a las que él describió."),
@@ -127,7 +127,7 @@ export const PERIODIC_TRENDS: Bank = {
     ),
     e(
       bi("How are the elements ordered in the modern periodic table?", "¿Cómo están ordenados los elementos en la tabla periódica moderna?"),
-      bi("By atomic number, the number of protons", "Por número atómico, el número de protones"),
+      bi("By atomic number", "Por número atómico"),
       [
         m("mass-not-electrons", "By atomic mass", "Por masa atómica"),
         m("misreads-history", "By the date they were discovered", "Por la fecha en que se descubrieron"),
@@ -153,18 +153,18 @@ const COVALENT = bi("Covalent", "Covalente");
 const METALLIC = bi("Metallic", "Metálico");
 
 export const BONDING: Bank = {
-  nudge: bi("Are electrons being transferred, shared, or spread among many atoms?", "¿Los electrones se transfieren, se comparten o se reparten entre muchos átomos?"),
+  nudge: bi("Is each atom here a metal or a nonmetal?", "¿Cada átomo de aquí es un metal o un no metal?"),
   strategy: bi(
-    "A metal and a nonmetal usually form an ionic bond: the metal gives electrons to the nonmetal, and the opposite charges attract. Two nonmetals usually form covalent bonds by sharing pairs of electrons. Atoms bond to reach a full outer shell.",
-    "Un metal y un no metal suelen formar un enlace iónico: el metal le da electrones al no metal, y las cargas opuestas se atraen. Dos no metales suelen formar enlaces covalentes al compartir pares de electrones. Los átomos se enlazan para completar su capa externa.",
+    "Then ask what the electrons do: jump from one atom to another, sit between two atoms that both hold them, or roam among many metal atoms. Count each atom's valence electrons.",
+    "Luego pregúntate qué hacen los electrones: saltan de un átomo a otro, quedan entre dos átomos que los sujetan a la vez o se mueven entre muchos átomos de metal. Cuenta los electrones de valencia de cada átomo.",
   ),
   seconds: 25,
   items: [
     e(
       bi("What happens in an ionic bond?", "¿Qué ocurre en un enlace iónico?"),
-      bi("Electrons move from one atom to another, and the oppositely charged ions attract.", "Los electrones pasan de un átomo a otro, y los iones de carga opuesta se atraen."),
+      bi("One atom gives electrons to another, and the ions attract.", "Un átomo le da electrones a otro, y los iones se atraen."),
       [
-        m("ionic-covalent-mixup", "Two atoms share pairs of electrons.", "Dos átomos comparten pares de electrones."),
+        m("ionic-covalent-mixup", "Two atoms share pairs of electrons, and the shared pairs attract both.", "Dos átomos comparten pares de electrones, y los pares compartidos atraen a los dos."),
         m("moves-protons", "Protons move from one atom to another.", "Los protones pasan de un átomo a otro."),
         m("confused-with-nuclear", "Two nuclei join into one.", "Dos núcleos se unen en uno solo."),
       ],
@@ -208,7 +208,7 @@ export const BONDING: Bank = {
       bi("A sodium atom becomes an ion. What charge does it get?", "Un átomo de sodio se convierte en ion. ¿Qué carga adquiere?"),
       bi("+1, because it loses one electron", "+1, porque pierde un electrón"),
       [
-        m("charge-sign-reversed", "−1, because it gains one electron", "−1, porque gana un electrón"),
+        m("charge-sign-reversed", "−1, because it gains one electron", "−1, porque recibe un electrón"),
         m("moves-protons", "+1, because it gains one proton", "+1, porque gana un protón"),
         m("ignores-ion", "No charge at all", "Ninguna carga"),
       ],
@@ -228,10 +228,10 @@ export const BONDING: Bank = {
     ),
     e(
       bi("Why do atoms form chemical bonds?", "¿Por qué los átomos forman enlaces químicos?"),
-      bi("To reach a more stable arrangement of outer electrons, often a full outer shell", "Para llegar a un arreglo más estable de electrones externos, muchas veces una capa externa llena"),
+      bi("To reach a more stable, full outer shell of electrons", "Para llegar a una capa externa de electrones llena y más estable"),
       [
         m("moves-protons", "To gain more protons", "Para ganar más protones"),
-        m("confused-with-nuclear", "To turn into a different element", "Para convertirse en otro elemento"),
+        m("confused-with-nuclear", "To change into a different element, with a new nucleus and new protons", "Para convertirse en un elemento distinto, con otro núcleo y otros protones"),
         m("invented-reason", "To become bigger atoms", "Para volverse átomos más grandes"),
       ],
       bi("Noble gases already have full outer shells, and they rarely bond.", "Los gases nobles ya tienen la capa externa llena, y casi nunca se enlazan."),
@@ -253,7 +253,7 @@ export const BONDING: Bank = {
     ),
     e(
       bi("How many electrons are shared in a double covalent bond?", "¿Cuántos electrones se comparten en un enlace covalente doble?"),
-      bi("4 (two pairs)", "4 (dos pares)"),
+      bi("4", "4"),
       [m("counted-pairs-not-electrons", "2", "2"), m("counted-full-shell", "8", "8"), m("counted-pairs-not-electrons", "1", "1")],
       bi("A single bond is one shared pair.", "Un enlace sencillo es un par compartido."),
       bi("Each bond is one pair, or 2 electrons, so a double bond shares 2 pairs, which is 4 electrons.", "Cada enlace es un par, o 2 electrones, así que un enlace doble comparte 2 pares, que son 4 electrones."),
@@ -273,7 +273,7 @@ export const BONDING: Bank = {
       bi("What holds the atoms together in a piece of copper?", "¿Qué mantiene unidos a los átomos de un trozo de cobre?"),
       bi("Metallic bonds: positive ions in a sea of shared electrons", "Enlaces metálicos: iones positivos en un mar de electrones compartidos"),
       [
-        m("metallic-ionic-mixup", "Ionic bonds between copper ions and chloride ions", "Enlaces iónicos entre iones de cobre e iones cloruro"),
+        m("metallic-ionic-mixup", "Ionic bonds between copper ions and chloride ions from the air", "Enlaces iónicos entre iones de cobre e iones cloruro que vienen del aire"),
         m("covalent-metallic-mixup", "Covalent bonds in small separate molecules", "Enlaces covalentes en moléculas pequeñas separadas"),
         m("invented-reason", "Magnetism between the atoms", "El magnetismo entre los átomos"),
       ],
@@ -306,8 +306,8 @@ const GAMMA = bi("Gamma rays", "Rayos gamma");
 export const NUCLEAR: Bank = {
   nudge: bi("Is something happening to the nucleus, or only to the electrons?", "¿Le pasa algo al núcleo o solo a los electrones?"),
   strategy: bi(
-    "Nuclear reactions change the nucleus and can turn one element into another. Fission splits a heavy nucleus; fusion joins light nuclei. Both turn a tiny amount of mass into a large amount of energy. Chemical reactions only rearrange electrons and atoms.",
-    "Las reacciones nucleares cambian el núcleo y pueden convertir un elemento en otro. La fisión divide un núcleo pesado; la fusión une núcleos ligeros. Las dos convierten una cantidad diminuta de masa en una gran cantidad de energía. Las reacciones químicas solo reacomodan electrones y átomos.",
+    "If the nucleus changes, ask whether it splits or joins, whether it ends up heavier or lighter, and whether its number of protons changes.",
+    "Si el núcleo cambia, pregúntate si se divide o se une, si queda más pesado o más ligero y si cambia su número de protones.",
   ),
   seconds: 25,
   items: [
@@ -315,7 +315,7 @@ export const NUCLEAR: Bank = {
       bi("What is nuclear fission?", "¿Qué es la fisión nuclear?"),
       bi("A heavy nucleus splits into smaller nuclei and releases energy.", "Un núcleo pesado se divide en núcleos más pequeños y libera energía."),
       [
-        m("fission-fusion-mixup", "Two light nuclei join to make a heavier one.", "Dos núcleos ligeros se unen para formar uno más pesado."),
+        m("fission-fusion-mixup", "Two light nuclei join to make a heavier one and release energy.", "Dos núcleos ligeros se unen para formar uno más pesado y liberan energía."),
         m("chemical-vs-nuclear", "An atom loses some of its electrons.", "Un átomo pierde algunos de sus electrones."),
         m("chemical-vs-nuclear", "Molecules break apart in a chemical reaction.", "Unas moléculas se separan en una reacción química."),
       ],
@@ -326,7 +326,7 @@ export const NUCLEAR: Bank = {
       bi("What is nuclear fusion?", "¿Qué es la fusión nuclear?"),
       bi("Light nuclei join to form a heavier nucleus and release energy.", "Núcleos ligeros se unen para formar un núcleo más pesado y liberan energía."),
       [
-        m("fission-fusion-mixup", "A heavy nucleus splits apart.", "Un núcleo pesado se divide."),
+        m("fission-fusion-mixup", "A heavy nucleus splits apart into smaller nuclei and releases energy.", "Un núcleo pesado se divide en dos núcleos más pequeños y así libera energía."),
         m("chemical-vs-nuclear", "Two atoms share electrons.", "Dos átomos comparten electrones."),
         m("chemical-vs-nuclear", "A solid melts into a liquid.", "Un sólido se derrite y se vuelve líquido."),
       ],
@@ -358,7 +358,7 @@ export const NUCLEAR: Bank = {
       bi("In a nuclear reaction, where does the released energy come from?", "En una reacción nuclear, ¿de dónde viene la energía que se libera?"),
       bi("A tiny amount of mass is changed into energy.", "Una cantidad diminuta de masa se convierte en energía."),
       [
-        m("chemical-vs-nuclear", "Electrons jumping between atoms", "Electrones que saltan entre átomos"),
+        m("chemical-vs-nuclear", "Electrons jumping from one atom to another in the fuel", "Electrones que saltan de un átomo a otro dentro del combustible"),
         m("invented-source", "Sunlight stored in the fuel", "Luz del Sol guardada en el combustible"),
         m("invented-source", "Friction between atoms", "La fricción entre los átomos"),
       ],
@@ -367,10 +367,10 @@ export const NUCLEAR: Bank = {
     ),
     e(
       bi("Why does fusion happen in the core of the Sun but not in a glass of water?", "¿Por qué ocurre la fusión en el núcleo del Sol pero no en un vaso de agua?"),
-      bi("Fusion needs extremely high temperature and pressure to push nuclei together.", "La fusión necesita temperaturas y presiones altísimas para juntar los núcleos."),
+      bi("Fusion needs extreme heat and pressure.", "La fusión necesita calor y presión extremos."),
       [
         m("invented-reason", "Water has no nuclei.", "El agua no tiene núcleos."),
-        m("fission-fusion-mixup", "Fusion works only with uranium.", "La fusión solo funciona con uranio."),
+        m("fission-fusion-mixup", "Fusion works only with heavy elements such as uranium.", "La fusión solo funciona con elementos pesados como el uranio."),
       ],
       bi("Nuclei are all positive, so they push each other away.", "Todos los núcleos son positivos, así que se repelen."),
       bi("Only at millions of degrees and huge pressure do nuclei move fast enough to overcome their repulsion and fuse.", "Solo a millones de grados y con una presión enorme los núcleos se mueven tan rápido que vencen su repulsión y se fusionan."),
@@ -398,7 +398,7 @@ export const NUCLEAR: Bank = {
     ),
     e(
       bi("A uranium-238 nucleus gives off an alpha particle. What happens to it?", "Un núcleo de uranio-238 emite una partícula alfa. ¿Qué le pasa?"),
-      bi("It becomes a different element, thorium-234.", "Se convierte en otro elemento, el torio-234."),
+      bi("It becomes thorium-234.", "Se convierte en torio-234."),
       [
         m("ignores-transmutation", "It stays uranium but gets heavier.", "Sigue siendo uranio, pero más pesado."),
         m("transmutation-direction", "It becomes uranium-239.", "Se convierte en uranio-239."),
@@ -411,7 +411,7 @@ export const NUCLEAR: Bank = {
       bi("What is a chain reaction in nuclear fission?", "¿Qué es una reacción en cadena en la fisión nuclear?"),
       bi("Neutrons released by one split cause more nuclei to split.", "Los neutrones que libera una división hacen que se dividan más núcleos."),
       [
-        m("chemical-vs-nuclear", "Electrons pass from atom to atom like a chain.", "Los electrones pasan de un átomo a otro como una cadena."),
+        m("chemical-vs-nuclear", "Electrons pass from one atom to the next like links in a chain.", "Los electrones pasan de un átomo al siguiente como los eslabones de una cadena."),
         m("fission-fusion-mixup", "Fission and fusion take turns.", "La fisión y la fusión se turnan."),
         m("chemical-vs-nuclear", "The fuel burns like a fuse.", "El combustible arde como una mecha."),
       ],
@@ -420,7 +420,7 @@ export const NUCLEAR: Bank = {
     ),
     e(
       bi("What is a major challenge of fission power plants?", "¿Cuál es un gran desafío de las plantas de energía por fisión?"),
-      bi("Used fuel stays radioactive for thousands of years and must be stored safely.", "El combustible usado sigue siendo radiactivo por miles de años y debe guardarse con seguridad."),
+      bi("Used fuel stays radioactive for thousands of years.", "El combustible usado sigue siendo radiactivo por miles de años."),
       [
         m("chemical-vs-nuclear", "They release large amounts of carbon dioxide while running.", "Liberan grandes cantidades de dióxido de carbono mientras funcionan."),
         m("chemical-vs-nuclear", "They use up the oxygen in the air.", "Gastan el oxígeno del aire."),
@@ -434,7 +434,7 @@ export const NUCLEAR: Bank = {
       [
         m("chemical-vs-nuclear", "New substances form.", "Se forman sustancias nuevas."),
         m("chemical-vs-nuclear", "Energy is released.", "Se libera energía."),
-        m("chemical-vs-nuclear", "Bonds between atoms break.", "Se rompen enlaces entre átomos."),
+        m("chemical-vs-nuclear", "Bonds between atoms break and new bonds form.", "Se rompen enlaces entre átomos y se forman otros."),
       ],
       bi("An element is set by the number of protons in its nucleus.", "Un elemento está definido por el número de protones de su núcleo."),
       bi("Chemical reactions rearrange atoms but never change their nuclei. Nuclear reactions change the number of protons, making a new element.", "Las reacciones químicas reacomodan los átomos pero nunca cambian sus núcleos. Las reacciones nucleares cambian el número de protones y forman un elemento nuevo."),
@@ -443,7 +443,7 @@ export const NUCLEAR: Bank = {
       bi("Doctors give patients tiny amounts of radioactive isotopes such as technetium-99m. What is the main reason?", "Los médicos dan a sus pacientes cantidades diminutas de isótopos radiactivos como el tecnecio-99m. ¿Cuál es la razón principal?"),
       bi("To make images of organs inside the body", "Para obtener imágenes de los órganos dentro del cuerpo"),
       [
-        m("invented-use", "To make the patient's bones stronger", "Para fortalecer los huesos del paciente"),
+        m("invented-use", "To make the patient's bones and muscles stronger", "Para fortalecer los huesos y los músculos del paciente"),
         m("invented-use", "To cool the patient's body", "Para enfriar el cuerpo del paciente"),
         m("invented-use", "To give the patient more energy", "Para darle más energía al paciente"),
       ],
