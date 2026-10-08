@@ -20,17 +20,29 @@ export const dotsPerRow = (groupCount: number, n: number) => (groupCount === 1 |
 /** The two strokes of an X over a counter that was taken away. */
 export const crossPath = (cx: number, cy: number, half: number) => `M${cx - half} ${cy - half} L${cx + half} ${cy + half} M${cx + half} ${cy - half} L${cx - half} ${cy + half}`;
 
-/** Counters in rows of five; groups side by side. The last `crossed` counters of the last group are taken away. */
-export function DotsVisual({ groups, crossed = 0, alt, tint }: P & { groups: number[]; crossed?: number }) {
-  const r = 11, gap = 6, cell = r * 2 + gap, groupGap = 28;
+/** Rough width of a group label at `size` px, so a long name gets room of its own. */
+export const labelWidth = (label: string, size: number) => [...label].length * size * 0.6;
+
+/**
+ * Counters in rows of five; groups side by side. The last `crossed` counters of the last group are
+ * taken away. `labels` puts a name or picture centred under each group.
+ */
+export function DotsVisual({ groups, crossed = 0, labels, alt, tint }: P & { groups: number[]; crossed?: number; labels?: string[] }) {
+  const r = 11, gap = 6, cell = r * 2 + gap, groupGap = 28, font = 14, labelH = labels ? 24 : 0;
   const perRow = (n: number) => dotsPerRow(groups.length, n);
-  const widths = groups.map((n) => Math.max(1, Math.min(n, perRow(n))) * cell - gap);
+  const dotsW = groups.map((n) => Math.max(1, Math.min(n, perRow(n))) * cell - gap);
+  const widths = dotsW.map((dw, g) => Math.max(dw, labels?.[g] ? labelWidth(labels[g], font) : 0));
   const rows = Math.max(1, ...groups.map((n) => Math.ceil(n / perRow(n))));
   const w = widths.reduce((a, b) => a + b, 0) + groupGap * (groups.length - 1) + 8;
-  const h = rows * cell - gap + 8;
-  const lefts = widths.map((_, g) => 4 + widths.slice(0, g).reduce((a, b) => a + b, 0) + groupGap * g);
+  const h = rows * cell - gap + 8 + labelH;
+  const lefts = widths.map((ww, g) => 4 + widths.slice(0, g).reduce((a, b) => a + b, 0) + groupGap * g + (ww - dotsW[g]) / 2);
   return (
     <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={alt} className="w-full" style={{ maxWidth: Math.min(w * 1.6, 420) }}>
+      {labels?.map((label, g) => (
+        <text key={`l${g}`} x={lefts[g] + dotsW[g] / 2} y={h - 6} textAnchor="middle" fontSize={font} fill={INK}>
+          {label}
+        </text>
+      ))}
       {groups.map((n, g) => {
         const left = lefts[g];
         const last = g === groups.length - 1;
