@@ -265,6 +265,14 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
     });
   });
 
+  it("misplaced modifiers: a misplaced only or solo is the same word moved, not a different word", () => {
+    each("e.modifiers", 1, (e, locale) => {
+      const limiter = locale === "en" ? "only" : "solo";
+      if (!words(e[1]).includes(limiter)) return;
+      for (const w of tagged(e, "misplaced-modifier")) expect(words(w), `${e[0]}: "${w}" drops ${limiter}`).toContain(limiter);
+    });
+  });
+
   it("confused words: the distractors really look or sound alike, and accent tags differ only by accents", () => {
     for (const level of [1, 2])
       each("e.confused.words", level, ([shown, right, wrong]) => {

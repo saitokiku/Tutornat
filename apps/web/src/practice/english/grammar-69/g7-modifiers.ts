@@ -22,7 +22,7 @@ const MISPLACED: Bi<Entry>[] = [
   },
   {
     en: ["The wallet was full of cash. Ana found it on the sidewalk.", "Ana found a wallet full of cash on the sidewalk.", [["Ana found a wallet on the sidewalk full of cash.", "misplaced-modifier"], ["Full of cash, Ana found a wallet on the sidewalk.", "misplaced-modifier"]], "What was full of cash?", "“Full of cash” goes right after “a wallet.”"],
-    es: ["Mía comió pizza y nada más.", "Mía comió solo pizza.", [["Solo Mía comió pizza.", "misplaced-modifier"], ["Mía comió la única pizza.", "misplaced-modifier"]], "¿Qué limita “solo”: quién comió, o qué comió?", "“Solo” va antes de “pizza”, porque la pizza fue lo único que comió."],
+    es: ["En la fiesta, Mía comió pizza y nada más.", "En la fiesta, Mía comió solo pizza.", [["En la fiesta, solo Mía comió pizza.", "misplaced-modifier"], ["Solo en la fiesta Mía comió pizza.", "misplaced-modifier"]], "¿Qué limita “solo”: quién comió, dónde comió o qué comió?", "“Solo” va antes de “pizza”, porque la pizza fue lo único que comió."],
   },
   {
     en: ["The cookies were warm from the oven. The baker handed them to the children.", "The baker handed the cookies, warm from the oven, to the children.", [["The baker handed the cookies to the children warm from the oven.", "misplaced-modifier"], ["Warm from the oven, the baker handed the cookies to the children.", "misplaced-modifier"]], "What was warm from the oven?", "“Warm from the oven” goes right after “the cookies.”"],
