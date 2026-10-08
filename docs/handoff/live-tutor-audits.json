@@ -1,0 +1,555 @@
+{
+ "audit:attention": {
+  "verdict": "Fixable. The \"moving attention\" part does not exist yet, though. Nothing that glides, follows speech or acts as a cursor has been built, and none of it is wired into a screen: no SpotlightLayer is mounted and TutorChat still uses the old useVoice.ts. The spotlight engine is a static pointer: it lights one thing, or runs a tour the learner clicks through with Back and Next. Its id model, honesty guard, clipping, caption placement and a11y can be kept. Its timing model cannot. Calling the obvious API (spot() or stepSpot() once per sentence) makes the screen flicker by design. Each call remounts the ring, which fades in, scales and pulses twice (about 2.5 s), remounts the caption, fades the dim scrim back in when dim is on, posts a new screen-reader announcement and may scroll the page. The voice layer at fbf54bf has the raw parts for sync: word timings from ElevenLabs alignment, word boundaries from the browser voice, and a sentence feed. But SpeechOut only gives a word index at the moment the word plays. It has no sentence event and no look-ahead. Its ElevenLabs word counting rests on an untested whitespace assumption (the tests only use made-up alignment data). There is no contract that ties a point_at call, a demo hint or a narration line to a moment in speech. The documented wiring fires the glow as soon as the tool input arrives, unrelated to the voice. Around it, the screens use three other speech paths that bypass lib/voice. The browser-voice picker, checked live on this Mac in Chrome 152, gives Spanish learners \"Eddy (Spanish (Spain))\", a robotic voice with a Spain accent, while Paulina (es-MX) goes unused. Two parts are needed: (1) a reply timeline and cue scheduler that use the speaking voice as the one clock, and (2) a pointing session that stays mounted between targets, with a ring that morphs and a small cursor dot. The plan's \"glow lands on what is being said as it is said\" works at sentence level for the AI tutor. Word level works only for content built in code: demo hints and authored lesson cues.",
+  "findings": [
+   {
+    "severity": "blocker",
+    "where": "apps/web/src/components/spotlight/SpotlightLayer.tsx:75 (<Lit key={live.session}>), :201/:212 (ring key={pulse}); apps/web/src/components/spotlight/styles.ts:16-20; apps/web/src/lib/spotlight.ts:470-477, 565-581 (begin)",
+    "problem": "Nothing can glide. Every spot() starts a new session, which remounts Lit, so the ring re-enters (420 ms fade+scale, then two 1100 ms pulses), the caption remounts (opacity 0, re-measure, fade in), the polite region re-announces and reveal() may scroll. stepSpot() keeps the session but changes the ring's key, so it remounts at the new spot. The caption's translate has no transition, so it snaps. Spotting the same id twice also restarts everything. A cue every 1.5-2.5 s means the ring is always pulsing and the caption always blinking. That is flicker by construction. There is no cursor element at all.",
+    "fix": "Add a pointing session with moves (spotPath(cues) / moveSpot(id), same session, nonce only on the first arrival). The ring stays mounted for the session. On a move it tweens from the old box to the live new box in requestAnimationFrame: pos = lerp(from, liveTo, ease(t)), reading the destination every frame so scrolling mid-glide stays correct. Use no CSS transition on plain tracking updates. One pulse at the first arrival per reply, none after. Moving to the target already lit does nothing."
+   },
+   {
+    "severity": "blocker",
+    "where": "docs/spotlight.md:322 (wiring step 5) + apps/web/src/lib/ai/spot-tool.ts:77-91; apps/web/src/lib/voice/types.ts:52 (onBoundary only)",
+    "problem": "There is no sync contract. As documented, runSpotFromToolPart runs on every messages change and lights the target as soon as the tool input is complete. That is when the text streams in, often several seconds before the voice reaches that sentence, or after it. SpeechOut gives the screen nothing to schedule against: no sentence-start event, no look-ahead, no shared clock. useVoiceSession exposes only `word` as React state.",
+    "fix": "Add SpeechOut.onSentence((index, leadMs) => \u2026). Browser voice: emit at utterance onstart with leadMs 0. ElevenLabs: emit when the first audio chunk holding that sentence's first aligned character is scheduled, with leadMs = (start \u2212 ctx.currentTime + (ctx.outputLatency || 0)) \u00d7 1000. Add a pure ReplyTimeline that owns the reply's sentenceFeed, so cue sentence numbers match what the voice speaks by construction. Cues fire from that timeline, not from the message render effect."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/components/tutor/TutorDrawer.tsx:19-29 (ctx only changes on open/close), apps/web/src/components/practice/Runner.tsx:228 (only dock.open), apps/web/src/components/spotlight/SpotAgain.tsx:23",
+    "problem": "Pointing outlives its problem. On desktop the drawer stays open, still keyed to the old item, after Next. Practice ids are positional: practice.prompt.part.0.bottom names the same slot on every problem. So a later point_at from the old conversation, a 'Show me again' chip, or any scheduled cue lights the new problem's part, with a caption about the old one ('the bottom number is 6'). Clearing the spot on item change (wiring step 7) does not stop later cues. This is false information about the problem, and with voice the tutor keeps talking about a problem that is gone.",
+    "fix": "Give every cue and every point_at result an epoch: route + item.id (or scene.id) + message id. Drop the cue, and make SpotAgain inert, when the epoch differs. Close or re-key the drawer when the item changes, and cancel speech plus pending cues on item or scene change."
+   },
+   {
+    "severity": "major",
+    "where": "docs/spotlight.md:262-270 (visual.clock.number.<n>, visual.numberline.tick.<k>, visual.tenframe.cell.<k>, visual.dots.group.<g>, visual.coord.point.<i>), apps/web/src/lib/spot-hints.ts:131-150 (answerSpots guards only pads and choices)",
+    "problem": "Moving attention opens a new way to give answers away. A tutor's natural gesture is counting along: tick, tick, tick, land. A voice-timed sequence over number-line ticks, ten-frame cells, dots or clock numbers that ends on the marker or hand is the answer to a read-off item. A single point at the clock number under the hour hand is the answer too. None of these are guarded while an item is up. The AI only sees item.say, so it cannot even tell which part is safe; any such point is a guess, and a lucky guess gives the answer away.",
+    "fix": "While an item is up, guard the parts that carry values (clock numbers, numbered ticks, ten-frame cells, dot groups and rows, coordinate points). Leave the structural parts pointable: hands, columns, marker, a given fraction's top and bottom, the empty answer slot. Those are exactly what hintSpot produces. Allow counting along only on a similar_problem card or after the item is answered. Add a test that runs every item's possible point_at targets against the extended guard."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/spotlight.ts:480-489 (spotSteps dim ?? true), :496-503 (reveal per step), :550-552 (checkSpot advances when a target vanishes); apps/web/src/lib/ai/spot-tool.ts:84",
+    "problem": "point_at with steps runs as a dimmed tour the learner clicks through: the scrim darkens the page, there is a '2 of 4' counter and Back/Next, every step can scroll, and the tour moves on by itself when a target disappears. None of that fits a voice that is already moving the learner along. Each step's caption repeats the spoken words and covers the page, and the last caption stays until someone taps 'Got it'.",
+    "fix": "Add a voice mode for sessions: no caption bubble (the caption becomes a hidden aria-describedby node and the chip's description), no dim, no counter, no auto-advance when a target vanishes, at most one scroll per reply (at the first cue). Later off-screen targets get the edge chip instead of a yank. Keep the click-through tour only when voice is off."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/chunk.ts:28 (decide \u2192 'wait' at end of buffer); apps/web/src/components/tutor/TutorChat.tsx:94 (text parts joined with \"\")",
+    "problem": "The sentence a point_at belongs to is held back. The chunker never sends the last sentence of a text part until more text arrives. With point_at, next_hint or show_visual in the middle of a reply, 'Look at the bottom number.' stays silent until the next model step starts streaming, a full round trip later. TutorChat also joins text parts with nothing between them, so steps run together ('number.What'). That kills the sentence split, misplaces the anchor, and moves word highlights off by one word at every step boundary.",
+    "fix": "Build the timeline from message.parts in order. When a text part reaches state 'done', write \"\\n\" to the feed to flush it. Join display text across parts with \"\\n\". Use step-start parts to decide which step a tool part belongs to."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/ai/spot-tool.ts:28 (execute echoes) + apps/web/src/lib/ai/tutor.ts:59-60 (stopWhen isStepCount(5))",
+    "problem": "Every point_at costs an extra model step. The tool runs, then the SDK calls the model again for the rest of the reply. If that second call's first sentence does not arrive before the first sentence finishes playing, the voice stops mid-turn, which sounds unnatural. Not measured. Short replies (two sentences plus a question) make it likely.",
+    "fix": "Measure the gap between steps on the real model. If it exceeds about 400 ms: let the model write all its words, then call point_at, possibly several times in parallel, at the end of the step. Add an optional `with` field: the exact opening words of the sentence the point goes with, matched against the reply's sentences after normalising, falling back to part order. Use a custom stopWhen that ends the loop when a step's only tools were board tools."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/elevenlabs.ts:204-215 (word counted at each space\u2192non-space change), :211 (index clamped); elevenlabs.test.ts:63-64 + fakes.ts:109 (made-up alignment)",
+    "problem": "Word boundaries assume the space between sentences appears in the alignment characters between flushes. The tests only feed made-up chunks like alignmentFor('Your turn. '). If the service trims that space, sentence n+1's first word is never counted. From then on every boundary lags one word per sentence, and the sentence-start signal arrives a word late. The clamp at :211 hides the drift instead of exposing it. Plausible, not confirmed against the real service.",
+    "fix": "Walk a cursor over the known spoken text's non-space characters. Each non-space alignment character moves it forward, and the word index is the word that holds the cursor. Use `alignment` only, never normalizedAlignment. Save a real ElevenLabs Flash v2.5 response for a three-sentence reply as a test fixture."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/elevenlabs.ts:182 (boundaries fire at ctx.currentTime), :197",
+    "problem": "There is no look-ahead and no output-latency correction. ElevenLabs schedules audio ahead, so word times are known early, but they only fire when the word plays. A 300-500 ms glide started at the word arrives after the word. Bluetooth output (AirPods, speakers) adds 100-300 ms that ctx.currentTime does not count.",
+    "fix": "Expose leadMs through onSentence (and optionally onWordScheduled). Start the glide at sentence start \u2212 glideMs \u2212 120 ms, so the cursor lands just before the word, the way a hand leads speech. Subtract ctx.outputLatency where reported."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/components/tutor/TutorDrawer.tsx:51 (phone sheet max-h-[80dvh], z-40); apps/web/src/components/spotlight/SpotlightLayer.tsx:225; docs/spotlight.md:374-376",
+    "problem": "Phones, the most common case for practice help: the drawer covers most of the problem. Targets outside it are correctly drawn under the sheet, so they cannot be seen. In voice mode with no caption bar, the learner gets no sign anything is lit. Wiring step 10 lowers the sheet per spot, which during a voice sequence would bounce the sheet every sentence.",
+    "fix": "Lower the sheet to a peek (\u2264 35% of the height) once, at the first cue of a pointing reply. Restore it when the final hold ends or the learner acts. Keep the direction chip when the target is off-view, even without a caption."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/components/spotlight/SpotlightLayer.tsx:53-66 (live region per spot and per step)",
+    "problem": "A screen reader hears two voices. Each cue or step posts a polite announcement ('Step 2 of 4: \u2026', 'Your tutor is pointing at \u2026') while the TTS voice is saying the same thing. A five-cue reply queues five announcements over the tutor's voice.",
+    "fix": "When the voice is speaking the reply, the move announcements stay silent; the reply already names the target, as SPOT_GUIDE requires. When the voice is off, announce once per cue, at least 1.5 s apart. Keep aria-describedby on the target."
+   },
+   {
+    "severity": "major",
+    "where": "docs/spotlight.md:251-253 (cards and worked copies get no spot prefix), apps/web/src/components/tutor/TutorChat.tsx:377-385",
+    "problem": "The AI cannot point at parts of its own drawing. K-2 is told to 'lead with a picture (show_visual)', but board cards carry no part ids, only tutor.card.<i> for the whole card. 'Look at these two shaded parts' cannot glow, so the main K-2 voice moment has no moving attention.",
+    "fix": "Give the latest show_visual card a board.visual.<kind> prefix with the same part ids as the problem visuals, and list them in visibleSpots. Older cards carry none, so ids stay unique. There is no honesty risk: the drawing is the model's own example."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/browser.ts:13-18 (pickVoice); apps/web/src/components/stage/useSpeech.ts:24 (voiceFor); apps/web/src/components/tutor/useVoice.ts:45",
+    "problem": "Checked live in Chrome 152 on this Mac: for Spanish, both pickers choose 'Eddy (Spanish (Spain))', a robotic voice with a Spain accent. There is no es-US voice, so every es-* voice ties and list order wins. Paulina (es-MX) is never chosen, even though the product promises neutral Latin-American Spanish. Joke voices (Albert, Bad News, Bubbles, Zarvox\u2026) and old robotic ones (Fred, Junior, Ralph, Eddy/Flo/Grandma\u2026) are never excluded. English happens to get Samantha only because she is first in the list. There are three separate pickers, so one screen can use two different voices. This is the fallback for the ElevenLabs path too.",
+    "fix": "One picker for the whole app. Exclude the joke and old robotic voices by name. Rank Spanish regions es-US/es-MX/es-419 above es-ES. Prefer names with Premium/Enhanced/Natural/Neural/Online, then the system default voice for the language. Hands-free conversation only with a natural voice (select.ts:62-74 currently allows it with any browser voice, against the plan)."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/components/stage/hear.tsx:29-40 (speakText: global speechSynthesis.cancel + its own voice); apps/web/src/components/spotlight/SpotlightLayer.tsx:329-334 (K-2 Hear in caption); apps/web/src/components/stage/useSpeech.ts",
+    "problem": "No single owner of audio. Hear, lesson narration and the old tutor reader each drive speechSynthesis directly. Tapping Hear cuts off the browser fallback but not ElevenLabs audio, so the two can talk at once. The tutor also changes voice between chat (ElevenLabs) and lessons or the caption speaker (browser). Narration is a separate system with no SpeechOut, so lesson cues cannot share the tutor's clock.",
+    "fix": "Send every read-aloud through one SpeechOut owner per page, using the claimVoice idea but for SpeechOut. Move useSpeech's segment narration onto SpeechOut: pass segments as an iterable, one sentence each, and map word index to a segment by running word counts. Drop the caption speaker when the voice is already saying the caption."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/components/stage/scenes.tsx:41-52 (Figure)",
+    "problem": "While a picture's alt text is read aloud, the narrated figure draws its own ring-2 ring-accent/60 and inserts a figcaption. That is a second glow style next to 'the one sanctioned halo', and a layout shift that moves the very target a cursor would be gliding to.",
+    "fix": "Let narration light figures through the spotlight engine, and drop the ad-hoc ring. Reserve the figcaption's space and toggle its visibility, so nothing shifts."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/components/spotlight/SpotlightLayer.tsx:142-148 (MutationObserver on body, characterData), :113 (full measure every frame)",
+    "problem": "While a target is lit, every DOM change outside the layer (the word highlight moving each word, streaming tokens) starts 12 frames of a full measure(): querySelectorAll(KEEP), elementsFromPoint \u00d72, ancestor getComputedStyle. That is constant layout work during exactly the voice + glow case, which can make glides stutter on low-end tablets.",
+    "fix": "Read the target's rect and the viewport first, and run the caption placement and clip work only when they changed. Ignore mutations inside [data-spot-still] containers (transcript, narrated text)."
+   },
+   {
+    "severity": "minor",
+    "where": "docs/spotlight.md:212, 251-257 ('first one that is shown wins'; one visual.<kind> per screen)",
+    "problem": "Narration cannot point at the second picture of the same kind on a slide (a before/after pair): both are visual.fraction and the first one wins.",
+    "fix": "Mark each slide block wrapper stage.block.<i>, and give visuals a per-block prefix (stage.block.<i>.visual.*) on the stage."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/lib/voice/server.ts:20 (DEFAULT_VOICE 'JBFqnCBsd6RMkjVDRZzb'), :95-96",
+    "problem": "With no env voice set, both English and Spanish get the same stock ElevenLabs voice (George, a British male narrator) on Flash v2.5. Spanish comes out with an English accent, the wrong persona for K-9 US families. Flash v2.5 cannot apply its own number normalisation outside Enterprise, and speakable() leaves digits as they are.",
+    "fix": "Fail closed to the browser path unless ELEVENLABS_VOICE_ID and ELEVENLABS_VOICE_ID_ES are set to voices chosen and listened to (a native Latin-American Spanish voice). In speakable, say multi-digit numbers, decimals and times in words for both locales."
+   }
+  ],
+  "recommendations": [
+   "Sync contract, AI tutor: cue = { id, say?, sentence, epoch }. The sentence is the last one completed in the same step before the point_at part (the text part must be 'done'). If that step has no text before the tool, it is the first sentence after it. steps[k] go to sentence + k only while the reply has that sentence. Steps left over are not played; they are offered as a Next after speech ends. No word-level anchor markup in model text: it leaks into the transcript, saved threads, the safety screen and the TTS, and breaks the chunker mid-stream.",
+   "Sync contract, demo tutor: build the reply as an array of sentences in code (opening line, then the hint), so cue.sentence is exact. id = hintSpot(item, rung). With voice on, show no caption (the voice says the hint). Show-how pointing goes on the noMoreHints / 'answer' sentence. Word-level timing here comes from a character offset into code-built text, never from markup.",
+   "Sync contract, lesson narration: cue by segment key plus an optional character offset, using pos.key and pos.start from NarrationContext (or SpeechOut once narration moves to it). Automatic cues: segment v{i} goes to that block's visual. Authored cues live in scene data as { segment, spot, word? } and are checked at build time against the segment text and the id list. Quiz choices stay word-highlight only (they are guarded).",
+   "Clock rule: start the glide at sentence start \u2212 glideMs \u2212 120 ms when leadMs is known, otherwise at sentence start. If speech is more than 1 sentence past the anchor, do not fire; keep 'Show me again'. At fire time, re-check epoch, isConnected/isShown and the guard, and drop the cue silently if any fails.",
+   "Pacing: glideMs = clamp(250 + 0.35 \u00d7 distance in px, 280, 560), ease cubic-bezier(0.2, 0, 0, 1). Minimum dwell 900 ms (K-2: 1200 ms); cues that come sooner wait or merge. At most 1 move per sentence and 5 targets per reply. One pulse, at the first arrival only. The final target stays lit through the learner's turn. After 6 s it drops to a resting state (60% opacity, no outer glow), and it clears on the learner's next turn or action, Escape, or a change of item, scene or route.",
+   "Cancel all remaining cues on barge-in (converse onBargeIn), on speech cancel (onEnd cancelled), when the learner uses any control, and on epoch change. Do not cancel speech just because the learner tapped the target.",
+   "Cursor: a 12 px rose dot (var(--color-accent)) with a 2 px var(--color-panel) ring and a soft shadow, on top of the ring. Never an arrow or anything shaped like the system mouse pointer: two pointers would read as someone remote-controlling the computer. It sits 4 px outside the ring on the side it arrived from and away from guarded boxes, never over the content being explained. aria-hidden. No idle drift, no 'thinking' scan of the problem. It fades out 200 ms after a cue ends.",
+   "Honesty in motion: if the straight path from one target to the next crosses a guarded box, or is longer than 60% of the viewport diagonal, fade out and back in instead of travelling. No counting-along sequences over parts that carry values while an item is up. Every cue and every SpotAgain carries its epoch.",
+   "Reduced motion: no cursor at all, no pulse, ring crossfade 150 ms, instant scroll. Dwell and hold stay the same. Forced colors: dot in Highlight with a CanvasText border; keep the dashed ring.",
+   "Phones (< 640 px): peek the tutor sheet to \u2264 35% height once per pointing reply and restore it after the hold. No docked caption bar while the voice is on. Show the direction chip whenever the target is off-view. Keep the existing rule of no scrolling while the learner is typing.",
+   "Screen readers: while the voice speaks the reply, the moves post no live-region announcements. With the voice off, one polite announcement per cue, at least 1.5 s apart. The target's aria-describedby still points to the hidden caption.",
+   "Engine API to add: spotPath(cues, { voice: true, epoch }), moveSpot(index), holdSpotRest(). Keep spot() and spotSteps() for no-voice use. The layer keeps one ring and one dot mounted per session. Caption and dim are off in voice mode.",
+   "Voice layer: add SpeechOut.onSentence(index, leadMs). Replace the space-change word counting with a cursor over the known spoken text's characters. Account for ctx.outputLatency. Save a real ElevenLabs alignment response for a 3-sentence reply as a test fixture. Have useVoiceSession expose a subscription for the scheduler instead of only `word` state.",
+   "TutorChat: build the reply timeline from message.parts in order. Flush the feed with \"\\n\" when a text part is 'done'. Join display text with \"\\n\". Use step-start parts to place each tool part in its step. Measure the silence between model steps, and if it goes over 400 ms, move to text-first, parallel point_at at the end of the step, plus a `with` quote and a stopWhen that ends after board-only tools.",
+   "Give the latest show_visual card board.visual.* part ids, so the K-2 'lead with a picture' turns can point at parts of the picture.",
+   "Voice selection (checked live: Spanish gets 'Eddy (Spanish (Spain))'): one picker for the app. Exclude joke and old robotic voices by name; rank Spanish es-US/es-MX/es-419 above es-ES; prefer Premium/Enhanced/Natural/Online voices; one audio owner for Hear, narration and the tutor; hands-free only with a natural voice; ElevenLabs voice ids per locale required, not defaulted to George.",
+   "Prove it in this order: (1) lesson narration cues (segment-level clock already exists) behind a flag; (2) demo-tutor hint cues; (3) AI point_at. Write pure scheduler tests with a fake clock (dwell, merging, epoch drop, barge-in cancel, guarded path). Then a hands-on pass on desktop Chrome, Safari and a phone with a Bluetooth headset, checking the glow lands within 0-200 ms before the referenced word."
+  ]
+ },
+ "audit:realtime": {
+  "verdict": "Fixable, and currently far from the owner's bar. The low-level pieces in fbf54bf are competent: sentence chunker, Deepgram/ElevenLabs adapters with server-minted tokens, mic capture that buffers audio while the socket opens, a backchannel list, a turn tracker, and a browser fallback. That foundation is worth keeping. Everything that would make the tutor feel live is missing: there is no conversation state machine (the plan's lib/voice/conversation.ts and useTutorVoice), no \"thinking\" state, no tutor cursor, and nothing ties the glow to speech. Nothing is wired into a screen either. Production still runs components/tutor/useVoice.ts, which uses the first browser voice whose language matches and push-to-talk with continuous=false, so it ends at the first pause.\n\nSeveral core turn-taking rules are wrong, and I confirmed them by running the pure modules in a scratch harness:\n- After the tutor stops talking, its own echo gets sent back to it as the learner's turn. Every tutor turn ends with a question, so this happens on the question.\n- A child's answer that repeats the tutor's words (\"three fourths\" after \"Is it three fourths or two fourths?\") is classed as echo. It never interrupts the tutor and is thrown away if the tutor is still speaking.\n- A \"yes\" spoken while the tutor is still talking is dropped as a backchannel.\n- The slower end-of-turn timing for K\u20135 is skipped because Deepgram puts a period on mid-thought fragments. \"I think it's twelve.\" ended the turn 1.05 s after the last word even with the young-learner setting.\n\nLatency: from the learner's last word to the first tutor sound is about 2.3 s at best, about 4 s on a typical answer turn, and 5\u20136 s with a cold server function or a young child's longer pause. The biggest single cost is that the rules make the model call check_answer or next_hint first, which means two model calls in a row.\n\nThe quality bar in plan \u00a76 (\"first audio < 1.5 s after a reply starts\") starts the clock after the slowest parts, so it hides the problem. The \"< 300 ms barge-in\" bar can't be met as designed: an interruption only counts once a transcribed word arrives, and Deepgram sends partial results about once a second.\n\nSpoken answers will be marked wrong by code: parseNumber has no number words and practice/spoken.ts doesn't exist. The default voice is George, a British narrator, and it is also used for Spanish when no Spanish voice is set.\n\nBottom line: keep the adapters. Rebuild the turn-taking policy, the latency path and the glow/cursor-to-speech sync before anyone hears this.",
+  "findings": [
+   {
+    "severity": "blocker",
+    "where": "apps/web/src/lib/voice/converse.ts:57-66 (onEndOfTurn), bargein.ts:20-25; session.ts:83",
+    "problem": "Echo is only filtered when `wasSpeaking` is true at the moment the turn ends. The tracker ends a turn 0.7\u20131.2 s after the last transcript, and by then the tutor's audio has usually finished. So the tutor's own echoed last sentence (always a question, by the prompt rules) becomes the learner's turn, and the tutor answers itself. Confirmed in a harness: converse({..}) with output idle at turn end \u2192 onTurn('What do you think?'). The same echo also shows up as the learner's live caption, because session.ts sets `heard` from every partial with no echo check. Browser acoustic echo cancellation is not a guarantee here: speechSynthesis plays through the OS, and Chrome does not reliably cancel Web Audio playback on every platform.",
+    "fix": "Keep echo screening on for an echo tail of about 1500 ms after the last scheduled audio sample ends. Compare against all of the reply's spoken words, not only the last 40. Also gate on time: map Deepgram word start times to the AudioContext clock and treat words that started inside a tutor playback window, and match tutor words, as echo. Don't show partials as the learner's caption while the tutor is speaking until they pass this check."
+   },
+   {
+    "severity": "blocker",
+    "where": "apps/web/src/lib/voice/bargein.ts:20-25, converse.ts:62-63, backchannel.ts:21",
+    "problem": "A child's answer that reuses the tutor's words is classed as echo: 2+ words with 80% or more overlap. Harness result: 'three fourths' / 'two fourths' / 'is it three fourths' against 'Is it three fourths or two fourths?' all give echo, so no barge-in, and the answer is dropped if the tutor is still speaking at turn end. 'yes', 'ok' and 's\u00ed' are backchannels and are also dropped while the tutor speaks. Since every tutor turn ends with a question and children answer before it finishes, the tutor talks over the child and then ignores the answer. That breaks the plan's own rule 'never talks over the learner'.",
+    "fix": "Use timing as well as words. If the current tutor sentence ends with '?' and the learner started speaking within the last 1.5 s of that sentence or after it, treat any utterance as a turn: backchannel, echo-looking or not. Fade the tutor's remaining \u22641 s out (duck) instead of dropping the child. Only discard words as echo when time-gating also says echo."
+   },
+   {
+    "severity": "blocker",
+    "where": "apps/web/src/lib/ai/tutor.ts:55-62 + prompts.ts RULES ('Check anything the learner says with check_answer'); plan line 394",
+    "problem": "Latency from last word to first sound, vendor path, warm:\n- end of turn: 1.0\u20131.2 s (Deepgram UtteranceEnd at 1000 ms, or speech_final arriving at about 0.45 s plus 700 ms of silence)\n- POST /api/tutor: 0.1\u20130.2 s (a cold function adds 0.5\u20131.5 s)\n- model time to first token: 0.6\u20131.5 s\n- for any answer turn, the rules force a tool call first: +0.3\u20130.6 s of tool-call tokens, then a second request with its own time to first token of 0.6\u20131.2 s\n- the first sentence is only released when the next sentence starts: +0.1\u20130.4 s\n- ElevenLabs Flash first audio chunk: 0.2\u20130.4 s\nTotal: about 2.3 s at best, about 4 s on a typical answer turn, 5\u20136 s cold or with a young child's open-ended pause. The \u00a76 bar ('first audio < 1.5 s after a reply starts') starts the clock after end-of-turn, the model wait and the tool round trip, so it passes while the experience feels slow.",
+    "fix": "Remove the tool round trip from voice turns: parse and check the spoken answer in code before calling the model, and pass the verdict and the next vetted hint in the context, so it is a single model call (saves 0.9\u20131.8 s). Re-state the bar as: learner's last word end (Deepgram word timestamp) to first audible tutor sample, p50 \u2264 1.6 s, p90 \u2264 2.5 s. Log each segment separately."
+   },
+   {
+    "severity": "blocker",
+    "where": "apps/web/src/practice/answer.ts:14-40 (parseNumber/check); plan line 'practice/spoken.ts' (does not exist)",
+    "problem": "Speech recognition returns 'Three fourths.', 'It's twelve.', 'Twelve?' or 'doce'. parseNumber accepts only digits, so all of these return null and check() returns correct:false. A correct spoken answer is marked wrong by code, and the tutor tells the child 'not yet'. check_answer is told to pass 'exactly what the learner said'.",
+    "fix": "Build practice/spoken.ts (EN/ES number words, fractions like 'three fourths' / 'tres cuartos', 'half past three', negatives, 'and a half', choice labels, and leading phrases like 'I think it's' / 'es') before any voice answering ships. Run it on the final transcript before check(). If it can't parse, ask the learner to repeat or show the parsed reading; never mark the answer wrong."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/turn.ts:111 (UtteranceEnd shortcut), turn.ts:20-22, deepgram.ts:36-39",
+    "problem": "For any text ending in . ? or !, the UtteranceEnd shortcut ends the turn about 1.0 s after the last word, whatever the age band. Deepgram (punctuate + smart_format, endpointing 300) puts periods on mid-thought fragments, so TURN_YOUNG's 1100/2000/4500 ms windows are mostly skipped. Harness: 'I think it's twelve.' with TURN_YOUNG ended 1.05 s after the last word. Children's planning pauses inside a turn often run over 1 s, so K\u20135 children get cut off. Also, Deepgram filler_words is English-only, so Spanish 'este/eh' never arrives and the 'hold' extension never applies in Spanish.",
+    "fix": "Turn off the UtteranceEnd shortcut for K\u20135. Wait times by band:\n- K\u20132: 2.0 s open, 0.7 s once the transcript parses as a complete answer to the pending question type, 4.0 s after a filler or joining word\n- 3\u20135: 1.4 / 0.6 / 3.0 s\n- 6\u20139: 0.9 / 0.5 / 2.5 s\nDeepgram: endpointing 500 and utterance_end_ms 1500 for K\u20135. Alternatively use Deepgram Flux for English (eot_threshold 0.8 for kids, eot_timeout_ms 4000) and flux-general-multi with en/es hints. Time silence from Deepgram word end times, not from when the message arrives. Show a visible 'still listening' ring that starts draining at half the window, plus a 'Done' tap."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/converse.ts:34-45, bargein.ts:7, elevenlabs.ts:196 (src.connect(c.destination))",
+    "problem": "An interruption only counts once a partial transcript contains a word that isn't a backchannel. Deepgram documents interim results as arriving about every 1 s, so real stop latency is about 0.6\u20131.3 s after the child starts, not 300 ms. There is no ducking while that decision is pending, so the tutor talks over the child for up to a second. Sources connect straight to the destination with no GainNode, so stop() cuts audio abruptly with a click.",
+    "fix": "Fade-then-decide. Within 150 ms of local voice detection, duck to \u221215 dB. Local detection: mic level \u2265 noise floor + 12 dB for \u2265 120 ms that doesn't follow the known tutor output envelope, or Deepgram SpeechStarted. Cancel with a 20 ms gain ramp on the first word that isn't a backchannel or echo. Restore over 300 ms if no such word arrives within 800 ms. Put a GainNode on each run. New bar: duck \u2264 150 ms, stop \u2264 700 ms."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/elevenlabs.ts:179-185 (tick), 275-308 (connect), 310-351 (drive); browser.ts fallback",
+    "problem": "There is no first-audio deadline and no stall watchdog, so the tutor can stay 'speaking' forever:\n(a) if the caller never calls feed.end()/abort() (LLM stream error, useChat stop, unmount), `drive` waits forever, closeSent/finalReceived never happen, and the fallback's queue never ends either;\n(b) iOS AudioContext state 'interrupted' (after a call, Siri, or switching apps) isn't checked: currentTime freezes, so `t >= lastEnd` is never true;\n(c) if the ElevenLabs server stalls, it only closes after inactivity_timeout=60 s.\nWhile stuck, converse.speaking() is true, so 'yes'/'ok' are dropped and echo filtering keeps running.",
+    "fix": "Add these checks:\n- a first-audio deadline 2.0 s after the first sentence is sent: one reconnect, then fall back\n- end the run if audio has drained and no new text arrived for 8 s\n- treat ctx.state !== 'running' and currentTime not advancing for 500 ms while audio is scheduled as a failure\n- tie the feed's lifetime to the request's AbortSignal inside the session so the caller can't forget to close it"
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/elevenlabs.ts:391-404 (warm), mic.ts:109-115, session.ts:115-118,169",
+    "problem": "Mobile Safari problems:\n(1) Web Audio uses iOS's default 'ambient' audio session, which the ringer/silent switch mutes. The tutor is silent with no error and no fallback, and children's devices are often on silent.\n(2) navigator.audioSession is never set. In hands-free mode, mic plus playback moves to play-and-record, where output gets quieter or routes oddly.\n(3) mic.ts creates a second AudioContext and waits on ctx.resume() with no timeout, although elevenlabs.ts's own comment says resume() 'may then never settle'. start() can hang with the UI showing listening.\n(4) session.warm() is `v?.out?.warm()` and session.say() is a no-op until voice() resolves (a /api/voice/status round trip). A tap before then loses the audio unlock, and the K\u20132 'tutor speaks first' line is skipped silently.",
+    "fix": "- Feature-detect navigator.audioSession: set 'playback' for read-aloud and 'play-and-record' in hands-free. Without it, start a looping near-silent <audio> element on the first tap.\n- Use one shared AudioContext for mic and TTS.\n- Time out resume() at 300 ms in mic.ts and show 'Tap to start the microphone'.\n- Make warm() work before ready (create and unlock the context in the tap regardless of voice()).\n- Queue say() until ready instead of resolving silently.\n- Cache voice status for the session."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/server.ts:20,96; speakable.ts:56-103; elevenlabs.ts:245-260; browser.ts:13-18; select.ts:60-75; components/stage/hear.tsx:29-40",
+    "problem": "The voice will sound fake or switch voices:\n- The default voice JBFqnCBsd6RMkjVDRZzb (George, British narrator) is used for US children, and also for Spanish when ELEVENLABS_VOICE_ID_ES is unset.\n- Flash v2.5 text normalization is Enterprise-only, and speakable leaves digits alone. Harness: '-2' stays '-2' (the plan says 'negative two'); '3:15', '3.75', '1,250', '$3.50', '50%', '2nd' and Spanish '1.250' pass through unchanged; 'A = l \u00d7 w' becomes 'A equals l w' (the 'times' is dropped).\n- If ElevenLabs fails mid-reply, the browser voice takes over in the middle of the reply.\n- Hear buttons and stage narration use speechSynthesis directly, so one tutor has two voices, and they can overlap.\n- pickVoice ranks on-device first and has no quality ranking and no novelty-voice exclusion (macOS Albert, Bubbles, Zarvox\u2026). Hands-free is allowed with any voice, against the plan's rule that robotic browser voices only read on request.",
+    "fix": "Require separate US-English and native Latin-American Spanish voice IDs that the owner has auditioned; never fall back to the English voice for es. Settings: stability 0.55\u20130.65, speed 1.0 for grades 6\u20139 and 0.92 for K\u20132. Add a per-locale number speller (integers, decimals, negatives, times, %, money, ordinals, Spanish separators) and fix the letter-variable '\u00d7' case. Reconnect once before any fallback. Use one app-wide SpeechOut that Hear, narration and the tutor all share. Rank browser voices (Natural/Neural/Premium/Enhanced/Siri/Google first, novelty list excluded) and allow hands-free only with vendor TTS or a voice that passes that ranking."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/spotlight.ts:470-476 (spot), components/spotlight/SpotlightLayer.tsx:211,218 (key={pulse}), docs/spotlight.md:61-64,390, lib/ai/tools.ts (no point_at)",
+    "problem": "'Moving attention' isn't built, and the planned approach can't keep time with speech:\n- point_at is a tool call. Each point ends the model step and needs another model request (+0.6\u20131.2 s), and the spot fires when the text stream arrives, not when the audio plays. Text arrives about 1\u20133 s ahead of the audio, so the glow lands early or after the related words.\n- Each spot remounts its ring (key={pulse}), so it fades in where it lands. Nothing glides, and there is no cursor element.\n- Captions stay until 'Got it' and aren't spoken, so in voice mode the child sees a box with different words from what the voice is saying.\n- point_at isn't even registered in tools.ts.",
+    "fix": "- Put cue markers inline in the reply text (e.g. \u27e6spot:practice.prompt.part.0.bottom\u27e7). The chunker strips them from screen and speech and records their word index. They are validated with the same isSpotId/resolveSpot/guardSpots rules.\n- Schedule from ElevenLabs alignment, which arrives before playback: start the glide 250 ms before the word so the cursor lands at word onset. Glide 300\u2013450 ms, ease-out, scaled by distance. Reduced motion: jump.\n- Use one persistent cursor/ring element that animates between targets instead of remounting.\n- In voice mode, use a bare glow cleared at the next cue or 2 s after the sentence ends; no Got-it caption.\n- Browser voices that report no word boundaries: cue at sentence start."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/session.ts:13-45, converse.ts:57-66; plan line 484 'conversation loop'",
+    "problem": "No state is shown between the end of the learner's turn and the first audio, which is 2\u20134 s, the longest wait in the loop. The session exposes only speaking/paused/listening/heard, not the output's 'waiting' state, and there is no thinking/hearing/error state machine. Speech during 'waiting' just cancels the output and fires a new onTurn while the previous LLM request keeps streaming. 'I think 10\u2026 no wait, 12' becomes two requests racing each other.",
+    "fix": "Implement the plan's state machine (idle \u2192 listening \u2192 hearing \u2192 thinking \u2192 speaking \u2192 paused/error) in conversation.ts:\n- Commit the learner's bubble at end of turn (0 ms).\n- Move the cursor to what is actually being considered (their answer or the problem part).\n- Show a quiet breathing mark. Show text 'Still working on it' at 3 s, and 'Taking longer than usual \u2014 Try again' at 10 s. Never use audio filler.\n- Speech during 'thinking' aborts the request (AbortController/useChat stop) and merges the new words with the previous turn."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/converse.ts:37-40 (barge-in \u2192 output.cancel), components/tutor/TutorChat.tsx:91-98",
+    "problem": "After a barge-in, the full assistant message stays in the transcript and in the next request's history. The model believes the child heard a question they never heard. The next reply then refers to unspoken content, which feels off.",
+    "fix": "Keep the word index where speech stopped (the last boundary). Truncate the assistant message to the words actually heard before the next request; the rest can be shown muted as 'not said'. ElevenLabs boundaries already give the index."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/voice/elevenlabs.ts:283-308 (per-reply token + new WebSocket), deepgram.ts:210-256,257-270 (token + socket + getUserMedia + AudioContext per start, CloseStream per stop)",
+    "problem": "Every reply mints a single-use token and opens a new TLS WebSocket. Every tap-to-talk turn mints a Deepgram token (Vercel function \u2192 /v1/auth/grant), opens a socket, calls getUserMedia, creates an AudioContext and loads the worklet, then closes all of it with CloseStream. That is 0.3\u20131.5 s of setup per turn. The 2.5 s audio buffer (MAX_BUFFERED_FRAMES 60) hides it until a cold start goes past 2.5 s, then the first words are lost. There is no STT token prefetch.",
+    "fix": "TTS: one ElevenLabs multi-context WebSocket (multi-stream-input) per conversation, opened at warm()/session start and kept alive with ' ' about every 15 s; one context_id per reply, close_context on barge-in. STT: keep one Deepgram socket per session; send Finalize at the end of a tap-to-talk turn instead of CloseStream; KeepAlive every 5 s while idle (no audio sent); prefetch the token at session start and every 25 s, or set ttl to 60 s."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/lib/voice/elevenlabs.ts:197 (at = max(currentTime + 0.03, nextStart)), ws URL output_format pcm_24000",
+    "problem": "There is no jitter buffer: the first chunk plays 30 ms after it arrives. A late chunk leaves a gap mid-word, with clicks at the edges. pcm_24000 as base64 JSON needs about 512 kbps sustained download, which stutters on congested home Wi-Fi or cellular.",
+    "fix": "Buffer 150 ms before the first chunk of a reply, and 100 ms again after any underrun; use 5\u201310 ms fades at the edges. Switch to pcm_16000 (about 340 kbps) when measured download falls below 1.5\u00d7 real time."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/components/tutor/TutorChat.tsx:94 (text parts .join(\"\"))",
+    "problem": "Text from different model steps (before and after a tool call) is joined with no separator. Harness: 'Let me check that.Nice try, but look again.' comes out of the chunker as one sentence, and the TTS reads 'that.Nice'.",
+    "fix": "Join text parts with '\\n' (the chunker splits on newline) or a space."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/lib/voice/deepgram.ts:104-111 (send), 194-199 (reconnects)",
+    "problem": "`reconnects` is only reset in start(), so in a long hands-free session the second network drop is fatal. Audio is sent without checking ws.bufferedAmount, so on a slow upload the transcripts fall further and further behind with no visible sign.",
+    "fix": "Reset the counter after 30 s of a healthy connection. If bufferedAmount > 32 KB (about 1 s of 16 kHz PCM), show a 'connection slow' state and pause hands-free."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/lib/voice/session.ts:83 (heard \u2190 every partial); deepgram.ts:36 (smart_format)",
+    "problem": "The learner's live caption updates in jumps about every 1 s (Deepgram's interim cadence). smart_format rewrites words between interim and final ('twenty' becomes '20'), so the text flickers. Echoed tutor words appear as if the learner said them. Nothing reacts within the first 50 ms to show the learner they're being heard.",
+    "fix": "Drive a 'hearing' indicator from mic.level() at once. Show finals in ink and interim text muted. Hold interim text back while the tutor is speaking until it passes the echo check. The tutor's caption is the current sentence, with the word highlighted from boundary events."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/lib/ai/prompts.ts (no voice addendum), lib/voice/chunk.ts:58 (firstMaxChars 120)",
+    "problem": "The first sentence's length sets first-audio time, because the chunker waits for its end. Nothing tells the model it is speaking, not writing, or that its input is a transcript that may be misheard. A 120-character first clause takes about 0.4 s longer to stream than an 8-word one.",
+    "fix": "Voice-mode prompt addendum: first sentence \u2264 8 words; no lists or symbols; numbers as words; the input is a speech transcript, so ask if it's unclear. Use firstMaxChars 60 in voice mode."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/lib/voice/server.ts:77,109 (limited per IP 40/20 per min), select.ts / session.ts (no hands-free auto-close)",
+    "problem": "The per-IP limits are shared behind one home or school NAT, so two learners in hands-free can hit 429. That turns into 'unavailable' and a switch to the browser voice mid-session. The plan's hands-free 'closes itself after silence' isn't implemented, so the mic stays open indefinitely.",
+    "fix": "Rate-limit per learner or session once accounts exist, and raise limits for hands-free. Auto-close hands-free after 30 s with no learner speech, with a visible countdown for the last 5 s."
+   }
+  ],
+  "recommendations": [
+   "Build lib/voice/conversation.ts as a pure state machine (idle, listening, hearing, thinking, speaking, paused, error). Wire it through one useTutorVoice used by TutorChat, the drawer and the stage, and remove components/tutor/useVoice.ts and the direct speechSynthesis calls in stage/hear.tsx so there is exactly one voice in the app.",
+   "Latency target from last learner word end to first audible tutor sample, answer turn: 0.5 s end of turn (answer-aware) + 0.1 s network + 0.7 s single model call + 0.1 s short first sentence + 0.25 s TTS = 1.65 s. Open turns: about 2.3 s. Fire the model request early at speech_final when the transcript already parses as a complete answer; cancel if speech resumes within 600 ms, at most once per turn. That gets p50 at or under 1.5 s.",
+   "Replace the \u00a76 voice bar with measured segments, logged per turn with p50 and p90: Deepgram last-word end \u2192 end of turn \u2192 request sent \u2192 first token \u2192 first sentence released \u2192 first audio scheduled \u2192 first audible. Gates: p50 \u2264 1.6 s, p90 \u2264 2.5 s; barge-in duck \u2264 150 ms, stop \u2264 700 ms; zero echo turns in a 30-minute laptop-speaker soak test with no headphones.",
+   "Before the model call, check the spoken answer in code (practice/spoken.ts, EN/ES) and pass the verdict and the next vetted hint in the context. Drop check_answer and next_hint from voice turns, so there is one model call per turn instead of two or three.",
+   "End-of-turn windows: K\u20132 2.0 s open / 0.7 s once an answer parses / 4.0 s after a filler; 3\u20135 1.4 / 0.6 / 3.0 s; 6\u20139 0.9 / 0.5 / 2.5 s. No UtteranceEnd shortcut for K\u20135. Deepgram endpointing 500 ms and utterance_end_ms 1500 for K\u20135, 300 ms and 1000 for 6\u20139. Alternatively Flux (eot_threshold 0.8, eot_timeout_ms 4000 for K\u20132, 3000 otherwise). Time silence from word end timestamps.",
+   "Echo and double-talk: echo tail of 1500 ms after the last audio sample; compare against the whole reply and gate by when the words started relative to tutor playback; duck to \u221215 dB on local voice detection (noise floor + 12 dB for \u2265 120 ms, not following the output envelope); cancel with a 20 ms ramp on the first word that isn't a backchannel or echo; restore after 800 ms of nothing. A speech onset in the last 1.5 s of a tutor question, or after it, is always a turn.",
+   "TTS transport: one ElevenLabs multi-context WebSocket per conversation; one context per reply; close_context on barge-in; keepalive about every 15 s; first-audio deadline 2.0 s \u2192 one reconnect \u2192 fallback only to a browser voice that passes the quality ranking; end the run after 8 s with no new text once audio has drained; 150 ms prebuffer; pcm_16000 below 1.5\u00d7 real-time download.",
+   "STT transport: one Deepgram socket per session; Finalize, not CloseStream, between tap-to-talk turns; KeepAlive every 5 s while idle; token prefetched at session start and refreshed every 25 s; reset the reconnect counter after 30 s healthy; 'connection slow' state when bufferedAmount exceeds 32 KB.",
+   "iOS Safari: set navigator.audioSession.type to 'playback' (read-aloud) or 'play-and-record' (hands-free), else a looping silent <audio> element on first tap; one shared AudioContext; time out resume() at 300 ms everywhere; handle the 'interrupted' state; warm() and say() must work, or queue, before voice() resolves. Test on a real iPhone with the silent switch on and with the mic open while the tutor speaks.",
+   "Voice: audition and pick a US-English voice and a native es-419 voice; never reuse the English voice for Spanish. Stability 0.55\u20130.65, similarity 0.75, speed 1.0 for grades 6\u20139 and 0.92 for K\u20132. Spell out numbers per locale in code (Flash v2.5 normalization is Enterprise-only): negatives as 'negative', decimals, times, %, money, ordinals, Spanish '1.250'.",
+   "Moving attention: inline \u27e6spot:id\u27e7 cues stripped by the chunker and mapped to word indexes; schedule from ElevenLabs alignment so the glide starts 250 ms before the word; one persistent cursor element gliding 300\u2013450 ms ease-out, jumping under reduced motion; bare glow in voice mode, cleared at the next cue or 2 s after the sentence; point_at kept only for text mode.",
+   "Honest waiting: the learner's bubble commits at end of turn; the cursor moves to what the tutor is actually considering; a breathing mark; 'Still working on it' at 3 s; Try again at 10 s; no spoken filler. For K\u20132 non-readers, short pre-recorded status clips in the tutor's voice for connection-lost and mic-blocked only.",
+   "Failure handling mid-turn: on a model stream error, speak what already arrived, then show 'Lost the connection' plus a retry that resends the saved transcript. On the offline event, switch to tap-and-type immediately. Truncate the assistant message to the words actually heard after any barge-in or failure.",
+   "Voice prompt addendum: first sentence \u2264 8 words, no lists or symbols, numbers as words, the input is a speech transcript that may be misheard. firstMaxChars 60 in voice mode. Join multi-step text parts with '\\n' in TutorChat."
+  ]
+ },
+ "audit:child": {
+  "verdict": "Fixable, but it doesn't meet your bar yet, and nobody can hear it today. Nothing is wired in: no screen imports lib/voice or useVoiceSession, SpotlightLayer isn't mounted, and point_at isn't in tutorTools. A child today still gets the old one-shot browser push-to-talk in components/tutor/useVoice.ts.\n\nThe plumbing on fbf54bf is mostly sound and worth keeping: the SpeechIn/SpeechOut contracts, single-use tokens, PCM scheduling on Web Audio, ElevenLabs word timings mapped to written words, the sentence chunker and the mic capture.\n\nThe conversation behaviour built on that plumbing is not ready for children. I ran the rules on real child-style phrases:\n- It cuts children off mid-thought. \"It's.\" and \"I think it's.\" end the turn after 1.0 s, even for K\u20135.\n- It throws away correct answers said while the tutor is still talking. \"Yes\", \"s\u00ed\", \"I know\" and \"The bottom number.\" (answering \"top or bottom?\") are dropped as backchannel or echo.\n- One word from anyone in the room (\"Mom!\") stops the tutor and is sent as the child's turn.\n- The mic never closes by itself.\n- A correct spoken \"seven\" or \"cinco\" is marked wrong, because the answer checker only reads digits.\n\nThe voice is uncanny by construction:\n- The default is ElevenLabs \"George\", the stock narrator from their own docs and countless AI videos.\n- Spanish uses that same English voice unless an extra setting is filled in.\n- When the vendor hiccups, the reply switches mid-sentence to a robotic browser voice.\n- Hear buttons and lesson narration use a second, different voice that can talk over the tutor.\n- On this Mac the browser fallback picks \"Eddy (Spanish (Spain))\" for Spanish, a robotic voice with a Spain accent.\n\n\"Moving attention\" doesn't exist. There is no tutor cursor; each glow just fades in at its target. The AI points through a separate tool call that can't be lined up with the words being said, and it splits a reply into a pause in the middle. Captions also wait for a \"Got it\" tap, which is a chore for a 6-year-old.\n\nThe spotlight ring, clipping and answer guard are careful work and reusable. Its pointing model was designed for text and has to change for voice.",
+  "findings": [
+   {
+    "severity": "blocker",
+    "where": "lib/voice/turn.ts:66-67,111 + lib/voice/deepgram.ts:35-39 (punctuate, smart_format, endpointing 300, utterance_end_ms 1000)",
+    "problem": "Deepgram puts a full stop on almost every fragment, so shapeOf() calls a fragment 'done'. Probe: 'It's.', 'I think it's.', 'It's seven.' and 'I don't know.' all end the turn at 1000 ms once UtteranceEnd arrives, even with TURN_YOUNG. A K\u20132 child counting on fingers ('it's... [2 s] ...seven') gets cut off, the tutor answers 'It's.', and then the child talks over the tutor. This is the main cause of the 'it keeps interrupting me' feeling.",
+    "fix": "Use Deepgram Flux for end of turn: flux-general-en, or flux-multi with language_hint [en, es]. Settings: eot_threshold 0.8/0.75/0.7 and eot_timeout_ms 3500/2500/1800 for K\u20132/3\u20135/6\u20139. Use EagerEndOfTurn plus TurnResumed to start the reply early and cancel it if the child keeps talking. If you stay on Nova-3, ignore inferred full stops for K\u20135 and require 1.6 s (K\u20132) / 1.2 s (3\u20135) of silence unless the words parse as an answer. Hold the floor for 8 s on 'it's, I think, wait, hold on, let me think, espera, a ver, pues, o sea, d\u00e9jame pensar'."
+   },
+   {
+    "severity": "blocker",
+    "where": "lib/voice/converse.ts:62-63, lib/voice/backchannel.ts:21-24, lib/voice/bargein.ts:20-24",
+    "problem": "Answers said while the tutor is still talking disappear. 'yes', 'yeah', 's\u00ed', 'right', 'ok', 'I know', 'claro' and 'ya' count as backchannels and are dropped. Two-word answers made of the tutor's own words count as echo and are dropped. Probe: 'The bottom number.' answering 'Is it the top number or the bottom number?' gives 'echo', so no barge-in and no turn. Young children blurt answers before the question finishes and choice questions are answered with the tutor's words, so the tutor talks on and then waits while the child thinks it was ignored. 'Say it with me' repetition is also eaten.",
+    "fix": "Echo must be time-aligned. Count a heard word as echo only if the tutor spoke it in the last 1.5 s, using the TTS word timings the adapter already has. If the reply's last sentence is a question, keep anything heard during it (including yes/s\u00ed/ok) as a pending turn and deliver it the moment the tutor's audio ends."
+   },
+   {
+    "severity": "blocker",
+    "where": "lib/ai/tools.ts:51 (check_answer 'Exactly what the learner said'), practice/answer.ts:14-40 (parseNumber digits only); plan's practice/spoken.ts does not exist",
+    "problem": "A correct spoken answer is marked wrong. The model is told to pass the transcript verbatim, and parseNumber rejects 'seven', 'cinco', 'three fourths', 'tres cuartos', 'half past three' and 'negative two'. 'Answers are checked by code' turns into 'not yet' for a right answer, which wrecks trust for both the child and the parent.",
+    "fix": "Write practice/spoken.ts: a deterministic EN/ES parser for number words 0\u20131000, fractions, mixed numbers, times and negatives. The spoken answer should fill the pad's output slot visibly. Run Check on the client before calling the LLM and pass the verdict in context, which also removes a tool round trip (about 1 s)."
+   },
+   {
+    "severity": "blocker",
+    "where": "lib/ai/spot-tool.ts:24-29,77-91; components/spotlight/SpotlightLayer.tsx:201-218; docs/spotlight.md 'caption stays until dismissed'",
+    "problem": "'Moving attention' is not built and can't be built on this path:\n- point_at is a tool call. It lights when the tool input completes, which has nothing to do with the word being spoken.\n- A tool call in the middle of a reply ends the model step. The next text needs a new model call, so the voice stops partway through a thought.\n- There is no tutor cursor. Each spot is a keyed new ring that fades in at its target, so attention teleports instead of moving.\n- A caption plus a 'Got it' tap duplicates the voice and adds a chore for a pre-reader.",
+    "fix": "Put inline anchors in the reply text (for example \u27e6spot:practice.prompt.part.0.bottom\u27e7). Strip them from display and speech, keep their word index, and fire the spot from SpeechOut.onBoundary at that word. Add one persistent cursor to the layer that glides between targets. Turn off captions and 'Got it' in voice mode. The guard and the visibleSpots checks stay as they are."
+   },
+   {
+    "severity": "blocker",
+    "where": "lib/voice/server.ts:20,96,102 (DEFAULT_VOICE JBFqnCBsd6RMkjVDRZzb 'George'; ES falls back to the same id; language_code forced to locale); elevenlabs.ts:245-260 (mid-reply browser fallback); components/stage/useSpeech.ts:24, hear.tsx:29-40 (separate speechSynthesis voice)",
+    "problem": "The tutor has no single, natural voice:\n- George is the stock narrator from ElevenLabs' own docs and widely used in AI content, so it reads as 'AI voice', especially to a 14-year-old.\n- Spanish is spoken by that English voice unless ELEVENLABS_VOICE_ID_ES is set.\n- Any socket hiccup switches the rest of the reply to the browser voice, a different voice and often a different gender.\n- Hear buttons, stage narration and the caption speaker use a third path, and claimVoice() doesn't stop ElevenLabs audio, so two voices can overlap.",
+    "fix": "Choose one conversational voice with a native Latin-American Spanish counterpart (or one bilingual voice), tested with children in each band, and ship explicit voice IDs. Refuse vendor Spanish without the Spanish ID. Send Hear, narration and captions through the same SpeechOut. On failure, retry the vendor once with a fresh token for the unheard sentences. Switch to the browser voice only for a whole reply, and show that it switched."
+   },
+   {
+    "severity": "blocker",
+    "where": "components/family/ChildSettings.tsx:60 + i18n/en.ts:712-713; lib/voice/server.ts:36-47,61-63",
+    "problem": "The only consent is the toggle 'Let {name} talk to the tutor with the microphone', and its text says audio may go to 'Apple or Google'. The new layer reuses it to stream a child's audio to Deepgram and reply text to ElevenLabs, which the parent never agreed to. On the server, consent is whatever boolean the page sends. sameSite() returns true when there is no Origin header, so curl -d '{\"consent\":true}' mints vendor tokens billed to you, limited only by an in-memory per-IP counter.",
+    "fix": "Rewrite the consent text to name Deepgram and ElevenLabs and say what each one receives. Store consent server-side and check it in voiceAllowed(). Reject token requests with no Origin header and require an app session. Decide with counsel whether read-aloud through the vendor (reply text only, names removed) can be separated from mic consent."
+   },
+   {
+    "severity": "blocker",
+    "where": "lib/voice/session.ts:120-134, lib/voice/deepgram.ts start() / browser.ts start() ('auto' keeps listening across turns)",
+    "problem": "listen() with the default 'auto' setting is hands-free: the mic stays open between turns and never closes by itself. Nothing stops it when the tab is hidden or the page is left (no visibilitychange or pagehide handling), so a child who walks away keeps streaming household audio to Deepgram. The plan says tap-to-talk is the default and hands-free 'closes itself after silence'. There's also no mode for 'end the turn automatically, then close'.",
+    "fix": "Add three modes. 'tap' (default for 3\u20139): ends itself, then the mic closes. 'conversation': the mic opens after a reply that ends in '?', closes after 12 s of no speech (15 s for K\u20132), and drops back to tap after 3 empty openings. Keep push-to-talk. Always stop on visibilitychange hidden, pagehide and route change. Hard-stop after 20 minutes."
+   },
+   {
+    "severity": "major",
+    "where": "lib/voice/converse.ts:49-56, bargein.ts:40-44",
+    "problem": "Barge-in has two problems.\n1. Anyone can trigger it. One non-backchannel word from anyone ('Mom!', 'Honey dinner', the TV) stops the tutor after 300 ms and becomes the child's turn.\n2. onsetAt goes stale. onSpeechStart sets it on any voice-activity hit (a cough, a chair), and it's only cleared at end of turn. After one noise, the 300 ms guard is gone until the next real turn. Probe: shouldBargeIn with onsetAt set 20 s earlier and heard 'Hey.' returns true.",
+    "fix": "Add a GainNode and lower the tutor to 30% within 100 ms of speech onset, like a person pausing. Stop only on 2 or more non-echo, non-backchannel words, or 700 ms of voiced speech. Restore the volume after 600 ms if nothing real follows. Clear onsetAt if no words arrive within 1 s."
+   },
+   {
+    "severity": "major",
+    "where": "lib/voice/browser.ts:13-18 pickVoice; components/stage/useSpeech.ts:24 voiceFor",
+    "problem": "The browser voice choice prefers on-device voices with no quality ranking. Checked here (Chromium 152 on this Mac):\n- Spanish gets 'Eddy (Spanish (Spain))', a robotic voice with a Spain accent; Paulina (es-MX) is in the list.\n- English gets Samantha (compact); 'Albert', 'Bad News' and 'Zarvox' are in the same list with nothing ruling them out.\n- On Edge it would pick the robotic local Microsoft David/Zira over the 'Aria Online (Natural)' voice, and desktop Chrome picks local voices over Google's.\nUnder-13 learners without consent always get this voice, and voice() still offers hands-free on the browser path, which breaks the plan's 'robotic browser voices only read on request'.",
+    "fix": "Rank Premium/Enhanced, then '(Natural)'/Online, then Google, then Samantha/Paulina/M\u00f3nica. For Spanish prefer es-US, then es-MX, then es-419, then es-ES. Rule out novelty voices (Albert, Bad News, Bahh, Bells, Boing, Bubbles, Cellos, Fred, Good News, Jester, Junior, Kathy, Organ, Ralph, Superstar, Trinoids, Whisper, Wobble, Zarvox) and the Eloquence voices (Eddy, Flo, Grandma, Grandpa, Reed, Rocko, Sandy, Shelley). If no natural voice is left, read on request only and allow no hands-free."
+   },
+   {
+    "severity": "major",
+    "where": "lib/voice/select.ts:59-74; browser.ts browserSpeechIn",
+    "problem": "The browser path runs full duplex. speechSynthesis on desktop is played by the operating system's speech engine, which is very likely outside the browser's echo cancellation (verify on device). So the browser recognizer hears the tutor and the word-overlap guard has to catch it, which leads to the tutor cutting itself off. On Android Chrome, the continuous restart loop plays the system start beep repeatedly.",
+    "fix": "Browser speech-to-text is tap mode only and half duplex: mic closed while the tutor speaks, no automatic restart."
+   },
+   {
+    "severity": "major",
+    "where": "lib/voice/server.ts:132 (en-US / es-419; 'multi' only via env), server.ts:102 (language_code forced)",
+    "problem": "Spanish/English switching is broken. A bilingual child answering 'es siete' in an English profile, or 'seven' in a Spanish one, gets transcribed as nonsense. The tutor's speech forces Spanish pronunciation and normalization on any English in a Spanish reply, and the other way round.",
+    "fix": "Speech-to-text: flux-multi with language_hint [en, es] (or nova-3 with language=multi and endpointing 100) for any family marked bilingual or es. Text-to-speech: detect the reply's language and set language_code per connection (there is already one socket per reply), or leave it unset, and keep one bilingual voice so the tutor stays the same person in both languages."
+   },
+   {
+    "severity": "major",
+    "where": "lib/voice/speakable.ts:56-103",
+    "problem": "Spoken maths and numbers are incomplete (probe):\n- '-2' stays '-2'; the plan asks for 'negative two'.\n- '2 1/2' becomes '2 one half'.\n- The date '10/12' becomes '10 twelfths' / '10 doceavos'.\n- '$2.50', '3:05', '3.5', '1,250', '45%', '1st', 'cm' and Spanish '3,5' pass through raw to Flash v2.5. ElevenLabs documents Flash as weak at number normalization, and normalization 'on' is Enterprise-only for Flash/Turbo v2.5.\n- The safety replies' '988', '741741' and '1-800-422-4453' are not normalized.",
+    "fix": "Add rules for negatives, mixed numbers ('two and a half' / 'dos y medio'), decimals ('three point five' / 'tres coma cinco'), times, money, percent and ordinals. Tell the prompt never to write dates as m/d. Give the fixed safety replies handwritten spoken versions with phone numbers read digit by digit."
+   },
+   {
+    "severity": "major",
+    "where": "lib/ai/prompts.ts:22-39 (no voice rules), i18n/en.ts:637-640 (openings), en.ts:498",
+    "problem": "Nothing tells the model that a message was spoken: transcripts can be misheard, can include other people in the room, and can be a fragment. 'I don't know', 'No s\u00e9' and 'Wait.' go to the model as ordinary turns with no rule, so expect 'What do you think?' loops. Openings: 'What have you tried so far?' is an adult tutoring line for a K\u20132 child who has just opened the tutor. 'What would you like to learn or work on?' freezes a 6-year-old. 'Let's look at it together.' is filler.",
+    "fix": "Add input:'voice' to the context with these rules:\n- The transcript may be misheard: if a word seems wrong, ask once, and never call a misheard word a mistake.\n- Answer only the part about learning; ignore other speakers without comment.\n- For K\u20132, at most 12 words per sentence.\n- End every turn with exactly one question.\n- 'I don't know' / 'no s\u00e9' / 'idk' / 'I forgot' means give next_hint, turn it into a two-option question, and point at the part.\nFor K\u20132 openings, use the first vetted hint as a concrete question with a point, or three picture choices. Cut 'Let's look at it together.'"
+   },
+   {
+    "severity": "major",
+    "where": "lib/voice/session.ts (no thinking state); components/tutor/TutorChat.tsx:253 (if busy return); docs/plans \u00a76 voice metric",
+    "problem": "Between the child stopping and the tutor speaking there's no visible state, and the mic stays open. A self-correction during that time ('eight... no, nine') becomes a second turn that TutorChat silently drops because a reply is already in progress. The plan measures 'first audio < 1.5 s after a reply starts', which leaves out end-of-turn time, model latency and the 1\u20131.5 s each tool step costs before any words. So the metric can pass while the child waits 3\u20135 s.",
+    "fix": "Add a 'thinking' state with a visual acknowledgement within 150 ms of end of turn. Merge speech that resumes within 1.5 s, before first audio, into the pending turn: cancel and resend. Measure from the child's last word to the first audio sample: p50 \u2264 1.6 s, p90 \u2264 2.5 s, logged per turn."
+   },
+   {
+    "severity": "major",
+    "where": "lib/voice/elevenlabs.ts:119,277-281; session.ts:69-113",
+    "problem": "Every useVoiceSession mount builds a new SpeechOut with its own AudioContext. On iOS, after moving from practice to Talk, the new context starts locked. connect() gives up after 300 ms and the browser voice reads instead (a different voice) or nothing plays. 'Tutor speaks first' for K\u20132 isn't implemented anywhere in the layer, and on a fresh load it fails silently.",
+    "fix": "Create one app-wide AudioContext and SpeechOut, unlocked on the first tap anywhere and kept across routes. K\u20132 opening: the tap that opens the tutor or problem calls warm(), then the tutor speaks. If audio is still locked, show a big 'Tap to hear' speaker instead of an error text the child can't read."
+   },
+   {
+    "severity": "major",
+    "where": "lib/voice/deepgram.ts:153-161 (confidence ignored), converse.ts:57-66",
+    "problem": "Mumbles become turns. A low-confidence 'Fish.' is sent to the model as the child's message. Words from a sibling or the TV get merged into the child's turn ('Seven. Can I play?').",
+    "fix": "Read alternatives[0].confidence and per-word confidence. Below 0.7, don't send: show what was heard with 'Send' / 'Try again', and for answers show 'Did you say 7?' with the number big, tap to confirm. Check on the device for an opening that addresses someone else (mom, mommy, dad, daddy, mam\u00e1, mami, pap\u00e1, papi, abuela, grandma, grandpa, plus siblings' nicknames, which never leave the device). Hold those turns behind a 'Send to tutor?' chip."
+   },
+   {
+    "severity": "major",
+    "where": "practice/english/early.ts (e.cvc.words, e.capitals, e.contractions, e.homophones, e.commas); expr items",
+    "problem": "There's no rule for when voice should not be used. Speech-to-text spells, capitalizes and punctuates for the child, so spelling, capitals, homophones, contractions and commas can't be answered by voice, and algebra expressions can't be dictated reliably. The tutor may read those items' choices aloud. The content authors already avoid Hear buttons on these choices (early.ts:210); the voice layer and the prompt don't know that.",
+    "fix": "Add per-skill flags voice.answerByVoice and voice.readChoices, used by the pad, the prompt and the tutor. Turn both off for those five skills and for expr. Reading a passage aloud on main-idea items stays a choice and is recorded."
+   },
+   {
+    "severity": "minor",
+    "where": "lib/voice/session.ts:82-85 + mic.ts:205-218; i18n/en.ts voice.error.*, voice.selfTest.ok, voice.source.browser",
+    "problem": "Copy problems:\n- A read-aloud failure shows 'The connection dropped while listening', because input and output errors share one error field and 'network' maps to the listening message.\n- Six error lines end 'Typing always works.' That's boilerplate, and false for K\u20132 pre-readers who don't type.\n- 'We heard you clearly' overclaims: the self-test only measures loudness.\n- voice.source.browser leaves out Microsoft (Edge).",
+    "fix": "Keep separate errors for speaking and listening, and don't show a speaking error when the fallback already read the reply. K\u20132: no text error; show tap chips and a speaker. 3\u20139: 'You can type instead.' once. selfTest.ok becomes 'The microphone works.' Say 'Apple, Google or Microsoft'."
+   },
+   {
+    "severity": "minor",
+    "where": "lib/voice/select.ts:42,61 vs lib/ai/prompts.ts:15-20, TutorChat.tsx:209",
+    "problem": "Voice treats K\u20135 as 'young' (rate 0.9, long pauses) while the prompt and the chat treat only K\u20132 as young. Slowed speech sounds babyish to a 10-year-old.",
+    "fix": "Use the same three bands everywhere. Speed 0.95 / 1.0 / 1.05 for K\u20132 / 3\u20135 / 6\u20139, and turn windows long / medium / default."
+   },
+   {
+    "severity": "minor",
+    "where": "lib/voice/session.ts:83 (heard set from every partial); browser.ts:350 (level 0)",
+    "problem": "The 'what you said' caption fills with the tutor's own echo while it is speaking. On the browser path the mic meter is always 0, so a child gets no sign they're being heard.",
+    "fix": "Hide the learner's caption while the tutor speaks unless a barge-in is confirmed. On the browser path, show a listening pulse driven by onspeechstart/onspeechend instead of a level meter."
+   },
+   {
+    "severity": "minor",
+    "where": "components/tutor/TutorChat.tsx:227-230 (safety notes)",
+    "problem": "A misheard transcript can trigger a crisis note to the parent with nothing to show it came from speech recognition.",
+    "fix": "Mark voice-sourced flags in the note ('heard by voice, may be misheard') and include the transcript."
+   }
+  ],
+  "recommendations": [
+   "Do it in this order: (1) one voice everywhere with explicit bilingual voice IDs; (2) Flux end of turn plus ducked barge-in plus time-aligned echo; (3) spoken-answer parser filling the pad, checked on the client; (4) tap / conversation / push-to-talk modes with automatic close; (5) inline spot anchors and the cursor. Don't wire the hook into Talk before (1)\u2013(3); a robotic, interrupting tutor teaches families to switch voice off for good.",
+   "Voice settings: Flash v2.5. Speed 0.95 / 1.0 / 1.05 for K\u20132 / 3\u20135 / 6\u20139, stability 0.45\u20130.55, similarity 0.75. Use one conversational voice persona (not a narrator) in both languages. Drop forced language_code, or set it per reply from the reply's detected language. No stock 'George'.",
+   "Turn-taking numbers: Flux eot_threshold 0.8 / 0.75 / 0.7 and eot_timeout_ms 3500 / 2500 / 1800 for K\u20132 / 3\u20135 / 6\u20139, eager_eot_threshold 0.5 to start the reply early, cancel on TurnResumed. 'Wait / hold on / let me think / espera / a ver / d\u00e9jame pensar' hold the floor for 8 s and never reach the model.",
+   "Barge-in numbers: lower the tutor to 30% within 100 ms of speech onset. Stop on 2 or more non-echo words or 700 ms of voiced speech. Restore after 600 ms if nothing follows. A heard word is echo only if the tutor spoke it within the last 1.5 s. Speech during the tutor's final question sentence is kept and delivered when the audio ends.",
+   "Silence policy (no nagging): wait at least 5 s with nothing happening. At 8 s show two big chips with speakers, 'Give me a hint' and 'Say it again'. K\u20132 gets at most one spoken offer per question, at 10 s. The mic closes at 15 s (K\u20132) / 12 s (others) with a visible 'Mic off \u2013 tap to talk'.",
+   "What the child sees with the mic on: a mic button with a pulsing ring driven by level() (never red); the tutor cursor in a 'listening' pose resting on the answer slot; live captions of the child's words for 3\u20139 only; a one-tap stop always visible. A 'thinking' pose within 150 ms of end of turn. The browser's own mic indicator stays as it is.",
+   "Mic permission: when a grown-up flips the voice toggle, run micSelfTest() right then, so the browser's permission prompt goes to the parent and the child never sees an Allow/Block choice. On iPad, tell the parent to set Safari's website setting Microphone to Allow. The disclosure lines (voice.source.*) are shown there, to the parent, not to the child.",
+   "Spotlight in time with speech: inline anchors at word indexes. The cursor arrives 150 ms before the anchored word, glides 380 ms with cubic-bezier(.2,.8,.2,1), moves at most once per sentence, scrolls before the sentence starts (never mid-word), holds until 1.2 s after the sentence ends, then returns to rest by the transcript. No caption bubble and no 'Got it' in voice mode. Reduced motion jumps with a 160 ms fade. Anchored phrases must make sense alone ('look at the bottom number', never 'look here'), because a guarded target stays dark.",
+   "Latency budget, measured from the child's last word to the first tutor audio: p50 \u2264 1.6 s, p90 \u2264 2.5 s. Open the TTS socket at end of turn, not at the first token. Answer check on the client before the model call (removes one tool step, about 1 s). First sentence \u2264 12 words. Log end-of-turn time, model time to first token, TTS time to first audio and total per turn.",
+   "Bands: K\u20132: tutor speaks first after the tap that opens it, conversation mode after consent, big picture chips, no text-only errors. 3\u20135: tap mode, normal speed. 6\u20139: read-aloud and mic off by default, tap mode, speed 1.05. Teenagers drop a voice that sounds like a stock AI narrator.",
+   "Copy cuts: the six 'Typing always works.' endings (go band-specific); 'We heard you clearly' (becomes 'The microphone works.'); 'Let's look at it together.'; 'What have you tried so far?' and 'What would you like to learn or work on?' as K\u20132 openings. Separate error keys for speaking and listening failures.",
+   "Proof before calling it done: 40 recorded child clips in EN/ES (mumbling, a sibling, the TV, 'I don't know', self-corrections, answering in the tutor's own words, code-switching) replayed through the speech-to-text and turn logic with expected outcomes. Test on iPad Safari, a Chromebook, Windows Edge, Android Chrome and Mac Safari. A listening session with 3 children per band, watching whether they wait, talk over the tutor, or give up.",
+   "Sources used: ElevenLabs stream-input API (https://elevenlabs.io/docs/api-reference/text-to-speech/v-1-text-to-speech-voice-id-stream-input.md); ElevenLabs normalization guidance on Flash v2.5 (https://elevenlabs.io/docs/best-practices/prompting/normalization); Nova-3 multilingual / endpointing 100 (https://deepgram.com/changelog/nova-3-multilingual-ga); Flux end-of-turn parameters (https://developers.deepgram.com/docs/flux/configuration); Flux Multilingual (https://telnyx.com/release-notes/deepgram-flux-multilingual-stt-livekit); George voice id (https://developer.signalwire.com/voice/tts/elevenlabs). Local probes (read-only copies) are in /private/tmp/claude-501/-Users-man-Documents-GitHub/cc81dda1-1fa9-40c2-9ae5-3280e58d125d/scratchpad/k9voice/p1.ts and p2.ts."
+  ]
+ },
+ "audit:uncanny": {
+  "verdict": "Fixable, but it doesn't meet the owner's bar anywhere today. Three reasons. (1) No child hears the voice layer. On fbf54bf, only the three /api/voice routes import lib/voice. Every screen still uses raw speechSynthesis with getVoices().find(v => v.lang.startsWith(locale)). I ran that on this Mac (Chromium 152, 180 voices) and Spanish comes out as \"Eddy (Spanish (Spain))\", a robotic voice with a Spain accent. TutorChat reads every reply aloud for K\u20132 in that voice by default. (2) The \"moving attention\" half does not exist. There is no tutor cursor and no glide, and nothing links word timings to the spotlight. point_at fires as soon as its tool part arrives, which is seconds ahead of the audio. Because point_at runs on the server, each point also costs a full extra LLM round trip in the middle of a reply. (3) The vendor path would still sound off once wired. The default voice is George, a middle-aged British narrator, and he also reads Spanish unless ELEVENLABS_VOICE_ID_ES is set. Flash v2.5 does not normalize numbers (ElevenLabs docs: disabled for latency, Enterprise-only switch), yet speakable() leaves \"-2\", \"2 1/2\", \"5/16\", \"3:30\", \"$2.50\", \"1,250\", \"3 x 4\" and \"\u221a16\" as written (I ran it). The browser fallback's pickVoice ranks the robotic voices first. The low-level plumbing (one socket per reply, alignment-driven word index, turn tracker, backchannel and echo rules, consent-gated tokens) is usable and is not the problem. What's missing: wiring, voice and model choice, number reading, voice tiers, barge-in feel, K\u20132 pacing, and the whole cursor. Doc sources: elevenlabs.io/docs/overview/models, elevenlabs.io/docs/developers/websockets, elevenlabs.io/docs/eleven-api/guides/how-to/websockets/realtime-tdd, elevenlabs.io/docs/api-reference/tokens/create, developers.deepgram.com/docs/models-languages-overview, developers.deepgram.com/docs/flux/quickstart, developers.deepgram.com/docs/keyterm.",
+  "findings": [
+   {
+    "severity": "blocker",
+    "where": "fbf54bf apps/web/src/lib/voice/* (no importer outside app/api/voice); foundation components/tutor/useVoice.ts:45, components/stage/useSpeech.ts:24, components/stage/hear.tsx speakText, components/spotlight/SpotlightLayer.tsx:332, components/tutor/TutorChat.tsx:212",
+    "problem": "CONFIRMED. Every voice a learner hears is raw speechSynthesis using the first voice whose lang starts with the locale. On this Mac that picks EN 'Samantha' and ES 'Eddy (Spanish (Spain))', a robotic voice with a Castilian accent (verified by running the same expression). TutorChat auto-reads every reply for K\u20132 (useState(young)) in that voice, which is exactly the 'robotic browser voice in conversation' the plan rules out. useSpeakStream does no text shaping, so markdown, ^, emoji and arrows reach the synthesizer as written. It splits only on '. ', '? ', '! '. When the layer is adopted by Talk alone, the stage narration, the Hear buttons, the Runner read-aloud and the K\u20132 spotlight caption speaker (speakText, rate 0.9) stay on a different voice from the tutor: two different people in one lesson.",
+    "fix": "Add one VoiceProvider in AppShell and the focus layout that builds one voice() per learner and locale. Send everything through it: Talk, the drawer, stage narration (re-implement useSpeech on SpeechOut and onBoundary), Hear/speakText, Runner read-aloud and the caption speaker. Delete voiceFor, useSpeakStream and speakText's own voice picking. Replace claimVoice with SpeechOut.cancel()."
+   },
+   {
+    "severity": "blocker",
+    "where": "lib/spotlight.ts (spot() has no time/word anchor), components/spotlight/SpotlightLayer.tsx + styles.ts, lib/ai/spot-tool.ts:28, fbf54bf lib/voice/session.ts (word index consumed by nothing)",
+    "problem": "CONFIRMED. The 'tutor cursor that glides between targets in time with the words' does not exist. spot() fades in a ring (kz-spot-in, plus two pulses) with no movement between targets, and no API ties a spot to a word index or an audio time. runSpotFromToolPart fires as soon as the point_at input is complete. Text streams far ahead of the audio, so the glow lands 1\u20134 s before the voice says the thing, or after it if the call closes the step. point_at has a server execute, so each point ends the model step and forces another streamText step: a full time-to-first-token of silence (claude-sonnet-5-5, about 0.5\u20132 s) between the sentence before the point and the one after.",
+    "fix": "Build TutorCursor and anchor points inline in the reply text (spec in the recommendations). For voice turns, remove the server round trip from point_at, or drop the tool and parse inline anchors. Fire spot() from SpeechOut.onBoundary at the anchored word minus the lead time."
+   },
+   {
+    "severity": "blocker",
+    "where": "fbf54bf apps/web/src/lib/voice/browser.ts:14-19 pickVoice; select.ts:62-66",
+    "problem": "CONFIRMED. The ranking is localService first, then an exact es-US/en-US match, then list order. Edge 'Microsoft \u2026 Online (Natural)' and Chrome 'Google \u2026' voices report localService=false, so Edge and Chrome on Windows pick the SAPI 'Microsoft David/Zira - English (United States)'. On macOS there is no es-US voice, all Spanish voices tie, and list order wins: 'Eddy (Spanish (Spain))' (I ran pickVoice on this machine's list). There is no deny list for novelty voices (Albert, Bad News, Bahh, Bells, Boing, Bubbles, Cellos, Good News, Jester, Organ, Superstar, Trinoids, Whisper, Wobble, Zarvox), legacy voices (Fred, Junior, Kathy, Ralph) or Eloquence voices (Eddy, Flo, Grandma, Grandpa, Reed, Rocko, Sandy, Shelley), all of which are present on this Mac. voice() hands this voice to hands-free converse() with no quality gate. getVoices() is read on each speak with no wait for voiceschanged, so in Chrome the first reply can use a default voice and later replies a different one.",
+    "fix": "Replace pickVoice with the tiered ranking in the recommendations. Wait up to 1000 ms for voiceschanged, cache the choice per learner and locale, and refuse hands-free or auto read-aloud unless the chosen voice is Tier A."
+   },
+   {
+    "severity": "major",
+    "where": "apps/web/src/lib/ai/tutor.ts (stopWhen isStepCount(5)), prompts.ts RULES ('Check anything the learner says with check_answer'), lib/ai/tools.ts execute on show_visual/point_at",
+    "problem": "CONFIRMED by reading the code. A spoken answer to a problem needs a check_answer step, plus another step for any board tool, before the first word is spoken. Time from the child's last word to the first sound = end-of-turn (0.7\u20131.1 s) + 2 \u00d7 TTFT + first sentence + TTS. That is roughly 3\u20134 s, against the plan's \u2264 ~1 s. The voice layer can't fix this; it is the biggest reason the conversation won't feel 'real time'.",
+    "fix": "When the utterance parses as an answer (the planned practice/spoken.ts), check it in code before the model call and put the verdict in TutorContext, so the model replies in one step. Make no-op board tools client-side, with no server step. Log time-to-first-audio per turn and gate on the numbers in the recommendations."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/speakable.ts (sayToken / fractionWords); server.ts:95 default eleven_flash_v2_5",
+    "problem": "CONFIRMED (ran speakable): '-3 + 5'\u2192'-3 plus 5'; 'dropped to -2 degrees' unchanged (the plan asks for 'negative two'); '2 1/2'\u2192'2 one half'; '7/20' and '5/16' unchanged (risk of a date or 'slash' reading); '3:30', '$2.50', '1,250', '2nd', '\u221a16', '50%', 'Try 3 \u2192 4 \u2192 5', '| a | b |', 'e.g.' and lowercase '3 x 4' all pass through as written. In Spanish, '0.5', '5 x 3' and 'Son las 3:30' do the same, and the power word 'a la potencia 3' is unnatural. ElevenLabs documents that Flash v2.5 does not normalize numbers and that apply_text_normalization is Enterprise-only on Flash, so every digit left in the text is a pronunciation gamble.",
+    "fix": "Convert every number to words in speakable per locale (full list in the recommendations), with a golden test table for EN and ES, and listen to each row once through the real voice."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/server.ts:20 DEFAULT_VOICE, :96 voiceId",
+    "problem": "CONFIRMED. JBFqnCBsd6RMkjVDRZzb is ElevenLabs 'George': a male, middle-aged, British narration voice. It is not a US K\u20139 conversational tutor. Without ELEVENLABS_VOICE_ID_ES, George also reads Spanish, and ElevenLabs says multilingual voices keep the speaker's accent across languages, so the Spanish tutor has an English accent. With _ES set, the tutor becomes a different person whenever the family switches language.",
+    "fix": "Choose one voice (process in the recommendations), set it as the default for both locales, and make the voice fixed per learner across every surface."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/elevenlabs.ts:335 (flush:true per sentence); chunk.ts:58 (firstMaxChars 120, forcedCut at a bare space)",
+    "problem": "CONFIRMED that the cuts happen; PLAUSIBLE that they hurt prosody (not measured). Every sentence is sent with flush:true under auto_mode. ElevenLabs advises flushing at the end of a conversational turn, and auto_mode already disables buffering. The streaming chunker cut a 152-character first sentence at its comma (verified: '\u2026the whole has been cut into,' | 'and the top number tells you\u2026'). Each piece is flushed, rendered as a finished utterance with a falling end, and separated by a generation gap. Past 220 characters it falls back to cutting at any space, mid-phrase.",
+    "fix": "Send sentences as `${text} ` with no flush, and keep only the closing {text:\"\"}. Never cut at a bare space. On the first sentence, cut only at ';', ':', ' \u2014 ' or ', and/but/so/because' once past 60 characters. Turn the first-sentence cut off for say(string) narration, where the whole text is already known."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/elevenlabs.ts:259 (fail \u2192 startFallback), :281 (locked audio \u2192 VoiceError 'speak' \u2192 fallback)",
+    "problem": "CONFIRMED by reading the code. Any socket drop hands the rest of the reply to the browser voice (Samantha, Eddy or David) mid-reply, so the tutor changes into another person mid-thought. If audio is still locked before the first tap, the first reply (the K\u20132 opening line, 'tutor speaks first') is spoken by the robot and later replies by George. Chrome also blocks speechSynthesis without user activation, so this fallback is often silent anyway, and the session shows an error even when the fallback did speak.",
+    "fix": "On failure, retry once with a fresh token, starting at the first unheard sentence in the same voice. If that also fails during conversation, stop speaking, keep the text, and show a 'Voice is off for now' chip. Use the browser voice only for K\u20131 pre-readers, only if it is Tier A or B, and say on screen that it is a different voice. Gate the first voice turn behind an explicit 'Tap to hear' button that calls warm()."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/select.ts:59-66 (allowed = consent || !under13; otherwise local browser voice)",
+    "problem": "CONFIRMED. Every K\u20138 learner without the grown-up toggle gets browserSpeechOut, which per the finding above is the robotic voice. Pre-readers, who depend on audio most, get the worst voice by default.",
+    "fix": "Pre-generate static audio, with alignment, for all fixed text (problem 'say', vetted hints, choices, narration, tutor openings, demo-tutor lines), served from our CDN. No learner data leaves the device, so it needs no consent and uses the same voice as live TTS. Whether live TTS of the tutor's own words (names already scrubbed) needs consent is a question for the owner and counsel, not for code."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/speakable.ts:115 (nameWords.has(core(tok)))",
+    "problem": "CONFIRMED (ran it). With names ['Will'], 'Will you try the next one?' becomes 'you try the next one?'. With ['May'], 'May I show you a picture?' becomes 'I show you a picture?'. Any nickname that is also a capitalized common word (Will, May, Rose, Grace, Hope, Joy, Sky, Mark, Jack, Bill) breaks sentence starts in the vendor voice. lib/ai/context.ts already keeps the name out of the prompt, so the scrub prevents almost nothing and produces broken sentences.",
+    "fix": "Scrub only vocative or possessive positions ('Name,' at sentence start, ', Name.' / ', Name?' / ', Name,' and \"Name's\"), and never a sentence-initial token followed by a pronoun or verb."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/converse.ts:36-40,64; bargein.ts; elevenlabs.ts:165 (s.stop())",
+    "problem": "CONFIRMED by reading the code. Barge-in waits for a non-backchannel interim transcript, so the tutor stops at first-partial latency, about 0.4\u20130.9 s after the child starts talking, not the plan's \u2264 300 ms. It then cuts the audio buffers dead, which clicks mid-sample. After a barge-in, the whole reply stays in the transcript and in the next model call, so the model thinks the child heard a question they never heard. That breeds 'as I asked\u2026' replies.",
+    "fix": "Duck, then fade, then cut (numbers in the recommendations). Record the last spoken word index at cancel and send the tutor message truncated to what was heard, plus '[interrupted]'."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf select.ts:61 (rate 0.9 if young), select.ts isYoung = K\u20135, turn.ts:20-22, deepgram.ts:36 (smart_format, punctuate)",
+    "problem": "CONFIRMED. 'young' covers K\u20135 for both speed (0.9) and TURN_YOUNG, so a kindergartner gets the same pace and patience as a 5th grader, and no grade gets a pause between sentences. Deepgram's punctuate and smart_format put a period on nearly every final result, so shapeOf() returns 'done' (verified: 'Twelve.' and 'Doce.' are done) and the turn ends after 1100 ms (700 ms for grades 6\u20139). Children who pause mid-thought ('it's twelve\u2026 no\u2026') get cut off.",
+    "fix": "Split the bands into K\u20132, 3\u20135 and 6\u20139, using the speed, pause and end-of-turn numbers in the recommendations. For K\u20132, ignore end punctuation the recognizer added, or move to Flux end-of-turn detection."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/session.ts, converse.ts; missing: lib/voice/conversation.ts, lib/voice/say.ts, practice/spoken.ts (named in plan M6)",
+    "problem": "CONFIRMED. There is no conversation state machine and no 'hearing' or 'thinking' state. Between the end of the learner's turn and the first audio, nothing on screen or in sound changes, so the tutor looks frozen. In hands-free mode the Deepgram stream stays open until stop(); nothing closes the mic after silence, as the plan's 'closes itself after silence' requires. That is a privacy problem on a kid's tablet.",
+    "fix": "Build conversation.ts as planned (idle \u2192 listening \u2192 hearing \u2192 thinking \u2192 speaking \u2192 barge-in) and expose the state through useVoiceSession. Show 'thinking' visually only: the cursor drifts and breathes, and no spoken 'hmm'. Close the mic after 8 s of silence (K\u20132: 12 s) and show it closing."
+   },
+   {
+    "severity": "major",
+    "where": "fbf54bf apps/web/src/lib/voice/elevenlabs.ts:197-214 (word starts counted as space\u2192non-space across chunks); fakes.ts alignmentFor",
+    "problem": "PLAUSIBLE, not verified against the live service. Word timing counts each change from space to non-space and carries that across chunks. Every test fakes alignment with the trailing space included ('One. '). If real alignment for a flushed sentence leaves out the trailing space or a leading space, the next sentence's first word is never counted, and every later highlight, plus any glow keyed to a word index, runs one word late for the rest of the reply. Boundary times also ignore AudioContext.outputLatency, so on Bluetooth (about 150\u2013250 ms) the highlight runs ahead of the sound.",
+    "fix": "Map alignment chars onto a running offset into the exact text sent, skipping whitespace mismatches either way, and look up the word index from precomputed word-start offsets. Add (ctx.outputLatency || ctx.baseLatency || 0) to every boundary time. Record one real ElevenLabs response as a test fixture and assert drift is at most 1 word at the end of a 60-word reply."
+   },
+   {
+    "severity": "minor",
+    "where": "fbf54bf apps/web/src/lib/voice/elevenlabs.ts:197 (at = max(currentTime + 0.03, nextStart))",
+    "problem": "There is no playout buffer and no gain stage. A chunk that arrives late leaves a gap mid-word, and starts and stops are hard edges that can click.",
+    "fix": "Hold the first playback until 150 ms of audio is buffered or 250 ms have passed, whichever comes first, and schedule with a 50 ms lead. Route playback through a GainNode with a 10 ms fade-in at stream start and fades on cancel and barge-in. On underrun, resume at the next word boundary rather than mid-word."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/components/tutor/TutorChat.tsx:94 (text parts joined with \"\")",
+    "problem": "CONFIRMED (ran the chunker). Text before and after a tool call joins as 'Let me check that.Your answer\u2026'. The chunker won't split there, the word index treats 'that.Your' as one word, and the TTS reads it as one word.",
+    "fix": "Join text parts from different steps with '\\n' (the chunker splits on newlines), or with ' ' at minimum."
+   },
+   {
+    "severity": "minor",
+    "where": "fbf54bf apps/web/src/lib/voice/backchannel.ts:21-24, converse.ts:62",
+    "problem": "CONFIRMED. 'yes', 'right', 's\u00ed', 'claro' and 'I know' spoken while the tutor is still talking are thrown away, but kids often answer a yes/no question over its last words, and the answer is lost. 'uh huh' with a space is not counted as a backchannel (verified), so it interrupts the tutor.",
+    "fix": "While the current sentence is a question and within its last 1.5 s, or after its last scheduled word, pass yes/no/s\u00ed/no through as a turn. Add 'uh huh', 'mm hmm' and 'a ha'."
+   },
+   {
+    "severity": "minor",
+    "where": "fbf54bf apps/web/src/lib/voice/converse.ts say() (recent built from written sentences), bargein.ts echoScore",
+    "problem": "PLAUSIBLE. Echo matching compares what the recognizer heard against the written words, not the spoken ones. The tutor says 'three fourths' (written '3/4'), while Deepgram with smart_format may return '3/4' or 'three fourths', so the match misses. On speakers where echo cancellation leaks, the tutor can interrupt itself.",
+    "fix": "Build the recent-words list from speakable().text, and fold digits and number words into one form on both sides before scoring."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/lib/ai/prompts.ts:34",
+    "problem": "'Keep notation simple; say numbers the way you would say them aloud' makes the model write 'three fourths' on screen for a 7th grader, who needs to see 3/4. Nothing tells the model a reply will be spoken: no rule against lists, parentheses, arrows or tables in voice mode.",
+    "fix": "Remove that line. When voice is on, add the voice-mode rules from the recommendations (normal math notation, no lists or parentheses or arrows or tables, short sentences, question last)."
+   },
+   {
+    "severity": "minor",
+    "where": "apps/web/src/i18n/en.ts:503,642,643 (tutor.demo.other / .found / .talkOther)",
+    "problem": "Three different lines say 'I'm the demo tutor', so when spoken aloud the tutor announces itself over and over, which sounds canned. The plan says once.",
+    "fix": "Disclose once in the opening line. Remove the disclosure from the per-turn strings."
+   }
+  ],
+  "recommendations": [
+   "Model (no code change to start): A/B ELEVENLABS_MODEL=eleven_flash_v2_5 against eleven_multilingual_v2 on the chosen voice. Use a fixed 30-line EN/ES script (fractions, negatives, questions, three K\u20132 lines) rated blind by the owner and 2\u20133 kids. Pick on naturalness unless median time to first audio goes above 1.2 s. Then prototype eleven_v4_turbo (~100 ms, ElevenLabs' most expressive real-time model) on the Text to Dialogue WebSocket wss://api.elevenlabs.io/v1/text-to-dialogue/stream-input. Keep one connection per session, set sync_alignment=true, and send new_turn:true at the end of each tutor turn so prosody context carries across turns. This needs a small server relay: single-use tokens only cover tts_websocket, realtime_scribe and batch_scribe, and stream-input does not accept eleven_v3 or v4.",
+   "Voice settings: stability 0.45, similarity_boost 0.75, style 0, use_speaker_boost true. Speed 1.0 for grades 6\u20139, 0.95 for 3\u20135, 0.9 for K\u20132, never below 0.88. For young kids, pace should come from pauses, not stretched words. Add 120 / 250 / 400 ms of extra silence at sentence ends for 6\u20139 / 3\u20135 / K\u20132, plus 300 ms before a question at K\u20132. Insert the silence into nextStart when the alignment passes a sentence's spokenEnd.",
+   "Voice choice: one adult, warm, mid-pitch voice from the 'conversational' category (not a narrator or storyteller), a native bilingual US-Latino speaker used for both locales. Audition 5 candidates on the script with Flash v2.5 and Multilingual v2, and reject any whose accent shifts in Spanish. If no single voice passes, use two voices matched on gender, age and pitch. Keep the voice fixed per learner on Talk, the drawer, narration, Hear, the Runner and the spotlight caption.",
+   "Number reading in speakable (EN/ES), never leaving a digit for Flash: cardinals up to 999,999,999. A leading \u2212/- before a digit: 'negative' / 'menos'. '2 1/2' \u2192 'two and a half' / 'dos y medio'. Fractions with denominator \u2264 20, 100 or 1000 \u2192 ordinal words ('five sixteenths' / 'cinco dieciseisavos'), anything else \u2192 'five over seventeen' / 'cinco sobre diecisiete'. '3:30' \u2192 'three thirty' / 'las tres y media'. '$2.50' \u2192 'two dollars and fifty cents' / 'dos d\u00f3lares con cincuenta centavos'. '50%' \u2192 'fifty percent' / 'cincuenta por ciento'. Thousands separators per locale. Decimals 'point' / 'punto'. Ordinals '2nd' / '2.\u00ba' \u2192 'second' / 'segundo'. 'x' or 'X' between numbers \u2192 'times' / 'por'. '\u221a16' \u2192 'the square root of sixteen' / 'la ra\u00edz cuadrada de diecis\u00e9is'. Drop \u2192 | \u2022 and table pipes. 'e.g.' \u2192 'for example', 'p. ej.' \u2192 'por ejemplo'. Spanish powers 'elevado a la'; '\u2260' \u2192 'es distinto de'.",
+   "Browser fallback ranking, one shared picker. Tier A (natural; the only tier allowed for hands-free and auto read-aloud): Edge /Online \\(Natural\\)/. For EN prefer 'Microsoft AvaMultilingual Online (Natural) - English (United States)', then Ava, Andrew, Emma, Brian, Jenny or Aria Online (Natural). For ES prefer 'Microsoft Dalia Online (Natural) - Spanish (Mexico)', 'Microsoft Paloma Online (Natural) - Spanish (United States)', 'Microsoft Jorge Online (Natural) - Spanish (Mexico)', or reuse the same Multilingual voice for both languages. Apple voices whose name ends in '(Premium)', then '(Enhanced)'. Android Chrome local Google TTS voices (localService true, en-US / es-US). Tier B (tap to hear only): 'Samantha', 'Paulina' (es-MX), 'Google US English', 'Google espa\u00f1ol de Estados Unidos', 'Google espa\u00f1ol', and 'M\u00f3nica' (es-ES) as the last Spanish option. Tier C (never; show text only): the SAPI 'Microsoft David/Mark/Zira/Sabina/Helena - \u2026' desktop voices, Albert, Fred, Junior, Kathy, Ralph, Bad News, Bahh, Bells, Boing, Bubbles, Cellos, Good News, Jester, Organ, Superstar, Trinoids, Whisper, Wobble, Zarvox, the Eloquence voices Eddy, Flo, Grandma, Grandpa, Reed, Rocko, Sandy and Shelley in any language, and 'Chrome OS \u2026' voices. Spanish region order: es-US > es-MX > es-419 > other Latin American > es-ES. Edge Online and Google voices send text to Microsoft or Google, so put them behind the same consent as the vendor. Wait up to 1000 ms for voiceschanged and cache the pick per learner and locale.",
+   "Pre-generate audio for all fixed text (problem 'say', vetted hints, choices, narration segments, tutor and demo openings, demo-tutor lines) with /v1/text-to-speech/{voice}/with-timestamps on the chosen voice, using multilingual_v2 or a batch v3/v4 for best quality. Store the files with their alignment JSON under hash(text, voice, model, speed) on our CDN. Result: zero latency, the same voice as live replies, word timings for the glow, and nothing sent to a vendor for under-13 learners.",
+   "Tutor cursor spec: one 16 px rose dot with a 6 px soft halo, parked at the edge of the tutor caption or avatar. It glides center to center with transform: translate over clamp(220 + 0.35 \u00d7 distance_px, 260, 650) ms, cubic-bezier(0.2, 0.8, 0.2, 1). It arrives 180 \u00b1 50 ms before the anchored word's audio start (gaze leads speech), and then the existing ring blooms. The ring holds until the sentence ends + 400 ms, then fades while the dot stays. While the tutor is thinking, the dot drifts to the item under discussion and breathes (opacity 0.55\u21941 every 1.6 s). While the learner talks, it moves to the mic or caption. Reduced motion: no glide, a 120 ms crossfade at the target on the word. Account for outputLatency in all timing.",
+   "Anchoring: the model writes an inline marker such as \u27e6spot:practice.prompt.part.0.bottom\u27e7 immediately before the word it refers to. Parse it on the client (isSpotId, visibleSpots, guards), strip it from both the screen text and speakable, and record its spoken word index. When onBoundary reaches anchor index \u2212 lead, call spot(). Pointing then costs zero model round trips; drop point_at's server execute in voice mode. In typed mode, fire when the anchored word is revealed. Have hintSpot return the matched phrase so the demo tutor anchors on 'bottom' in 'the bottom number is 6'.",
+   "Barge-in: on Deepgram SpeechStarted, or mic level above \u221235 dBFS for 120 ms, while the tutor speaks and the input does not look like echo, duck TTS gain to 0.25 over 60 ms. If a non-backchannel word arrives within 700 ms, cancel with a 120 ms fade; otherwise restore over 250 ms. Targets: audible reaction \u2264 200 ms, fully stopped \u2264 800 ms. Truncate the tutor turn in the model context to the words actually heard, plus '[interrupted]'.",
+   "Turn-taking: K\u20132 done 1600 ms / open 2200 ms / hold 5000 ms, ignoring end punctuation the recognizer added, with Deepgram utterance_end_ms 1500. Grades 3\u20135: 1100 / 1800 / 4000. Grades 6\u20139: keep 700 / 1400 / 3000. Better: Deepgram Flux flux-general-multi (EN+ES) at wss://api.deepgram.com/v2/listen with eot_threshold 0.8 (K\u20135) or 0.7 (6\u20139), eot_timeout_ms 5000 (K\u20132) or 3000, and eager_eot_threshold 0.5 to start the LLM early, cancelling on TurnResumed. Send 80 ms frames (today's are about 43 ms). First check that Flux accepts the /v1/auth/grant token from the browser.",
+   "Latency budget, median on home Wi-Fi, logged per turn: end of turn \u2264 700 ms (6\u20139) or \u2264 1600 ms (K\u20132); first model text token \u2264 600 ms after the turn ends; first audio \u2264 300 ms after the first sentence completes. Total \u2264 1.6 s from the learner's last word to the tutor's first sound (6\u20139). Getting there needs answers checked in code before the model call and board tools with no server step.",
+   "Prompt voice-mode block, added when voice is on: at most 18 words per sentence, the question last, no parentheses, lists, tables, arrows or emoji, and math written in normal notation (3/4, 5 \u00d7 2 = 10) because the app speaks it. Remove 'say numbers the way you would say them aloud'.",
+   "Ship gates before calling it 'not uncanny': echo and self-interrupt test on MacBook speakers, iPad speakers (check whether iOS lowers playback volume while getUserMedia is open) and a Windows laptop. 20 real utterances per age band in each language, with no cut-off turns. Highlight drift \u2264 1 word at the end of a 60-word reply, tested on a recorded real ElevenLabs response. A blind listen of the 30-line script in which no listener picks out any line as robotic."
+  ]
+ }
+}

@@ -1,0 +1,71 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/components/shell/AppShell.tsx",
+   "change": "Call `useWeeklyEmail();` once at the top of AppShell (`import { useWeeklyEmail } from \"@/lib/email/weekly\";`). It sends last week's email when a grown-up opens any Parent view screen. It does nothing for learners, or when the email is off or unconfirmed. Settings picks this up on its own (useSentFromParentView) and changes its copy from \"when a grown-up opens Settings\" to \"opens the Parent view\". The e2e journey \"opening the Family page after Sunday sends last week's email\" fails until this lands."
+  },
+  {
+   "file": "apps/web/src/app/(app)/practice/page.tsx",
+   "change": "SkillRow's badge (line ~233): render `{!isReviewed(s, skill) && <Badge>{t(\"practice.draft\")}</Badge>}` instead of `skill.content === \"draft\"`. Get `s` with `useStore((s) => s)` or pass a boolean computed with `useStore((st) => isReviewed(st, skill))`; import from @/lib/review. The contract says every \"Draft questions\" badge must use isReviewed, so do the same for any other badge the practice package added. The e2e review journey checks that the approved e.rhyme row no longer shows the badge and that e.syllables still does."
+  },
+  {
+   "file": "apps/web/src/components/landing/Landing.tsx",
+   "change": "In the footer, next to <KaizenLogo />, render the policy links: `import { PolicyLinks } from \"@/app/(legal)/legal\";` and `<PolicyLinks />`. That gives Privacy, Terms of use and Data retention, translated, with 44px targets."
+  },
+  {
+   "file": "apps/web/src/app/(auth)/sign-up/page.tsx",
+   "change": "Below the sign-up form, add `<PolicyLinks className=\"justify-center\" />` (from \"@/app/(legal)/legal\"), so a parent can read the policies before creating an account and adding children."
+  },
+  {
+   "file": "apps/web/src/lib/types.ts",
+   "change": "Add to Account: `weeklyEmail?: { on: boolean; confirmed?: { token: string; at: number }; askedAt?: number; lastWeek?: string; lastSentAt?: number };`. Then lib/email/weekly.ts can drop its `WithWeekly` cast and use Account directly; WeeklyOptIn there has the same shape."
+  },
+  {
+   "file": "apps/web/.env.example",
+   "change": "Append:\n# Weekly parent email (optional). Without a key, Settings shows a preview and nothing is sent.\n# RESEND_API_KEY=\n# On Vercel, a Resend key only sends when this is also set (keeps old keys inert):\n# KAIZEN_EMAIL=resend\n# Origin for links in emails. Required off Vercel (a request's Host header isn't trusted); on Vercel it defaults to the deployment's address:\n# APP_URL=https://kaizenedu.net\n# Sender on a domain verified in Resend:\n# EMAIL_FROM=\"KaizenEDU <weekly@kaizenedu.net>\"\n# Optional key for confirmation codes and send tokens (defaults to one derived from the Resend key). Change it to end every token at once:\n# EMAIL_SECRET="
+  },
+  {
+   "file": "apps/web/src/components/family/CoachNote.tsx",
+   "change": "Before POST /api/ai/coach, strip family names from `comingUp` (school item titles a parent typed, e.g. \"Ada's spelling test\"): `comingUp.map((x) => withoutNames(x, nameWords([child.nickname, account.displayName]), t(\"trust.email.child\"), t(\"trust.email.childs\")))`, with withoutNames and nameWords from \"@/lib/email/render\"."
+  },
+  {
+   "file": "apps/web/src/lib/tutor.ts",
+   "change": "Before sending TutorContext.homework.title/notes and lesson.title to /api/tutor, run them through `withoutNames(text, nameWords([learner.nickname, account.displayName]), ...)` (both from \"@/lib/email/render\"). If the tutor package agrees, do the same for the learner's message text, so a typed family name never reaches Anthropic. The policies already say text goes as typed, so this only narrows what is sent."
+  },
+  {
+   "file": "apps/web/src/components/stage/hear.tsx",
+   "change": "When picking a voice, prefer a local one: `const vs = speechSynthesis.getVoices().filter((v) => v.lang.startsWith(locale)); u.voice = vs.find((v) => v.localService) ?? vs[0] ?? null;`. Without this, Chrome without local voices sends the text being read to Google (the privacy page now says so). Make the same change in src/components/stage/useSpeech.ts and src/components/tutor/useVoice.ts."
+  },
+  {
+   "file": "apps/web/src/components/gate.tsx",
+   "change": "Optional, now that a typed code works anywhere: when Guard need=\"selected\" sends a signed-in grown-up to /profiles, keep the original URL with its hash (e.g. /profiles?next=\u2026) and have /profiles return there after Parent is chosen. The emailed link (/settings#weekly=CODE) then confirms in one click even when nobody is selected."
+  },
+  {
+   "file": "apps/web/src/lib/auth.ts",
+   "change": "Optional: export `async function checkPassword(email: string, password: string): Promise<boolean>`, which hashes against the stored salt without touching the session. Settings' delete-all could then re-check the password without signIn() first resetting the session to the profile picker. It reloads to / right after, so today this only shows for a moment."
+  },
+  {
+   "file": "apps/web/src/app/(app)/settings/DataSection.tsx",
+   "change": "Integration step after the intake package (lib/blobs.ts) merges (this file is trust's own): make download() async and put the attached files inside the export: `const data = await withFiles(exportFamily(read(), accountId, {...})!, async (id) => { const f = await getBlob(id); return f && { name: f.name, type: f.type, size: f.size, dataUrl: await dataUrl(f.blob) }; });`. Then switch the paragraph and export note to trust.data.exportBodyFiles; that key already exists in en and es."
+  },
+  {
+   "file": "apps/web/src/lib/email/weekly.ts",
+   "change": "Integration step after the family package (lib/nudges.ts, lib/family.ts lastActive) merges (this file is trust's own): replace LOOK_RULES, the local lastActive and the overdue/stuck/tests/idle computation in learnerWeek with `nudgesFor(s, p.id, now)`. Map prep and unlinked to tests (title through scrub), check to overdue, stuck to stuck, idle to idleDays. Replace the `lessonChecks` cast with `f.lessonChecks` once WeekFacts has it. The rules are already the same by construction, so the numbers don't change."
+  }
+ ],
+ "followups": [
+  "Skipped: the Practice page badge. practice/page.tsx is not trust's file, so it is a request. The approval copy still says the label disappears because the contract requires every \"Draft questions\" badge to use isReviewed(). The e2e review journey fails until the practice package does this.",
+  "Skipped: making the whole Parent view send the weekly email. AppShell is not trust's file, so it is a request. Until it lands, Settings says the email goes out when a grown-up opens Settings, and the e2e journey \"opening the Family page after Sunday sends last week's email\" is expected to fail. It is there to flag the missing step.",
+  "Not run: Playwright, per the instructions. None of the e2e journeys or the 390/1440 axe audits in trust.spec.ts have been run. In particular, the new store-seeding helper (lastWeekDue) and the Practice search selectors are untested against the merged app.",
+  "Partly done: revoking a weekly-email token. Tokens now expire after 120 days, are replaced on later sends, are left out of the export, and EMAIL_SECRET ends all of them at once. Revoking a single family's token on the server is not possible until accounts and a database exist.",
+  "Not built: browser-side error capture. There is no instrumentation-client file and no error endpoint inside trust's paths. Ops tracking covers server errors only.",
+  "Decision needed from the owner (with counsel): the retention periods for the server era (idle accounts, backup purge, logs). The page now labels those rows a proposal with no numbers. The other periods it states (120-day email key, 2-day codes, 30-minute reset links, 1-day lookup cache, newest 5,000 acts) come from the code.",
+  "Not built (plan 5.5 to 5.7, needs the backend): verifiable parental consent and receipts; server-side delete with purge at vendors; backups and a restore drill; uptime; cost dashboard; shared rate limits. The rate and duplicate guards in /api/email/weekly are per-instance memory.",
+  "Waiting on other packages: \"Worth a look\" in the weekly email copies the Family page's nudge rules instead of calling nudgesFor, and lessonChecks still uses a type cast. Both are swapped after the family merge (listed in requests).",
+  "Waiting on the intake package: the export does not include attached files yet. Its text now says when saved files are left out, until withFiles is wired.",
+  "Waiting on other packages: landing-page and sign-up links to the policies (requested). Today a family can create an account and add children before seeing a link to the privacy notice.",
+  "Needs a native speaker: about 300 Spanish trust.* strings. The app-wide event.quiz \"Prueba corta\" (not trust's) still collides with \"prueba\" meaning a skill check; the email now uses \"examen corto\".",
+  "Needs the owner before launch: counsel review of the privacy, terms and retention drafts; a real privacy@kaizenedu.net mailbox; a Resend-verified EMAIL_FROM domain; APP_URL set wherever the app runs off Vercel; KAIZEN_EMAIL=resend on Vercel to send at all.",
+  "Soft check: \"only a teacher approves\" is the grown-up saying they are a teacher. The device can't verify it. reviewed.ts, maintained by the owner, is still the only route that clears the label for every family."
+ ]
+}

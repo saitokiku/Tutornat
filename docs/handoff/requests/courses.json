@@ -1,0 +1,38 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/e2e/journey.spec.ts",
+   "change": "Still needed. In demo mode the magic box now builds \"dinosaurs\" from real sources instead of a template, so the outline-only \"Ready to learn right now\" panel no longer appears, and unmocked /api/know calls go to live sources (a 502 turns into a console error). (1) Before `await page.goto(\"/courses/new\");` add: `await page.route(\"**/api/ai/status\", (r) => r.fulfill({ json: { mode: \"demo\" } })); await page.route(\"**/api/know/**\", (r) => { const kind = new URL(r.request().url()).pathname.split(\"/\").pop(); return r.fulfill({ json: kind === \"wiki\" ? { summary: { title: \"Dinosaur\", extract: \"Dinosaurs are reptiles that lived a very long time ago.\", url: \"https://en.wikipedia.org/wiki/Dinosaur\", lang: \"en\", license: \"CC BY-SA 4.0\" } } : kind === \"books\" ? { books: [] } : kind === \"define\" ? { definitions: [] } : { related: [] } }); });` (Leo is K, so the builder asks lang=simple first; this mock answers both). (2) Replace `await expect(page.getByText(\"Ready to learn right now\")).toBeVisible();` with `await expect(page.getByText(/^Built from (Wikipedia and )?real sources$/).first()).toBeVisible();`. Land it together with this package."
+  },
+  {
+   "file": "apps/web/src/components/stage/Stage.tsx",
+   "change": "Still needed. Show the course's origin in the stage header: `import { OriginBadge } from \"@/components/courses/Origin\";` and render `<OriginBadge course={course} />` next to the `<SubjectDot>` and the course title. It renders Written by people / Built from Wikipedia and real sources / Built from real sources / Written by AI / Template outline, derived by `courseOrigin()` in lib/courses.ts from Course.origin, Course.ai and Course.citations. On the finish screen of a source-built course (`course.citations?.length`), render `<CourseSources course={course} />` from `@/components/courses/Sources`, so every source is one tap away (a slide Block has no link type, so the overview credit shows the readable URL and points to the course page)."
+  },
+  {
+   "file": "apps/web/src/knowledge/wiki.ts and apps/web/src/app/api/know/[kind]/route.ts",
+   "change": "New. Support Simple English Wikipedia for K\u20132. In the route, accept `lang=simple`: `const raw = url.searchParams.get(\"lang\"); const lang = raw === \"es\" || raw === \"simple\" ? raw : \"en\";`. In wiki.ts, widen `wikiSummary(topic, lang: \"en\" | \"es\" | \"simple\")` and `WikiSummary.lang` to include \"simple\" (`base(lang)` already builds https://simple.wikipedia.org). buildSourceCourse already asks `lang=simple` first for K\u20132 English learners and falls back to English Wikipedia when it gets null, so nothing else changes. Today the route answers lang=simple from English Wikipedia, so this is safe to land at any time."
+  },
+  {
+   "file": "apps/web/src/app/(app)/family/page.tsx",
+   "change": "Optional, still valid. The assign list (`options`) leaves out courses the child already has. `addFromCatalogue(id, childId, { assigned: true })` also marks an already-added course \"From a grown-up\" and moves it to the top of the child's path, so the list could include those courses (labelled as already on their path) to let a parent bring one to the front."
+  },
+  {
+   "file": "apps/web/src/lib/activity.ts (continueTarget) / apps/web/src/components/today/*",
+   "change": "Optional, still valid. Today's continue point and \"Your courses\" use most-recently-touched order. To follow the learner's own path order, use `pathOf(state, profileId, subject)` from lib/courses.ts (placed order first, then a grown-up's courses, then date added)."
+  }
+ ],
+ "followups": [
+  "Playwright was not run, per instructions. I rewrote e2e/courses.spec.ts by reading the DOM and strings carefully, but its four acceptance journeys plus the offline and safety cases are unverified until it runs after merge. journey.spec.ts stays red until its request lands.",
+  "No visual check at 320/390 px. Headless Chrome hung in this sandbox, and the browser pane could not open local files. I reviewed the rendered DOM text of the builder, the course page and Learn. The e2e noOverflow checks cover 1440 and 390 px after merge; 320 px is not covered.",
+  "Finding on journey.spec.ts (major): not fixed here, because the file is not mine. It is in requests with the exact change.",
+  "Finding that the overview credit has no link (minor): only partly fixable. Block has no link type, so the slide credit shows the readable URL (en.wikipedia.org/wiki/\u2026) and the CC BY-SA 4.0 licence link is on the course page. The stage request adds CourseSources on the finish screen.",
+  "Finding that K\u20132 overviews are adult Wikipedia prose (major): mitigated (first sentence only, no word quiz, 10-minute cap). The real fix, Simple English Wikipedia, is already wired in buildSourceCourse and waits on the knowledge/route request.",
+  "Spec 3: the origin is not stored as its own field, because lib/types.ts is not mine. It is fully determined by the existing Course.origin, Course.ai and Course.citations, and courseOrigin() / OriginBadge expose it. The stage header label depends on the stage package taking the request.",
+  "No pictures in source-built lessons. Block has no image type, and hot-linking Wikipedia thumbnails would leak the device's address. This needs an image Block plus a server-side image proxy (types and route owners). The borrowed catalogue lesson supplies visuals when one matches.",
+  "Spanish source-built courses stay thinner. There is no word list (Datamuse is English only, and the log says so), and almost no Spanish catalogue lesson to borrow (content packages). Books are filtered to ones with a Spanish edition, but Open Library shows the work's main title, which can be English.",
+  "The safety screen is pattern matching. It can withhold a harmless article (a biology lead that mentions sexual reproduction). The log now says the safety check found words, without judging the topic.",
+  "knowledge/topics.ts is a small hand-written bridge table (18 topics). It and its crs.why.* lines were written by this package, not reviewed by a teacher.",
+  "The 'Draft questions' title on a built practice quiz is fixed when the course is built. The course page badge uses live isReviewed.",
+  "catalogue/index.ts matchEntry still matches on any shared four-letter word. The builder no longer uses it (readyMadeMatch replaces it), and it has no other callers outside the catalogue. Tightening it is up to the catalogue owner."
+ ]
+}

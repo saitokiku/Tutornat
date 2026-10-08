@@ -1,0 +1,39 @@
+[desktop] › e2e/aiinfra.spec.ts:54:5 › over the daily cap the tutor says so kindly, in its own voice, and practice is one tap away 
+    Error: expect(locator).toBeVisible() failed
+    Expected: visible
+    Error: element(s) not found
+    > 69 |   await expect(log.getByText(en["tutor.practiceCard"])).toBeVisible();
+
+[desktop] › e2e/family.spec.ts:116:5 › a skill gone stuck in test prep: the nudge hands over to Practice with that skill first 
+    Error: expect(page).toHaveURL(expected) failed
+    Expected pattern: /\/practice\?subject=math&again=m\.frac\.equiv$/
+    Received string:  "http://localhost:3291/home"
+    > 124 |   await expect(page).toHaveURL(/\/practice\?subject=math&again=m\.frac\.equiv$/);
+
+[desktop] › e2e/journey.spec.ts:12:5 › a family's first evening ───────────────────────────────
+    Error: locator.selectOption: Error: strict mode violation: getByLabel('Grade') resolved to 3 elements:
+    > 33 |   await page.getByLabel("Grade").selectOption("K");
+
+[desktop] › e2e/intake.spec.ts:68:5 › a typed test lands on an item page showing its skills' statuses and a prep button 
+    Error: expect(locator).toBeVisible() failed
+    Expected: visible
+    Error: element(s) not found
+    > 81 |   await expect(page.getByText("0 proved · 0 practicing · 1 not started")).toBeVisible();
+
+[desktop] › e2e/stage.spec.ts:199:7 › with reduced motion › the new manipulatives have no serious accessibility problems and fit the screen 
+    Error: expect(received).toEqual(expected) // deep equality
+    - Expected  - 1
+    + Received  + 3
+    > 206 |       expect(bad.map((v) => `${widgets[i].title}: ${v.id} — ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
+
+[desktop] › e2e/tutor.spec.ts:64:5 › “what is a logical fallacy” in demo mode: a cited extract and the fallacies practice 
+    Error: expect(locator).toBeVisible() failed
+    Expected: visible
+    Error: strict mode violation: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' }) resolved to 2 elements:
+    > 74 |   await expect(fact).toBeVisible();
+
+[desktop] › e2e/tutor.spec.ts:200:5 › at 320px wide, Talk fits and a sentence that isn't a topic is never searched 
+    Error: expect(locator).toBeVisible() failed
+    Expected: visible
+    Error: strict mode violation: getByRole('region', { name: 'Board' }).getByRole('article', { name: 'Fallacy' }) resolved to 2 elements:
+    > 214 |   await expect(page.getByRole("region", { name: "Board" }).getByRole("article", { name: "Fallacy" })).toBeVisible();

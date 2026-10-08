@@ -1,0 +1,41 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/components/tutor/TutorChat.tsx",
+   "change": "REQUIRED for spec item 4 / plan 2.6. Without it the AI tutor receives none of the teaching profile. In AiChat:\n(1) Change the import to `import { familyNames, scrubContext, scrubMessages, teachingFor, type TutorContext } from \"@/lib/ai/context\";`.\n(2) Next to the `working` state, add `const [teaching] = useState(() => teachingFor(read(), learner, Date.now()));` and `const [others] = useState(() => familyNames(read(), learner));`.\n(3) Build the context as `const context: TutorContext = scrubContext({ ...the existing fields..., teaching }, learner.nickname, others);`. This takes the learner's and the family's names out of lastAnswer, lesson, homework, interests and the note.\n(4) Create the transport as `new DefaultChatTransport({ api: \"/api/tutor\", prepareSendMessagesRequest: ({ id, messages, body, trigger, messageId }) => ({ body: { ...body, id, trigger, messageId, messages: scrubMessages(messages, learner.nickname, others, learner.locale) } }) })`. What the learner typed then reaches the model without names, while the chat on screen keeps it as typed."
+  },
+  {
+   "file": "apps/web/src/lib/ai/tools.ts",
+   "change": "In tutorTools, add `import { startHint } from \"./context\";` and replace `let hintsGiven = 0;` with `let hintsGiven = startHint(ctx);`. The first next_hint then returns the rung the profile chose, matching the prompt line \"Start hints at rung N of 3 \u2026 next_hint starts there for this learner\". startHint already falls back to rung 1 when there is no teaching block."
+  },
+  {
+   "file": "apps/web/src/lib/types.ts",
+   "change": "In TeachingPrefs add `/** A grown-up turned \"How we teach\" off: nothing is worked out from practice and nothing goes to the tutor. */ off?: true;`. learning/profile.ts then exports `TeachingEdits = TeachingPrefs`, which today is `TeachingPrefs & { off?: true }`. This is a type-only change; the runtime already stores and reads it."
+  },
+  {
+   "file": "apps/web/src/lib/family.ts",
+   "change": "When logging nudge acts (kind \"nudge\", intent \"parent-acts\", once, profileId = the child), build ref with `nudgeKey` from `@/learning/outcomes` and put the kind in detail:\n- `nudgeKey(\"check\", skillId)` for a check waiting 14 days;\n- `nudgeKey(\"stuck\", skillId)`;\n- `nudgeKey(\"prep\", eventId)` for a test in 3 days with no prep;\n- `nudgeKey(\"idle\")` for nothing done in 5 days.\nparseNudge is tolerant of other key forms, but these four resolve exactly."
+  },
+  {
+   "file": "apps/web/src/components/practice/Runner.tsx",
+   "change": "A contract detail the outcomes and the hint rung depend on. Hint, steps and similar acts carry `setId: set.id`, `skillId: slot.skillId` and `ref: String(index)`, where index is the slot's position in set.slots, the same index passed to recordAnswer. For hints, `detail` is the rung just shown: \"1\" | \"2\" | \"3\". Any other ref leaves the act pending. Also pass AnswerRecord.why for wrong answers that match a tagged choice or wrong value, so \"Mistakes that come back\" can fill in."
+  },
+  {
+   "file": "apps/web/src/components/stage/Stage.tsx",
+   "change": "A contract detail: log the lesson act with `ref: `${course.id}/${lesson.id}`` at or before the first quiz answer, in the same effect that records lesson_started. Outcomes count only quiz answers recorded at or after act.at."
+  }
+ ],
+ "followups": [
+  "Until the TutorChat.tsx and tools.ts requests are applied, the AI tutor does not read the teaching profile and next_hint still starts at the nudge. The child page does not claim otherwise: the copy only labels the note \"for the tutor\" and says the tutor gets nothing when the profile is off. The demo tutor and the practice Runner do not use the profile yet; wiring them to teachingOf() is the next step.",
+  "tutorTools(ctx) is rebuilt on every request, so hintsGiven resets each turn. That is a tools.ts issue that predates this package, and the tutor package should address it. The startHint request only sets where the count starts.",
+  "Nothing logs teaching acts yet at this commit (Runner hints / steps / similar, startSet, checks, prep, Today plan lines, nudges, tutor talks, lessons, courses). Those belong to the practice, today, family, tutor, stage and courses packages under the shared logAct contract. Until they land, \"Is it working?\", the hint rung and lead-with stay at \"Not enough yet\" for real learners. Runner must also pass `why` before \"Mistakes that come back\" can fill in.",
+  "Mistake tags: the banks contain no `why` tags at this commit, so only lm.why.tag.added-denominators exists. Unknown tags show the author's words in English and \"Un error que se repite\" in Spanish. Add lm.why.tag.<tag> keys once the practice package settles its tags. I left out an i18n test that every bank tag has a key, because it would fail the merged suite until those keys exist.",
+  "Skipped, finding 14 (a typed logHelp helper): the ref/detail contract is written on ActInput in lib/acts.ts and in the shared contract every package builds against. A helper with no caller in this package would be an abstraction without a second user.",
+  "Not available in the record: read-aloud and microphone use, and \"explain it a different way\" requests, are not recorded anywhere. So Language and voice comes from settings (labelled \"From settings\"), and the representation fact uses miss rates only.",
+  "Superseded lm.* keys stay in en.ts and es.ts under the append-only rule: lm.how.body, derived, derivedNone, fromRecord, noteHint, clearAsk, ai, demo, lm.rung.1-3, lm.fact.rung.says, repr.says, why.row, why.rowExample, time.says, day.says, lm.work.lead, lead.set, lead.demo and lm.proved.standard. They are unused and can be pruned after merge.",
+  "The plan 2.6 acceptance eval (a real-model run where \"examples work\" gets an example first) needs the eval harness from task 2.4. Meanwhile a deterministic test checks the prompt for that case.",
+  "The Records page (records/, not this package) could also print the verified half from verifiedEducation(): proof with standards, course tallies and school results.",
+  "\"Is it working?\" covers this learner only. Plan 3.3's de-identified aggregates need the backend. Outcomes are computed and cached, not persisted; the backend should persist outcome and resolvedAt by the same rules, and resolveActs already keeps an outcome that is on the act.",
+  "Playwright was not run, as instructed. The ambiguous \"Save\" locator is fixed (the note button is now \"Save note\"), but learner.spec.ts still needs a run at 1440 and 390 after merge."
+ ]
+}

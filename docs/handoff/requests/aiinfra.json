@@ -1,0 +1,62 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/components/tutor/TutorChat.tsx",
+   "change": "BLOCKER for the privacy claim and the per-learner caps. Create the transport as `new DefaultChatTransport({ api: \"/api/tutor\", fetch: aiFetch })`, importing aiFetch from \"@/lib/ai/client\". Until this lands: learner names reach the model as typed; the server can hold tutor requests only to the per-address ceiling; and settings.aiOnBody's \"Learner names are never sent\" is not true for typed names."
+  },
+  {
+   "file": "apps/web/src/components/tutor/TutorChat.tsx",
+   "change": "The demo tutor over a cap:\n1. In TutorChat, add `const budget = useAiBudget();` (from @/lib/ai/client).\n2. Render `<DemoChat/>` when `mode === \"demo\" || budget`.\n3. useAiBudget switches to \"day\"/\"month\" as soon as a capped reply arrives through aiFetch (x-kaizen-budget header). Keep the capped line visible when switching: pass the last tutor entry's text as DemoChat's opening line.\n4. While the last tutor entry has `metadata.budget`, disable the quick-ask chips."
+  },
+  {
+   "file": "apps/web/src/components/tutor/TutorChat.tsx (CardView, case \"practice\")",
+   "change": "The capped reply's practice card (a start_practice tool part written by lib/server/budget.ts) is the main action for a K-2 non-reader. Its Button is `size=\"sm\"` (min-h-9, 36px). Make it at least 44px, and `min-h-14` (56px) when `young` (grades K-2)."
+  },
+  {
+   "file": "apps/web/src/lib/generate.ts (+ GenerationEvent in src/lib/types.ts, + src/app/(app)/courses/new/[draftId]/page.tsx)",
+   "change": "1. In aiOutline, use `aiFetch` in place of `fetch` for /api/ai/course.\n2. The cap now arrives inside the ndjson stream as `{type:\"error\", error:\"budget\", scope, message}` with HTTP 200, both at the start and when a course stops partway on a cost cap. So no 429 handling is needed: pass the message through with `else if (e.type === \"error\") yield { type: \"error\", error: e.error ?? \"model\", message: typeof e.message === \"string\" ? e.message : undefined };`.\n3. Add `message?: string` to the error GenerationEvent.\n4. On the draft page, store `{ error, message }` and show `message ?? t(error === \"rate\" ? \"gen.errRate\" : \"gen.errModel\")`."
+  },
+  {
+   "file": "apps/web/src/lib/practice.ts (aiQuestions) + the practice screen that calls it",
+   "change": "1. Use `aiFetch` in place of `fetch` for /api/ai/practice.\n2. When `!res.ok`, the text to show is `await capNotice(res)` (both from @/lib/ai/client): \"AI-written questions are done for today. Practice from the skill map still works.\" Use it in place of the generic failure, for example by returning `{ items: null, notice }` or by exposing the notice beside the null."
+  },
+  {
+   "file": "apps/web/src/components/calendar/ImportPanel.tsx",
+   "change": "In readWithAi, use `aiFetch` in place of `fetch` for /api/ai/extract, and replace `if (!res.ok) return setError(t(\"import.aiFailed\"))` with `if (!res.ok) return setError((await capNotice(res)) ?? t(\"import.aiFailed\"))`."
+  },
+  {
+   "file": "apps/web/src/components/family/CoachNote.tsx",
+   "change": "Use `aiFetch` in place of `fetch` for /api/ai/coach. On failure, show `await capNotice(res)` when it is not null (\"No more weekly notes today. Everything on this page is still here; try again tomorrow.\") in place of child.coachFailed."
+  },
+  {
+   "file": "apps/web/src/lib/ai/tools.ts (+ src/lib/ai/tutor.ts)",
+   "change": "next_hint restarts its ladder on every request, so \"another hint\" in a later turn repeats the first hint. This is the 2 known failing eval turns.\n1. `export function tutorTools(ctx: TutorContext, hintsSoFar = 0)` with `let hintsGiven = hintsSoFar;`.\n2. In tutorTurn, pass `messages.flatMap((m) => m.parts).filter((p) => p.type === \"tool-next_hint\").length`.\n3. Then remove \"hint-advances\" from KNOWN in apps/web/evals/tutor.eval.ts (the report says when it passes)."
+  },
+  {
+   "file": "apps/web/src/lib/ai/safety.ts",
+   "change": "Gap found while testing: the CRISIS pattern `want(ed)? to die` misses \"wants to die\" and \"wanting to die\". For example, \"Ada says she wants to die\" screens as ok and goes to the model. Change it to `want(s|ed|ing)? to die`, and consider third-person forms like \"(he|she|they) (wants?|wanna) (to )?die\", with a test."
+  },
+  {
+   "file": ".gitignore (repo root)",
+   "change": "Add the line `apps/web/evals/out/` so eval reports are ignored on purpose. Today only the generic `out/` rule, meant for Next's export output, covers them."
+  },
+  {
+   "file": "package.json (repo root) and apps/web/package.json \"verify\"",
+   "change": "Root: add `\"evals\": \"npm run evals -w apps/web\"`. apps/web: append `&& npm run evals` to \"verify\". It takes about 4 seconds on the mock, needs no key, and keeps the harness, the writer gates and the server's cap path green in CI."
+  },
+  {
+   "file": "apps/web/playwright.config.ts (optional)",
+   "change": "To run the opt-in forced-cap journey in e2e/aiinfra.spec.ts in CI, add a webServer or project with a provider key, KAIZEN_AI_ADDRESS_DAILY_TURNS=1, and E2E_AI_CAP=1 in the test env. Each run spends one real tutor turn."
+  }
+ ],
+ "followups": [
+  "Skipped finding (e2e/aiinfra.spec.ts is outside the owned files): the task brief explicitly tells this package to write apps/web/e2e/aiinfra.spec.ts, so it stays. The flagged selectors were replaced: the spec goes to /talk directly and uses the practice card inside the tutor log instead of the practice home's /^Start/ button. It has not been run, as instructed; it must pass after the merge.",
+  "Not fixable in my files (requests filed): until TutorChat, generate.ts, practice.ts, ImportPanel and CoachNote send through aiFetch:\n- learner names reach the model as typed;\n- every AI request is held only to the per-address ceiling, not to a learner's day or a family's month;\n- outside the tutor, a cap shows each screen's generic failure line. The course screen now shows gen.errModel instead of the wrong \"wait a minute\", but not the cap message.\nThe eval report's \"In the product\" section tracks each of these and flips when the change lands.",
+  "The demo tutor over a cap is not delivered until TutorChat adopts useAiBudget (request filed). Meanwhile the capped tutor reply puts a practice card on the board when a skill is known. A brand-new learner on /talk with no recent practice gets the line only.",
+  "Blocked on the owner (key and cost): the real-model bars have not been measured. These are 90% of turns passing, median first words under 1.5 s, and the writer at 80% first try; the model judge has never run either. A run needs EVAL_REAL=1 with a provider key and costs a few dollars. The README states this status.",
+  "Known limits, documented:\n- caps, holds and the course cache live in memory per server instance (ponytail comments) until the database lands; on Vercel, caps hold per instance and cache hits will be rare;\n- the address ceiling runs on the server's UTC day, so for US families it lifts in the evening, sooner than the \"tomorrow\" it promises;\n- a request refused after the gate (rate limit, bad body) keeps its held turn for up to 2 minutes;\n- holds stop concurrent requests from slipping under the turn caps, but cost can still overshoot by the lesson or reply already in flight.",
+  "Name scrubbing is still a heuristic:\n- an everyday-word or two-letter name typed in lowercase passes through on purpose (\"will\", \"leo\");\n- a capitalized everyday word at the start of a sentence is scrubbed (\"Al final\u2026\" for a child called Al);\n- contractions on a name (\"Ada'll\") are not scrubbed;\n- the everyday-word list is finite.",
+  "Recent practice (`working`) is still not given to the course writer, on purpose, so courses stay shareable. When a course stops partway on a cost cap, it shows the generic course cap line; it does not say the lessons already shown are kept.",
+  "The spec asked for 40 tutor conversations; there are now 45. The extra five cover word-names, names that collide with the safety screen, and the forced caps."
+ ]
+}

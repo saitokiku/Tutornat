@@ -1,0 +1,21 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/components/practice/tutor-dock.tsx",
+   "change": "Add `hints?: number` (hints the learner already opened on this problem) to DockContext: `export type DockContext = { item: Item; setId?: string; tries: number; hints?: number; lastAnswer?: string };`. TutorDrawer already reads it and passes it on as hintsSeen, so the tutor's hint ladder continues past them in demo and AI modes."
+  },
+  {
+   "file": "apps/web/src/components/practice/Runner.tsx",
+   "change": "At the Ask-the-tutor button (around line 298), pass the open-hint count: `dock.open({ item, setId: set.id, tries, hints, lastAnswer: ... })`, where `hints` is the Runner's existing hints state."
+  }
+ ],
+ "followups": [
+  "Skipped: a crop step to keep a name off a photo (a builder follow-up, not in the package spec). It would need a crop control that works by tap and keyboard; for now the photo panel asks the learner to keep their name out of the photo.",
+  "Remaining gap: 'speaks first' on iOS Safari is still unverified. iOS may drop speechSynthesis.speak() before the first user gesture. The e2e now checks speech in Chromium only. A fix would replay the opening on the first tap (in useVoice.ts) and needs a real iPhone to confirm.",
+  "Remaining gap: hint-ladder continuity from the Runner depends on the two requests above (DockContext.hints). Until they land, both tutors start the drawer at the first hint.",
+  "Design note: the newest practice Start on the Talk board is ink, and so is the Send icon button, so Talk has two ink controls. Making every board Start secondary would follow 'one ink primary per screen' strictly; I kept the newest offer as the one clear next step.",
+  "Trade-offs: the safety screen now also runs on Wikipedia extracts, definitions, book titles and poems. Some legitimate topics will show no card (for example an extract that mentions 'bomb' or 'alcohol'). This errs toward safety for K-9 and also applies to adult profiles.",
+  "Trade-offs: name removal matches names as entered, Capitalized or in capitals, so a child named 'Will' turns a sentence-initial 'Will' into '[name]'. The demo also skips searches whose words match a family name.",
+  "Checks were run on a heavily loaded shared machine (load average about 15). One full vitest run had 3 timeouts in practice-bank tests I don't own. Re-run alone they passed, and the next full run passed 904/904."
+ ]
+}

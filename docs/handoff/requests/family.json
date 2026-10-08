@@ -1,0 +1,20 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/learning/outcomes.ts",
+   "change": "Learner package: lib/nudges.ts now also logs kind \"unlinked\" (detail \"unlinked\", ref \"unlinked:<eventId>\"). It is for a test or quiz with no skills on the map, and its action is linking skills on the item page. parseNudge currently treats it as prep. Please mark it met when, within OUTCOME_RULES.nudgeMs, the event gets a skill on the map linked (event.skillIds.some(getSkill)) or a prep set for it is answered; otherwise missed. The other kinds already resolve on your branch (check, stuck, prep, idle; the idle key is \"idle:<YYYY-MM-DD>\")."
+  },
+  {
+   "file": "apps/web/src/app/(app)/family/[profileId]/page.tsx",
+   "change": "Learner package, optional: show the same nudges on the child page with <NudgeList child={child} nudges={useStore((s) => nudgesFor(s, child.id, now))} />, imported from @/components/family/NudgeList and @/lib/nudges. Wrap the page's <Guard need=\"parent\"> in <HandoverScope> (from @/components/family/Handover). Without it, the check and stuck hand-over links get redirected to /home by the Guard instead of reaching /practice. NudgeList logs nudge acts once a day by itself and renders nothing in a child's session. WeekFacts.lessonChecks now counts each lesson question once, as it last stood (lib/growth lessonAnswers)."
+  }
+ ],
+ "followups": [
+  "Playwright was not run, as instructed. Journey 2 (a test with no linked skills opens /calendar/<eventId>) needs the intake package's item page. On the intake branch (4dbd2a3) that page already works for a grown-up: it uses Guard need=\"selected\", looks the event up across the family, and has a skill picker. So the builder's request to intake is already met and is dropped here. Merge intake before running the e2e.",
+  "Finding 'logNudges writes once per nudge': partly fixed. Nudges already logged today are filtered out first, so showing the page again writes nothing. The first showing of N new nudges still makes N writes through logAct, because the contract says to use logAct. They are not batched into one update().",
+  "Two nudges can show for the same skill: a second check open 14+ days and 'stuck' (the 'checked' state can be both). Both are true and both link to Practice, so I left it.",
+  "The shared status line on Growth's grown-up skill list reads 'Proved on your own \u00b7 <date>', worded to the learner. It comes from components/practice/status.ts, which I don't own. I left it.",
+  "Not running next dev or Playwright means real fonts and app-router behaviour were not checked visually in this pass. The checks are the unit and component tests and the build.",
+  "The first full vitest run had 3 timeouts in practice-strand tests I don't own (g3to5, g6to7, science upper), from a shared machine under load. They passed when rerun, and the final full run passed 819 of 819."
+ ]
+}

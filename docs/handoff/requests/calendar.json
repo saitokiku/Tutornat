@@ -1,0 +1,45 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/lib/server/safe-fetch.ts",
+   "change": "Close the DNS-rebinding gap. `assertPublic` looks the host up, then fetch resolves it again. Pin the connection to the checked addresses: pass fetch `dispatcher: new Agent({ connect: { lookup: (host, opts, cb) => dns.lookup(host, { all: true }, (err, addrs) => err ? cb(err) : addrs.every((a) => isPublicAddress(a.address)) ? cb(null, addrs) : cb(new FeedError(\"blocked\"))) } })` (undici). Keep the pre-check, which gives the clean \"blocked\" code. Also: (1) treat NAT64 64:ff9b::/96, 6to4 2002::/16, Teredo 2001::/32 and ::/96 as non-public, or check the IPv4 address embedded in them; (2) race `lookup()` against the same 10 s signal; (3) wrap the body-read loop and map TimeoutError/AbortError to `FeedError(\"timeout\")` (the /api/ics route already does this mapping, so this only matters for other callers); (4) `await res.body?.cancel()` before following a redirect; (5) optionally return \"format\" for an upstream `content-type: text/html` (spec item 4 names a content-type check; the BEGIN:VCALENDAR body check catches the same cases today). app/api/ics/route.test.ts runs through the real guard and mocks node:dns/promises, so it will cover these changes."
+  },
+  {
+   "file": "apps/web/src/planner/types.ts",
+   "change": "Add `seenUids?: string[]` to SchoolClass, with the doc comment \"Items of this class's calendar link the family has been shown (kept, left out or deleted), so Refresh brings in only what is new.\" lib/week.ts already stores and reads it through `type FeedClass = SchoolClass & { seenUids?: string[] }`. Once the field exists, that type and its ponytail note can go."
+  },
+  {
+   "file": "apps/web/src/lib/school.ts",
+   "change": "(intake package) `isDay` accepts impossible dates such as \"2026-02-30\" (Date rolls them into March 2), so `checkEvent`, `addEvent`, `updateEvent` and `importDrafts` should require `isDay(s) && addDays(s, 0) === s`, as `realDay` in lib/week.ts does. Also, `importDrafts` counts an item that matches by UID but has not changed as \"updated\". `lib/week.ts` `saveImport` filters those out and reports them as unchanged, adopts hand-typed matches and records seen UIDs, so other importers (the magic box) should call `saveImport`, or `matchDrafts` and then `saveImport`, instead of `importDrafts` directly."
+  },
+  {
+   "file": "apps/web/src/app/(app)/calendar/[eventId]/page.tsx",
+   "change": "(intake package) Keep this route: the week links every school item to /calendar/<eventId>, and e2e/calendar.spec.ts follows one and expects the item's title as the h1. Keep the EventForm props as they are (profileId, event, classes, locale, onDone); they are unchanged. The calendar page's `?edit=` mode was removed because the item page edits inline, so the earlier request to link Edit to /calendar?edit= is withdrawn."
+  },
+  {
+   "file": "apps/web/src/lib/plan.ts",
+   "change": "Optional: export the PlanInput assembly from todayPlan as `planInput(s, p, now)`. lib/week.ts `weekInput` copies it field by field, including the rule that a lesson finished today stays on the plan. With the export it can call `planInput` and add attempts, lessonsDone and nextLesson."
+  },
+  {
+   "file": "apps/web/src/components/today/ComingUp.tsx",
+   "change": "(today package) Make each coming-up row a link to `/calendar/<eventId>`, as the week view does. Keep Today's \"I have a test coming\" link at `/calendar?add=test`; e2e/calendar.spec.ts follows it. For K-2 learners that link now asks the grown-up question first."
+  },
+  {
+   "file": "docs/STATUS.md",
+   "change": "Tick \"1.3 Calendar week shows each day's plan (done / projected)\"."
+  }
+ ],
+ "followups": [
+  "Skipped, not this package's file: the DNS-rebinding part of the safe-fetch finding (the address is checked by one lookup and fetch looks it up again, and NAT64/6to4/Teredo count as public), and the 'lookup outside the 10 s budget' part of the timeout finding. Both are in the safe-fetch.ts request. The route comment now names the rebinding gap. The timeout-while-streaming case is handled in route.ts and tested.",
+  "Spec 4 'content-type check': the route checks the request's JSON content type and sniffs the body for BEGIN:VCALENDAR. It never sees the upstream Content-Type header, because fetchFeed returns only text. A header check needs safe-fetch.ts (requested).",
+  "Playwright was not run (task rule). calendar.spec.ts is updated for the new refresh-then-review flow, the auto-linked skill chip, Back closing panels, the K learner gate and opening an item page. Opening an item needs the intake package's /calendar/[eventId] route, which exists in that package's worktree; until both merge, item links 404 at this commit alone.",
+  "next build fails in a worktree whose node_modules are symlinks: Turbopack won't follow a symlink that leaves the git worktree root. For the build check I swapped the symlinks for APFS clone copies (cp -c), ran `next build` (it passed: compiled, 32/32 static pages, no prerender or type errors), then restored the symlinks as the setup asked. Anyone building in these worktrees will hit the same problem.",
+  "Screenshot review was static only: rendered HTML with the built CSS in headless Chrome at 1440, 390 and 320 px (week, refresh review, K-2 view). It was not done in the live app, which the rules don't allow running here. Fonts fell back to system fonts.",
+  "Seen UIDs live on the class record through a typed extension (FeedClass) until planner/types.ts declares the field. A class linked before this fix has no seen list, so items the family declined back then come back once, for review only (never saved without review). After that they are remembered.",
+  "Refresh never deletes items the school removed: they are named in the refresh message ('No longer on the school calendar: \u2026') until the family deletes them or the date passes.",
+  "One-time plan lines (teacher-note sets, reviews) are still projected once, on the first day they appear, the way the plan offers them. Open checks past the two-a-day cap now spread over the following days.",
+  "K-2: the week is read aloud per day with the browser's speech (speakText from stage/hear). Lines are text, with no pictures. Grown-up controls sit behind the existing ParentGate. Once a grown-up unlocks it, the controls stay open until the next learner switch, as elsewhere in the app.",
+  "The Photo tab still sends families to the magic box on Today. Photo-to-calendar depends on the intake package (1.1) making the magic box the universal intake. A parent now gets there in one step ('Open {name}'s Today'). That step switches to the child, so returning to the parent view asks the grown-up question again.",
+  "Pasted items now match earlier ones by day and name, ignoring case and spacing. If the same name is pasted with different capitals, the stored name changes to the latest text, which counts as '1 updated'."
+ ]
+}

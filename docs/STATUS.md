@@ -1,5 +1,7 @@
 # Status
 
+> **Stopped 2026-10-07 (out of tokens). Start with [HANDOFF.md](HANDOFF.md).**
+
 ## Queue 4 — the 1.0 build, in order (started 2026-10-07; owner: "build it all now", come back at the end)
 
 Plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md). One sequence, no side

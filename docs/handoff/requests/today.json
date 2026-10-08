@@ -1,0 +1,32 @@
+{
+ "requests": [
+  {
+   "file": "apps/web/src/app/(app)/family/[profileId]/page.tsx",
+   "change": "Without this, the grown-up Today has no in-app entry point. In the header actions next to Records and \"Open {name}'s dashboard\", add a secondary link to the child's read-only Today: <Link href={`/home?learner=${child.id}`} className={btn(\"secondary\")}>{t(\"today.forChild\", { name: child.nickname })}</Link> (renders \"Today for Ada\"; the key exists). Optionally add the same link per child card on apps/web/src/app/(app)/family/page.tsx next to the existing 'open as' button. Since this pass, /home without ?learner= sends a parent to /family, so this link is the only way in."
+  },
+  {
+   "file": "apps/web/src/lib/courses.ts",
+   "change": "Log the courses act inside addFromCatalogue when a new course is pushed: logAct({ profileId, kind: \"course\", intent: \"course-finished\", ref: id }, { once: true }). Do the same where a course is built. Today's pick tiles and suggest card log it themselves with once:true, so moving it into the lib function will not double-count. Other screens that add courses are covered only if the logging lives in lib."
+  },
+  {
+   "file": "apps/web/src/lib/activity.ts",
+   "change": "continueTarget(courses, events) at line 75 has no callers. lib/plan.ts and Today use lib/continue.ts continueTarget(s, profileId). Delete it, or make it a one-line wrapper (continueTarget(s, id)[0]), so there is one definition of where a course picks up."
+  },
+  {
+   "file": "apps/web/next.config.ts (or the workflow harness)",
+   "change": "Turbopack's `next build` panics when node_modules is a symlink pointing outside the worktree: \"Symlink apps/web/node_modules could not be resolved: the symlink target leaves the filesystem root\". Either set `turbopack: { root: path.join(__dirname, \"../..\") }` with node_modules physically inside that root, or have the harness clone node_modules (`cp -cR`, an APFS copy-on-write clone that takes about 5 seconds) instead of symlinking. I did the clone in this worktree to get the build check to pass."
+  }
+ ],
+ "followups": [
+  "Not run: I did not run the Playwright e2e in apps/web/e2e/today.spec.ts, as instructed. Journey 2 depends on Runner strings ('Set done', 'Back to Today', 'Next') and on choice buttons named by number. I re-checked these against Runner.tsx and AnswerPad.tsx at 379bfe4, but the practice package and the 1.8 tap-to-mark work may change them before merge.",
+  "Finding 15 (pill overlapping the speaker at 320px) is fixed by layout, not seen in a browser. I could not render with real fonts. The Browser pane refused file:// and was at its tab cap with other agents' tabs, which I did not close. Headless Chrome for Testing hung without writing a screenshot, inside and outside the shell sandbox. The real-font check is written into the e2e K journey (coveredBySpeaker at the project size and at 320px) and runs after merge. Task 1.5's screenshot review at both sizes is still to do.",
+  "Findings 2/11 (no in-app route to the grown-up Today): skipped, because the fix belongs to the family package. The view works at /home?learner=<id>, but nothing in the product links there until the family request lands. I also made a parent at plain /home go to /family again (the base behaviour), so stray /home links no longer show 'Today for <first child>'.",
+  "Owner decision: spec 3 says 'no minute numbers to the child' while the acceptance test wants 'a K learner sees a 10-minute budget'. I resolved it by stating the daily-practice setting ('Leo's daily practice: 10 minutes.') in the grown-ups area at the bottom of the child's own screen. The plan's own lead can run over budget (the first line always leads), so the line states the setting and does not claim the plan fits it. The owner should confirm this.",
+  "Merge order: the status strip, Coming up and school plan titles all link to /calendar/<eventId>. Those return 404 until the intake package (task 1.2) merges, including the Coming up rows reused on family/[profileId]. /calendar?add=homework only preselects a kind once the calendar package's add form supports it; at 379bfe4 it just opens the form.",
+  "Plan 1.9 'I'm done for today on every finish' belongs to Runner and Stage, not Today. Today honours a stop only through its done-for-today and time-up states. There is no per-day stopped marker.",
+  "There are now two exported continueTarget functions with different meanings (lib/activity.ts is dead code). Cleaning that up is outside my ownership; it is in requests.",
+  "Courses section copy: I changed the heading to the existing key 'Your courses', because the list includes courses not begun (those show Start). If the owner wants a separate 'Courses in progress' section listing only begun courses, that is a copy and layout decision for later.",
+  "Spanish strings still need the native-speaker pass that PRODUCT.md requires before launch.",
+  "The worktree's node_modules are now APFS clones of the main checkout, not symlinks. They are gitignored and only there so `next build` could run."
+ ]
+}
