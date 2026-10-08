@@ -189,13 +189,16 @@ describe.each(DRAFT.map((s) => [s.id, s] as const))("bank %s", (id, skill) => {
     expect(problems).toEqual([]);
   });
 
-  it("never gives the key away in the nudge or the first step", () => {
+  it("never gives the key away in the nudge, the strategy or the first step", () => {
     levels.forEach((level, li) => {
       level.items.forEach((e, ei) => {
         for (const locale of LOCALES) {
           const key = pick(e.a[0].t, locale);
           if (key.length < 4) continue;
-          for (const h of [e.h[0], e.h[1]]) expect(containsPhrase(pick(h, locale), key), `${id} L${li + 1} #${ei} ${locale} hint names "${key}"`).toBe(false);
+          expect(containsPhrase(pick(e.h[0], locale), key) || containsPhrase(pick(e.h[1], locale), key), `${id} L${li + 1} #${ei} ${locale} hint names "${key}"`).toBe(false);
+          // The level-wide strategy may name a key the question itself names ("renewable or nonrenewable?").
+          if (containsPhrase(pick(e.q, locale), key)) continue;
+          for (const h of [e.strat ?? level.strat]) expect(containsPhrase(pick(h, locale), key), `${id} L${li + 1} #${ei} ${locale} hint names "${key}"`).toBe(false);
         }
       });
     });
