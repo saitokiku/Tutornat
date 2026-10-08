@@ -89,15 +89,15 @@ describe("browser read-aloud", () => {
     const { s, out, seen } = outSetup();
     const done = out.speak("Shade 3/4. Count the dots.");
     await tick();
-    expect(s.queue.map((u) => u.text)).toEqual(["Shade 3 fourths.", "Count the dots."]);
+    expect(s.queue.map((u) => u.text)).toEqual(["Shade three fourths.", "Count the dots."]);
     expect(s.queue[0]).toMatchObject({ lang: "en-US", rate: 0.95 });
     expect(s.queue[0].voice?.name).toBe("Local US");
     const [a, b] = s.queue;
     expect(out.state).toBe("waiting");
     a.onstart!();
     expect(out.state).toBe("speaking");
-    a.onboundary!({ name: "word", charIndex: 6 }); // "3"
-    a.onboundary!({ name: "word", charIndex: 8 }); // "fourths."
+    a.onboundary!({ name: "word", charIndex: 6 }); // "three"
+    a.onboundary!({ name: "word", charIndex: 12 }); // "fourths."
     a.onend!();
     b.onstart!();
     b.onboundary!({ name: "word", charIndex: 6 }); // "the"

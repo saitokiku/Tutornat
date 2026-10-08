@@ -89,7 +89,7 @@ const ES_ORD = [
  */
 export function ordinal(n: number, locale: Locale, gender: Gender = "m", apocope = false): string {
   if (locale === "es") {
-    if (n < 1 || n > 20) return cardinal(n, "es", gender);
+    if (n < 1 || n > 20) return cardinal(n, "es", gender === "f" ? "f" : "alone");
     const w = ES_ORD[n];
     if (gender === "f") return w.replace(/o$/, "a");
     return apocope ? w.replace(/(primer|tercer)o$/, "$1") : w;
