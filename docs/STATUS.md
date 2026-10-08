@@ -10,6 +10,12 @@
 > replayable, lessons are saved or regenerated theater sessions) come before the learning-loop build and
 > before any new lesson authoring. Existing catalogue courses stay as seeds and get fixed, not extended.
 
+> **Owner decision (2026-10-07) on OpenMAIC:** "Take the html for sure that's the main thing I want from it
+> then incorporate some project based learning and then maybe add the multi agent classroom out it behind a
+> button". So the theater takes OpenMAIC's AI-written HTML interactives (sandboxed, labelled, exploration —
+> proof still only from code-checked practice and checks), its project-based learning, and its multi-agent
+> classroom as an opt-in mode behind a button. Amends docs/plans/2026-10-07-tutor-theater-spec.md.
+
 ## Queue 4 — the 1.0 build, in order (started 2026-10-07; owner: "build it all now", come back at the end)
 
 Plan: [plans/2026-10-07-kaizenedu-1.0-plan.md](plans/2026-10-07-kaizenedu-1.0-plan.md). One sequence, no side
