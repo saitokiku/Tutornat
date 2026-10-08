@@ -90,15 +90,15 @@ function enReadQ([w, kind]: [string, "i" | "e" | "y"]): Q {
 /**
  * [word, a sentence that uses it (___ where it goes), wrong spellings as "word:CODE"]; I i for y, J y for i,
  * L ll for y, D a letter dropped, E the silent h dropped. The sentence is said aloud and shown with a
- * blank, so a wrong spelling that is another real word (rallo) still does not fit. Dropped-letter
- * spellings are not Spanish words (ry, not re).
+ * blank, so the word is known by its meaning. No wrong spelling is another Spanish word (rallo, re, esto),
+ * since a child who hears "rallo" for rayo would be right.
  */
 const ES_READ: [string, string, string][] = [
   ["rey", "El ___ lleva una corona.", "rei:I ry:D"], ["hoy", "___ es lunes.", "hoi:I oy:E"], ["muy", "La sopa está ___ caliente.", "mui:I my:D"],
   ["ley", "Tirar basura va contra la ___.", "lei:I ly:D"], ["buey", "El ___ jala la carreta.", "buei:I bue:D"], ["voy", "Yo ___ a la escuela.", "voi:I vo:D"],
   ["estoy", "Yo ___ en mi casa.", "estoi:I etoy:D"], ["soy", "Yo ___ tu amigo.", "soi:I sy:D"], ["reina", "La ___ lleva una corona.", "reyna:J rena:D"],
   ["aire", "El globo tiene ___.", "ayre:J aie:D"], ["oigo", "Yo ___ la música.", "oygo:J ogo:D"], ["playa", "Jugamos en la ___.", "plaia:I plalla:L"],
-  ["payaso", "El ___ tiene la nariz roja.", "paiaso:I pallaso:L"], ["rayo", "Cayó un ___.", "raio:I rao:D"], ["mayo", "Mi cumpleaños es en ___.", "maio:I mallo:L"],
+  ["payaso", "El ___ tiene la nariz roja.", "paiaso:I pallaso:L"], ["rayo", "Cayó un ___.", "raio:I rao:D"], ["mayo", "Mi cumpleaños es en ___.", "maio:I myo:D"],
   ["doy", "Yo te ___ un abrazo.", "doi:I dy:D"],
 ];
 const ES_TAG: Record<string, string> = { I: "i-for-y", J: "y-for-i", L: "ll-for-y", D: "dropped-letter", E: "dropped-silent-letter" };

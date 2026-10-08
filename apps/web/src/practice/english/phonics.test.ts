@@ -862,3 +862,128 @@ describe("answer keys, checked another way (y as a vowel)", () => {
     }
   });
 });
+
+// ---- Checks for the content audit (docs/handoff/content-audits.json, "eng-phonics") ----
+
+describe("content audit: items a child could answer right and be marked wrong", () => {
+  it("English items carry no Spanish text (the silent-h hint once reached English hand)", () => {
+    const SPANISH = /[ñáéíóú¿¡]|\b(los|las|una|suena|escribe|sonido|palabra|que|del|dibujo|letra)\b/i;
+    for (const [id] of TABLE) for (const q of qs(id, "en")) for (const s of strings(q)) expect(s, `${id}: ${s}`).not.toMatch(SPANISH);
+  });
+
+  it("a spelling question names the picture, or says the word in a sentence with a blank", () => {
+    let seen = 0;
+    for (const [id] of TABLE)
+      for (const locale of LOCALES)
+        for (const q of qs(id, locale)) {
+          if (!/spelled right|bien escrit/.test(q.prompt)) continue;
+          seen++;
+          if (q.picture) expect(q.prompt, `${id} ${q.prompt}`).toMatch(/picture|dibujo/);
+          else expect(q.prompt.split("___").length, `${id} ${q.prompt}`).toBe(2);
+        }
+    expect(seen).toBeGreaterThan(80);
+  });
+
+  it("Spanish y spelling: no wrong spelling is another Spanish word that would sound right", () => {
+    const REAL = ["re", "le", "esto", "do", "so", "mu", "are", "rallo", "mallo", "ayo", "oye"];
+    for (const q of lv("e.y.vowel", 2, "es")) for (const c of q.choices.slice(1)) expect(REAL, `${key(q)}: ${c.label}`).not.toContain(norm(c.label));
+  });
+
+  it("a heard gap never offers a fill that sounds like the word unless it asks for the spelling; hint 3 says which", () => {
+    // Spellings that say the same sound in the same place. ow is in two groups (snow, cow).
+    const SAME = [["ai", "ay"], ["ee", "ea"], ["oa", "ow"], ["oi", "oy"], ["ou", "ow"], ["er", "ir", "ur"], ["ei", "ey"], ["wh", "w"], ["ck", "k", "c"], ["ll", "y"]];
+    const GAPS: [string, number][] = [...READING.map((id): [string, number] => [id, 1]), ["e.r.controlled", 1], ["e.diphthongs", 1]];
+    for (const [id, level] of GAPS)
+      for (const locale of LOCALES)
+        for (const q of lv(id, level, locale)) {
+          const shown = q.prompt.split(" ").at(-1)!;
+          const k = key(q);
+          const soundsLike = (fill: string) =>
+            SAME.some((g) => g.includes(k) && g.includes(fill)) ||
+            // Spanish: a word starts with a strong r, so rr there sounds just like r.
+            (locale === "es" && k === "r" && fill === "rr" && shown.startsWith("___")) ||
+            // English: one vowel left at the end of a word says its name (be, sno), like the team.
+            (locale === "en" && /^[aeiou]{2}$/.test(k) && /^[aeiou]$/.test(fill) && shown.endsWith("___"));
+          const same = q.choices.slice(1).map((c) => soundsLike(c.label));
+          const where = `${id} ${locale} ${q.prompt}`;
+          expect(/spell it right|se escribe bien/.test(q.prompt), where).toBe(same.includes(true));
+          expect(/sounds the same|suena igual/.test(q.hints[2]), `${where}: ${q.hints[2]}`).toBe(same[0]);
+        }
+  });
+
+  it("vowel teams, level 2: a dropped letter never leaves the vowel at the end, where it reads as the key (be, sno)", () => {
+    for (const q of lv("e.vowel.teams", 2, "en"))
+      for (const c of q.choices.slice(1)) if (c.why === "dropped-letter") expect(c.label, key(q)).toMatch(/[^aeiou]$/);
+  });
+
+  it("pre-primer Spanish does not test the written accent (tu / tú, se / sé), a grade 2–3 lesson", () => {
+    for (const q of qs("e.sight.preprimer", "es")) for (const c of q.choices.slice(1)) expect(c.why, `${key(q)} / ${c.label}`).not.toBe("accent-mixup");
+  });
+});
+
+describe("content audit: hints, pictures and speech", () => {
+  it("no hint names the answer, except a hint 2 rule that names the choices it decides between", () => {
+    // Category answers (syllable types, letter shapes, sound counts) are named by the rule itself.
+    const CATEGORY = ["e.syllable.types", "e.letter.names", "e.segment.sounds"];
+    // Accents kept: a hint may name a look-alike that differs only by one (pinguino for pingüino).
+    const phrase = (s: string) => ` ${s.toLowerCase().split(/[^\p{L}\d]+/u).filter(Boolean).join(" ")} `;
+    for (const [id] of TABLE) {
+      if (CATEGORY.includes(id)) continue;
+      for (const locale of LOCALES)
+        for (const q of qs(id, locale)) {
+          if (norm(key(q)).length < 3) continue;
+          for (const [i, h] of q.hints.entries()) {
+            const named = q.choices.filter((c) => phrase(h).includes(phrase(c.label)));
+            if (i === 1 && named.length >= 2) continue;
+            expect(phrase(h), `${id} ${locale} ${key(q)}: ${h}`).not.toContain(phrase(key(q)));
+          }
+        }
+    }
+  });
+
+  it("letter names, level 1: hints never show the target letter's shape", () => {
+    for (const locale of LOCALES)
+      for (const q of lv("e.letter.names", 1, locale)) for (const h of q.hints) expect(h.split(/[^\p{L}]+/u), `${key(q)}: ${h}`).not.toContain(key(q));
+  });
+
+  it("a picture's alt never names an answer the item does not already say", () => {
+    for (const [id] of TABLE)
+      for (const locale of LOCALES)
+        for (const q of qs(id, locale)) {
+          if (!q.alt) continue;
+          const k = norm(key(q));
+          if (k.length < 3 || words(q.say).includes(k) || words(q.prompt).includes(k)) continue;
+          expect(words(q.alt), `${id} ${locale} ${key(q)}: ${q.alt}`).not.toContain(k);
+        }
+  });
+
+  it("speech never has to say a lone function word: blend rimes are content words; swaps name the letter", () => {
+    const WEAK = ["a", "an", "at", "up", "in", "it", "on", "and", "as", "am", "all", "of", "to", "is"];
+    for (const q of lv("e.blend.onset", 1, "en")) expect(WEAK, q.prompt).not.toContain(/Then add (\S+)\.$/.exec(q.prompt)![1]);
+    for (const q of lv("e.sound.swap", 2, "en")) expect(q.say, q.say).toMatch(/^Change the letter \S in /);
+  });
+
+  it("Spanish text has none of the words that are vulgar in some countries", () => {
+    const VULGAR = ["pito", "guevo", "güevo", "poto", "puto", "culo", "verga", "polla", "coño", "pija", "pinga", "chocho", "porro"];
+    for (const [id] of TABLE)
+      for (const locale of LOCALES)
+        for (const q of qs(id, locale)) for (const s of strings(q)) for (const w of words(s)) expect(VULGAR, `${id} ${locale}: ${s}`).not.toContain(w);
+  });
+
+  it("Spanish middle vowels: a matched-consonants near miss keeps the consonants as heard (boca is not bici)", () => {
+    const heard = (w: string) =>
+      norm(w)
+        .replace(/qu(?=[ei])/g, "k")
+        .replace(/c(?=[ei])/g, "s")
+        .replace(/c/g, "k")
+        .replace(/z/g, "s")
+        .replace(/v/g, "b")
+        .replace(/ll/g, "y")
+        .replace(/h/g, "")
+        .replace(/[aeiou]/g, "");
+    for (const q of lv("e.middle.vowel", 1, "es")) {
+      const t = /que (\S+)\?$/.exec(q.prompt)![1];
+      for (const c of q.choices.slice(1)) if (c.why === "matched-consonants") expect(heard(c.label), `${t} ${c.label}`).toBe(heard(t));
+    }
+  });
+});

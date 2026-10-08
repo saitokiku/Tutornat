@@ -26,15 +26,17 @@ type Look = [string, string, string, string];
 /** [sentence with ___, key, three look-alikes that do not fit] */
 type Fit = [string, string, string, string, string];
 
+// The hints avoid every sight word in the banks (con, cada, tiene, does, first…), so a hint never shows
+// a key.
 function lookQ(locale: Locale, [w, ...others]: Look): Q {
   return {
     prompt: tr(locale, "Listen. Tap that word.", "Escucha y elige."),
     say: tr(locale, `Find the word: ${w}.`, `Busca la palabra: ${w}.`),
     choices: [word(w), ...others.map((d) => word(d, lookTag(w, d)))],
     hints: [
-      tr(locale, "Listen to the word again. What sound does it start with?", "Escucha la palabra otra vez. ¿Con qué sonido empieza?"),
-      tr(locale, "Look at the first letters of each word.", "Mira las primeras letras de cada palabra."),
-      tr(locale, `It starts with ${w[0]} and has ${w.length} letters.`, `Empieza con ${w[0]} y tiene ${w.length} letras.`),
+      tr(locale, "Listen to the word again. Say its starting sound.", "Escucha la palabra otra vez y di su primer sonido."),
+      tr(locale, "Look at the start of each word.", "Mira las primeras letras."),
+      tr(locale, `It starts with ${w[0]} and has ${w.length} letters.`, `Empieza por la ${w[0]} y lleva ${w.length} letras.`),
     ],
     steps: [tr(locale, `The word is ${w}: ${w.split("").join("-")}.`, `La palabra es ${w}: ${w.split("").join("-")}.`)],
   };
@@ -47,9 +49,9 @@ function fitQ(locale: Locale, [s, k, ...others]: Fit): Q {
     say: `${s.replace("___", "…")} ${tr(locale, "Which word fits?", "¿Qué palabra va?")}`,
     choices: [word(k), ...others.map((d) => word(d, lookTag(k, d)))],
     hints: [
-      tr(locale, "Read the sentence with each word.", "Lee la oración con cada palabra."),
-      tr(locale, "Only one word makes sense.", "Solo una palabra tiene sentido."),
-      tr(locale, `“${fill(others[0])}” does not make sense.`, `“${fill(others[0])}” no tiene sentido.`),
+      tr(locale, "Read the sentence with each word.", "Lee la oración y prueba las palabras."),
+      tr(locale, "Only a single word fits.", "Solo sirve la palabra correcta."),
+      tr(locale, `“${fill(others[0])}” makes no sense.`, `“${fill(others[0])}” suena mal.`),
     ],
     steps: [fill(k)],
   };
