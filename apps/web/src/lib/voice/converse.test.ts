@@ -1,344 +1,165 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { sentenceFeed } from "./chunk";
-import { converse, type ConverseOptions } from "./converse";
+import { converse, type ConverseMetric } from "./converse";
 import { fakeIn, fakeOut } from "./fakes";
+import type { HeardWord } from "./types";
 
-function setup(over: Partial<ConverseOptions> = {}) {
-  const input = fakeIn();
-  const output = fakeOut({ auto: false });
-  const onTurn = vi.fn();
-  const onBargeIn = vi.fn();
-  const onBackchannel = vi.fn();
-  const onEcho = vi.fn();
-  const onMicOff = vi.fn();
-  const onMetric = vi.fn();
-  const talk = converse({ input, output, onTurn, onBargeIn, onBackchannel, onEcho, onMicOff, onMetric, ...over });
-  return { input, output, onTurn, onBargeIn, onBackchannel, onEcho, onMicOff, onMetric, talk };
+// The two-way loop on a fake clock: the fake voice schedules its words when the test says, the
+// fake recognizer hears words with times. Times are performance.now() ms (Date.now() under fake timers).
+
+function setup() {
+  const output = fakeOut({ auto: false, kind: "elevenlabs" });
+  const input = fakeIn({ kind: "deepgram" });
+  const seen = { turns: [] as string[], held: [] as boolean[], barges: 0, backchannels: [] as string[], echoes: [] as string[], micOff: [] as string[], half: 0, ducks: [] as boolean[], metrics: [] as ConverseMetric[] };
+  const talk = converse({
+    input,
+    output,
+    onTurn: (t, m) => (seen.turns.push(t), seen.held.push(m.held)),
+    onBargeIn: () => seen.barges++,
+    onBackchannel: (t) => seen.backchannels.push(t),
+    onEcho: (t) => seen.echoes.push(t),
+    onMicOff: (w) => seen.micOff.push(w),
+    onHalfDuplex: () => seen.half++,
+    onDuck: (d) => seen.ducks.push(d),
+    onMetric: (m) => seen.metrics.push(m),
+    now: () => Date.now(),
+  });
+  return { output, input, seen, talk };
 }
 
-/** The voice reads word by word: a boundary for each written word, `ms` apart, starting now. */
-async function readWords(s: ReturnType<typeof setup>, from: number, to: number, ms = 300) {
-  for (let i = from; i <= to; i++) {
-    s.output.boundary(i);
-    await vi.advanceTimersByTimeAsync(ms);
-  }
+/** The tutor says `text`; its words are scheduled `gap` ms apart from now. Returns when each was heard. */
+async function tutorSays(s: ReturnType<typeof setup>, text: string, gap = 250) {
+  void s.talk.say(text);
+  await vi.advanceTimersByTimeAsync(1);
+  const t0 = Date.now();
+  const n = text.split(/\s+/).filter(Boolean).length;
+  for (let i = 0; i < n; i++) s.output.schedule(i, t0 + i * gap);
+  return Array.from({ length: n }, (_, i) => t0 + i * gap);
 }
 
-const tick = () => vi.advanceTimersByTimeAsync(0);
+const w = (word: string, start: number): HeardWord => ({ word, start, end: start + 200, confidence: 0.9 });
+const meta = (words: HeardWord[]) => ({ words, confidence: 0.9, lastWordEnd: words.at(-1)?.end ?? null });
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(0);
+  vi.setSystemTime(10_000);
 });
 afterEach(() => vi.useRealTimers());
 
-describe("talking with the tutor", () => {
-  it("a child's mhm does not stop the tutor or become a turn", async () => {
+describe("talking over the tutor", () => {
+  it("ducks the moment the learner starts, stops it on a real word, and the words become the turn", async () => {
     const s = setup();
-    void s.talk.say("So we split the bar into four parts. Each part is one fourth.");
-    await tick();
-    expect(s.output.state).toBe("speaking");
+    await tutorSays(s, "Look at the top number. Now the bottom one.");
     s.input.speechStart();
-    s.input.partial("mhm");
-    await vi.advanceTimersByTimeAsync(1500);
-    s.input.endOfTurn("Mhm.");
-    expect(s.output.state).toBe("speaking");
-    expect(s.onBargeIn).not.toHaveBeenCalled();
-    expect(s.onTurn).not.toHaveBeenCalled();
-    expect(s.onBackchannel).toHaveBeenCalledWith("Mhm.");
-  });
-
-  it("works for Spanish acknowledgements too", async () => {
-    const s = setup();
-    void s.talk.say("Partimos la barra en cuatro partes.");
-    await tick();
-    for (const t of ["ajá", "sí", "ok"]) {
-      s.input.speechStart();
-      s.input.partial(t);
-      await vi.advanceTimersByTimeAsync(800);
-      s.input.endOfTurn(t);
-    }
-    expect(s.output.state).toBe("speaking");
-    expect(s.onTurn).not.toHaveBeenCalled();
-  });
-
-  it("real speech over 300 ms stops the tutor at once and becomes the next turn", async () => {
-    const s = setup();
-    void s.talk.say("So we split the bar into four parts.");
-    await tick();
-    s.input.speechStart();
-    await vi.advanceTimersByTimeAsync(100);
-    s.input.partial("wait");
-    expect(s.output.state).toBe("speaking"); // 100 ms: not yet
-    await vi.advanceTimersByTimeAsync(200);
-    expect(s.output.state).toBe("idle"); // 300 ms: cancelled without waiting for more words
-    expect(s.onBargeIn).toHaveBeenCalledOnce();
-    s.input.endOfTurn("Wait, why four?");
-    expect(s.onTurn).toHaveBeenCalledWith("Wait, why four?");
-  });
-
-  it("ok followed by a question is an interruption", async () => {
-    const s = setup();
-    void s.talk.say("Each part is one fourth.");
-    await tick();
-    s.input.speechStart();
-    s.input.partial("ok");
-    await vi.advanceTimersByTimeAsync(400);
-    expect(s.output.state).toBe("speaking");
-    s.input.partial("ok but why");
-    expect(s.output.state).toBe("idle");
-  });
-
-  it("ignores the tutor's own voice from the speakers", async () => {
-    const s = setup();
-    void s.talk.say("Each part is one fourth of the bar.");
-    await tick();
-    s.input.speechStart();
-    await vi.advanceTimersByTimeAsync(400);
-    s.input.partial("one fourth of the bar");
-    expect(s.output.state).toBe("speaking");
-    s.input.endOfTurn("One fourth of the bar.");
-    expect(s.onTurn).not.toHaveBeenCalled();
-    expect(s.onEcho).toHaveBeenCalledWith("One fourth of the bar.");
-  });
-
-  it("the tutor's own voice is still echo when the turn ends after the reply has", async () => {
-    const s = setup();
-    void s.talk.say("Each part is one fourth of the bar.");
-    await tick();
-    s.input.speechStart();
+    expect(s.output.gains.at(-1)).toEqual({ gain: 0.3, ms: 80 });
+    expect(s.seen.ducks).toEqual([true]);
     await vi.advanceTimersByTimeAsync(300);
-    s.input.partial("each part is");
-    await vi.advanceTimersByTimeAsync(1500);
-    s.input.partial("each part is one fourth of the bar");
-    expect(s.output.state).toBe("speaking");
-    s.output.finish(); // the voice ends without a pause, so the echo's turn ends 700 ms later
-    await vi.advanceTimersByTimeAsync(700);
-    s.input.endOfTurn("Each part is one fourth of the bar.");
-    expect(s.onTurn).not.toHaveBeenCalled();
-    expect(s.onEcho).toHaveBeenCalledOnce();
-  });
-
-  it("recognizes the echo of math said in words", async () => {
-    const s = setup();
-    void s.talk.say("Shade 3/4 of the bar. Then 5 × 2 = 10.");
-    await tick();
-    s.input.speechStart();
-    await vi.advanceTimersByTimeAsync(1500);
-    s.output.boundary(5); // the voice reaches the second sentence
-    await vi.advanceTimersByTimeAsync(400);
-    // The microphone hears "3 fourths" and "times … equals", not what is written.
-    s.input.partial("shade three fourths of the bar then five times two");
-    expect(s.output.state).toBe("speaking");
-    expect(s.onBargeIn).not.toHaveBeenCalled();
-    s.output.finish();
-    await vi.advanceTimersByTimeAsync(700);
-    s.input.endOfTurn("Shade three fourths of the bar. Then five times two equals ten.");
-    expect(s.onTurn).not.toHaveBeenCalled();
-    // A recognizer that writes digits and slashes is matched too.
-    void s.talk.say("Shade 3/4 of the bar.");
-    await tick();
-    s.input.speechStart();
-    s.output.finish();
-    s.input.endOfTurn("Shade 3/4 of the bar.");
-    expect(s.onTurn).not.toHaveBeenCalled();
-    expect(s.onEcho).toHaveBeenCalledTimes(2);
-  });
-
-  it("an answer that uses the question's words is the learner's, not echo", async () => {
-    const s = setup();
-    void s.talk.say("Which is bigger, three fourths or two thirds?");
-    await tick();
-    await readWords(s, 1, 3); // "is" "bigger," "three" — the voice is at "three" (900 ms)
-    s.input.speechStart(); // the learner read ahead on the screen
-    await readWords(s, 4, 4);
-    s.input.partial("two thirds is bigger");
+    s.input.words([w("wait", Date.now())]);
     expect(s.output.state).toBe("idle");
-    expect(s.onBargeIn).toHaveBeenCalledOnce();
-    s.input.endOfTurn("Two thirds is bigger.");
-    expect(s.onTurn).toHaveBeenCalledWith("Two thirds is bigger.");
-    expect(s.onEcho).not.toHaveBeenCalled();
+    expect(s.output.gains.at(-1)).toEqual({ gain: 0, ms: 120 });
+    expect(s.seen.barges).toBe(1);
+    const m = s.seen.metrics.find((x) => x.name === "barge-in");
+    expect(m).toMatchObject({ duckMs: 0 });
+    expect(m && m.name === "barge-in" && m.stopMs).toBeLessThanOrEqual(800);
+    s.input.endOfTurn("wait, is it seven?", meta([w("wait", Date.now() - 100)]));
+    expect(s.seen.turns).toEqual(["wait, is it seven?"]);
   });
 
-  it("an answer given as the question ends is delivered", async () => {
+  it("'mhm' doesn't stop the tutor, and it comes back to full volume after 800 ms", async () => {
     const s = setup();
-    void s.talk.say("Which is bigger, three fourths or two thirds?");
-    await tick();
-    await readWords(s, 1, 7);
+    await tutorSays(s, "Look at the top number. Now look at the bottom number. They tell different things.");
     s.input.speechStart();
+    s.input.words([w("mhm", Date.now())]);
+    await vi.advanceTimersByTimeAsync(850);
+    expect(s.output.state).toBe("speaking");
+    expect(s.output.gains.at(-1)).toEqual({ gain: 1, ms: 250 });
+    s.input.endOfTurn("mhm", meta([w("mhm", Date.now() - 800)]));
+    expect(s.seen.backchannels).toEqual(["mhm"]);
+    expect(s.seen.turns).toEqual([]);
+  });
+
+  it("the tutor's own voice heard back is set aside by time; the same words said later are a turn", async () => {
+    const s = setup();
+    const at = await tutorSays(s, "Shade 3/4 of it.");
+    // The speakers come back through the microphone 150 ms after each word.
+    s.input.endOfTurn("Shade three fourths of it.", meta([w("Shade", at[0] + 150), w("three", at[1] + 150), w("fourths", at[1] + 400), w("of", at[2] + 150), w("it", at[3] + 150)]));
+    expect(s.seen.echoes).toEqual(["Shade three fourths of it."]);
+    expect(s.seen.turns).toEqual([]);
     s.output.finish();
-    await vi.advanceTimersByTimeAsync(1500);
-    s.input.endOfTurn("Two thirds is bigger.");
-    expect(s.onTurn).toHaveBeenCalledWith("Two thirds is bigger.");
+    await vi.advanceTimersByTimeAsync(3000);
+    const later = Date.now();
+    s.input.endOfTurn("three fourths", meta([w("three", later), w("fourths", later + 250)]));
+    expect(s.seen.turns).toEqual(["three fourths"]);
   });
 
-  it("speech while the tutor is paused is never taken for echo", async () => {
+  it("'The bottom number.' answering 'top or bottom?' is a turn, held until the tutor finishes", async () => {
     const s = setup();
-    void s.talk.say("Each part is one fourth of the bar.");
-    await tick();
-    s.output.pause();
-    s.input.speechStart();
-    await vi.advanceTimersByTimeAsync(400);
-    s.input.endOfTurn("One fourth of the bar?");
-    expect(s.onEcho).not.toHaveBeenCalled();
-    expect(s.onTurn).toHaveBeenCalledWith("One fourth of the bar?");
+    const at = await tutorSays(s, "Is it the top number or the bottom number?");
+    // The learner starts just after the question's last word, in the tutor's own words.
+    const start = at[8] + 400;
+    vi.setSystemTime(start + 700);
+    s.input.endOfTurn("The bottom number.", meta([w("The", start), w("bottom", start + 200), w("number.", start + 450)]));
+    expect(s.seen.echoes).toEqual([]);
+    expect(s.seen.turns).toEqual([]);
+    s.output.finish();
+    expect(s.seen.turns).toEqual(["The bottom number."]);
+    expect(s.seen.held).toEqual([true]);
   });
 
-  it("when the tutor is quiet, every finished turn is an answer, even ok", async () => {
+  it("'yes' in the last 1.5 s of a question answers it, once the tutor finishes", async () => {
     const s = setup();
-    s.input.endOfTurn("ok");
-    expect(s.onTurn).toHaveBeenCalledWith("ok");
-    expect(s.onBackchannel).not.toHaveBeenCalled();
+    const at = await tutorSays(s, "Do you want another one?");
+    s.input.endOfTurn("yes", meta([w("yes", at[3])]));
+    expect(s.seen.backchannels).toEqual([]);
+    s.output.finish();
+    expect(s.seen.turns).toEqual(["yes"]);
   });
 
-  it("an answer while the reply is still on its way cancels it", async () => {
+  it("'yes' while the tutor is still explaining is listening, not a turn", async () => {
     const s = setup();
-    s.output.state = "waiting";
-    const cancel = vi.spyOn(s.output, "cancel");
-    s.input.endOfTurn("Never mind, I got it.");
-    expect(cancel).toHaveBeenCalled();
-    expect(s.onBargeIn).toHaveBeenCalledOnce(); // so the screen stops the reply too
-    expect(s.onTurn).toHaveBeenCalledWith("Never mind, I got it.");
+    const at = await tutorSays(s, "The bottom number tells how many equal parts the whole has. The top number tells how many we count.");
+    s.input.endOfTurn("yes", meta([w("yes", at[2])]));
+    expect(s.seen.backchannels).toEqual(["yes"]);
+    expect(s.output.state).toBe("speaking");
   });
 
-  it("a mhm while the reply is on its way leaves it alone", async () => {
+  it("two echo set-asides switch the session to half duplex", async () => {
     const s = setup();
-    s.output.state = "waiting";
-    const cancel = vi.spyOn(s.output, "cancel");
-    for (const t of ["mhm", "ok", "ajá"]) {
-      s.input.speechStart();
-      s.input.partial(t);
-      s.input.endOfTurn(t);
+    for (let k = 0; k < 2; k++) {
+      const at = await tutorSays(s, "Count the dots.");
+      s.input.endOfTurn("count the dots", meta([w("count", at[0] + 100), w("the", at[1] + 100), w("dots", at[2] + 100)]));
     }
-    expect(cancel).not.toHaveBeenCalled();
-    expect(s.onTurn).not.toHaveBeenCalled();
-    expect(s.onBackchannel).toHaveBeenCalledTimes(3);
-    expect(s.output.state).toBe("waiting");
+    expect(s.seen.echoes).toHaveLength(2);
+    expect(s.seen.half).toBe(1);
+    expect(s.talk.halfDuplex).toBe(true);
   });
+});
 
-  it("yes during the tutor's question is the answer, given when the tutor finishes", async () => {
+describe("the microphone turns itself off", () => {
+  it("after the idle time with nobody speaking", async () => {
     const s = setup();
-    void s.talk.say("Good. Do you want to try another one?");
-    await tick();
-    s.output.boundary(1); // "Do …"
-    s.input.speechStart();
-    s.input.partial("yes");
-    await vi.advanceTimersByTimeAsync(800);
-    s.input.endOfTurn("Yes.");
-    expect(s.output.state).toBe("speaking"); // not an interruption
-    expect(s.onTurn).not.toHaveBeenCalled();
-    s.output.finish();
-    expect(s.onTurn).toHaveBeenCalledWith("Yes.");
-    // During a statement it is only listening.
-    void s.talk.say("Each part is one fourth.");
-    await tick();
-    s.input.endOfTurn("ok");
-    s.output.finish();
-    expect(s.onTurn).toHaveBeenCalledTimes(1);
-    expect(s.onBackchannel).toHaveBeenCalledWith("ok");
-  });
-
-  it("a mhm that started over the tutor's last words is still not a turn", async () => {
-    const s = setup();
-    void s.talk.say("So each part is one fourth.");
-    await tick();
-    s.input.speechStart();
-    s.input.partial("mhm");
-    s.output.finish();
-    await vi.advanceTimersByTimeAsync(700);
-    s.input.endOfTurn("Mhm.");
-    expect(s.onTurn).not.toHaveBeenCalled();
-    expect(s.onBackchannel).toHaveBeenCalledWith("Mhm.");
-  });
-
-  it("the voice is still recognized as echo when a noise started the turn before the voice began", async () => {
-    const s = setup();
-    const feed = sentenceFeed();
-    void s.talk.say(feed.sentences);
-    s.input.speechStart(); // a chair scrapes while the reply is on its way
-    await vi.advanceTimersByTimeAsync(200);
-    feed.write("Each part is one fourth of the bar. ");
-    feed.end();
-    await tick();
-    expect(s.output.state).toBe("speaking");
-    await vi.advanceTimersByTimeAsync(500);
-    s.input.partial("each part is one fourth");
-    await vi.advanceTimersByTimeAsync(400);
-    expect(s.output.state).toBe("speaking");
-    expect(s.onBargeIn).not.toHaveBeenCalled();
-  });
-
-  it("a noise long before doesn't count toward the 300 ms", async () => {
-    const s = setup();
-    void s.talk.say("So we split the bar into four parts. Then we shade one.");
-    await tick();
-    s.input.speechStart(); // a cough: no words follow
-    await vi.advanceTimersByTimeAsync(5000);
-    s.input.partial("wait");
-    expect(s.output.state).toBe("speaking");
-    await vi.advanceTimersByTimeAsync(299);
-    expect(s.output.state).toBe("speaking");
-    await vi.advanceTimersByTimeAsync(1);
-    expect(s.output.state).toBe("idle");
-  });
-
-  it("reports how long first audio and barge-in took", async () => {
-    const s = setup();
-    void s.talk.say("So we split the bar into four parts.");
-    await tick();
-    expect(s.onMetric).toHaveBeenCalledWith({ name: "first-audio", ms: 0, vendor: "browser" });
-    s.input.speechStart();
-    s.input.partial("wait");
-    await vi.advanceTimersByTimeAsync(300);
-    expect(s.onMetric).toHaveBeenLastCalledWith({ name: "barge-in", ms: 300, vendor: "browser" });
-  });
-
-  it("turns the microphone off after 30 s with nobody talking, but not while the tutor talks", async () => {
-    const s = setup();
-    const stop = vi.spyOn(s.input, "stop");
     s.talk.listening();
-    void s.talk.say("A long explanation.");
-    await tick();
-    await vi.advanceTimersByTimeAsync(45_000);
-    expect(stop).not.toHaveBeenCalled();
-    s.output.finish();
-    await vi.advanceTimersByTimeAsync(29_000);
-    s.input.partial("um");
-    await vi.advanceTimersByTimeAsync(29_000);
-    expect(stop).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1_000);
-    expect(stop).toHaveBeenCalledOnce();
-    expect(s.onMicOff).toHaveBeenCalledWith("idle");
+    await vi.advanceTimersByTimeAsync(30_001);
+    expect(s.input.listening).toBe(false);
+    expect(s.seen.micOff).toEqual(["idle"]);
   });
 
-  it("turns the microphone off when the page goes out of sight", async () => {
+  it("when the page is hidden", async () => {
     const s = setup();
-    const abort = vi.spyOn(s.input, "abort");
-    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
     document.dispatchEvent(new Event("visibilitychange"));
-    expect(abort).toHaveBeenCalledOnce();
-    expect(s.onMicOff).toHaveBeenCalledWith("hidden");
+    expect(s.input.listening).toBe(false);
+    expect(s.seen.micOff).toEqual(["hidden"]);
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
     s.talk.dispose();
-    s.input.listening = true;
-    document.dispatchEvent(new Event("visibilitychange"));
-    expect(abort).toHaveBeenCalledOnce();
-    hidden.mockRestore();
   });
+});
 
-  it("dispose stops listening to the microphone", async () => {
+describe("what the tutor said", () => {
+  it("passes the heard prefix through, for truncating the reply after a barge-in", async () => {
     const s = setup();
-    s.talk.dispose();
-    s.input.endOfTurn("hello");
-    expect(s.onTurn).not.toHaveBeenCalled();
-  });
-
-  it("works with no output (typing-only screens) and no input", async () => {
-    const onTurn = vi.fn();
-    const input = fakeIn();
-    const talk = converse({ input, output: null, onTurn });
-    await talk.say("Hello.");
-    input.endOfTurn("hi");
-    expect(onTurn).toHaveBeenCalledWith("hi");
-    expect(() => converse({ input: null, output: fakeOut(), onTurn }).dispose()).not.toThrow();
+    await tutorSays(s, "One two three.");
+    s.output.heard = 1;
+    expect(s.talk.heardUpTo()).toBe(1);
+    expect(s.talk.sentenceAt(0)).toEqual({ from: 0, to: 3, question: false });
   });
 });

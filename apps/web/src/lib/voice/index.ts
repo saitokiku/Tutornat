@@ -12,7 +12,7 @@ export * from "./types";
 export { asyncQueue, createChunker, sentenceFeed, sentencesFrom, sentencesOf, splitSentences, type ChunkOptions } from "./chunk";
 export { fold, fractionWords, hasName, speakable, wordAt, type Speakable } from "./speakable";
 export { isBackchannel, isFillerOnly, words } from "./backchannel";
-export { BARGE_IN_MS, echoScore, echoVerdict, echoWords, shouldBargeIn, type BargeInput } from "./bargein";
+export { bargeStart, bargeStep, echoByTime, echoMarks, echoScore, echoVerdict, foldWords, wordKind, type BargeAction, type BargeEvent, type BargeState, type PlayedWord } from "./bargein";
 export { TURN_DEFAULT, TURN_MANUAL, TURN_YOUNG, emptyTurn, finishTurn, nextCheckAt, shapeOf, silenceNeeded, stepTurn, turnText, turnTracker } from "./turn";
 export type { TurnEvent, TurnOptions, TurnShape, TurnState, TurnTracker } from "./turn";
 export { browserSpeechIn, browserSpeechOut, browserVoice, speechLang } from "./browser";
@@ -33,6 +33,6 @@ export {
   type SelfTest,
   type SelfTestStatus,
 } from "./mic";
-export { ECHO_LAG_MS, ECHO_TAIL_MS, converse, type ConverseOptions, type MicOffReason, type VoiceMetric } from "./converse";
+export { converse, type Converse, type ConverseMetric, type ConverseOptions, type HeardTurn, type MicOffReason } from "./converse";
 export { mayBeUnder13, voice, voiceDisclosure, voiceStatus, withFallback, type Voice, type VoiceSetup, type VoiceStatus } from "./select";
 export { useVoiceSession, type SessionOptions, type VoiceSession } from "./session";

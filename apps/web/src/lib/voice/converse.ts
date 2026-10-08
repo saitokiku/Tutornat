@@ -1,75 +1,102 @@
 import type { Locale } from "@/lib/types";
-import { isBackchannel, words } from "./backchannel";
-import { BARGE_IN_MS, echoVerdict, echoWords, shouldBargeIn } from "./bargein";
+import { isBackchannel } from "./backchannel";
+import {
+  bargeStart,
+  bargeStep,
+  ECHO_SCREEN_MS,
+  echoByTime,
+  echoVerdict,
+  foldWords,
+  HALF_DUPLEX_AFTER,
+  QUESTION_TAIL_MS,
+  wordKind,
+  type BargeAction,
+  type BargeEvent,
+  type PlayedWord,
+} from "./bargein";
 import { sentencesFrom } from "./chunk";
 import { speakable } from "./speakable";
-import { countWords, type SpeakSource, type SpeechIn, type SpeechOut, type Unsubscribe } from "./types";
+import { countWords, type HeardWord, type SpeakOptions, type SpeakSource, type SpeechIn, type SpeechOut, type SpeechRun, type TurnMeta, type Unsubscribe } from "./types";
 
-// Talking with the tutor, both ways at once. While the tutor speaks the microphone stays open:
-//  - "mhm", "ok", "ajá", "sí" are let through: no interruption, no new turn, the tutor goes on. Said
-//    while the tutor asks a question ("Do you want another one?"), it is the answer, given when the
-//    tutor finishes;
-//  - real speech for 300 ms or more stops the tutor at once (barge-in) and becomes the next turn;
-//  - the tutor's own voice picked up by the microphone is not taken as the learner. Echo is judged
-//    against the words that were actually playing when the learner's speech began (from the output's
-//    word boundaries), in their spoken form ("3/4" is heard as "3 fourths"), including speech that
-//    ends after the reply does. What is set aside as echo goes to onEcho, so a screen can offer it.
-// When the tutor is quiet, every finished turn (even "ok") goes to onTurn. Nobody talking for a while,
-// or the page going out of sight, turns the microphone off.
+// Talking with the tutor, both ways at once (live tutor spec §2.4). While the tutor speaks the
+// microphone stays open (vendor recognizers; the browser's is half duplex and closed meanwhile):
+//  - the learner starting to talk ducks the tutor to 30% at once; a real word (not "mhm", not the
+//    tutor's own echo) or 700 ms of voice stops it with a fade; nothing within 800 ms brings it back;
+//  - speech that starts in the last 1.5 s of a tutor question, or after it, answers that question,
+//    even "yes" or the tutor's own words ("the bottom number"): it is held and delivered when the
+//    tutor's audio ends;
+//  - the tutor's voice coming back through the microphone is matched by time: the same word played
+//    within ±400 ms of when it was heard (screened until 1.5 s after the last sample). What is set
+//    aside as echo goes to onEcho ("Did you say …?"); two of those in a session switch it to half
+//    duplex (the microphone is gated while the tutor speaks; Stop interrupts).
+// When the tutor is quiet, every finished turn goes to onTurn. Nobody talking for a while, or the
+// page going out of sight, turns the microphone off.
 
-export type VoiceMetric = {
-  /** first-audio: from say() to the first sound. barge-in: from the learner's first sound to the tutor stopping. */
-  name: "first-audio" | "barge-in";
-  ms: number;
-  vendor: SpeechOut["kind"];
-};
+export type ConverseMetric =
+  /** say() → the first audio was scheduled. */
+  | { name: "first-audio"; ms: number; vendor: SpeechOut["kind"] }
+  /** The learner's first sound → the tutor ducked, → the tutor stopped. */
+  | { name: "barge-in"; duckMs: number | null; stopMs: number; vendor: SpeechOut["kind"] };
+/** @deprecated the first version's name. */
+export type VoiceMetric = ConverseMetric;
 
 export type MicOffReason = "idle" | "hidden";
+
+export type HeardTurn = TurnMeta & {
+  /** Said over the end of the tutor's question, delivered when the tutor finished. */
+  held: boolean;
+};
 
 export type ConverseOptions = {
   input: SpeechIn | null;
   output: SpeechOut | null;
-  /** The reply's language, so echo is compared with what the voice said ("3 fourths", "3 cuartos"). */
+  /** The reply's language, so echo is compared with what the voice said. */
   locale?: Locale;
   /** The names the output leaves out, so echo is compared with what was really said. */
   names?: string[];
   /** The learner said something to answer. */
-  onTurn: (text: string) => void;
+  onTurn: (text: string, meta: HeardTurn) => void;
   /** The learner interrupted; the tutor's speech was cancelled. Stop the reply too. */
   onBargeIn?: () => void;
+  /** The tutor was ducked (true) or brought back (false). */
+  onDuck?: (ducked: boolean) => void;
   /** An acknowledgement while the tutor was speaking (kept out of the conversation). */
   onBackchannel?: (text: string) => void;
-  /** Heard while the tutor spoke and matching its words, so not sent. A screen may offer to send it. */
+  /** Heard while the tutor spoke and matching its words in time, so not sent. A screen may offer to send it. */
   onEcho?: (text: string) => void;
+  /** Two echo set-asides: from now on the microphone is gated while the tutor speaks. */
+  onHalfDuplex?: () => void;
   /** The microphone was turned off: nobody spoke for idleMs, or the page went out of sight. */
   onMicOff?: (why: MicOffReason) => void;
-  /** Timings for the voice quality bars (first audio < 1.5 s; barge-in in about 300 ms). */
-  onMetric?: (m: VoiceMetric) => void;
-  minBargeMs?: number;
+  onMetric?: (m: ConverseMetric) => void;
   /** Silence (no learner speech, no tutor speech) after which listening stops. 30 s by default. */
   idleMs?: number;
+  /** How often the microphone level is read while the tutor speaks (for the onset). */
+  frameMs?: number;
+  /** performance.now() */
   now?: () => number;
 };
 
-/** Learner speech that starts this soon after the tutor stops may still be the tail of its echo. */
-export const ECHO_TAIL_MS = 1000;
-/** Recognizers report speech a little late: echo is matched against what played this long before. */
+/** @deprecated kept for callers of the first version; echo is screened for ECHO_SCREEN_MS after the voice. */
+export const ECHO_TAIL_MS = ECHO_SCREEN_MS;
+/** @deprecated */
 export const ECHO_LAG_MS = 1500;
-/** A speech start with no words after this long was noise; the next words start a new onset. */
-export const STALE_ONSET_MS = 1200;
 
 type Reply = {
+  run: number;
   startedAt: number;
-  /** Echo words of everything this reply has handed to the voice, with the written word each came from. */
-  spoken: { index: number; word: string }[];
+  /** Spoken forms of each written word, folded ("3/4" → ["three", "fourths"]). */
+  forms: Map<number, string[]>;
+  /** How many of a written word's spoken words were scheduled so far. */
+  seen: Map<number, number>;
+  played: PlayedWord[];
   /** Written word ranges of the sentences, and whether each asks a question. */
   sentences: { from: number; to: number; question: boolean }[];
-  /** When each word boundary fired. */
-  marks: { at: number; index: number }[];
-  /** Boundaries arrive per word (not only per sentence). */
-  perWord: boolean;
+  /** When each written word was (or will be) heard. */
+  wordAt: Map<number, number>;
   endedAt: number | null;
   cancelled: boolean;
+  firstAudio: boolean;
 };
 
 export function converse({
@@ -79,58 +106,61 @@ export function converse({
   names = [],
   onTurn,
   onBargeIn,
+  onDuck,
   onBackchannel,
   onEcho,
+  onHalfDuplex,
   onMicOff,
   onMetric,
-  minBargeMs = BARGE_IN_MS,
   idleMs = 30_000,
-  now = () => Date.now(),
+  frameMs = 40,
+  now = () => performance.now(),
 }: ConverseOptions) {
-  let onsetAt: number | null = null;
-  /** The tutor's voice was playing when the learner's speech began. */
-  let onsetPlaying = false;
-  /** …or had stopped only just before (its echo may still be coming in). */
-  let onsetNearVoice = false;
-  let heard = "";
   let reply: Reply | null = null;
-  /** A "yes" given during the tutor's question, delivered when the tutor finishes. */
-  let held: string | null = null;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let barge = bargeStart();
+  let duckedAt: number | null = null;
+  let heardSoFar = "";
+  let onset: number | null = null;
+  let held: { text: string; meta: HeardTurn } | null = null;
+  let setAsides = 0;
+  let halfDuplex = !!input && !input.duplex;
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let frameTimer: ReturnType<typeof setInterval> | undefined;
   const subs: Unsubscribe[] = [];
 
   const state = () => output?.state ?? "idle";
   const playing = () => state() === "speaking";
-  const midReply = () => state() === "speaking" || state() === "paused";
+  const midReply = () => state() === "speaking" || state() === "paused" || state() === "waiting";
 
-  const sentenceAt = (index: number) => reply?.sentences.find((s) => index >= s.from && index < s.to) ?? null;
-  /** The written word playing at time t (-1 before the first). */
-  const indexAt = (t: number) => {
-    let k = -1;
-    for (const m of reply?.marks ?? []) {
-      if (m.at > t) break;
-      k = m.index;
-    }
-    return k;
-  };
+  /** The tutor's voice was heard at t, or stopped less than 1.5 s before (its echo may still come in). */
+  const nearVoice = (t: number) => playing() || (reply?.endedAt != null && !reply.cancelled && t - reply.endedAt <= ECHO_SCREEN_MS);
 
-  /** Echo words of what the voice played from `from` to `to` (ms). */
-  function playedBetween(from: number, to: number): string[] {
-    const r = reply;
-    if (!r || !r.marks.length) return [];
-    const at = indexAt(to);
-    if (at < 0) return [];
-    let lo = Math.max(indexAt(from), r.marks[0].index);
-    // Per-word marks: up to this word and the next. Voices that only mark sentences: the whole sentence.
-    let hi = r.perWord ? at + 1 : (sentenceAt(at)?.to ?? at + 1) - 1;
-    if (!r.perWord) lo = sentenceAt(lo)?.from ?? lo;
-    if (r.endedAt != null && !r.cancelled && to >= r.endedAt) hi = Infinity; // it all played
-    return r.spoken.filter((w) => w.index >= lo && w.index <= hi).map((w) => w.word);
+  const sentenceOf = (r: Reply, index: number) => r.sentences.find((s) => index >= s.from && index < s.to) ?? null;
+
+  /** When a sentence is heard, as far as is known: its first word, and its end (the next sentence's start, or its last word plus a little). */
+  function sentenceSpan(r: Reply, k: number): { start: number; end: number } | null {
+    const s = r.sentences[k];
+    const start = r.wordAt.get(s.from);
+    if (start == null) return null;
+    const next = r.sentences[k + 1] ? r.wordAt.get(r.sentences[k + 1].from) : undefined;
+    let last = start;
+    for (let i = s.from; i < s.to; i++) last = Math.max(last, r.wordAt.get(i) ?? last);
+    return { start, end: next ?? (k === r.sentences.length - 1 && r.endedAt != null ? r.endedAt : last + 350) };
   }
 
-  /** The tutor's voice was playing at t, or had finished playing only just before. */
-  const nearVoice = (t: number) => playing() || (reply?.endedAt != null && !reply.cancelled && t - reply.endedAt <= ECHO_TAIL_MS);
+  /** Did speech starting at t answer a question: in its last 1.5 s, or after it (before the next sentence)? */
+  function overQuestion(t: number): boolean {
+    const r = reply;
+    if (!r) return false;
+    for (let k = r.sentences.length - 1; k >= 0; k--) {
+      if (!r.sentences[k].question) continue;
+      const span = sentenceSpan(r, k);
+      if (!span) continue;
+      const nextStart = r.sentences[k + 1] ? r.wordAt.get(r.sentences[k + 1].from) : undefined;
+      if (t >= span.end - QUESTION_TAIL_MS && (nextStart == null || t < nextStart)) return true;
+    }
+    return false;
+  }
 
   const pokeIdle = () => {
     clearTimeout(idleTimer);
@@ -143,108 +173,160 @@ export function converse({
     }, idleMs);
   };
 
-  function bargeIn(at: number | null) {
-    held = null;
-    output?.cancel();
-    if (at != null && output) onMetric?.({ name: "barge-in", ms: now() - at, vendor: output.kind });
-    onBargeIn?.();
+  function act(actions: BargeAction[]) {
+    for (const a of actions) {
+      if (a.type === "duck") {
+        output?.duck(a.gain, a.ms);
+        duckedAt = now();
+        onDuck?.(true);
+      } else if (a.type === "restore") {
+        output?.unduck(a.ms);
+        duckedAt = null;
+        onDuck?.(false);
+      } else {
+        held = null;
+        const duckMs = duckedAt != null ? Math.round(duckedAt - a.onsetAt) : null;
+        const stopMs = Math.round(now() + a.fadeMs - a.onsetAt);
+        output?.cancel({ fadeMs: a.fadeMs }); // ends the run, which resets the duck
+        if (output) onMetric?.({ name: "barge-in", duckMs, stopMs, vendor: output.kind });
+        duckedAt = null;
+        onDuck?.(false);
+        onBargeIn?.();
+      }
+    }
   }
 
-  function check() {
-    clearTimeout(timer);
-    if (!output || !midReply() || onsetAt == null || !heard) return;
-    // While the voice plays, what we hear may be the voice itself (even if the learner's sound began before it did).
-    const recent = state() === "speaking" ? playedBetween(onsetAt - ECHO_LAG_MS, now()) : [];
-    if (shouldBargeIn({ speaking: true, heard, onsetAt, now: now(), tutorRecent: recent, minMs: minBargeMs })) return bargeIn(onsetAt);
-    // Real words but not long enough yet: look again when they would be.
-    const left = onsetAt + minBargeMs - now();
-    if (left > 0) timer = setTimeout(check, left);
+  const feed = (e: BargeEvent) => {
+    const r = bargeStep(barge, e);
+    barge = r.state;
+    act(r.actions);
+  };
+
+  /** While the tutor speaks and the microphone is open, read its level for the onset. */
+  function frames(on: boolean) {
+    clearInterval(frameTimer);
+    frameTimer = undefined;
+    if (!on || !input || halfDuplex) return;
+    frameTimer = setInterval(() => {
+      const level = input.listening ? input.level() : null;
+      const t = now();
+      if (level != null) feed({ type: "frame", level, at: t, playing: playing() });
+      feed({ type: "tick", at: t });
+    }, frameMs);
   }
 
-  /** The learner's speech began now (unless it already began; a start that brought no words was noise). */
-  function onset() {
+  const played = () => reply?.played ?? [];
+
+  function endOfTurn(text: string, meta: TurnMeta) {
+    pokeIdle();
     const t = now();
-    if (onsetAt != null && (heard || t - onsetAt < STALE_ONSET_MS)) return;
-    onsetAt = t;
-    onsetPlaying = playing();
-    onsetNearVoice = nearVoice(t);
+    const at = meta.words[0]?.start ?? onset ?? t;
+    onset = null;
+    heardSoFar = "";
+    const s = state();
+    const wasNear = nearVoice(at) || nearVoice(t);
+    // The tutor's own voice: by time when the recognizer gives word times, else by word order.
+    const echo = wasNear ? (meta.words.length && meta.words.some((w) => w.end > w.start) ? echoByTime(meta.words, played(), locale) : echoVerdict(text, played().map((p) => p.word), locale)) : "no";
+    if (echo === "echo" && s !== "paused") {
+      setAsides++;
+      onEcho?.(text);
+      if (setAsides >= HALF_DUPLEX_AFTER && !halfDuplex) {
+        halfDuplex = true;
+        frames(false);
+        onHalfDuplex?.();
+      }
+      return;
+    }
+    const answered = overQuestion(at);
+    if (answered && midReply()) {
+      // Said over the end of the tutor's question: it answers it once the tutor finishes.
+      held = { text, meta: { ...meta, held: true } };
+      feed({ type: "reset" });
+      if (duckedAt != null) act([{ type: "restore", ms: 250 }]);
+      return;
+    }
+    if (midReply() && isBackchannel(text)) {
+      onBackchannel?.(text);
+      return;
+    }
+    held = null;
+    if (midReply()) act([{ type: "cancel", fadeMs: 120, onsetAt: at }]);
+    onTurn(text, { ...meta, held: false });
   }
 
   if (input) {
     subs.push(
       input.onSpeechStart(() => {
         pokeIdle();
-        onset();
+        onset ??= now();
+        if (!halfDuplex) feed({ type: "start", at: now(), playing: playing() });
       }),
       input.onPartial((text) => {
         pokeIdle();
-        if (!words(text).length) return;
-        if (!heard) onset();
-        heard = text;
-        check();
+        onset ??= now();
+        heardSoFar = text;
       }),
-      input.onEndOfTurn((text) => {
-        pokeIdle();
-        const t = now();
-        // No speech start or partial came first (some recognizers): the turn began about now.
-        const at = onsetAt ?? t;
-        const wasPlaying = onsetAt != null ? onsetPlaying : playing();
-        const wasNearVoice = onsetAt != null ? onsetNearVoice : nearVoice(t);
-        clearTimeout(timer);
-        onsetAt = null;
-        onsetPlaying = onsetNearVoice = false;
-        heard = "";
-        const s = state();
-        if ((wasNearVoice || nearVoice(t)) && s !== "paused" && echoVerdict(text, playedBetween(at - ECHO_LAG_MS, t)) === "echo") return onEcho?.(text);
-        if ((s !== "idle" || wasPlaying) && isBackchannel(text)) {
-          // "Yes" while the tutor asks something answers it (once the tutor finishes); otherwise it's listening.
-          const asked = s !== "waiting" && !!sentenceAt(indexAt(t))?.question;
-          if (asked && midReply()) held = text;
-          else if (asked) onTurn(text);
-          else onBackchannel?.(text);
-          return;
+      input.onWords((ws: HeardWord[]) => {
+        if (halfDuplex || !midReply()) return;
+        for (const w of ws) {
+          const kind = overQuestion(w.start) ? "backchannel" : wordKind(w, played(), heardSoFar, locale);
+          feed({ type: "word", kind, at: now() });
         }
-        held = null;
-        if (s !== "idle") bargeIn(null);
-        onTurn(text);
       }),
+      input.onEndOfTurn((text, meta) => endOfTurn(text, meta)),
     );
   }
 
   if (output) {
     subs.push(
-      output.onStart(() => {
-        pokeIdle();
-        if (reply) onMetric?.({ name: "first-audio", ms: now() - reply.startedAt, vendor: output.kind });
-      }),
-      output.onBoundary((index) => {
+      output.onStart((run) => {
         pokeIdle();
         const r = reply;
-        if (!r) return;
-        const last = r.marks[r.marks.length - 1];
-        if (last && sentenceAt(last.index) === sentenceAt(index) && last.index !== index) r.perWord = true;
-        r.marks.push({ at: now(), index });
+        if (r && r.run === run && !r.firstAudio) {
+          r.firstAudio = true;
+          onMetric?.({ name: "first-audio", ms: Math.round(now() - r.startedAt), vendor: output.kind });
+        }
+        frames(true);
       }),
-      output.onEnd(({ cancelled }) => {
+      output.onWordScheduled((index, at, run) => {
+        const r = reply;
+        if (!r || r.run !== run) return;
+        const k = r.seen.get(index) ?? 0;
+        r.seen.set(index, k + 1);
+        if (k === 0) r.wordAt.set(index, at);
+        const form = r.forms.get(index)?.[k];
+        if (form) r.played.push({ word: form, at });
+      }),
+      output.onBoundary((index, run) => {
         pokeIdle();
-        if (reply) {
-          reply.endedAt = now();
-          reply.cancelled = cancelled;
+        const r = reply;
+        // Browser voices have no look-ahead: the boundary is the best time there is.
+        if (!r || r.run !== run || r.wordAt.has(index)) return;
+        const at = now();
+        r.wordAt.set(index, at);
+        for (const form of r.forms.get(index) ?? []) r.played.push({ word: form, at });
+      }),
+      output.onEnd(({ cancelled }, run) => {
+        pokeIdle();
+        frames(false);
+        feed({ type: "reset" });
+        duckedAt = null;
+        const r = reply;
+        if (r && r.run === run) {
+          r.endedAt = now();
+          r.cancelled = cancelled;
         }
         const h = held;
         held = null;
-        if (!h) return;
-        if (cancelled) onBackchannel?.(h);
-        else onTurn(h);
+        if (h) onTurn(h.text, h.meta);
       }),
     );
   }
 
   const onVisibility = () => {
     if (typeof document === "undefined" || !document.hidden || !input?.listening) return;
-    clearTimeout(timer);
-    onsetAt = null;
-    heard = "";
+    onset = null;
+    heardSoFar = "";
     input.abort();
     onMicOff?.("hidden");
   };
@@ -255,40 +337,48 @@ export function converse({
 
   return {
     /** Speak through the output, remembering what is said so its echo isn't taken for the learner. */
-    say(source: SpeakSource): Promise<void> {
-      if (!output) return Promise.resolve();
+    say(source: SpeakSource, opts?: SpeakOptions): SpeechRun {
       held = null;
-      const r: Reply = { startedAt: now(), spoken: [], sentences: [], marks: [], perWord: false, endedAt: null, cancelled: false };
-      reply = r;
+      feed({ type: "reset" });
+      const r: Reply = { run: -1, startedAt: now(), forms: new Map(), seen: new Map(), played: [], sentences: [], wordAt: new Map(), endedAt: null, cancelled: false, firstAudio: false };
       let base = 0;
       const tap = async function* () {
         for await (const s of sentencesFrom(source)) {
           const sp = speakable(s, locale, names);
           const said = sp.text.split(/\s+/).filter(Boolean);
-          // Spoken then written form of each word ("3 fourths", "3 4"): a recognizer may write either.
           s.split(/\s+/)
             .filter(Boolean)
-            .forEach((w, k) => {
-              const spokenForm = echoWords(said.filter((_, j) => sp.words[j] === k).join(" "));
-              const writtenForm = echoWords(w).filter((x) => !spokenForm.includes(x));
-              for (const word of [...spokenForm, ...writtenForm]) r.spoken.push({ index: base + k, word });
-            });
+            .forEach((_, k) => r.forms.set(base + k, foldWords(said.filter((__, j) => sp.words[j] === k).join(" "), locale)));
           r.sentences.push({ from: base, to: base + countWords(s), question: /[?¿]/.test(s) });
           base += countWords(s);
           yield s;
         }
       };
-      return output.speak(tap());
+      if (!output) return Object.assign(Promise.resolve(), { id: -1 });
+      const run = output.speak(tap(), opts);
+      r.run = run.id;
+      reply = r;
+      return run;
     },
     /** Call when the microphone is turned on, so the idle timer starts. */
     listening() {
       pokeIdle();
     },
+    /** The microphone is gated while the tutor speaks (half-duplex recognizer, or echo kept coming back). */
+    get halfDuplex() {
+      return halfDuplex;
+    },
+    /** The last written word the learner heard of the current or last reply. */
+    heardUpTo: () => output?.heardUpTo() ?? -1,
+    /** The sentence the tutor is in, and whether it asks something (for the held-answer rule and the UI). */
+    sentenceAt: (index: number) => (reply ? sentenceOf(reply, index) : null),
     dispose() {
-      clearTimeout(timer);
       clearTimeout(idleTimer);
+      frames(false);
       subs.forEach((u) => u());
       subs.length = 0;
     },
   };
 }
+
+export type Converse = ReturnType<typeof converse>;

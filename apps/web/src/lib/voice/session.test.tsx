@@ -147,26 +147,6 @@ describe("useVoiceSession", () => {
     expect(result.current.listening).toBe(false);
   });
 
-  it("talking over the tutor stops it; mhm doesn't", async () => {
-    const { result, onBargeIn } = mount();
-    await flush();
-    await act(() => result.current.listen());
-    await act(async () => {
-      void result.current.say("So we split the bar into four equal parts.");
-      await vi.advanceTimersByTimeAsync(5);
-    });
-    act(() => synth.queue[0].onstart!());
-    const rec = Rec.all[0];
-    act(() => rec.onspeechstart!());
-    act(() => rec.hear("mhm", false));
-    await act(() => vi.advanceTimersByTimeAsync(500));
-    expect(synth.cancel).not.toHaveBeenCalled();
-    act(() => rec.hear("mhm wait why four", false));
-    expect(synth.cancel).toHaveBeenCalled();
-    expect(onBargeIn).toHaveBeenCalledOnce();
-    expect(result.current.speaking).toBe(false);
-  });
-
   it("reports a refused microphone", async () => {
     const { result } = mount();
     await flush();
@@ -206,28 +186,6 @@ describe("useVoiceSession", () => {
       await vi.advanceTimersByTimeAsync(5);
     });
     expect(onTurn).toHaveBeenCalledWith("twelve.");
-  });
-
-  it("the tutor's own voice is set aside, and can still be sent", async () => {
-    const { result, onTurn } = mount();
-    await flush();
-    await act(() => result.current.listen({ turns: "auto" }));
-    await act(async () => {
-      void result.current.say("Each part is one fourth of the bar.");
-      await vi.advanceTimersByTimeAsync(5);
-    });
-    act(() => synth.queue[0].onstart!());
-    const rec = Rec.all[0];
-    act(() => rec.onspeechstart!());
-    act(() => rec.hear("each part is one fourth of the bar", false));
-    act(() => synth.queue[0].onend!());
-    act(() => rec.hear("each part is one fourth of the bar.", true));
-    await act(() => vi.advanceTimersByTimeAsync(800));
-    expect(onTurn).not.toHaveBeenCalled();
-    expect(result.current.setAside).toBe("each part is one fourth of the bar.");
-    act(() => result.current.sendSetAside());
-    expect(onTurn).toHaveBeenCalledWith("each part is one fourth of the bar.");
-    expect(result.current.setAside).toBeNull();
   });
 
   it("the microphone turns itself off after 30 s of quiet and says so", async () => {

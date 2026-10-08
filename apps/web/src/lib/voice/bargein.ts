@@ -1,28 +1,71 @@
+import type { Locale } from "@/lib/types";
 import { isBackchannel, words } from "./backchannel";
+import { speakable } from "./speakable";
+import type { HeardWord } from "./types";
 
-// Barge-in: a learner who starts really talking over the tutor gets the floor. "Really talking" means
-// at least 300 ms since their speech began and at least one word that is not a backchannel. The
-// tutor's own voice coming back through the microphone (echo) never counts.
+// Barge-in (live tutor spec §2.4): a learner who starts talking over the tutor gets the floor, and the
+// tutor's own voice coming back through the microphone (echo) never does.
 //
-// Echo repeats the tutor's words in the order they were played, so it is matched in order (a longest
-// common subsequence), not as a bag of words: "two thirds is bigger" said over "Which is bigger, three
-// fourths or two thirds?" is an answer, not an echo. Recognizers write numbers either way ("five",
-// "5"), so number words are compared as digits.
+//  1. Onset: the recognizer's start of speech, or the mic level at −30 dBFS (0.5 on levelOf's scale)
+//     for 120 ms while the tutor plays (0.33 when it doesn't). The tutor is ducked to 30% at once.
+//  2. Cancel: the first word that is neither a backchannel nor echo, or 700 ms of continuous voice:
+//     fade to silence over 120 ms and stop.
+//  3. Restore: nothing of the kind within 800 ms of the onset: back to full volume over 250 ms.
+// Echo is judged by time, not by words alone: a heard word is echo only if the tutor's voice played
+// the same word (both folded through the number speller, so "3/4" and "three fourths" match) within
+// ±400 ms of when the microphone heard it. "The bottom number." said a second after the tutor asked
+// "top or bottom?" is an answer, however many words it shares with the question.
 
+export const DUCK_GAIN = 0.3;
+export const DUCK_MS = 80;
+export const CANCEL_FADE_MS = 120;
+export const RESTORE_MS = 250;
+export const RESTORE_AFTER_MS = 800;
+export const VOICED_CANCEL_MS = 700;
+export const ONSET_MS = 120;
+export const LEVEL_PLAYING = 0.5;
+export const LEVEL_QUIET = 0.33;
+/** A heard word within this of the same word played is echo. */
+export const ECHO_WINDOW_MS = 400;
+/** Echo is screened for this long after the last scheduled sample ends. */
+export const ECHO_SCREEN_MS = 1500;
+/** Speech that starts this close to the end of a tutor question (or after it) answers it. */
+export const QUESTION_TAIL_MS = 1500;
+/** Two echo set-asides in one session switch it to half duplex. */
+export const HALF_DUPLEX_AFTER = 2;
+/** @deprecated the first version's barge-in wait; the timeline above replaces it. */
 export const BARGE_IN_MS = 300;
 
-const NUMBER_WORDS: Record<string, string> = Object.fromEntries(
-  [
-    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty",
-    "cero uno dos tres cuatro cinco seis siete ocho nueve diez once doce trece catorce quince dieciseis diecisiete dieciocho diecinueve veinte",
-  ].flatMap((list) => list.split(" ").map((w, i) => [w, String(i)])),
-);
-Object.assign(NUMBER_WORDS, { un: "1", una: "1", thirty: "30", forty: "40", fifty: "50", hundred: "100", treinta: "30", cuarenta: "40", cincuenta: "50", cien: "100" });
+/** Words in the form a voice says them, for comparing what was heard with what was played. */
+export function foldWords(text: string, locale: Locale = "en"): string[] {
+  return words(speakable(text, locale).text);
+}
 
-/** Words for echo matching: normalized like words(), number words as digits. */
-export const echoWords = (text: string) => words(text).map((w) => NUMBER_WORDS[w] ?? w);
+/** @deprecated echo words of the first version (digits for number words); see foldWords. */
+export const echoWords = (text: string) => foldWords(text);
 
-/** Share of the heard words that follow, in order, words the tutor played (0..1). */
+/** A word the tutor's voice played, folded, and when it was heard (performance.now() ms). */
+export type PlayedWord = { word: string; at: number };
+
+/** For each heard word: was the same word played within ±400 ms of it? */
+export function echoMarks(heard: HeardWord[], played: PlayedWord[], locale: Locale = "en", windowMs = ECHO_WINDOW_MS): boolean[] {
+  return heard.map((h) => {
+    // One written word may be several spoken ones ("3/4": "three fourths"); each later one may start a little later.
+    const forms = foldWords(h.word, locale);
+    return forms.length > 0 && forms.every((f, k) => played.some((p) => p.word === f && Math.abs(p.at - h.start) <= windowMs + k * 300));
+  });
+}
+
+/** Is what was heard the tutor's own voice? Two or more words, 80% of them echo by time: "echo". One echoed word: "maybe". */
+export function echoByTime(heard: HeardWord[], played: PlayedWord[], locale: Locale = "en"): "echo" | "maybe" | "no" {
+  const marks = echoMarks(heard, played, locale);
+  if (!marks.length) return "no";
+  const share = marks.filter(Boolean).length / marks.length;
+  if (marks.length >= 2) return share >= 0.8 ? "echo" : "no";
+  return marks[0] ? "maybe" : "no";
+}
+
+/** Share of the heard words that follow, in order, words the tutor played (0..1). For recognizers without word times. */
 export function echoScore(heard: string[], tutorWords: string[]): number {
   if (!heard.length || !tutorWords.length) return 0;
   let prev = new Array<number>(tutorWords.length + 1).fill(0);
@@ -34,34 +77,73 @@ export function echoScore(heard: string[], tutorWords: string[]): number {
   return prev[tutorWords.length] / heard.length;
 }
 
-/**
- * Is what we heard most likely the tutor's own voice? Two or more words that follow the tutor's played
- * words is echo; one word the tutor just said is not decided yet (wait for a second word).
- * `tutor` is the text, or words already passed through echoWords().
- */
-export function echoVerdict(heard: string, tutor: string | string[]): "echo" | "maybe" | "no" {
-  const h = echoWords(heard);
-  const score = echoScore(h, typeof tutor === "string" ? echoWords(tutor) : tutor);
+/** Echo by word order only (no times): two or more words that follow the tutor's played words. */
+export function echoVerdict(heard: string, tutor: string | string[], locale: Locale = "en"): "echo" | "maybe" | "no" {
+  const h = foldWords(heard, locale);
+  const score = echoScore(h, typeof tutor === "string" ? foldWords(tutor, locale) : tutor);
   if (h.length >= 2) return score >= 0.8 ? "echo" : "no";
   return score === 1 ? "maybe" : "no";
 }
 
-export type BargeInput = {
-  /** The tutor's voice is playing (or paused mid-reply). */
-  speaking: boolean;
-  /** Everything heard in the learner's current turn. */
-  heard: string;
-  /** When the learner's speech began (ms), null if not yet. */
+// ---- the duck / cancel / restore timeline (pure)
+
+export type BargePhase = "idle" | "ducked" | "cancelled";
+
+export type BargeState = {
+  phase: BargePhase;
+  /** When the learner's speech began (ms). */
   onsetAt: number | null;
-  now: number;
-  /** The words the tutor played around the time the learner spoke, to rule out echo. */
-  tutorRecent?: string | string[];
-  minMs?: number;
+  /** Loud frames began (ms), while they last. */
+  loudSince: number | null;
 };
 
-export function shouldBargeIn({ speaking, heard, onsetAt, now, tutorRecent, minMs = BARGE_IN_MS }: BargeInput): boolean {
-  if (!speaking || onsetAt == null || now - onsetAt < minMs) return false;
-  if (!words(heard).length || isBackchannel(heard)) return false;
-  if (tutorRecent && tutorRecent.length && echoVerdict(heard, tutorRecent) !== "no") return false;
-  return true;
+export type BargeEvent =
+  /** One microphone frame's own level (0..1), while the tutor is `playing`. */
+  | { type: "frame"; level: number; at: number; playing: boolean }
+  /** The recognizer heard speech begin (Flux StartOfTurn, Nova SpeechStarted). */
+  | { type: "start"; at: number; playing: boolean }
+  /** A recognized word: "real" interrupts; backchannels and echo don't. */
+  | { type: "word"; kind: "real" | "backchannel" | "echo"; at: number }
+  | { type: "tick"; at: number }
+  /** The tutor's voice ended (or a new reply began): start over. */
+  | { type: "reset" };
+
+export type BargeAction = { type: "duck"; gain: number; ms: number; onsetAt: number } | { type: "cancel"; fadeMs: number; onsetAt: number } | { type: "restore"; ms: number };
+
+export const bargeStart = (): BargeState => ({ phase: "idle", onsetAt: null, loudSince: null });
+
+export function bargeStep(s: BargeState, e: BargeEvent): { state: BargeState; actions: BargeAction[] } {
+  const duck = (onsetAt: number): { state: BargeState; actions: BargeAction[] } => ({ state: { ...s, phase: "ducked", onsetAt }, actions: [{ type: "duck", gain: DUCK_GAIN, ms: DUCK_MS, onsetAt }] });
+  const cancel = (): { state: BargeState; actions: BargeAction[] } => ({ state: { ...s, phase: "cancelled", loudSince: null }, actions: [{ type: "cancel", fadeMs: CANCEL_FADE_MS, onsetAt: s.onsetAt ?? 0 }] });
+  switch (e.type) {
+    case "reset":
+      return { state: bargeStart(), actions: [] };
+    case "start":
+      if (!e.playing || s.phase !== "idle") return { state: s, actions: [] };
+      return duck(e.at);
+    case "frame": {
+      if (s.phase === "cancelled") return { state: s, actions: [] };
+      const loud = e.level >= (e.playing ? LEVEL_PLAYING : LEVEL_QUIET);
+      if (!loud) return { state: { ...s, loudSince: null }, actions: [] };
+      const since = s.loudSince ?? e.at;
+      const next = { ...s, loudSince: since };
+      if (s.phase === "idle" && e.playing && e.at - since >= ONSET_MS) return { ...duck(since), state: { ...next, phase: "ducked", onsetAt: since } };
+      if (s.phase === "ducked" && e.at - since >= VOICED_CANCEL_MS) return { state: { ...next, phase: "cancelled", loudSince: null }, actions: [{ type: "cancel", fadeMs: CANCEL_FADE_MS, onsetAt: s.onsetAt ?? since }] };
+      return { state: next, actions: [] };
+    }
+    case "word":
+      if (e.kind !== "real" || s.phase === "cancelled") return { state: s, actions: [] };
+      if (s.phase === "idle") return { state: { ...s, phase: "cancelled", onsetAt: s.onsetAt ?? e.at }, actions: [{ type: "cancel", fadeMs: CANCEL_FADE_MS, onsetAt: s.onsetAt ?? e.at }] };
+      return cancel();
+    case "tick":
+      if (s.phase === "ducked" && s.onsetAt != null && e.at - s.onsetAt >= RESTORE_AFTER_MS) return { state: bargeStart(), actions: [{ type: "restore", ms: RESTORE_MS }] };
+      return { state: s, actions: [] };
+  }
+}
+
+/** What a heard word is, for the timeline: a backchannel, the tutor's echo, or a real word. */
+export function wordKind(word: HeardWord, played: PlayedWord[], soFar: string, locale: Locale = "en"): "real" | "backchannel" | "echo" {
+  if (echoMarks([word], played, locale)[0]) return "echo";
+  if (isBackchannel(`${soFar} ${word.word}`) || isBackchannel(word.word)) return "backchannel";
+  return "real";
 }
