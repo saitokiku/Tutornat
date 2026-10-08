@@ -29,6 +29,7 @@ export function closeSharedAudio() {
 export function resetAudioForTests(make: (() => AudioContext) | null = null) {
   shared = null;
   makeShared = make;
+  micsOpen = 0;
 }
 
 /**
@@ -72,14 +73,33 @@ export function setAudioSession(type: "playback" | "play-and-record" | "auto") {
 
 const hasAudioSession = () => typeof navigator !== "undefined" && !!(navigator as NavigatorWithSession).audioSession;
 
+let micsOpen = 0;
+
+/** The microphone opened or closed: "play-and-record" only while it is open, "playback" otherwise. */
+export function micSession(open: boolean) {
+  micsOpen = Math.max(0, micsOpen + (open ? 1 : -1));
+  setAudioSession(micsOpen ? "play-and-record" : "playback");
+}
+
+/**
+ * About to read aloud: with the microphone closed, "playback", so an iPhone's ring/silent switch
+ * doesn't mute the tutor (Web Audio follows the switch under "auto"). Hear, narration and the K–2
+ * opening all play before anyone opens the mic.
+ */
+export function playbackSession() {
+  if (!micsOpen) setAudioSession("playback");
+}
+
 // 50 ms of silence as a WAV data URL (8-bit mono, 8 kHz).
 const SILENT_WAV = "data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
 
 /**
  * Inside a tap or key press: resume the shared context and play one silent sample (what iOS needs to
- * unlock Web Audio), and start the silent loop where there is no audioSession API. Never throws.
+ * unlock Web Audio), set the playback session, and start the silent loop where there is no
+ * audioSession API. Never throws.
  */
 export function unlockAudio(ctx: AudioContext = sharedAudio()) {
+  playbackSession();
   try {
     if (ctx.state !== "running") void ctx.resume().catch(() => {});
     const b = ctx.createBuffer(1, 1, ctx.sampleRate || 24000);

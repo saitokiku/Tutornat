@@ -45,6 +45,13 @@ export function appSpeechOut({ now = () => Date.now(), unlock = () => unlockAudi
 
   const usingDevice = () => !!voices?.deviceOut && vendorFailedAt != null && now() - vendorFailedAt < DEVICE_VOICE_MS;
   const pick = (): SpeechOut | null => (usingDevice() ? voices!.deviceOut : (voices?.out ?? null));
+  /** What the screen was last told ("Using this device's voice"): it follows the voice that actually speaks. */
+  let shownDevice = false;
+  const showDevice = (on: boolean) => {
+    if (on === shownDevice) return;
+    shownDevice = on;
+    ev.device.emit(on);
+  };
 
   /** Inner events, re-sent with the outer run id; anything from another inner run is dropped. */
   function wire(o: SpeechOut) {
@@ -73,7 +80,7 @@ export function appSpeechOut({ now = () => Date.now(), unlock = () => unlockAudi
         if (id == null) return;
         if (o === voices?.out && o.kind === "elevenlabs" && voices.deviceOut) {
           vendorFailedAt = now();
-          ev.device.emit(true);
+          showDevice(true);
         }
         ev.error.emit(e, id);
       }),
@@ -87,6 +94,8 @@ export function appSpeechOut({ now = () => Date.now(), unlock = () => unlockAudi
 
   function start(id: number, source: SpeakSource, opts: SpeakOptions): Promise<void> {
     const inner = pick();
+    // The device's voice was used for a while after a vendor failure; once the vendor speaks again, say so.
+    showDevice(!!inner && inner === voices?.deviceOut && inner !== voices.out);
     if (!inner) {
       ev.end.emit({ cancelled: false }, id);
       return Promise.resolve();
@@ -120,6 +129,7 @@ export function appSpeechOut({ now = () => Date.now(), unlock = () => unlockAudi
       current = null;
       voices = v;
       vendorFailedAt = null;
+      showDevice(false); // another learner, or none: their voice starts fresh
       for (const o of new Set([v?.out, v?.deviceOut])) if (o) wire(o);
       const p = pending;
       pending = null;

@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/types";
-import { resumeWithin, sharedAudio, unlockAudio } from "./audio";
+import { playbackSession, resumeWithin, sharedAudio, unlockAudio } from "./audio";
 import { voiceSpeed } from "./bands";
 import { sentencesFrom } from "./chunk";
 import { assertSpoken } from "./numbers";
@@ -319,6 +319,7 @@ export function elevenLabsSpeechOut(o: ElevenLabsOptions): SpeechOut {
 
   async function connect(r: Run, fresh: boolean): Promise<boolean> {
     const ctx = ctxOf();
+    playbackSession(); // the mic may be closed: don't let the silent switch mute the reply
     if (!(await unlocked(r, ctx))) return false;
     if (!r.player) newPlayer(r, ctx);
     const t = await takeToken(fresh);

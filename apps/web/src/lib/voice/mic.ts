@@ -1,5 +1,5 @@
 import type { Key } from "@/i18n/en";
-import { resumeWithin, setAudioSession, sharedAudio } from "./audio";
+import { micSession, resumeWithin, sharedAudio } from "./audio";
 import { asVoiceError, VoiceError, type SpeechIn, type VoiceErrorCode } from "./types";
 
 // The microphone, for the vendor recognizer and the self-test: echo cancellation on (so the tutor's
@@ -119,10 +119,13 @@ export const micCapture: MicCapture = async ({ onFrame, targetRate = MIC_RATE, m
     throw micError(e);
   }
   const ctx = (audioContext ?? (() => sharedAudio()))();
-  setAudioSession("play-and-record");
+  micSession(true);
+  let released = false;
   const release = () => {
+    if (released) return;
+    released = true;
     stream.getTracks().forEach((t) => t.stop());
-    setAudioSession("playback");
+    micSession(false);
   };
   try {
     // A resume outside a tap may never settle on iOS: wait at most 300 ms, then say so.

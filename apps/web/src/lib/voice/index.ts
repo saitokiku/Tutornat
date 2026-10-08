@@ -20,7 +20,7 @@ export { TURN_DEFAULT, TURN_MANUAL, TURN_YOUNG, emptyTurn, finishTurn, nextCheck
 export type { TurnEvent, TurnOptions, TurnShape, TurnState, TurnTracker } from "./turn";
 export { ANSWER_END_MS, BANDS, FLUX, NOVA, SENTENCE_PAUSE, TURN_WINDOWS, bandOf, voiceSpeed } from "./bands";
 export { chooseVoice, isOnline, loadVoices, pickBrowserVoice, rankVoices, tierOf, type Tier, type VoicePick } from "./voices";
-export { audibleAtMs, latencyMs, resumeWithin, setAudioSession, sharedAudio, unlockAudio } from "./audio";
+export { audibleAtMs, latencyMs, micSession, playbackSession, resumeWithin, setAudioSession, sharedAudio, unlockAudio } from "./audio";
 export { createPlayer, type Player } from "./player";
 export { browserSpeechIn, browserSpeechOut, browserVoice, speechLang } from "./browser";
 export { elevenLabsSpeechOut, pcm16ToFloat32 } from "./elevenlabs";

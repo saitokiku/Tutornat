@@ -1,7 +1,7 @@
 import { act, render, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { appSpeechOut } from "./app-out";
+import { appSpeechOut, DEVICE_VOICE_MS } from "./app-out";
 import { fakeIn, fakeOut } from "./fakes";
 import { useAppVoice, useSpeak, VoiceProvider, type VoiceLearner } from "./root";
 import type { Voice, VoiceSetup } from "./select";
@@ -84,6 +84,30 @@ describe("the app's one SpeechOut", () => {
     void app.speak("Second reply.");
     await vi.advanceTimersByTimeAsync(1);
     expect(deviceOut!.said).toEqual([["Second reply."]]);
+  });
+
+  it("'Using this device's voice' turns off once the vendor voice speaks again, and for another learner", async () => {
+    let t = 0;
+    const app = appSpeechOut({ unlock: () => {}, now: () => t });
+    const shown: boolean[] = [];
+    app.onDeviceVoice((on) => shown.push(on));
+    const { out, deviceOut, v } = voices({ device: true });
+    app.attach({ out: v.out, deviceOut: v.deviceOut });
+    void app.speak("First reply.");
+    await vi.advanceTimersByTimeAsync(1);
+    out.fail(new VoiceError("speak", "socket"));
+    void app.speak("Second reply.");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(shown).toEqual([true]);
+    t += DEVICE_VOICE_MS + 1;
+    void app.speak("Third reply.");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(out.said.at(-1)).toEqual(["Third reply."]);
+    expect(shown).toEqual([true, false]);
+    out.fail(new VoiceError("speak", "socket"));
+    expect(shown).toEqual([true, false, true]);
+    app.attach({ out: v.out, deviceOut: deviceOut });
+    expect(shown).toEqual([true, false, true, false]);
   });
 });
 
