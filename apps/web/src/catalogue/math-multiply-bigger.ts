@@ -13,6 +13,8 @@ const multiplyBigger: CatalogueEntry = {
       title: "Times 10, times 100",
       summary: "Multiplying by 10 makes each digit worth ten times as much.",
       minutes: 12,
+      // The whole-number level of m.pow10 is the nearest skill; it also divides, which this lesson leaves out.
+      practice: ["m.pow10"],
       scenes: [
         {
           id: "s1",
@@ -126,6 +128,7 @@ const multiplyBigger: CatalogueEntry = {
       title: "Split by place value",
       summary: "Break the bigger number into hundreds, tens and ones, multiply each part, and add.",
       minutes: 14,
+      practice: ["m.mult.multi"],
       scenes: [
         {
           id: "s1",
@@ -241,6 +244,7 @@ const multiplyBigger: CatalogueEntry = {
       title: "Multiply in columns",
       summary: "Write the problem in columns, multiply each place, and carry as you go.",
       minutes: 15,
+      practice: ["m.mult.multi"],
       scenes: [
         {
           id: "s1",
@@ -372,6 +376,7 @@ const multiplyBigger: CatalogueEntry = {
       title: "Two digits times two digits",
       summary: "Split both numbers into tens and ones, find four partial products, and add.",
       minutes: 15,
+      practice: ["m.mult.multi"],
       scenes: [
         {
           id: "s1",
@@ -483,15 +488,6 @@ const multiplyBigger: CatalogueEntry = {
       ],
     },
   ],
-};
-
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
-// tens-hundreds: the whole-number level of m.pow10 is the nearest skill (it also divides, which this lesson leaves out).
-export const practice: Record<string, string[]> = {
-  "tens-hundreds": ["m.pow10"],
-  "split-place-value": ["m.mult.multi"],
-  columns: ["m.mult.multi"],
-  "two-by-two": ["m.mult.multi"],
 };
 
 export default multiplyBigger;

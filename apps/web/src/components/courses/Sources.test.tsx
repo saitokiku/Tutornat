@@ -5,6 +5,7 @@ import { sourceLine } from "@/components/generation/steps";
 import { t } from "@/i18n";
 import { read, resetMemory } from "@/lib/store";
 import type { Course, Profile } from "@/lib/types";
+import { getSkill } from "@/practice/skills";
 import { Catalogue } from "./Catalogue";
 import { OriginBadge } from "./Origin";
 import { CoursePractice, CourseSources } from "./Sources";
@@ -89,6 +90,16 @@ describe("CoursePractice", () => {
     const set = read().sets[0];
     expect(set).toMatchObject({ kind: "pick", skillId: "s.plate.tectonics", profileId: "p1" });
     expect(push).toHaveBeenCalledWith(`/practice/${set.id}`);
+  });
+
+  it("offers the skills a ready-made course's lessons name, once each and in lesson order, instead of matching its topic", () => {
+    const lesson = (id: string, practice: string[]) => ({ id, title: id, summary: "", minutes: 10, scenes: [], practice });
+    const ready: Course = { ...course, origin: "catalogue", subject: "math", citations: undefined, lessons: [lesson("a", ["m.dec.tenths"]), lesson("b", ["m.dec.thousandths", "m.dec.tenths"])] };
+    render(<CoursePractice course={ready} learner={learner} />);
+    const rows = screen.getAllByRole("listitem");
+    expect(rows.map((r) => within(r).getByRole("button").getAttribute("aria-label"))).toEqual(
+      ["m.dec.tenths", "m.dec.thousandths"].map((id) => `Practice ${getSkill(id)!.title.en}`),
+    );
   });
 
   it("shows nothing when no skill fits", () => {

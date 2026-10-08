@@ -13,6 +13,7 @@ const multiplicationEs: CatalogueEntry = {
       title: "Grupos iguales",
       summary: "La multiplicación cuenta grupos iguales: el número de grupos por el número de cosas en cada grupo.",
       minutes: 12,
+      practice: ["m.mult.groups"],
       scenes: [
         {
           id: "s1",
@@ -128,6 +129,7 @@ const multiplicationEs: CatalogueEntry = {
       title: "Arreglos",
       summary: "Las filas iguales muestran grupos iguales. Girar un arreglo muestra que el orden no cambia el producto.",
       minutes: 12,
+      practice: ["m.mult.groups", "m.mult.props"],
       scenes: [
         {
           id: "s1",
@@ -241,6 +243,7 @@ const multiplicationEs: CatalogueEntry = {
       title: "Las tablas del 2, del 5 y del 10",
       summary: "Usa patrones para multiplicar por 2, 5 y 10, y descubre qué pasa con el 0 y el 1.",
       minutes: 12,
+      practice: ["m.mult.easy"],
       scenes: [
         {
           id: "s1",
@@ -359,6 +362,8 @@ const multiplicationEs: CatalogueEntry = {
       title: "Descomponer para multiplicar",
       summary: "Separa una multiplicación que no sabes en dos que sí sabes, y luego suma.",
       minutes: 14,
+      // Not m.mult.props: its × 9 items call 9 the number of groups, the reverse of this course's rule.
+      practice: ["m.mult.facts"],
       scenes: [
         {
           id: "s1",
@@ -463,7 +468,5 @@ const multiplicationEs: CatalogueEntry = {
     },
   ],
 };
-
-export { practice } from "./math-multiplication";
 
 export default multiplicationEs;

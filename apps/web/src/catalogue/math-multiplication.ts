@@ -13,6 +13,7 @@ const multiplication: CatalogueEntry = {
       title: "Equal groups",
       summary: "Multiplication counts equal groups: how many groups, times how many in each group.",
       minutes: 12,
+      practice: ["m.mult.groups"],
       scenes: [
         {
           id: "s1",
@@ -128,6 +129,7 @@ const multiplication: CatalogueEntry = {
       title: "Arrays",
       summary: "Equal rows make equal groups easy to see. Turning an array shows the order of the numbers doesn't change the product.",
       minutes: 12,
+      practice: ["m.mult.groups", "m.mult.props"],
       scenes: [
         {
           id: "s1",
@@ -245,6 +247,7 @@ const multiplication: CatalogueEntry = {
       title: "Facts with 2, 5 and 10",
       summary: "Use patterns to multiply by 2, 5 and 10, and see what happens with 0 and 1.",
       minutes: 12,
+      practice: ["m.mult.easy"],
       scenes: [
         {
           id: "s1",
@@ -363,6 +366,8 @@ const multiplication: CatalogueEntry = {
       title: "Break apart to multiply",
       summary: "Split a fact you don't know into two facts you do know, then add.",
       minutes: 14,
+      // Not m.mult.props: its × 9 items call 9 the number of groups, the reverse of this course's rule.
+      practice: ["m.mult.facts"],
       scenes: [
         {
           id: "s1",
@@ -466,14 +471,6 @@ const multiplication: CatalogueEntry = {
       ],
     },
   ],
-};
-
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
-export const practice: Record<string, string[]> = {
-  "equal-groups": ["m.mult.groups"],
-  arrays: ["m.mult.groups", "m.mult.props"],
-  "facts-patterns": ["m.mult.easy"],
-  "break-apart": ["m.mult.facts", "m.mult.props"],
 };
 
 export default multiplication;

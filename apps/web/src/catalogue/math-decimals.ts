@@ -13,6 +13,7 @@ const decimals: CatalogueEntry = {
       title: "Tenths and hundredths",
       summary: "Split one whole into 10 or 100 equal parts, and write the parts as decimals.",
       minutes: 12,
+      practice: ["m.dec.tenths"],
       scenes: [
         {
           id: "s1",
@@ -118,6 +119,7 @@ const decimals: CatalogueEntry = {
       title: "Thousandths, comparing and rounding",
       summary: "Read decimals to the thousandths place, compare them place by place, and round them.",
       minutes: 15,
+      practice: ["m.dec.thousandths"],
       scenes: [
         {
           id: "s1",
@@ -263,6 +265,7 @@ const decimals: CatalogueEntry = {
       title: "Multiply and divide by 10, 100 and 1,000",
       summary: "When you multiply or divide by 10, every digit moves one place.",
       minutes: 14,
+      practice: ["m.pow10"],
       scenes: [
         {
           id: "s1",
@@ -391,6 +394,7 @@ const decimals: CatalogueEntry = {
       title: "Add and subtract decimals",
       summary: "Line up the decimal points so you add tenths to tenths and hundredths to hundredths.",
       minutes: 14,
+      practice: ["m.dec.addsub"],
       scenes: [
         {
           id: "s1",
@@ -523,14 +527,6 @@ const decimals: CatalogueEntry = {
       ],
     },
   ],
-};
-
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
-export const practice: Record<string, string[]> = {
-  "tenths-hundredths": ["m.dec.tenths"],
-  thousandths: ["m.dec.thousandths"],
-  "powers-of-ten": ["m.pow10"],
-  "add-subtract": ["m.dec.addsub"],
 };
 
 export default decimals;

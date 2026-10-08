@@ -13,6 +13,7 @@ const hundredsTensOnes: CatalogueEntry = {
       title: "Ten tens make a hundred",
       summary: "Group ones into tens. Group tens into a hundred.",
       minutes: 10,
+      practice: ["m.place.tens", "m.skip.count"],
       scenes: [
         {
           id: "s1",
@@ -111,6 +112,7 @@ const hundredsTensOnes: CatalogueEntry = {
       title: "What each digit means",
       summary: "The place of a digit tells what it is worth.",
       minutes: 12,
+      practice: ["m.place.1000"],
       scenes: [
         {
           id: "s1",
@@ -222,6 +224,7 @@ const hundredsTensOnes: CatalogueEntry = {
       title: "Count by tens and hundreds",
       summary: "Find 10 more, 10 less, 100 more and 100 less.",
       minutes: 12,
+      practice: ["m.skip.count"],
       scenes: [
         {
           id: "s1",
@@ -335,6 +338,7 @@ const hundredsTensOnes: CatalogueEntry = {
       title: "Compare three-digit numbers",
       summary: "Compare the hundreds first. Then the tens. Then the ones.",
       minutes: 12,
+      practice: ["m.compare.1000"],
       scenes: [
         {
           id: "s1",
@@ -441,14 +445,6 @@ const hundredsTensOnes: CatalogueEntry = {
       ],
     },
   ],
-};
-
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
-export const practice: Record<string, string[]> = {
-  "ten-tens": ["m.place.tens", "m.skip.count"],
-  "three-digits": ["m.place.1000"],
-  "skip-count": ["m.skip.count"],
-  compare: ["m.compare.1000"],
 };
 
 export default hundredsTensOnes;

@@ -133,7 +133,8 @@ export type InteractiveScene = { id: string; kind: "interactive"; title: string;
 export type ProjectScene = { id: string; kind: "project"; title: string; brief: string; steps: string[] };
 export type Scene = SlideScene | QuizScene | InteractiveScene | ProjectScene;
 
-export type Lesson = { id: string; title: string; summary: string; minutes: number; scenes: Scene[] };
+/** `practice`: skill-map skills that practice what the lesson teaches, chosen by its author; the course page offers them. */
+export type Lesson = { id: string; title: string; summary: string; minutes: number; scenes: Scene[]; practice?: string[] };
 
 export type Course = {
   id: string;

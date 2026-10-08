@@ -13,6 +13,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
       title: "Diez decenas forman una centena",
       summary: "Agrupa unidades en decenas. Agrupa decenas en una centena.",
       minutes: 10,
+      practice: ["m.place.tens", "m.skip.count"],
       scenes: [
         {
           id: "s1",
@@ -111,6 +112,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
       title: "Lo que vale cada cifra",
       summary: "El lugar de una cifra dice cuánto vale.",
       minutes: 12,
+      practice: ["m.place.1000"],
       scenes: [
         {
           id: "s1",
@@ -223,6 +225,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
       title: "Contar de 10 en 10 y de 100 en 100",
       summary: "Encuentra 10 más, 10 menos, 100 más y 100 menos.",
       minutes: 12,
+      practice: ["m.skip.count"],
       scenes: [
         {
           id: "s1",
@@ -336,6 +339,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
       title: "Comparar números de tres cifras",
       summary: "Compara primero las centenas. Luego las decenas. Luego las unidades.",
       minutes: 12,
+      practice: ["m.compare.1000"],
       scenes: [
         {
           id: "s1",
@@ -446,7 +450,5 @@ const hundredsTensOnesEs: CatalogueEntry = {
     },
   ],
 };
-
-export { practice } from "./math-hundreds-tens-ones";
 
 export default hundredsTensOnesEs;

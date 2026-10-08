@@ -10,7 +10,7 @@ import { isReviewed } from "@/lib/review";
 import { citationGroups, isWebLink, practiceSkillsFor, topicOf } from "@/lib/source-course";
 import { read, useStore } from "@/lib/store";
 import type { Course, Profile } from "@/lib/types";
-import { getSkill } from "@/practice/skills";
+import { getSkill, gradeIndex } from "@/practice/skills";
 
 type Citation = NonNullable<Course["citations"]>[number];
 
@@ -104,7 +104,10 @@ export function CourseSources({ course }: { course: Course }) {
   );
 }
 
-/** The skills on the map that fit a source-built course, with where each stands and a way to practice it. */
+/**
+ * The skills on the map that fit a course, with where each stands and a way to practice it: the ones its
+ * lessons name (a ready-made course), else the ones that match a source-built course's topic.
+ */
 export function CoursePractice({ course, learner }: { course: Course; learner: Profile }) {
   const t = useT();
   const router = useRouter();
@@ -112,7 +115,10 @@ export function CoursePractice({ course, learner }: { course: Course; learner: P
   const statuses = useStore((s) => statusesOf(s, learner.id, now));
   const store = useStore((s) => s);
   const article = course.citations ? citationGroups(course.citations).article?.title : undefined;
-  const skills = practiceSkillsFor(topicOf(course.goal), article, course.subject, course.grade).flatMap((m) => {
+  const named = [...new Set(course.lessons.flatMap((l) => l.practice ?? []))];
+  const near = (id: string) => Math.abs(gradeIndex(getSkill(id)?.grade ?? course.grade) - gradeIndex(course.grade)) <= 2;
+  const matches = named.length ? named.map((skillId) => ({ skillId, fits: near(skillId) })) : practiceSkillsFor(topicOf(course.goal), article, course.subject, course.grade);
+  const skills = matches.flatMap((m) => {
     const skill = getSkill(m.skillId);
     return skill ? [{ skill, fits: m.fits }] : [];
   });

@@ -140,7 +140,7 @@ function CourseView() {
         </ol>
       </section>
 
-      {courseOrigin(course) === "sources" && <CoursePractice course={course} learner={learner} />}
+      {(courseOrigin(course) === "sources" || course.lessons.some((l) => l.practice?.length)) && <CoursePractice course={course} learner={learner} />}
       <CourseSources course={course} />
 
       {course.sources.length > 0 && (

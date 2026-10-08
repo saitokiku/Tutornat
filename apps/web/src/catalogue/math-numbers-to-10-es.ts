@@ -13,6 +13,7 @@ const numbersTo10Es: CatalogueEntry = {
       title: "Contar hasta 10",
       summary: "Di un número por cada cosa. El último número dice cuántas hay.",
       minutes: 10,
+      practice: ["m.count.10"],
       scenes: [
         {
           id: "s1",
@@ -123,6 +124,7 @@ const numbersTo10Es: CatalogueEntry = {
       title: "Más, menos e igual",
       summary: "Encuentra el número que sigue. Di qué número es mayor.",
       minutes: 10,
+      practice: ["m.compare.10", "m.next.number"],
       scenes: [
         {
           id: "s1",
@@ -227,6 +229,7 @@ const numbersTo10Es: CatalogueEntry = {
       title: "Dos partes forman un número",
       summary: "Separa un número en dos partes. Vuelve a juntar las partes.",
       minutes: 10,
+      practice: ["m.decompose.10", "m.add.5"],
       scenes: [
         {
           id: "s1",
@@ -327,6 +330,7 @@ const numbersTo10Es: CatalogueEntry = {
       title: "Formar 10",
       summary: "Encuentra cuántos faltan para 10. Usa un marco de diez y tus dedos.",
       minutes: 10,
+      practice: ["m.make.10"],
       scenes: [
         {
           id: "s1",
@@ -424,7 +428,5 @@ const numbersTo10Es: CatalogueEntry = {
     },
   ],
 };
-
-export { practice } from "./math-numbers-to-10";
 
 export default numbersTo10Es;

@@ -13,6 +13,7 @@ const numbersTo10: CatalogueEntry = {
       title: "Count to 10",
       summary: "Say one number for each thing. The last number tells how many.",
       minutes: 10,
+      practice: ["m.count.10"],
       scenes: [
         {
           id: "s1",
@@ -123,6 +124,7 @@ const numbersTo10: CatalogueEntry = {
       title: "More, less and the same",
       summary: "Find the number that comes next. Tell which number is more.",
       minutes: 10,
+      practice: ["m.compare.10", "m.next.number"],
       scenes: [
         {
           id: "s1",
@@ -227,6 +229,7 @@ const numbersTo10: CatalogueEntry = {
       title: "Two parts make a number",
       summary: "Break a number into two parts. Put the parts back together.",
       minutes: 10,
+      practice: ["m.decompose.10", "m.add.5"],
       scenes: [
         {
           id: "s1",
@@ -331,6 +334,7 @@ const numbersTo10: CatalogueEntry = {
       title: "Make 10",
       summary: "Find how many more make 10. Use a ten-frame and your fingers.",
       minutes: 10,
+      practice: ["m.make.10"],
       scenes: [
         {
           id: "s1",
@@ -427,14 +431,6 @@ const numbersTo10: CatalogueEntry = {
       ],
     },
   ],
-};
-
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
-export const practice: Record<string, string[]> = {
-  "count-to-10": ["m.count.10"],
-  "more-and-less": ["m.compare.10", "m.next.number"],
-  "number-pairs": ["m.decompose.10", "m.add.5"],
-  "make-10": ["m.make.10"],
 };
 
 export default numbersTo10;
