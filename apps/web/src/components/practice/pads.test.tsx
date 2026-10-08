@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { check } from "@/practice/answer";
-import type { Pad } from "@/practice/types";
+import type { Input, Pad } from "@/practice/types";
 import { AnswerInput } from "./AnswerPad";
 import { counterCell, layoutCounters, MarkCounters, type MarkableVisual } from "./MarkCounters";
 import { hourAt, responseOf } from "./pad-math";
@@ -20,6 +20,56 @@ function Harness({ input, pad, onSubmit = () => {} }: { input: "number-line" | "
   );
 }
 const response = () => screen.getByTestId("response").textContent;
+
+function TypingHarness({ input }: { input: Input }) {
+  const [value, setValue] = useState("");
+  const [answers, setAnswers] = useState<string[]>([]);
+  const [hints, setHints] = useState(0);
+  return <>
+    <AnswerInput input={input} value={value} onChange={setValue} onSubmit={() => setAnswers((a) => [...a, responseOf(input, value)])} onPick={() => {}} label="Your answer" />
+    <button type="button" onClick={() => setHints((h) => h + 1)}>Hint</button>
+    <output aria-label="Submitted answers">{JSON.stringify(answers)}</output>
+    <output aria-label="Hints taken">{hints}</output>
+  </>;
+}
+
+describe("typing after help", () => {
+  it("keypad typing moves Enter back to the answer after a hint", async () => {
+    render(<TypingHarness input="keypad" />);
+    await userEvent.click(screen.getByRole("button", { name: "Hint" }));
+    await userEvent.keyboard("3{Enter}");
+    expect(screen.getByLabelText("Submitted answers")).toHaveTextContent('["3"]');
+    expect(screen.getByLabelText("Hints taken")).toHaveTextContent("1");
+  });
+
+  it("Tab follows the quotient and remainder fields, and Enter sends their values", async () => {
+    render(<TypingHarness input="remainder" />);
+    await userEvent.click(screen.getByRole("button", { name: /^Answer:/ }));
+    await userEvent.keyboard("2");
+    await userEvent.tab();
+    await userEvent.keyboard("1{Enter}");
+    expect(screen.getByLabelText("Submitted answers")).toHaveTextContent('["2 R 1"]');
+  });
+
+  it("the remainder shortcut resumes answering after a hint", async () => {
+    render(<TypingHarness input="remainder" />);
+    await userEvent.click(screen.getByRole("button", { name: "Hint" }));
+    await userEvent.keyboard("2r1{Enter}");
+    expect(screen.getByLabelText("Submitted answers")).toHaveTextContent('["2 R 1"]');
+    expect(screen.getByLabelText("Hints taken")).toHaveTextContent("1");
+  });
+
+  it.each(["clock", "number-line"] as const)("composition Enter does not submit the %s", async (input) => {
+    render(<TypingHarness input={input} />);
+    const control = input === "clock" ? screen.getByRole("spinbutton", { name: "Hour" }) : screen.getByRole("slider", { name: "Number line: place your point" });
+    control.focus();
+    if (input === "number-line") await userEvent.keyboard("{ArrowRight}");
+    fireEvent.keyDown(control, { key: "Enter", isComposing: true });
+    expect(screen.getByLabelText("Submitted answers")).toHaveTextContent("[]");
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByLabelText("Submitted answers")).toHaveTextContent(input === "clock" ? '["12:00"]' : '["0"]');
+  });
+});
 
 /** jsdom has no layout; give an element a box so taps can be turned into positions. */
 function box(el: Element, width: number, height: number) {

@@ -87,6 +87,12 @@ describe("topic → skill", () => {
     expect(matchSkills("Multiplication test Friday")).toContain("m.mult.facts");
   });
 
+  it("a multiplication test links facts without also inventing an equal-groups topic", () => {
+    expect(matchSkills("multiplication", "math")).toEqual(["m.mult.facts"]);
+    expect(matchSkills("equal groups", "math")[0]).toBe("m.mult.groups");
+    expect(matchSkills("repeated addition", "math")[0]).toBe("m.mult.groups");
+  });
+
   it("finds nothing when nothing fits", () => {
     expect(matchSkills("nothing related at all")).toEqual([]);
     expect(matchSkills("what is photosynthesis")).toEqual([]);

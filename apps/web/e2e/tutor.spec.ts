@@ -70,7 +70,7 @@ test("“what is a logical fallacy” in demo mode: a cited extract and the fall
   await page.keyboard.press("Enter");
 
   const board = page.getByRole("region", { name: "Board" });
-  const fact = board.getByRole("article", { name: "Fallacy" });
+  const fact = board.getByRole("article", { name: "Fallacy", exact: true });
   await expect(fact).toBeVisible();
   await expect(fact.getByText(FALLACY.extract)).toBeVisible();
   await expect(fact.getByRole("link", { name: /Read the article/ })).toHaveAttribute("href", FALLACY.url);
@@ -211,7 +211,7 @@ test("at 320px wide, Talk fits and a sentence that isn't a topic is never search
   expect(searched).toEqual([]);
   await page.getByRole("textbox").fill("what is a logical fallacy");
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("region", { name: "Board" }).getByRole("article", { name: "Fallacy" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Board" }).getByRole("article", { name: "Fallacy", exact: true })).toBeVisible();
   expect(searched).toEqual(["logical fallacy"]);
   await noOverflow(page);
   expect(errors, errors.join("\n")).toEqual([]);

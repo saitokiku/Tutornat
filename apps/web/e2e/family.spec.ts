@@ -125,6 +125,10 @@ test("a skill gone stuck in test prep: the nudge hands over to Practice with tha
   const next = page.getByRole("region", { name: "Practice this again" });
   await expect(next.getByText("Equivalent fractions", { exact: true })).toBeVisible();
   await noOverflow(page);
+  // Next keeps visited pages alive: Back must reapply the child's guard, never leave Family blank.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Hi, Ada" })).toBeVisible();
   expect(errors, errors.join("\n")).toEqual([]);
 });
 

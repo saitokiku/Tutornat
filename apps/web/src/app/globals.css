@@ -258,8 +258,9 @@
 
 @utility k-btn {
   @apply inline-flex min-h-target items-center justify-center gap-2 rounded-full px-5 py-2 text-center text-sm leading-tight font-semibold;
-  transition-property: background-color, border-color, color, box-shadow, transform, opacity;
-  transition-duration: var(--duration-quick), var(--duration-quick), var(--duration-quick), var(--duration-quick), var(--duration-instant), var(--duration-quick);
+  /* Enable/disable and inverted colours change together: interpolating them makes labels unreadable. */
+  transition-property: border-color, box-shadow, transform;
+  transition-duration: var(--duration-quick), var(--duration-quick), var(--duration-instant);
   transition-timing-function: var(--ease-out-quart);
   &:active { transform: scale(0.98); }
   &:disabled { pointer-events: none; }
@@ -317,8 +318,8 @@
 
   .k-chip {
     @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-panel2 px-3 text-xs font-medium text-muted pointer-coarse:min-h-11;
-    transition: background-color var(--duration-quick) var(--ease-out-quart), border-color var(--duration-quick) var(--ease-out-quart),
-      color var(--duration-quick) var(--ease-out-quart), transform var(--duration-instant) var(--ease-out-quart);
+    /* Foreground and background switch atomically when a chip becomes selected. */
+    transition: border-color var(--duration-quick) var(--ease-out-quart), transform var(--duration-instant) var(--ease-out-quart);
     @media (hover: hover) { &:hover { border-color: var(--color-border-strong); color: var(--color-ink); } }
     &:active { transform: scale(0.97); }
     &:disabled { opacity: 0.5; pointer-events: none; }
@@ -565,6 +566,9 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-property: color, background-color, border-color, text-decoration-color, outline-color, opacity, box-shadow, fill, stroke !important;
+  }
+  .k-btn-primary, .k-btn-secondary, .k-btn-ghost, .k-btn-danger, .k-chip {
+    transition-property: border-color, outline-color, box-shadow !important;
   }
   .k-enter, .k-stagger > *, .k-toast, .animate-fade-up, .k-dialog, .k-sheet {
     animation-name: k-fade !important;

@@ -75,9 +75,9 @@ test("Check pressed too early points at the empty place instead of marking it", 
 test("the privacy notice and the terms are real pages, from the parents' section and the footer", async ({ page }) => {
   const errors = collectErrors(page);
   const links: [string, RegExp, string][] = [
-    ["Privacy notice", /\/privacy$/, "Privacy notice"],
+    ["Privacy notice", /\/privacy$/, "Privacy"],
     ["Terms of use", /\/terms$/, "Terms of use"],
-    ["Privacy", /\/privacy$/, "Privacy notice"],
+    ["Privacy", /\/privacy$/, "Privacy"],
     ["Terms", /\/terms$/, "Terms of use"],
   ];
   for (const [name, url, title] of links) {
