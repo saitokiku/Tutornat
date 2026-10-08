@@ -155,7 +155,7 @@ describe("K–2 math: every item", () => {
   it("has the brief's shape, the same answer in both languages, tagged mistakes and true arithmetic", () => {
     for (const skill of MATH_K_2_MORE) {
       for (const level of levelsOf(skill.id)) {
-        const variety = new Set<string>();
+        const variety = new Set<string>(), varietyEs = new Set<string>();
         for (const [en, es] of both(skill.id, level)) {
           const where = `${skill.id} L${level} seed ${en.seed}`;
           expect(es.answer, `${where} answer differs by language`).toEqual(en.answer);
@@ -163,6 +163,7 @@ describe("K–2 math: every item", () => {
           expect([es.input, es.pad, es.markable, es.picture, es.wrong], `${where} pad differs by language`).toEqual([en.input, en.pad, en.markable, en.picture, en.wrong]);
           expect(es.choices?.map((c) => [c.why, c.picture]), `${where} choices differ by language`).toEqual(en.choices?.map((c) => [c.why, c.picture]));
           variety.add(JSON.stringify([en.prompt, en.visual, en.picture, en.choices?.map((c) => c.label).sort()]));
+          varietyEs.add(JSON.stringify([es.prompt, es.visual, es.picture, es.choices?.map((c) => c.label).sort()]));
           for (const it of [en, es]) {
             const at = `${where} ${it === en ? "en" : "es"}`;
             expect(it.hints.length, `${at} hints`).toBe(3);
@@ -240,6 +241,7 @@ describe("K–2 math: every item", () => {
         }
         // The brief's floor: 12 distinct items per level (choice order does not count), so a set is not memorized.
         expect(variety.size, `${skill.id} L${level} variety`).toBeGreaterThanOrEqual(12);
+        expect(varietyEs.size, `${skill.id} L${level} Spanish variety`).toBeGreaterThanOrEqual(12);
       }
     }
   }, 60_000);
