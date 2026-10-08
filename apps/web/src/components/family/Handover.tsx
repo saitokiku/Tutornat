@@ -10,23 +10,31 @@ import { useStore } from "@/lib/store";
 // Today, overriding a link to Practice. The shell owns the handover boundary above its learner key:
 // it survives switching learners, steps aside on the originating route, and clears on navigation.
 
-const Leave = createContext<(() => void) | null>(null);
+const Leave = createContext<((href: string) => void) | null>(null);
 
-/** Keep above the shell's learner-keyed pages so navigation owns its lifetime, not a cached page. */
+/**
+ * Keep above the shell's learner-keyed pages so navigation owns its lifetime, not a cached page. One
+ * scope, in AppShell: a scope nested inside a page is remounted with that page and loses the handover.
+ */
 export function HandoverScope({ children }: { children: ReactNode }) {
   const path = usePathname();
   const parent = useStore((s) => s.session.profileId === "parent");
   const [from, setFrom] = useState<string | null>(null);
   const leaving = from === path && !parent;
   if (from !== null && (parent || from !== path)) setFrom(null);
-  return <Leave.Provider value={() => setFrom(path)}>{leaving ? null : children}</Leave.Provider>;
+  // Only a link that leaves this route steps the page aside: on the same route nothing would ever clear
+  // it, so the page stays and its own Guard takes the child on.
+  const leave = (href: string) => {
+    if (href.split(/[?#]/)[0] !== path) setFrom(path);
+  };
+  return <Leave.Provider value={leave}>{leaving ? null : children}</Leave.Provider>;
 }
 
-/** The `onNavigate` for a link that hands the device to this child. */
+/** `handover(href)` is the `onNavigate` for a link to `href` that hands the device to this child. */
 export function useHandover(childId: string) {
   const leave = useContext(Leave);
-  return () => {
-    leave?.();
+  return (href: string) => () => {
+    leave?.(href);
     selectLearner(childId);
   };
 }

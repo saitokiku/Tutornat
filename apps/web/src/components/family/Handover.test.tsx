@@ -43,6 +43,16 @@ function Shell({ children }: { children: ReactNode }) {
   return <HandoverScope><div key={useScopeKey()}>{children}</div></HandoverScope>;
 }
 
+/** A grown-up page's hand-over link to `href`, on its own. */
+function Card({ href = "/home" }: { href?: string }) {
+  const handover = useHandover("ada");
+  return (
+    <button type="button" onClick={handover(href)}>
+      Hand over
+    </button>
+  );
+}
+
 // Wednesday 7 October 2026, 3 pm local.
 const NOW = new Date(2026, 9, 7, 15, 0).getTime();
 const D = 864e5;
@@ -99,14 +109,6 @@ describe("handing the device to a child from the family overview", () => {
   });
 
   it("shows the page again when the grown-up comes back to it (Next keeps visited pages hidden, not unmounted)", async () => {
-    function Card() {
-      const handover = useHandover("ada");
-      return (
-        <button type="button" onClick={handover}>
-          Hand over
-        </button>
-      );
-    }
     update((s) => {
       s.profiles = [ada];
       s.session = { accountId: "acc", profileId: "parent", unlocked: true };
@@ -125,6 +127,18 @@ describe("handing the device to a child from the family overview", () => {
     // Back through the grown-up gate.
     act(() => update((s) => void (s.session.profileId = "parent")));
     rerender(page("visible"));
+    expect(screen.getByRole("button", { name: "Hand over" })).toBeVisible();
+  });
+
+  it("a hand-over link that stays on this route never blanks the page: its own Guard takes the child on", async () => {
+    update((s) => {
+      s.profiles = [ada];
+      s.session = { accountId: "acc", profileId: "parent", unlocked: true };
+    });
+    render(<HandoverScope><Card href="/family?again=m.frac.equiv" /></HandoverScope>);
+    await userEvent.click(screen.getByRole("button", { name: "Hand over" }));
+    expect(read().session.profileId).toBe("ada");
+    // Nothing would ever navigate away to clear a step-aside here, so the page stays.
     expect(screen.getByRole("button", { name: "Hand over" })).toBeVisible();
   });
 

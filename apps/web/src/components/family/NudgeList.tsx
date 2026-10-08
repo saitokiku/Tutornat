@@ -89,7 +89,7 @@ export function NudgeList({ child, nudges }: { child: Profile; nudges: Nudge[] }
               </p>
               <Link
                 href={n.action.href}
-                onNavigate={n.action.handover ? handover : undefined}
+                onNavigate={n.action.handover ? handover(n.action.href) : undefined}
                 aria-label={action.label}
                 className="inline-flex min-h-11 max-w-full items-center gap-1.5 text-sm font-semibold text-ink underline decoration-border underline-offset-4 hover:text-accent"
               >

@@ -107,7 +107,7 @@ export function FamilyCard({ child, now }: { child: Profile; now: number }) {
                 </>
               )}
             </p>
-            <Link href="/home" onNavigate={handover} className={btn("secondary", "sm", "min-h-11")}>
+            <Link href="/home" onNavigate={handover("/home")} className={btn("secondary", "sm", "min-h-11")}>
               {t("fam.act.handover", { name: child.nickname })}
             </Link>
           </div>
