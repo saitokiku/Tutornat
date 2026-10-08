@@ -36,7 +36,8 @@ describe("resources", () => {
     for (const r of RESOURCES) {
       if (r.urlEs) expect(r.languages, r.id).toContain("es");
       if (r.about.es.includes("(en inglés)")) expect(r.languages.includes("es") || !!r.urlEs, `${r.id} has Spanish but says "en inglés"`).toBe(false);
-      if (r.note) expect(r.note.en && r.note.es, r.id).toBeTruthy();
+      // A note may be for one language only, when only that language's page needs it.
+      if (r.note) expect(r.note.en || r.note.es, r.id).toBeTruthy();
     }
     // Illustrative Mathematics publishes every K–5 family page in Spanish under /k5_es/.
     const imK5 = RESOURCES.filter((r) => r.url.startsWith("https://im.kendallhunt.com/k5/"));

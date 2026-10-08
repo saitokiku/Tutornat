@@ -23,7 +23,28 @@ export function catalogueFor(grade: Grade, locale: Locale): CatalogueEntry[] {
   const otherLang = CATALOGUE.filter((c) => c.locale !== locale && !sameLang.some((s) => sameTopic(s, c)));
   const pool = [...sameLang, ...otherLang];
   const rank = (c: CatalogueEntry) => (bandOf(c.grade) === band ? 0 : 1);
-  return pool.sort((a, b) => rank(a) - rank(b));
+  const sorted = pool.sort((a, b) => rank(a) - rank(b));
+  const inBand = sorted.filter((c) => rank(c) === 0);
+  // The learner's own language first, then the other; each takes turns by subject.
+  return [...takeTurns(inBand.filter((c) => c.locale === locale), grade), ...takeTurns(inBand.filter((c) => c.locale !== locale), grade), ...sorted.filter((c) => rank(c) === 1)];
+}
+
+/**
+ * The learner's band, nearest grade first, taking turns by subject: each round offers every subject's
+ * nearest remaining course once (their own grade first, then a step up before a step back), so a
+ * learner is never offered three math courses in a row. Order within a subject is kept.
+ */
+function takeTurns(list: CatalogueEntry[], grade: Grade): CatalogueEntry[] {
+  const dist = (c: CatalogueEntry) => Math.abs(N(c.grade) - N(grade)) * 2 + (N(c.grade) < N(grade) ? 1 : 0);
+  const groups = new Map<string, CatalogueEntry[]>();
+  for (const c of [...list].sort((a, b) => dist(a) - dist(b))) groups.set(c.subject, [...(groups.get(c.subject) ?? []), c]);
+  const out: CatalogueEntry[] = [];
+  while ([...groups.values()].some((g) => g.length)) {
+    const heads = [...groups.entries()].filter(([, g]) => g.length).map(([s, g]) => [s, g[0]] as const);
+    heads.sort(([sa, a], [sb, b]) => dist(a) - dist(b) || SUBJECT_ORDER.indexOf(sa) - SUBJECT_ORDER.indexOf(sb));
+    for (const [s] of heads) out.push(groups.get(s)!.shift()!);
+  }
+  return out;
 }
 
 // Translations share an id prefix: "math-fractions" and "math-fractions-es".

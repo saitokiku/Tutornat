@@ -16,4 +16,10 @@ export function LangTag({ course, learner }: { course: Locale; learner: Locale }
  * The subject a course is filed under, named by the language it teaches in: an "english" course
  * written in Spanish (Rimas y sílabas) teaches Spanish reading and writing, so it is "Lengua", not "Inglés".
  */
-export const subjectKey = (subject: Subject, lang: Locale): Key => (subject === "english" && lang === "es" ? "course.spanishArts" : `subject.${subject}`);
+/**
+ * A course's subject, named by the language it teaches: in Spanish, "english" practice is Lengua (the
+ * Spanish side teaches Spanish language arts), but a course written in English teaches English, so it is
+ * "Inglés"; a Spanish-language course is "Lengua" in both.
+ */
+export const subjectKey = (subject: Subject, lang: Locale): Key =>
+  subject === "english" ? (lang === "es" ? "course.spanishArts" : "course.englishArts") : `subject.${subject}`;

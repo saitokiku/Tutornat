@@ -2373,6 +2373,8 @@ const en = {
   "spoken.didYouSay": "Did you say {reading}?",
   "spoken.typeIt": "Tap or type this one.",
   "voice.fail.limit": "Voice is busy right now. Try again in a minute.",
+  // -- close-out
+  "course.englishArts": "English",
 } as const;
 
 export default en;

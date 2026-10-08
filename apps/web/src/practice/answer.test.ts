@@ -99,9 +99,9 @@ describe("check", () => {
   it("choices", () => {
     expect(check({ kind: "choice", index: 2 }, 2).correct).toBe(true);
     expect(check({ kind: "choice", index: 2 }, 1).correct).toBe(false);
-    // The index as text, the way answerText writes it without the choices.
-    expect(check({ kind: "choice", index: 2 }, answerText({ kind: "choice", index: 2 })).correct).toBe(true);
-    expect(check({ kind: "choice", index: 2 }, " 2 ").correct).toBe(true);
+    // The index as text never counts (a choice labelled "2" must not be read as the choice at index 2).
+    expect(check({ kind: "choice", index: 2 }, answerText({ kind: "choice", index: 2 })).correct).toBe(false);
+    expect(check({ kind: "choice", index: 2 }, " 2 ").correct).toBe(false);
     expect(check({ kind: "choice", index: 0 }, "").correct).toBe(false);
     expect(check({ kind: "choice", index: 2 }, "1").correct).toBe(false);
     expect(check({ kind: "choice", index: 2 }, "2.5").correct).toBe(false);

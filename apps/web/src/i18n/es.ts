@@ -2375,6 +2375,8 @@ const es: Record<Key, string> = {
   "spoken.didYouSay": "¿Dijiste {reading}?",
   "spoken.typeIt": "Toca o escribe esta.",
   "voice.fail.limit": "La voz está ocupada en este momento. Inténtalo de nuevo en un minuto.",
+  // -- close-out
+  "course.englishArts": "Inglés",
 };
 
 export default es;

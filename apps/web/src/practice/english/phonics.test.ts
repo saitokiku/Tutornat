@@ -150,8 +150,8 @@ describe.each(ENGLISH_PHONICS.map((s) => [s.id, s] as const))("%s generator", (i
           expect(item.choices!.filter((c) => c.why).length, where).toBe(q.choices.length - 1);
           expect(item.choices!.map((c) => c.label).sort(), where).toEqual(q.choices.map((c) => c.label).sort());
           item.choices!.forEach((_, i) => expect(check(item.answer, i).correct, `${where} choice ${i}`).toBe(i === index));
-          // "Show me" writes the key as answerText does; the checker must accept that text too.
-          expect(check(item.answer, answerText(item.answer)).correct, `${where} answerText`).toBe(true);
+          // answerText is for display; a choice is checked by its index (line above), never by text.
+          expect(answerText(item.answer, item.choices), `${where} answerText`).toBe(item.choices![index].label);
           positions.add(index);
           return slot;
         });
