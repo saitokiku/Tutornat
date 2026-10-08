@@ -189,7 +189,7 @@ const hundredsTensOnes: CatalogueEntry = {
               prompt: "Which number has 2 hundreds, 0 tens and 7 ones?",
               choices: ["207", "27", "270"],
               answer: 0,
-              hint: "Which place does each digit go in: hundreds, tens or ones?",
+              hint: "Put each digit in its place: hundreds, tens, ones.",
               explain: "2 hundreds, 0 tens and 7 ones is 207.",
             },
             {

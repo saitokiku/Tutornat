@@ -189,7 +189,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
               prompt: "¿Qué número tiene 2 centenas, 0 decenas y 7 unidades?",
               choices: ["207", "27", "270"],
               answer: 0,
-              hint: "¿En qué lugar va cada cifra: centenas, decenas o unidades?",
+              hint: "Pon cada cifra en su lugar: centenas, decenas, unidades.",
               explain: "2 centenas, 0 decenas y 7 unidades son 207.",
             },
             {

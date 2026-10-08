@@ -229,7 +229,7 @@ const decimals: CatalogueEntry = {
               prompt: "Round 5.64 to the nearest whole number.",
               choices: ["5", "5.6", "6"],
               answer: 2,
-              hint: "Is 5.64 closer to 5 or to 6? Look at the tenths digit.",
+              hint: "Which two whole numbers is 5.64 between? Look at the tenths digit to see which is closer.",
               explain: "The tenths digit is 6, which is 5 or more, so 5.64 rounds up to 6. 5.6 is 5.64 rounded to the nearest tenth.",
             },
             {
