@@ -520,6 +520,89 @@ function barMisses(k: number, d: 2 | 3 | 4, cuts: readonly (2 | 3 | 4)[]) {
   return misses(`${k}/${d}`, tags);
 }
 
+/** Part widths for a whole cut into parts that are not equal: plainly different sizes, never all alike. */
+const UNEQUAL: Record<2 | 3 | 4, readonly (readonly number[])[]> = {
+  2: [[1, 2], [2, 1], [1, 3], [3, 1], [2, 3], [3, 2]],
+  3: [[1, 1, 2], [2, 1, 1], [1, 2, 1], [1, 2, 3], [3, 2, 1], [2, 2, 1]],
+  4: [[1, 1, 2, 2], [2, 1, 1, 2], [1, 2, 1, 2], [1, 3, 1, 1], [2, 2, 1, 1], [1, 1, 1, 3]],
+};
+/**
+ * A yes-or-no question about a drawn cut: "Is the waffle cut into equal parts?" (`ask` null) or "Is
+ * the waffle cut into thirds?". Equal shares are about size as well as count, so some bars have the
+ * right number of parts in the wrong sizes, and some the wrong number of equal parts. With `shade`,
+ * one part is shaded and the question is "Is one third of the waffle shaded?".
+ */
+function cutQuestion(r: Rng, w: Whole, locale: Locale, ask: 2 | 3 | 4 | null, cuts: readonly (2 | 3 | 4)[], quarter = false, shade = false): ItemBody {
+  const right = r.bool(0.45);
+  let p: 2 | 3 | 4, sizes: readonly number[] | undefined;
+  if (ask === null) {
+    p = r.pick(cuts);
+    sizes = right ? undefined : r.pick(UNEQUAL[p]);
+  } else if (right) p = ask;
+  else if (r.bool()) {
+    p = ask;
+    sizes = r.pick(UNEQUAL[ask]);
+  } else {
+    p = r.pick(cuts.filter((x) => x !== ask));
+    sizes = r.bool(0.3) ? r.pick(UNEQUAL[p]) : undefined;
+  }
+  const equal = !sizes;
+  const W = cap(theWhole(w, "es"));
+  const cut = w.f ? "dividida" : "dividido";
+  const one = ask === null ? "" : quarter && locale === "en" ? "one quarter" : t2(locale, SHARE[ask].one);
+  const text =
+    ask === null
+      ? tr(locale, `Is the ${w.en} cut into equal parts?`, `¿${W} está ${cut} en partes iguales?`)
+      : shade
+        ? tr(locale, `Is ${one} of the ${w.en} shaded?`, `¿Está ${SHARE[ask].f ? "coloreada" : "coloreado"} ${one} ${w.f ? "de la" : "del"} ${w.es}?`)
+        : tr(locale, `Is the ${w.en} cut into ${sharePl(ask, "en", quarter)}?`, `¿${W} está ${cut} en ${sharePl(ask, "es")}?`);
+  const YES: Choice = { label: tr(locale, "Yes", "Sí"), say: tr(locale, "Yes", "Sí") };
+  const NO: Choice = { label: "No", say: "No" };
+  const sized = equal ? tr(locale, "all the same size", "todas del mismo tamaño") : tr(locale, "of different sizes", "de distintos tamaños");
+  const pl = ask === null ? "" : sharePl(ask, locale, quarter);
+  const art = ask === null ? "" : SHARE[ask].f ? "Las" : "Los";
+  return {
+    prompt: [text],
+    say: text,
+    visual: { kind: "fraction", parts: p, shaded: shade ? 1 : 0, ...(sizes ? { sizes: [...sizes] } : {}) },
+    ...(w.pic ? { picture: w.pic } : {}),
+    // What is drawn, sizes included: the picture shows them, so the description does too.
+    alt:
+      (w.pic
+        ? tr(locale, `A ${w.en}, and a bar cut into ${p} parts, ${sized}.`, `${w.f ? "Una" : "Un"} ${w.es} y una barra dividida en ${p} partes, ${sized}.`)
+        : tr(locale, `A bar cut into ${p} parts, ${sized}.`, `Una barra dividida en ${p} partes, ${sized}.`)) + (shade ? tr(locale, " 1 part is shaded.", " 1 parte está coloreada.") : ""),
+    ...(right ? choose(r, YES, [{ ...NO, why: "missed-equal-shares" }]) : choose(r, NO, [{ ...YES, why: equal ? "wrong-number-of-parts" : "counted-parts-not-sizes" }])),
+    hints:
+      ask === null
+        ? [
+            tr(locale, "Equal parts are all the same size.", "Las partes iguales son todas del mismo tamaño."),
+            tr(locale, "Compare the parts. Is one bigger than another?", "Compara las partes. ¿Alguna es más grande que otra?"),
+            tr(locale, "Look at the first part and the next one.", "Mira la primera parte y la siguiente."),
+          ]
+        : [
+            shade ? tr(locale, `${cap(one)} is 1 of ${ask} equal parts.`, `${cap(one)} es 1 de ${ask} partes iguales.`) : tr(locale, `${cap(pl)} are ${ask} equal parts.`, `${art} ${pl} son ${ask} partes iguales.`),
+            tr(locale, "Count the parts. Then check they are the same size.", "Cuenta las partes. Luego revisa que sean del mismo tamaño."),
+            tr(locale, `The bar has ${p} parts.`, `La barra tiene ${p} partes.`),
+          ],
+    steps:
+      ask === null
+        ? equal
+          ? [tr(locale, `All ${p} parts are the same size.`, `Las ${p} partes son del mismo tamaño.`), tr(locale, "Yes: they are equal parts.", "Sí: son partes iguales.")]
+          : [tr(locale, "Some parts are bigger than others.", "Algunas partes son más grandes que otras."), tr(locale, "No: the parts are not equal.", "No: las partes no son iguales.")]
+        : shade
+          ? [
+              equal ? tr(locale, `The bar has ${p} equal parts.`, `La barra tiene ${p} partes iguales.`) : tr(locale, "The parts are not the same size.", "Las partes no son del mismo tamaño."),
+              right ? tr(locale, `Yes: 1 of ${ask} equal parts is ${one}.`, `Sí: 1 de ${ask} partes iguales es ${one}.`) : tr(locale, `No: ${one} is 1 of ${ask} equal parts.`, `No: ${one} es 1 de ${ask} partes iguales.`),
+            ]
+          : right
+            ? [tr(locale, `The bar has ${ask} equal parts.`, `La barra tiene ${ask} partes iguales.`), tr(locale, `Yes: they are ${pl}.`, `Sí: son ${pl}.`)]
+            : !equal
+              ? [tr(locale, "The parts are not the same size.", "Las partes no son del mismo tamaño."), tr(locale, `No: ${pl} must be equal parts.`, `No: ${art.toLowerCase()} ${pl} deben ser partes iguales.`)]
+              : [tr(locale, `The bar has ${p} equal parts, not ${ask}.`, `La barra tiene ${p} partes iguales, no ${ask}.`), tr(locale, `No: ${pl} are ${ask} equal parts.`, `No: ${art.toLowerCase()} ${pl} son ${ask} partes iguales.`)],
+    seconds: 10,
+  };
+}
+
 type Ctx = { pic: string; what: Pair; f: boolean; split: Pair; use: Pair };
 const SHARE_CTX: readonly Ctx[] = [
   { pic: "🥪", what: ["sandwich", "sándwich"], f: false, split: ["cuts", "corta"], use: ["eats 1 part", "Se come 1 parte"] },
@@ -1490,8 +1573,20 @@ export const MATH_K_2_MORE: Skill[] = [
     generate(r, level, locale) {
       const w = r.pick(WHOLES);
       const W = cap(theWhole(w, locale));
+      // Some items ask about a drawn cut instead of making one: equal parts or not (level 1), the
+      // right share or not (level 2). Equal shares are about size, so a count alone is not enough.
+      if (level < 3 && r.bool(0.4)) {
+        if (level === 1) return cutQuestion(r, w, locale, null, [2, 4]);
+        const d = r.pick([2, 4] as const);
+        return cutQuestion(r, w, locale, d, [2, 3, 4], d === 4 && r.bool(0.3));
+      }
       if (level === 3) {
-        const kind = r.pick(["name", "compare", "count"] as const);
+        const kind = r.pick(["name", "compare", "count", "shaded"] as const);
+        if (kind === "shaded") {
+          // "Is one fourth of the waffle shaded?": the share's name holds only for equal parts of the right count.
+          const d = r.pick([2, 4] as const);
+          return cutQuestion(r, w, locale, d, [2, 3, 4], d === 4 && r.bool(0.3), true);
+        }
         const HALF: Choice = { label: tr(locale, "One half", "Una mitad"), say: tr(locale, "One half", "Una mitad") };
         const FOURTH: Choice = { label: tr(locale, "One fourth", "Un cuarto"), say: tr(locale, "One fourth", "Un cuarto") };
         if (kind === "name") {
@@ -2841,6 +2936,9 @@ export const MATH_K_2_MORE: Skill[] = [
       const D = [2, 3, 4] as const;
       const one = (d: 2 | 3 | 4, why?: string): Choice => ({ label: cap(t2(locale, SHARE[d].one)), say: cap(t2(locale, SHARE[d].one)), ...(why ? { why } : {}) });
       const w = r.pick(WHOLES);
+      // As in grade 1, some items ask about a drawn cut: equal parts or not (level 1), the named share or not (level 2).
+      if (level === 1 && r.bool(0.35)) return cutQuestion(r, w, locale, null, D);
+      if (level === 2 && r.bool(0.4)) return cutQuestion(r, w, locale, r.pick(D), D);
       if (level === 1) {
         const d = r.pick([2, 3, 3, 4] as const);
         const sh = SHARE[d];
