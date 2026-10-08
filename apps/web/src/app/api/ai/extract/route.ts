@@ -18,6 +18,8 @@ export async function POST(req: Request) {
   if (limited(req, "extract", 10)) return Response.json({ error: "rate" }, { status: 429 });
   const parsed = ExtractRequest.safeParse(body);
   if (!parsed.success || (!parsed.data.text && !parsed.data.file)) return Response.json({ error: "bad_request" }, { status: 400 });
+  // Pasted school text is screened before any model call, as the magic box's text is below.
+  if (parsed.data.text && screen(parsed.data.text, parsed.data.locale).kind !== "ok") return Response.json({ error: "topic" }, { status: 422 });
   try {
     return Response.json(await readSchoolDocument(parsed.data, m));
   } catch {

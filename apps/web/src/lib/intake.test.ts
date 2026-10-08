@@ -392,6 +392,17 @@ describe("readIntake (server)", () => {
       expect(doGenerate).not.toHaveBeenCalled();
     });
 
+    it("runs the safety screen on pasted school text before any model call, for both school readers", async () => {
+      const doGenerate = vi.fn(async () => reply(out));
+      ai.model = new MockLanguageModelV4({ doGenerate }) as unknown as LanguageModel;
+      for (const kind of ["syllabus", "feedback"]) {
+        const res = await post({ kind, text: "Unit test Oct 21. I want to die", today: TODAY, locale: "en", grade: "4" });
+        expect(res.status).toBe(422);
+        expect(await res.json()).toEqual({ error: "topic" });
+      }
+      expect(doGenerate).not.toHaveBeenCalled();
+    });
+
     it("reads an intake request, and turns away one with nothing in it", async () => {
       ai.model = new MockLanguageModelV4({ doGenerate: async () => reply(out) }) as unknown as LanguageModel;
       const res = await post(intake);
