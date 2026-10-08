@@ -33,17 +33,17 @@ export const TAGS: Record<string, string> = {
   Z: "split-wrong",
 };
 
-/** "chip:P sip:S" → choices with tags. */
+/** "chip:P sip:S" → choices with tags. A trailing ~ ("rr:W~") marks a fill that sounds the same as the key. */
 export const wrongs = (spec: string) =>
   spec.split(" ").map((s) => {
-    const [label, code] = s.split(":");
+    const [label, code] = s.replace(/~$/, "").split(":");
     if (!TAGS[code]) throw new Error(`Unknown tag code in "${s}"`);
     return word(label, TAGS[code]);
   });
 
 /** What hint 3 says about the first wrong choice, by its tag. */
 const MISS: Record<string, [string, string]> = {
-  "dropped-letter": ["is missing a sound.", "A {w} le falta un sonido."],
+  "dropped-letter": ["is missing a letter.", "A {w} le falta una letra."],
   "single-letter": ["uses one letter where two belong.", "usa una letra donde van dos."],
   "wrong-digraph": ["uses a different letter pair.", "usa otro par de letras."],
   "wrong-blend": ["has a different blend of letters.", "tiene otra mezcla de consonantes."],
@@ -75,8 +75,17 @@ export const missHint = (locale: Locale, label: string, why: string) => {
   return tr(locale, `${cap(label)} ${en}`, es.includes("{w}") ? es.replace("{w}", label) : `${cap(label)} ${es}`);
 };
 
-/** Asks for the correct spelling of the pictured word, when a misspelling would sound the same. */
-export const SPELLED: [string, string] = ["Which word is spelled right?", "¿Cuál está bien escrita?"];
+/**
+ * Asks for the correct spelling of the pictured word, when a misspelling would sound the same. It names the
+ * picture, so a wrong choice that is another real word (to for two, pasa for pausa) is plainly wrong.
+ */
+export const SPELLED: [string, string] = ["Which word names the picture, spelled right?", "¿Cuál es el nombre del dibujo, bien escrito?"];
+
+/**
+ * The screen-reader text for a picture whose name is the answer. Naming it would read the key aloud, so it
+ * says only what the picture is for.
+ */
+export const NAME_IT_ALT: [string, string] = ["A picture to name", "Un dibujo para nombrar"];
 
 /** Picture shown, written words to choose from: "Which word names the picture?" (or `ask`). */
 export function readQ(locale: Locale, w: string, picture: string, spec: string, strategy: [string, string], ask?: [string, string]): Q {
@@ -86,7 +95,7 @@ export function readQ(locale: Locale, w: string, picture: string, spec: string, 
     prompt: question,
     say: ask ? `${tr(locale, "Read each word.", "Lee cada palabra.")} ${question}` : tr(locale, "Read each word. Which one names the picture?", "Lee cada palabra. ¿Cuál va con el dibujo?"),
     picture,
-    alt: altFor(locale, w),
+    alt: tr(locale, ...NAME_IT_ALT),
     choices: [word(w), ...others],
     hints: [tr(locale, "Say the picture's name slowly.", "Di despacio el nombre del dibujo."), tr(locale, ...strategy), missHint(locale, others[0].label, others[0].why!)],
     steps: [tr(locale, `${cap(w)} names the picture.`, `${cap(w)} va con el dibujo.`)],
@@ -95,11 +104,15 @@ export function readQ(locale: Locale, w: string, picture: string, spec: string, 
 
 /**
  * Picture shown and the word with a gap ("___ip"); written letter choices fill it. `shown` has ___ where
- * `key` goes. The spoken line says the whole word.
+ * `key` goes. The spoken line says the whole word. When a wrong fill sounds the same as the key (a "Y"
+ * spelling, or one marked "~"), hearing the word cannot decide, so the item asks for the right spelling
+ * and hint 3 says that fill sounds the same; otherwise hint 3 says what the first wrong fill would sound like.
  */
-export function gapQ(locale: Locale, w: string, picture: string, shown: string, key: string, spec: string, strategy: [string, string], unit: "letters" | "syllable" = "letters"): Q {
+export function gapQ(locale: Locale, w: string, picture: string, shown: string, key: string, spec: string, strategy: [string, string]): Q {
   const others = wrongs(spec);
-  const ask = unit === "letters" ? tr(locale, "Which letters are missing?", "¿Qué letras faltan?") : tr(locale, "Which part is missing?", "¿Qué sílaba falta?");
+  const same = spec.split(" ").map((s) => /:Y$|~$/.test(s));
+  const ask = same.includes(true) ? tr(locale, "Which letters spell it right?", "¿Con qué letras se escribe bien?") : tr(locale, "Which letters are missing?", "¿Qué letras faltan?");
+  const first = others[0].label;
   return {
     prompt: `${ask} ${shown}`,
     say: `${cap(w)}. ${ask}`,
@@ -109,7 +122,9 @@ export function gapQ(locale: Locale, w: string, picture: string, shown: string, 
     hints: [
       tr(locale, "Say the word slowly.", "Di la palabra despacio."),
       tr(locale, ...strategy),
-      tr(locale, `With ${others[0].label}, it would say ${shown.replace("___", others[0].label)}.`, `Con ${others[0].label} diría ${shown.replace("___", others[0].label)}.`),
+      same[0]
+        ? tr(locale, `With ${first}, it sounds the same but is spelled wrong.`, `Con ${first} suena igual, pero está mal escrita.`)
+        : tr(locale, `With ${first}, it would say ${shown.replace("___", first)}.`, `Con ${first} diría ${shown.replace("___", first)}.`),
     ],
     steps: [tr(locale, `The missing part is ${key}: ${w}.`, `Falta ${key}: ${w}.`)],
   };

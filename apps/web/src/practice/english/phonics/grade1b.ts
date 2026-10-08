@@ -19,13 +19,15 @@ const reads = (en: Read[], es: Read[], strategy: [string, string]): Entry[] =>
   en.map(([w, p, s], i) => ({ en: readQ("en", w, p, s, strategy), es: readQ("es", es[i][0], es[i][1], es[i][2], strategy) }));
 
 // ---- e.digraphs: sh ch th wh ck | ch ll rr ----
+// The word is spoken, so no English fill may sound like it: w for wh (wale) and k or c for ck (duk) are
+// never offered. Spanish y for ll (yave) does sound the same, so those items ask for the right spelling.
 const EN_DG_GAP: Gap[] = [
   ["ship", "🚢", "___ip", "sh", "ch:P th:P s:S"], ["shoe", "👞", "___oe", "sh", "ch:P th:P s:S"], ["sheep", "🐑", "___eep", "sh", "ch:P th:P s:S"],
   ["shark", "🦈", "___ark", "sh", "ch:P th:P s:S"], ["chair", "🪑", "___air", "ch", "sh:P th:P c:S"], ["cheese", "🧀", "___eese", "ch", "sh:P th:P c:S"],
-  ["cherry", "🍒", "___erry", "ch", "sh:P th:P c:S"], ["thumb", "👍", "___umb", "th", "sh:P ch:P t:S"], ["three", "3️⃣", "___ree", "th", "sh:P ch:P t:S"],
-  ["whale", "🐋", "___ale", "wh", "th:P sh:P w:S"], ["fish", "🐟", "fi___", "sh", "ch:P th:P s:S"], ["tooth", "🦷", "too___", "th", "sh:P ch:P t:S"],
-  ["bath", "🛁", "ba___", "th", "sh:P ch:P t:S"], ["peach", "🍑", "pea___", "ch", "sh:P th:P c:S"], ["duck", "🦆", "du___", "ck", "ch:P k:S c:S"],
-  ["sock", "🧦", "so___", "ck", "ch:P k:S c:S"],
+  ["cherry", "🍒", "___erry", "ch", "th:P sh:P c:S"], ["thumb", "👍", "___umb", "th", "sh:P ch:P t:S"], ["three", "3️⃣", "___ree", "th", "sh:P ch:P t:S"],
+  ["whale", "🐋", "___ale", "wh", "th:P sh:P h:S"], ["fish", "🐟", "fi___", "sh", "ch:P th:P s:S"], ["tooth", "🦷", "too___", "th", "sh:P ch:P t:S"],
+  ["bath", "🛁", "ba___", "th", "sh:P ch:P t:S"], ["peach", "🍑", "pea___", "ch", "sh:P th:P c:S"], ["duck", "🦆", "du___", "ck", "ch:P sh:P t:S"],
+  ["sock", "🧦", "so___", "ck", "ch:P sh:P t:S"],
 ];
 const ES_DG_GAP: Gap[] = [
   ["chocolate", "🍫", "___ocolate", "ch", "c:S ll:P"], ["chile", "🌶️", "___ile", "ch", "c:S ll:P"], ["leche", "🥛", "le___e", "ch", "c:S ll:P"],
@@ -39,7 +41,7 @@ const EN_DG_READ: Read[] = [
   ["ship", "🚢", "chip:P sip:S shop:V"], ["shell", "🐚", "sell:S shall:V"], ["chick", "🐤", "thick:P sick:S check:V"], ["cheese", "🧀", "geese:S chase:V"],
   ["whale", "🐋", "shale:P tale:S while:V"], ["bath", "🛁", "bash:P bat:S both:V"], ["fish", "🐟", "fit:S fix:S"], ["sock", "🧦", "song:P sod:S sack:V"],
   ["clock", "⏰", "cloth:P clog:S click:V"], ["chair", "🪑", "hair:S fair:S"], ["sheep", "🐑", "cheep:P seep:S shop:V"], ["shoe", "👞", "hoe:S toe:S"],
-  ["peach", "🍑", "peak:S pear:S"], ["cherry", "🍒", "berry:S merry:S"], ["shark", "🦈", "park:S bark:S"], ["three", "3️⃣", "tree:S free:S"],
+  ["peach", "🍑", "peak:S pear:S"], ["cherry", "🍒", "ferry:S merry:S"], ["shark", "🦈", "park:S bark:S"], ["three", "3️⃣", "tree:S free:S"],
 ];
 const ES_DG_READ: Read[] = [
   ["perro", "🐶", "pero:S pelo:S"], ["carro", "🚗", "caro:S callo:P"], ["cerro", "⛰️", "cero:S cebo:S"], ["llave", "🔑", "lave:S nave:S"],

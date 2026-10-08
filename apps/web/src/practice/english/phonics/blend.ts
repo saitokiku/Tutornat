@@ -9,17 +9,18 @@ import { cap, altFor, both, pic, same, voiced, word, type Entry, type Q } from "
 
 // ---- e.blend.onset ----
 // Level 1: [anchor word, rime, key, picture, another start + the same rime ("wrong-start"), picture,
-// the same start + another ending ("wrong-end"), picture].
+// the same start + another ending ("wrong-end"), picture]. Every rime is itself a content word (art, ice,
+// oat, ink), which speech says in full; function words like "an", "at" or "up" come out as a weak schwa.
 type EnBlend = [string, string, string, string, string, string, string, string];
 const EN_BLEND: EnBlend[] = [
-  ["house", "at", "hat", "🎩", "bat", "🦇", "hen", "🐔"], ["cow", "up", "cup", "☕", "pup", "🐶", "cat", "🐱"],
+  ["cow", "art", "cart", "🛒", "dart", "🎯", "cake", "🎂"], ["dog", "art", "dart", "🎯", "cart", "🛒", "duck", "🦆"],
   ["bed", "ox", "box", "📦", "fox", "🦊", "bus", "🚌"], ["moon", "ice", "mice", "🐭", "dice", "🎲", "milk", "🥛"],
-  ["game", "oat", "goat", "🐐", "boat", "⛵", "gift", "🎁"], ["bee", "all", "ball", "⚽", "wall", "🧱", "bed", "🛏️"],
+  ["game", "oat", "goat", "🐐", "boat", "⛵", "gift", "🎁"], ["fork", "ace", "face", "😀", "race", "🏁", "fox", "🦊"],
   ["rain", "ice", "rice", "🍚", "mice", "🐭", "ring", "💍"], ["man", "eat", "meat", "🥩", "seat", "💺", "moon", "🌙"],
-  ["vest", "an", "van", "🚐", "can", "🥫", "volcano", "🌋"], ["cat", "oat", "coat", "🧥", "goat", "🐐", "cup", "☕"],
-  ["dog", "ice", "dice", "🎲", "rice", "🍚", "duck", "🦆"], ["pig", "an", "pan", "🍳", "can", "🥫", "pear", "🍐"],
+  ["web", "ink", "wink", "😉", "drink", "🥤", "watch", "⌚"], ["cat", "oat", "coat", "🧥", "goat", "🐐", "cup", "☕"],
+  ["dog", "ice", "dice", "🎲", "rice", "🍚", "duck", "🦆"], ["sun", "eat", "seat", "💺", "meat", "🥩", "sock", "🧦"],
   ["bus", "oat", "boat", "⛵", "coat", "🧥", "bell", "🔔"], ["fish", "ox", "fox", "🦊", "box", "📦", "fork", "🍴"],
-  ["car", "an", "can", "🥫", "van", "🚐", "cat", "🐱"], ["web", "all", "wall", "🧱", "ball", "⚽", "watch", "⌚"],
+  ["rose", "ace", "race", "🏁", "face", "😀", "ring", "💍"], ["cup", "ash", "cash", "💵", "trash", "🗑️", "car", "🚗"],
 ];
 // Spanish: [first syllable, second syllable, key, picture, another first syllable ("wrong-start"),
 // picture, the same first syllable with another ending ("wrong-end"), picture].
@@ -76,7 +77,7 @@ const EN_BLEND_READ: ReadBlend[] = [
 const ES_BLEND_READ: ReadBlend[] = [
   ["ma", "no", "mono", "pino"], ["ca", "sa", "cosa", "mesa"], ["lu", "na", "lana", "cuna"], ["bo", "ta", "bata", "gota"],
   ["pe", "ra", "para", "cera"], ["ra", "ta", "ruta", "lata"], ["de", "do", "dado", "lado"], ["co", "ma", "cama", "loma"],
-  ["pi", "so", "paso", "beso"], ["pa", "to", "pito", "gato"], ["li", "ma", "loma", "rama"], ["bo", "ca", "beca", "foca"],
+  ["pi", "so", "paso", "beso"], ["pa", "to", "pata", "gato"], ["li", "ma", "loma", "rama"], ["bo", "ca", "beca", "foca"],
   ["me", "sa", "misa", "rosa"], ["ro", "ca", "rica", "vaca"], ["pa", "la", "pila", "sala"], ["mu", "la", "mala", "cola"],
 ];
 
@@ -172,17 +173,18 @@ const ES_SWAP_READ: Swap[] = [
 ];
 
 function swapReadQ(locale: Locale, [w, old, neu, k, other]: Swap): Q {
-  const ask = tr(locale, `Change the ${old} in ${w} to ${neu}.`, `Cambia la ${old} de ${w} por ${neu}.`);
+  // English names "the letter a": a bare "a" would be read aloud as the article, a weak schwa.
+  const ask = tr(locale, `Change the letter ${old} in ${w} to ${neu}.`, `Cambia la ${old} de ${w} por ${neu}.`);
   return {
     prompt: ask,
     say: `${ask} ${tr(locale, "Which word do you get?", "¿Qué palabra se forma?")}`,
     choices: [word(k), word(w, "kept-old-letter"), word(other, "wrong-new-letter")],
     hints: [
-      tr(locale, `Find the ${old} in ${w}.`, `Busca la ${old} en ${w}.`),
+      tr(locale, `Find the letter ${old} in ${w}.`, `Busca la ${old} en ${w}.`),
       tr(locale, "Swap only that letter. Keep the others.", "Cambia solo esa letra. Las demás quedan igual."),
       tr(locale, `${cap(other)} does not use the letter ${neu}.`, `${cap(other)} no usa la letra ${neu}.`),
     ],
-    steps: [`${w} → ${k}`, tr(locale, `With ${neu} in place of ${old}, it says ${k}.`, `Con ${neu} en lugar de ${old}, dice ${k}.`)],
+    steps: [`${w} → ${k}`, tr(locale, `Swap the letter ${old} for ${neu}: ${k}.`, `Con ${neu} en lugar de ${old}, dice ${k}.`)],
   };
 }
 
@@ -209,7 +211,8 @@ function segQ(locale: Locale, [split, picture]: Seg): Q {
   const W = cap(w);
   const sounds = (k: number) => tr(locale, `${k} sounds`, `${k} sonidos`);
   const tag = (k: number) => (k === w.length ? "counted-letters" : k < n ? "missed-a-sound" : "added-a-sound");
-  const silentH = w.startsWith("h");
+  // Only Spanish h is silent (hoja); the h of English hand is a sound of its own.
+  const silentH = locale === "es" && w.startsWith("h");
   return {
     prompt: tr(locale, `How many sounds in ${w}?`, `¿Cuántos sonidos tiene ${w}?`),
     say: tr(locale, `${W}. How many sounds do you hear in ${w}?`, `${W}. ¿Cuántos sonidos oyes en ${w}?`),

@@ -20,7 +20,7 @@ const EN_SE_READ: Read[] = [
   ["cake", "🎂", "cak:E bake:C"], ["five", "5️⃣", "fiv:E dive:C"], ["nine", "9️⃣", "nin:E line:C"], ["game", "🎮", "gam:E gate:C"],
 ];
 const ES_SE_READ: Read[] = [
-  ["helado", "🍦", "elado:E jelado:J"], ["huevo", "🥚", "uevo:E güevo:Y"], ["hoja", "🍃", "oja:E joja:J"], ["hormiga", "🐜", "ormiga:E jormiga:J"],
+  ["helado", "🍦", "elado:E jelado:J"], ["huevo", "🥚", "uevo:E huebo:Y"], ["hoja", "🍃", "oja:E joja:J"], ["hormiga", "🐜", "ormiga:E jormiga:J"],
   ["hilo", "🧵", "ilo:E jilo:J"], ["hueso", "🦴", "ueso:E güeso:Y"], ["hongo", "🍄", "ongo:E jongo:J"], ["hielo", "🧊", "ielo:E yelo:Y"],
   ["hacha", "🪓", "acha:E jacha:J"], ["hada", "🧚", "ada:E jada:J"], ["helicóptero", "🚁", "elicóptero:E jelicóptero:J"], ["hipopótamo", "🦛", "ipopótamo:E jipopótamo:J"],
   ["hamburguesa", "🍔", "amburguesa:E jamburguesa:J"], ["hospital", "🏥", "ospital:E jospital:J"], ["hotel", "🏨", "otel:E jotel:J"], ["búho", "🦉", "búo:E bujo:J"],
@@ -50,19 +50,22 @@ export const SILENT_E: Entry[][] = [
     es: readQ("es", ES_SE_READ[i][0], ES_SE_READ[i][1], ES_SE_READ[i][2], ["", "La h no suena, pero se escribe."], SPELLED),
   })),
   EN_SE_FIT.map(([s, k, spec], i) => ({
-    en: sentenceQ("en", s, k, spec, ["Silent e changes the vowel: hop, hope.", ""]),
+    en: sentenceQ("en", s, k, spec, ["Silent e changes the vowel: kit, kite.", ""]),
     es: sentenceQ("es", ES_SE_FIT[i][0], ES_SE_FIT[i][1], ES_SE_FIT[i][2], ["", "Suenan igual, pero con h o sin h dicen cosas distintas."]),
   })),
 ];
 
 // ---- e.vowel.teams: ai ay ee ea oa ow | diptongos ue ie ua ia io ----
+// Level 1 is heard: the word is spoken, so no wrong fill may sound like it. A team that says the same
+// sound (ay for ai, ea for ee, ow for oa) or one vowel left at the end of the word (be, sno) is never
+// offered; the wrong fills say another vowel sound or a short one (rain: reen, ran, roan).
 const EN_VT_GAP: Gap[] = [
-  ["rain", "🌧️", "r___n", "ai", "ay:T a:D ee:T"], ["snail", "🐌", "sn___l", "ai", "ay:T a:D ee:T"], ["train", "🚆", "tr___n", "ai", "ay:T a:D oa:T"],
-  ["crayon", "🖍️", "cr___on", "ay", "ai:T a:D ee:T"], ["bee", "🐝", "b___", "ee", "ea:T e:D ay:T"], ["tree", "🌳", "tr___", "ee", "ea:T e:D ai:T"],
-  ["feet", "🦶", "f___t", "ee", "ea:T e:D oa:T"], ["sheep", "🐑", "sh___p", "ee", "ea:T e:D ai:T"], ["leaf", "🍃", "l___f", "ea", "ee:T e:D ai:T"],
-  ["seal", "🦭", "s___l", "ea", "ee:T e:D oa:T"], ["peach", "🍑", "p___ch", "ea", "ee:T e:D oa:T"], ["boat", "⛵", "b___t", "oa", "ow:T o:D ai:T"],
-  ["goat", "🐐", "g___t", "oa", "ow:T o:D ee:T"], ["soap", "🧼", "s___p", "oa", "ow:T o:D ea:T"], ["snow", "❄️", "sn___", "ow", "oa:T o:D ee:T"],
-  ["bowl", "🥣", "b___l", "ow", "oa:T o:D ee:T"],
+  ["rain", "🌧️", "r___n", "ai", "ee:T a:D oa:T"], ["snail", "🐌", "sn___l", "ai", "ee:T a:D oa:T"], ["train", "🚆", "tr___n", "ai", "ee:T a:D oa:T"],
+  ["crayon", "🖍️", "cr___on", "ay", "ee:T ow:T oy:T"], ["bee", "🐝", "b___", "ee", "ay:T oa:T ow:T"], ["tree", "🌳", "tr___", "ee", "ay:T ow:T oy:T"],
+  ["feet", "🦶", "f___t", "ee", "ai:T e:D oa:T"], ["sheep", "🐑", "sh___p", "ee", "ai:T e:D oa:T"], ["leaf", "🍃", "l___f", "ea", "oa:T e:D ai:T"],
+  ["seal", "🦭", "s___l", "ea", "ai:T e:D oa:T"], ["peach", "🍑", "p___ch", "ea", "oa:T e:D ai:T"], ["boat", "⛵", "b___t", "oa", "ee:T o:D ai:T"],
+  ["goat", "🐐", "g___t", "oa", "ea:T o:D ai:T"], ["soap", "🧼", "s___p", "oa", "ee:T o:D ai:T"], ["snow", "❄️", "sn___", "ow", "ee:T ay:T oy:T"],
+  ["bowl", "🥣", "b___l", "ow", "ee:T ai:T oi:T"],
 ];
 const ES_VT_GAP: Gap[] = [
   ["puerta", "🚪", "p___rta", "ue", "eu:X e:D ua:T"], ["fuego", "🔥", "f___go", "ue", "eu:X e:D ui:T"], ["huevo", "🥚", "h___vo", "ue", "eu:X e:D ua:T"],
@@ -72,11 +75,13 @@ const ES_VT_GAP: Gap[] = [
   ["cuatro", "4️⃣", "c___tro", "ua", "au:X a:D ue:T"], ["paraguas", "☂️", "parag___s", "ua", "au:X a:D ue:T"], ["piano", "🎹", "p___no", "ia", "ai:X a:D io:T"],
   ["radio", "📻", "rad___", "io", "oi:X o:D ia:T"],
 ];
+// Level 2: the picture's name among written words. A wrong word must not read as the picture's name, so a
+// dropped letter never leaves the vowel at the end (be and tre read as bee and tree).
 const EN_VT_READ: Read[] = [
-  ["rain", "🌧️", "ran:D rail:C"], ["train", "🚆", "tran:D trail:C"], ["snail", "🐌", "snal:D sail:D"], ["tree", "🌳", "tre:D free:C"],
-  ["sheep", "🐑", "shep:D ship:V"], ["feet", "🦶", "fet:D foot:V"], ["bee", "🐝", "be:D bay:T"], ["leaf", "🍃", "lef:D loaf:T"],
+  ["rain", "🌧️", "ran:D rail:C"], ["train", "🚆", "tran:D trail:C"], ["snail", "🐌", "snal:D sail:D"], ["tree", "🌳", "tray:T free:C"],
+  ["sheep", "🐑", "shep:D ship:V"], ["beach", "🏖️", "bech:D peach:C"], ["bee", "🐝", "bay:T boo:T"], ["leaf", "🍃", "lef:D loaf:T"],
   ["seal", "🦭", "sel:D sail:T"], ["peach", "🍑", "pech:D pouch:T"], ["boat", "⛵", "bot:D beat:T"], ["goat", "🐐", "got:D gait:T"],
-  ["soap", "🧼", "sop:D seep:T"], ["snow", "❄️", "sno:D show:C"], ["bowl", "🥣", "bol:D boil:T"], ["road", "🛣️", "rod:D read:T"],
+  ["soap", "🧼", "sop:D seep:T"], ["snow", "❄️", "snew:T show:C"], ["bowl", "🥣", "bol:D boil:T"], ["road", "🛣️", "rod:D read:T"],
 ];
 const ES_VT_READ: Read[] = [
   ["puerta", "🚪", "perta:D peurta:X"], ["fuego", "🔥", "fego:D feugo:X"], ["huevo", "🥚", "hevo:D heuvo:X"], ["nieve", "❄️", "neve:D neive:X"],

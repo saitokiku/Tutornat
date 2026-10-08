@@ -20,7 +20,7 @@ const EN_SHORT: Read[] = [
 /** [word, picture, first syllable, three other syllables] */
 type Syl = [string, string, string, string];
 const ES_SHORT: Syl[] = [
-  ["mano", "✋", "ma", "mo mu na"], ["mono", "🐒", "mo", "ma mi no"], ["pato", "🦆", "pa", "po pe ba"], ["pera", "🍐", "pe", "pa pi be"],
+  ["mano", "✋", "ma", "mo mu na"], ["mono", "🐒", "mo", "ma mi no"], ["pato", "🦆", "pa", "ga pe ba"], ["pera", "🍐", "pe", "pa pi be"],
   ["piña", "🍍", "pi", "pa pu bi"], ["sopa", "🍲", "so", "sa su lo"], ["luna", "🌙", "lu", "la lo nu"], ["lobo", "🐺", "lo", "la le ro"],
   ["dado", "🎲", "da", "de du ta"], ["dedo", "☝️", "de", "da di te"], ["nube", "☁️", "nu", "na ne mu"], ["niña", "👧", "ni", "na no mi"],
   ["tomate", "🍅", "to", "ta tu do"], ["taza", "☕", "ta", "to te da"], ["sofá", "🛋️", "so", "sa si fo"], ["foca", "🦭", "fo", "fa fe po"],

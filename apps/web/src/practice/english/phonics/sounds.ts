@@ -1,6 +1,7 @@
 import type { Locale } from "@/lib/types";
 import { tr } from "../../text";
 import { cap, altFor, EN_VOWEL_SAY, ES_VOWEL_SAY, pic, same, voiced, word, type Entry, type Q } from "./core";
+import { NAME_IT_ALT } from "./read";
 
 // Kindergarten sound work: the middle vowel, rhyme families, blending a start and an ending, and
 // swapping one sound. Level 1 of each is listening (picture choices, every word spoken). Level 2 asks
@@ -20,13 +21,14 @@ const EN_MID: Mid[] = [
   ["hat", "🎩", "map", "🗺️", "hot", "🥵", "bed", "🛏️", "c"], ["bed", "🛏️", "ten", "🔟", "fox", "🦊", "pig", "🐷", "v"],
   ["dog", "🐶", "sock", "🧦", "duck", "🦆", "hat", "🎩", "v"], ["bus", "🚌", "cup", "☕", "bed", "🛏️", "six", "6️⃣", "v"],
 ];
-// Spanish: words with one vowel throughout (oso, casa, bebé, bici), matched by their vowels.
+// Spanish: words with one vowel throughout (oso, casa, bebé, bici), matched by their vowels. A "c" near
+// miss keeps the target's consonants as heard, not only as written (boca is not bici: /k/ is not /s/).
 const ES_MID: Mid[] = [
   ["mono", "🐒", "loro", "🦜", "mano", "✋", "casa", "🏠", "c"], ["papa", "🥔", "rana", "🐸", "dedo", "☝️", "oso", "🐻", "v"],
   ["lana", "🧶", "vaca", "🐮", "luna", "🌙", "lobo", "🐺", "c"], ["bata", "🥼", "cama", "🛏️", "bota", "👢", "toro", "🐂", "c"],
   ["casa", "🏠", "mapa", "🗺️", "pez", "🐟", "oso", "🐻", "v"], ["oso", "🐻", "globo", "🎈", "uva", "🍇", "rana", "🐸", "v"],
   ["bebé", "👶", "leche", "🥛", "mono", "🐒", "casa", "🏠", "v"], ["leche", "🥛", "bebé", "👶", "lobo", "🐺", "cama", "🛏️", "v"],
-  ["bici", "🚲", "kiwi", "🥝", "boca", "👄", "lana", "🧶", "c"], ["kiwi", "🥝", "bici", "🚲", "cama", "🛏️", "toro", "🐂", "v"],
+  ["bici", "🚲", "kiwi", "🥝", "beso", "💋", "lana", "🧶", "v"], ["kiwi", "🥝", "bici", "🚲", "cama", "🛏️", "toro", "🐂", "v"],
   ["loro", "🦜", "pollo", "🐔", "luna", "🌙", "casa", "🏠", "v"], ["toro", "🐂", "mono", "🐒", "taza", "☕", "bebé", "👶", "v"],
   ["vaca", "🐮", "llama", "🦙", "boca", "👄", "kiwi", "🥝", "v"], ["rana", "🐸", "cama", "🛏️", "rosa", "🌹", "bebé", "👶", "v"],
   ["coco", "🥥", "ojo", "👁️", "cama", "🛏️", "uva", "🍇", "v"], ["globo", "🎈", "coco", "🥥", "llama", "🦙", "bici", "🚲", "v"],
@@ -109,7 +111,7 @@ const ES_FAM: Fam[] = [
   ["ero", "sombrero", "dinero", "granero", "vaquero", "🤠", "queso", "🧀", "luna", "🌙"], ["ino", "pepino", "camino", "molino", "pingüino", "🐧", "niño", "👦", "sol", "☀️"],
   ["osa", "rosa", "cosa", "hermosa", "mariposa", "🦋", "boca", "👄", "pez", "🐟"], ["or", "tambor", "color", "calor", "flor", "🌸", "sol", "☀️", "casa", "🏠"],
   ["ía", "tía", "día", "policía", "sandía", "🍉", "piña", "🍍", "sol", "☀️"], ["ena", "cena", "arena", "sirena", "ballena", "🐋", "pera", "🍐", "gato", "🐱"],
-  ["ota", "pelota", "bota", "nota", "gota", "💧", "sopa", "🍲", "luna", "🌙"], ["ito", "gatito", "perrito", "pito", "mosquito", "🦟", "libro", "📖", "casa", "🏠"],
+  ["ota", "pelota", "bota", "nota", "gota", "💧", "sopa", "🍲", "luna", "🌙"], ["ito", "gatito", "perrito", "palito", "mosquito", "🦟", "libro", "📖", "casa", "🏠"],
   ["ama", "cama", "rama", "dama", "llama", "🦙", "casa", "🏠", "pez", "🐟"], ["una", "cuna", "aceituna", "vacuna", "luna", "🌙", "uva", "🍇", "sol", "☀️"],
 ];
 
@@ -156,7 +158,7 @@ function famReadQ(locale: Locale, [fam, picture, k, first, end, vowel]: FamRead)
     prompt: tr(locale, `Which -${fam} word is this?`, `¿Qué palabra de la familia -${fam} es esta?`),
     say: tr(locale, "Read each word. Which one names the picture?", "Lee cada palabra. ¿Cuál va con el dibujo?"),
     picture,
-    alt: altFor(locale, k),
+    alt: tr(locale, ...NAME_IT_ALT),
     choices: [word(k), word(first, "wrong-first-letter"), word(end, "wrong-ending"), word(vowel, "wrong-vowel")],
     hints: [
       tr(locale, "Look at the end of each word first.", "Mira primero cómo termina cada palabra."),

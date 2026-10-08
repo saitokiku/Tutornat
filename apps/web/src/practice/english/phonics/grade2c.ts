@@ -60,6 +60,7 @@ const ES_SPLIT: Split[][] = [
   ],
 ];
 
+// Hint 2 examples (win-ter, mo-ne-da, tí-a, ma-íz) are not words in the bank, so they never show a key.
 function splitQ(locale: Locale, level: number, [w, picture, key, spec]: Split): Q {
   const wrong = spec.split(" ").map((s) => s.split(":"));
   const [, en, es] = SPLIT[wrong[0][1]];
@@ -71,8 +72,12 @@ function splitQ(locale: Locale, level: number, [w, picture, key, spec]: Split): 
     hints: [
       tr(locale, "Clap the word. Each clap is a syllable.", "Aplaude la palabra. Cada palmada es una sílaba."),
       level === 1
-        ? tr(locale, "Between two consonants, split them: rab-bit.", "Una consonante entre vocales va con la vocal que sigue: pe-lo-ta.")
-        : tr(locale, "Long first vowel: split after it. Short: after the consonant.", "No se separan bl, br, tr, ch, ll, rr ni diptongos como io o ue."),
+        ? tr(locale, "Between two consonants, split them: win-ter.", "Una consonante entre vocales va con la vocal que sigue: mo-ne-da.")
+        : tr(
+            locale,
+            "Long first vowel: split after it. Short: after the consonant.",
+            "No se separan bl, br, tr, ch, ll, rr ni diptongos como io o ue. Pero si la i o la u lleva tilde, sí se separan: tí-a, ma-íz.",
+          ),
       tr(locale, `${cap(wrong[0][0])} ${en}`, `${cap(wrong[0][0])} ${es}`),
     ],
     steps: [tr(locale, `${cap(w)}: ${key}`, `${cap(w)}: ${key}`)],
@@ -88,7 +93,7 @@ const kebab = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{Diacri
 const EN_KINDS = [["closed", "open", "silent e"], ["vowel team", "r-controlled", "consonant-le"]];
 const EN_SEEN: Record<string, string> = {
   closed: "a consonant follows the vowel.",
-  open: "the vowel is at the end.",
+  open: "the word ends with its vowel sound.",
   "silent e": "the last e is silent.",
   "vowel team": "two vowels sit together.",
   "r-controlled": "an r follows the vowel.",
@@ -119,7 +124,7 @@ function enTypeQ(level: number, [s, from, kind]: Kind): Q {
     hints: [
       "Look at the vowels and what comes after them.",
       level === 1
-        ? "Closed ends in a consonant. Open ends in a vowel. Silent e ends in e."
+        ? "Closed: it ends in a consonant. Open: it ends with the vowel sound. Silent e: a last e you do not hear."
         : "Vowel team: two vowels. R-controlled: vowel then r. Consonant-le: ends in le.",
       `In ${from ? s : `“${s}”`}, ${EN_SEEN[kind]}`,
     ],

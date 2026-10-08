@@ -7,7 +7,8 @@ import { word, type Entry, type Q } from "./core";
 // (yo, mi, con) to longer ones (siempre, mientras, temprano), chosen by hand, not from a published list.
 // Level 1: hear the word, find it among look-alikes (choices are not read aloud). Level 2: the sentence
 // is read with a pause; only one look-alike makes sense in it. Words that sound alike (to/two, by/buy,
-// tu/tú said aloud) are never offered together where hearing would decide.
+// tu/tú said aloud) are never offered together where hearing would decide. The written accent that tells
+// tu from tú or se from sé is a grade 2–3 lesson, so the pre-primer band never offers that contrast.
 
 /** A look-alike's tag, from how it differs from the word. */
 export function lookTag(w: string, d: string): string {
@@ -83,8 +84,8 @@ const ES_PP_FIT: Fit[] = [
   ["Tengo ___ manzana roja.", "una", "uno", "uña", "luna"], ["Me gusta ___ sol.", "el", "le", "en", "al"],
   ["___ niños juegan.", "Los", "Sol", "Las", "Lo"], ["Vamos ___ parque.", "al", "la", "el", "ala"],
   ["Yo ___ a la escuela.", "voy", "doy", "soy", "hoy"], ["¿Quieres jugar? ___, quiero.", "Sí", "Se", "Su", "Sin"],
-  ["Este es ___ libro.", "mi", "me", "ni", "si"], ["¿Dónde está ___ mochila?", "tu", "te", "tos", "tú"],
-  ["Ellos ___ mis primos.", "son", "nos", "sol", "sin"], ["Mi perro ___ llama Toby.", "se", "es", "sé", "su"],
+  ["Este es ___ libro.", "mi", "me", "ni", "si"], ["¿Dónde está ___ mochila?", "tu", "te", "tos", "ti"],
+  ["Ellos ___ mis primos.", "son", "nos", "sol", "sin"], ["Mi perro ___ llama Toby.", "se", "es", "sol", "su"],
   ["No tengo ___ lápiz.", "un", "en", "uno", "una"], ["Mi mamá me ___ un beso.", "da", "de", "la", "dan"],
 ];
 
@@ -180,7 +181,7 @@ const EN_G2_FIT: Fit[] = [
   ["I ___ soap to wash.", "use", "us", "sue", "fuse"], ["Kim can ___ the dishes.", "wash", "wish", "was", "cash"],
 ];
 const ES_G2_FIT: Fit[] = [
-  ["¿Hay ___ en la puerta?", "alguien", "algún", "algodón", "álgebra"], ["No vino ___ a la fiesta.", "nadie", "nadar", "nadando", "madera"],
+  ["¿Hay ___ en la puerta?", "alguien", "algún", "alegre", "álgebra"], ["No vino ___ a la fiesta.", "nadie", "nadar", "nadando", "madera"],
   ["Mi hermanito ___ no sabe leer.", "todavía", "todo", "todas", "tranvía"], ["Canto ___ me baño.", "mientras", "mientes", "muestras", "menta"],
   ["La escuela está ___ de mi casa.", "cerca", "cerco", "cerdo", "cereza"], ["La luna está muy ___.", "lejos", "lentes", "conejos", "viejos"],
   ["Llegaremos muy ___.", "pronto", "punto", "propio", "prado"], ["Me levanto ___ para ir a la escuela.", "temprano", "templado", "tiempo", "trapo"],

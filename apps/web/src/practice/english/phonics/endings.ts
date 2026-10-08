@@ -3,7 +3,8 @@ import { cap, voiced, word, type Entry, type Q } from "./core";
 // Grade 1 endings. English: the three sounds of -ed (listening), spelling with -ed, and adding -ing.
 // Spanish: the matching endings of Spanish verbs, the participio (-ado, -ido: cantado, comido, and
 // irregular ones like escrito, roto, hecho) and the gerundio (-ando, -iendo: cantando, comiendo, with
-// leyendo, durmiendo, pidiendo).
+// leyendo, durmiendo, pidiendo). Worked examples in hints (frito, midiendo, creyendo) are verbs outside
+// the banks, so a hint never shows the answer.
 
 const tags = (map: Record<string, string>) => (spec: string) =>
   spec.split(" ").map((s) => {
@@ -39,7 +40,7 @@ const ES_ED_HEAR: EsHear[] = [
 function enEdHearQ([t, k, a, aSound, b, bSound]: EdHear): Q {
   const T = cap(t);
   return {
-    prompt: `Which word ends like ${t}?`,
+    prompt: `Which word ends with the same sound as ${t}?`,
     say: `${T}. Which word ends with the same sound?`,
     choices: [voiced(k, k), voiced(a, a, ED_SOUND[aSound]), voiced(b, b, ED_SOUND[bSound])],
     hints: ["Say each word. Listen to the very end.", "The ending -ed can sound like t, d, or id.", `${cap(a)} ends with a different sound.`],
@@ -105,8 +106,9 @@ function esEdSpellQ([inf, key, spec]: Spell): Q {
     choices: [word(key), ...others],
     hints: [
       "Después de he va una palabra que termina en -ado o -ido, o una irregular.",
-      inf.endsWith("ar") ? "Los verbos en -ar terminan en -ado." : "Los verbos en -er o -ir terminan en -ido, pero algunos cambian: escrito, roto, hecho.",
-      `${cap(others[0].label)} no va después de he.`,
+      inf.endsWith("ar") ? "Los verbos en -ar terminan en -ado." : "Los verbos en -er o -ir terminan en -ido, pero algunos cambian: de freír, frito.",
+      // Not "does not go after he": salado does (he salado, from salar). It is only not a form of salir.
+      `Con ${inf} no se dice ${others[0].label}.`,
     ],
     steps: [`Yo he ${key}.`],
   };
@@ -119,7 +121,9 @@ export const ENDING_ED: Entry[][] = [
 
 // ---- e.ending.ing ----
 // Level 1: words that just add the ending. Level 2: words that change first (run → running, make →
-// making | dormir → durmiendo, leer → leyendo). Codes: N not doubled, K kept a silent e, W doubled
+// making | dormir → durmiendo, leer → leyendo). The Spanish sentence answers "¿Qué estás haciendo?",
+// which takes the gerundio: "Estoy dormido" is good Spanish for a state, but it does not say what you
+// are doing, so the participle choice is plainly wrong there. Codes: N not doubled, K kept a silent e, W doubled
 // wrongly, G dropped the g, D a letter dropped, I changed a y | E the wrong ending (-iendo on -ar,
 // -ando on -er/-ir), P the participle, S no stem change, Y i kept where y belongs.
 const EN_ING_TAG = tags({ N: "did-not-double", K: "kept-silent-e", W: "doubled-wrongly", G: "dropped-g", D: "dropped-letter", I: "changed-y-wrongly" });
@@ -156,7 +160,7 @@ const ES_ING: Spell[][] = [
     ["venir", "viniendo", "veniendo:S venido:P"], ["leer", "leyendo", "leiendo:Y leído:P"], ["oír", "oyendo", "oiendo:Y oído:P"],
     ["caer", "cayendo", "caiendo:Y caído:P"], ["traer", "trayendo", "traiendo:Y traído:P"], ["construir", "construyendo", "construiendo:Y construido:P"],
     ["ir", "yendo", "iendo:Y ido:P"], ["sentir", "sintiendo", "sentiendo:S sentido:P"], ["servir", "sirviendo", "serviendo:S servido:P"],
-    ["seguir", "siguiendo", "seguiendo:S seguido:P"], ["poder", "pudiendo", "podiendo:S podido:P"], ["reír", "riendo", "reiendo:S reído:P"],
+    ["seguir", "siguiendo", "seguiendo:S seguido:P"], ["elegir", "eligiendo", "elegiendo:S elegido:P"], ["reír", "riendo", "reiendo:S reído:P"],
     ["repetir", "repitiendo", "repetiendo:S repetido:P"],
   ],
 ];
@@ -181,12 +185,12 @@ function esIngQ(level: number) {
   return ([inf, key, spec]: Spell): Q => {
     const others = ES_ING_TAG(spec);
     return {
-      prompt: `Estoy ___. (${inf})`,
-      say: `Estoy … ¿Qué palabra va? El verbo es ${inf}.`,
+      prompt: `¿Qué estás haciendo? Estoy ___. (${inf})`,
+      say: `¿Qué estás haciendo? Estoy … ¿Qué palabra va? El verbo es ${inf}.`,
       choices: [word(key), ...others],
       hints: [
-        "Después de estoy va una palabra que termina en -ando o -iendo.",
-        level === 1 ? "Los verbos en -ar terminan en -ando. Los verbos en -er o -ir, en -iendo." : "Algunos verbos cambian una letra: dormir, durmiendo; leer, leyendo.",
+        "Para decir lo que haces ahora, usa una palabra que termina en -ando o -iendo.",
+        level === 1 ? "Los verbos en -ar terminan en -ando. Los verbos en -er o -ir, en -iendo." : "Algunos verbos cambian una letra: medir, midiendo; creer, creyendo.",
         `${cap(others[0].label)} no va después de estoy.`,
       ],
       steps: [`Estoy ${key}.`],

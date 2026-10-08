@@ -44,7 +44,6 @@ const others = ([, , , letters, tags]: Letter) => [...letters].map((l, i) => wor
 
 function capitalQ(locale: Locale, d: Letter): Q {
   const [C, name, anchor, letters] = d;
-  const said = locale === "es" ? name : C;
   return {
     prompt: tr(locale, "Listen. Tap the letter.", "Escucha y toca la letra."),
     say: tr(locale, `Find the capital letter ${C}.`, `Busca la letra mayúscula ${name}.`),
@@ -52,7 +51,8 @@ function capitalQ(locale: Locale, d: Letter): Q {
     hints: [
       tr(locale, "Listen to the letter name again.", "Escucha otra vez el nombre de la letra."),
       tr(locale, "Look at the shape of each letter.", "Mira la forma de cada letra."),
-      tr(locale, `${letters[0]} looks close, but it is not ${said}.`, `La ${letters[0]} se parece, pero no es la ${said}.`),
+      // Hints are shown as text, so they name the target by sound only, never by its shape.
+      tr(locale, `${letters[0]} looks close. It is not the letter you heard.`, `La ${letters[0]} se parece, pero no es la ${name}.`),
     ],
     steps: [tr(locale, `This is ${C}. ${C} is for ${anchor}.`, `Esta es la ${name}: ${C}, como en ${anchor}.`)],
   };
@@ -83,7 +83,8 @@ export const LETTER_NAMES: Entry[][] = [same(EN_CAPS, ES_CAPS, capitalQ), same(E
 // ---- e.first.sound and e.final.sound ----
 // [target, picture, key, picture, near miss, picture, other, picture]. First sound: the near miss rhymes
 // with the target ("matched-ending"). Final sound: the near miss starts like the target
-// ("matched-first-sound"). The key never shares the target's other end by accident.
+// ("matched-first-sound"). The key never shares the target's other end by accident. The prompt says
+// "the same sound", since "ends like gato" reads as a rhyme in Spanish classrooms.
 type Sound = [string, string, string, string, string, string, string, string];
 
 const EN_FIRST: Sound[] = [
@@ -110,7 +111,7 @@ const ES_FIRST: Sound[] = [
 function firstQ(locale: Locale, [t, tp, k, kp, near, np, other, op]: Sound): Q {
   const T = cap(t);
   return {
-    prompt: tr(locale, `Which one starts like ${t}?`, `¿Cuál empieza como ${t}?`),
+    prompt: tr(locale, `Which one starts with the same sound as ${t}?`, `¿Cuál empieza con el mismo sonido que ${t}?`),
     say: tr(locale, `${T}. Which one starts with the same sound as ${t}?`, `${T}. ¿Cuál empieza con el mismo sonido que ${t}?`),
     picture: tp,
     alt: altFor(locale, t),
@@ -148,7 +149,7 @@ const ES_FINAL: Sound[] = [
 function finalQ(locale: Locale, [t, tp, k, kp, near, np, other, op]: Sound): Q {
   const T = cap(t);
   return {
-    prompt: tr(locale, `Which one ends like ${t}?`, `¿Cuál termina como ${t}?`),
+    prompt: tr(locale, `Which one ends with the same sound as ${t}?`, `¿Cuál termina con el mismo sonido que ${t}?`),
     say: tr(locale, `${T}. Which one ends with the same sound as ${t}?`, `${T}. ¿Cuál termina con el mismo sonido que ${t}?`),
     picture: tp,
     alt: altFor(locale, t),

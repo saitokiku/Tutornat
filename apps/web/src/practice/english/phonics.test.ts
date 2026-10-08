@@ -67,6 +67,8 @@ const qs = (id: string, locale: L) => PHONICS_BANKS[id].flat().map((e) => e[loca
 const strings = (q: Q) => [q.prompt, q.say, q.alt ?? "", ...q.hints, ...q.steps, ...q.choices.flatMap((c) => [c.label, c.say ?? ""])];
 const label = (q: Q, why: string) => q.choices.find((c) => c.why === why)?.label ?? "";
 const vowels = (w: string) => norm(w).replace(/[^aeiou]/g, "");
+/** The words of a text, normalized. */
+const words = (s: string) => norm(s).split(/[^\p{L}\d]+/u).filter(Boolean);
 const frame = (w: string) => norm(w).replace(/[aeiou]/g, "");
 
 describe("ENGLISH_PHONICS skill list", () => {
@@ -217,7 +219,7 @@ describe("answer keys, checked another way (kindergarten)", () => {
   it("first sound: the key starts like the target and does not rhyme; the near miss rhymes", () => {
     for (const locale of LOCALES)
       for (const q of qs("e.first.sound", locale)) {
-        const t = norm(/(?:like|como) (\S+)\?$/.exec(q.prompt)![1]);
+        const t = norm(/(?:sound as|sonido que) (\S+)\?$/.exec(q.prompt)![1]);
         const [k, near, other] = q.choices.map((c) => norm(c.label));
         expect(k[0], q.prompt).toBe(t[0]);
         expect(/^(sh|ch|th|wh|ll)/.test(k) || /^(sh|ch|th|wh|ll)/.test(t), q.prompt).toBe(false);
@@ -230,7 +232,7 @@ describe("answer keys, checked another way (kindergarten)", () => {
   it("final sound: the key ends with the target's last sound; the near miss only starts like it", () => {
     for (const locale of LOCALES)
       for (const q of qs("e.final.sound", locale)) {
-        const t = norm(/(?:like|como) (\S+)\?$/.exec(q.prompt)![1]);
+        const t = norm(/(?:sound as|sonido que) (\S+)\?$/.exec(q.prompt)![1]);
         const last = (w: string) => (locale === "en" ? lastSound(w) : w.slice(-1));
         const [k, near, other] = q.choices.map((c) => norm(c.label));
         expect(last(k), q.prompt).toBe(last(t));
@@ -329,7 +331,7 @@ describe("answer keys, checked another way (kindergarten)", () => {
     }
     for (const locale of LOCALES)
       for (const q of lv("e.sound.swap", 2, locale)) {
-        const [, old, w, neu] = /(?:the|la) (\S) (?:in|de) (\S+) (?:to|por) (\S)\.$/.exec(q.prompt)!;
+        const [, old, w, neu] = /(?:the letter|la) (\S) (?:in|de) (\S+) (?:to|por) (\S)\.$/.exec(q.prompt)!;
         expect(w.split(old).length, `${q.prompt}: one ${old}`).toBe(2);
         expect(key(q), q.prompt).toBe(w.replace(old, neu));
         expect(label(q, "kept-old-letter"), q.prompt).toBe(w);
@@ -451,8 +453,9 @@ function kinds(key: string, wrong: string): Set<string> {
 describe("answer keys, checked another way (grade 1 reading)", () => {
   it("short vowels: misses differ from the key only in the vowel, or in one consonant", () => {
     for (const q of lv("e.short.vowels", 1, "en")) {
-      expect(key(q), q.alt).toMatch(/^[^aeiou][aeiou][^aeiou]$/);
-      expect(norm(q.alt!), q.alt).toBe(`a ${key(q)}`);
+      expect(key(q), q.prompt).toMatch(/^[^aeiou][aeiou][^aeiou]$/);
+      expect(q.picture && q.alt, q.prompt).toBeTruthy();
+      expect(words(q.alt!), `${key(q)}: the alt names the answer`).not.toContain(norm(key(q)));
       for (const c of q.choices.slice(1)) expect(kinds(key(q), c.label).has(c.why!), `${key(q)} ${c.label} ${c.why}`).toBe(true);
     }
     for (const q of lv("e.short.vowels", 1, "es")) {
@@ -494,7 +497,7 @@ describe("answer keys, checked another way (grade 1 reading)", () => {
     for (const id of READING)
       for (const locale of LOCALES)
         for (const q of lv(id, 2, locale)) {
-          expect(norm(q.alt!).split(" ").at(-1), q.alt).toBe(norm(key(q)));
+          expect(words(q.alt!), `${key(q)}: the alt names the answer`).not.toContain(norm(key(q)));
           for (const c of q.choices.slice(1)) expect(kinds(key(q), c.label).has(c.why!), `${key(q)} → ${c.label} (${c.why})`).toBe(true);
         }
   });
@@ -504,7 +507,7 @@ describe("answer keys, checked another way (silent letters and endings)", () => 
   const noH = (w: string) => norm(w).replace(/(?<!c)h/g, "");
   /** Spellings that sound the same in Spanish: hue/güe, hie/ye, c/s before e, hay/ay/ahí. */
   const soundsSame = (a: string, b: string) => {
-    const say = (w: string) => noH(w).replace(/^ue/, "gue").replace(/^ie/, "ye").replace(/ce/g, "se").replace(/^ay$|^ai$/, "ai");
+    const say = (w: string) => noH(w).replace(/^ue/, "gue").replace(/^ie/, "ye").replace(/ce/g, "se").replace(/v/g, "b").replace(/^ay$|^ai$/, "ai");
     return say(a) === say(b) || [["hay", "ay", "ahi"]].some((g) => g.includes(norm(a)) && g.includes(norm(b)));
   };
 
@@ -535,7 +538,7 @@ describe("answer keys, checked another way (silent letters and endings)", () => 
     };
     const TAG: Record<string, string> = { t: "ed-as-t", d: "ed-as-d", id: "ed-as-extra-syllable" };
     for (const q of lv("e.ending.ed", 1, "en")) {
-      const t = /like (\S+)\?$/.exec(q.prompt)![1];
+      const t = /sound as (\S+)\?$/.exec(q.prompt)![1];
       expect(edSound(key(q)), q.prompt).toBe(edSound(t));
       for (const c of q.choices.slice(1)) expect(c.why, `${t} ${c.label}`).toBe(TAG[edSound(c.label)]);
       expect(new Set(q.choices.map((c) => edSound(c.label))).size, q.prompt).toBe(3);
@@ -580,7 +583,7 @@ describe("answer keys, checked another way (silent letters and endings)", () => 
     const PARTICIPLE: Record<string, string> = { escribir: "escrito", abrir: "abierto", romper: "roto", poner: "puesto", hacer: "hecho", ver: "visto", decir: "dicho", volver: "vuelto", cubrir: "cubierto" };
     const GERUND: Record<string, string> = {
       dormir: "durmiendo", pedir: "pidiendo", decir: "diciendo", venir: "viniendo", leer: "leyendo", oir: "oyendo", caer: "cayendo", traer: "trayendo",
-      construir: "construyendo", ir: "yendo", sentir: "sintiendo", servir: "sirviendo", seguir: "siguiendo", poder: "pudiendo", reir: "riendo", repetir: "repitiendo",
+      construir: "construyendo", ir: "yendo", sentir: "sintiendo", servir: "sirviendo", seguir: "siguiendo", elegir: "eligiendo", reir: "riendo", repetir: "repitiendo",
     };
     const regular = (inf: string, ar: string, erir: string) => inf.slice(0, -2) + (inf.endsWith("ar") ? ar : erir);
     for (const q of lv("e.ending.ed", 2, "es")) {
@@ -643,7 +646,7 @@ describe("answer keys, checked another way (grade 2 reading)", () => {
           for (const c of q.choices.slice(1)) expect(kinds(w, shown.replace("___", c.label)).has(c.why!), `${w}: ${c.label} (${c.why})`).toBe(true);
         }
         for (const q of lv(id, 2, locale)) {
-          if (q.alt) expect(norm(q.alt).split(" ").at(-1), q.alt).toBe(norm(key(q)));
+          if (q.alt) expect(words(q.alt), `${key(q)}: the alt names the answer`).not.toContain(norm(key(q)));
           else expect(q.steps[0], q.prompt).toBe(q.prompt.replace("___", key(q)));
           for (const c of q.choices.slice(1)) expect(kinds(key(q), c.label).has(c.why!), `${key(q)}: ${c.label} (${c.why})`).toBe(true);
         }
@@ -655,7 +658,7 @@ describe("answer keys, checked another way (grade 2 reading)", () => {
   it("soft c and g: the read word's letter and the key picture start with the same sound", () => {
     const EN_FIRST: Record<string, string> = {
       sun: "s", sock: "s", seal: "s", saw: "s", sea: "s", kite: "k", key: "k", cat: "k", cow: "k", car: "k", cake: "k",
-      jet: "j", jeans: "j", juice: "j", goat: "g", gift: "g", game: "g", girl: "g",
+      jet: "j", jeans: "j", juice: "j", goat: "g", gift: "g", game: "g", girl: "g", guitar: "g", gorilla: "g",
     };
     const enRead = (w: string) => (w[0] === "c" ? (/^c[eiy]/.test(w) ? "s" : "k") : /^g[eiy]/.test(w) ? "j" : "g");
     const EN_TAG: Record<string, string> = { s: "hard-for-soft", j: "hard-for-soft", k: "soft-for-hard", g: "soft-for-hard" };
@@ -725,7 +728,7 @@ describe("answer keys, checked another way (grade 2 word study)", () => {
           const ok = {
             "wrong-first-word": d.endsWith(b) && !d.startsWith(a),
             "wrong-last-word": d.startsWith(a) && !d.endsWith(b),
-            "one-part-only": [a, b, norm(b).replace(/s$/, ""), norm(a).replace(/a$/, "o")].includes(norm(d)),
+            "one-part-only": [a, b, norm(b).replace(/s$/, "")].includes(norm(d)),
             "reversed-parts": d === b + a,
             "no-spelling-change": d === a + b && d !== key(q),
             "kept-accent": d === a + b && /[áéíóú]/.test(a),
@@ -825,7 +828,7 @@ describe("answer keys, checked another way (y as a vowel)", () => {
   it("English: the key ends with the target's y sound; wrong sounds are tagged", () => {
     const TAG: Record<string, string> = { i: "y-as-long-i", e: "y-as-long-e", y: "y-as-consonant" };
     for (const q of lv("e.y.vowel", 1, "en")) {
-      const t = /like (\S+)\?$/.exec(q.prompt)![1];
+      const t = /sound as (\S+)\?$/.exec(q.prompt)![1];
       expect(ySound(key(q)), q.prompt).toBe(ySound(t));
       for (const c of q.choices.slice(1)) expect(c.why, `${t} ${c.label}`).toBe(TAG[ySound(c.label)]);
     }
@@ -840,7 +843,7 @@ describe("answer keys, checked another way (y as a vowel)", () => {
   it("Spanish: y at the end sounds like i; inside, the i sound is written i; each wrong spelling is tagged", () => {
     for (const q of lv("e.y.vowel", 1, "es")) {
       const w = /en (\S+)\?$/.exec(q.prompt)![1];
-      expect(key(q), w).toBe(w.endsWith("y") ? "como la vocal i" : "como en yoyó");
+      expect(key(q), w).toBe(w.endsWith("y") ? "como la vocal i" : "como en yo");
     }
     for (const q of lv("e.y.vowel", 2, "es")) {
       const k = key(q);

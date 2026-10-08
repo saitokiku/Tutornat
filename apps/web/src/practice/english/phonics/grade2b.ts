@@ -35,7 +35,7 @@ type EsJoin = [string, string, string, string];
 const ES_JOIN: EsJoin[] = [
   ["gira", "sol", "girasol", "solgira:R parasol:F"], ["para", "sol", "parasol", "solpara:R paraguas:L"], ["para", "aguas", "paraguas", "paraaguas:J parasol:L"],
   ["tela", "araña", "telaraña", "telaaraña:J araña:O"], ["rompe", "cabezas", "rompecabezas", "cabezasrompe:R rompeolas:L"], ["rasca", "cielos", "rascacielos", "cielosrasca:R cielo:O"],
-  ["arco", "iris", "arcoíris", "irisarco:R arco:O"], ["alta", "voz", "altavoz", "vozalta:R alto:O"], ["pelo", "rojo", "pelirrojo", "pelorojo:J rojopelo:R"],
+  ["arco", "iris", "arcoíris", "irisarco:R arco:O"], ["alta", "voz", "altavoz", "vozalta:R voz:O"], ["pelo", "rojo", "pelirrojo", "pelorojo:J rojopelo:R"],
   ["medio", "día", "mediodía", "díamedio:R medio:O"], ["media", "noche", "medianoche", "nochemedia:R noche:O"], ["cumple", "años", "cumpleaños", "añoscumple:R años:O"],
   ["hierba", "buena", "hierbabuena", "buenahierba:R hierba:O"], ["porta", "folio", "portafolio", "folioporta:R portarretrato:L"], ["video", "juego", "videojuego", "juegovideo:R juego:O"],
   ["balón", "cesto", "baloncesto", "balóncesto:G cestobalón:R"],
@@ -77,11 +77,12 @@ const enJoinQ = ([a, b, key, p, spec]: EnJoin): Q =>
 const esJoinQ = ([a, b, key, spec]: EsJoin): Q => joinQ("es", a, b, key, [voiced(key, key), ...coded(COMPOUND, spec).map(([w, why]) => voiced(w, w, why))]);
 
 // Level 2: what a compound means. The last word names the thing; the first tells which kind. English
-// compounds are noun + noun; Spanish ones are verb + noun (abrelatas: abre + latas).
+// compounds are noun + noun; Spanish ones are verb + noun (abrelatas: abre + latas). No compound is also
+// fairly "a kind of" its first word (a houseboat is a house of sorts, so it is not used).
 /** [compound, first part, second part, meaning, reversed meaning] */
 type Mean = [string, string, string, string, string];
 const EN_MEAN: Mean[] = [
-  ["doghouse", "dog", "house", "a house for a dog", "a dog that lives in a house"], ["houseboat", "house", "boat", "a boat people live on", "a house where boats are kept"],
+  ["doghouse", "dog", "house", "a house for a dog", "a dog that lives in a house"], ["doorbell", "door", "bell", "a bell you ring at a door", "a door shaped like a bell"],
   ["boathouse", "boat", "house", "a house where boats are kept", "a boat people live on"], ["fishbowl", "fish", "bowl", "a bowl for a fish", "a fish shaped like a bowl"],
   ["bookshelf", "book", "shelf", "a shelf for books", "a book about shelves"], ["raincoat", "rain", "coat", "a coat for the rain", "rain that falls on a coat"],
   ["toothbrush", "tooth", "brush", "a brush for teeth", "a tooth used as a brush"], ["snowman", "snow", "man", "a man made of snow", "snow that falls on a man"],
@@ -111,8 +112,8 @@ function meanQ(locale: Locale, [w, a, b, meaning, reversed]: Mean): Q {
     choices: [word(meaning), word(reversed, "reversed-meaning"), word(one, "one-part-only")],
     hints: [
       tr(locale, "Find the two small words.", "Busca las dos palabras que la forman."),
-      tr(locale, "The last word names the thing. The first tells which kind.", "La primera palabra dice qué hace. La segunda, sobre qué lo hace."),
-      tr(locale, `A ${w} is a kind of ${b}.`, `Un ${w} hace algo con ${b}.`),
+      tr(locale, "The last word names the thing. The first tells which kind.", "La primera palabra dice qué hace. La segunda dice con qué cosa."),
+      tr(locale, `A ${w} is a kind of ${b}.`, `La palabra ${a} dice qué hace un ${w}.`),
     ],
     steps: [tr(locale, `${a} + ${b}: ${meaning}.`, `${a} + ${b}: ${meaning}.`)],
   };

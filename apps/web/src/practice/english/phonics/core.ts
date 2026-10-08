@@ -11,6 +11,10 @@ import type { Choice, ItemBody, MathPart, Skill } from "../../types";
 // a sound is always named through a whole word ("the sound at the start of sun") or a letter name.
 // Spanish syllables (ma, pe, tro) are said as written, since Spanish speech reads them reliably.
 //
+// Spanish is Latin American, the Spanish a US bilingual family speaks: ce, ci and z sound like s (seseo),
+// and ll sounds like y (yeísmo). "Sounds the same" in a Spanish item means in that Spanish; a hint that
+// depends on it says "en América".
+//
 // Every wrong choice carries a kebab-case `why` tag (rule 16); the key carries none.
 
 /** One question in one language. `choices[0]` is the key; the generator shuffles. */
