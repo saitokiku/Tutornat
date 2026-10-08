@@ -114,6 +114,15 @@ describe("topic → skill", () => {
     const g4 = matchSkills("fractions", undefined, 3, "4");
     expect(g4[0]).toBe("m.frac.unit");
     expect(g4.slice(1).every((id) => SKILLS.find((s) => s.id === id)!.grade === "4")).toBe(true);
+    // "Greek and Latin roots" is the unit name at grade 4 (L.4.4b) and grade 6 (L.6.4b): each grade gets its own.
+    for (const [q, g, id] of [
+      ["Greek and Latin roots", "4", "e.greek.latin.roots"],
+      ["Greek and Latin roots", "6", "e.root.clues"],
+      ["Greek and Latin roots", "8", "e.root.clues"],
+      ["Raíces griegas y latinas", "4", "e.greek.latin.roots"],
+      ["Raíces griegas y latinas", "6", "e.root.clues"],
+    ] as const)
+      expect(matchSkills(q, "english", 3, g)[0], `${q} grade ${g}`).toBe(id);
   });
 
   it("a short question that names a skill finds it", () => {

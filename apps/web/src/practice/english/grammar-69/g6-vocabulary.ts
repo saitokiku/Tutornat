@@ -135,7 +135,7 @@ const ROOT_WORDS: Bi<Entry>[] = [
 ];
 
 const ROOTS = skill(
-  { id: "e.root.clues", grade: "6", title: { en: "Roots as clues to meaning", es: "Las raíces como pistas del significado" }, standard: "L.6.4b", prereqs: ["e.prefixes", "e.context.clues"] },
+  { id: "e.root.clues", grade: "6", title: { en: "Greek and Latin roots as clues to meaning", es: "Raíces griegas y latinas como pistas del significado" }, standard: "L.6.4b", prereqs: ["e.prefixes", "e.context.clues"] },
   [
     {
       bank: ROOT_MEANING,
