@@ -431,10 +431,11 @@ export function plainPrompt(parts: MathPart[]): string {
 /**
  * A skill-map item as a lesson quiz question, checked by index. Choice items keep their choices; typed
  * answers become choices only from their authored likely-wrong values, and only after the checker
- * agrees the right one is right and every wrong one is wrong. Items that need a picture are left out.
+ * agrees the right one is right and every wrong one is wrong. Items that need a picture or a passage
+ * to read are left out.
  */
 export function questionFrom(item: ItemBody, seed: number): Omit<QuizQuestion, "id"> | null {
-  if (item.visual || item.picture) return null;
+  if (item.visual || item.picture || item.passage) return null;
   const prompt = plainPrompt(item.prompt);
   const hint = item.hints[0]?.trim();
   const explain = item.steps.join(" ").trim();

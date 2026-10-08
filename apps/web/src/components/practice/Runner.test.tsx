@@ -298,3 +298,21 @@ describe("Runner", () => {
     expect(read().sets[1]).toMatchObject({ skillId: "m.count.10", kind: "pick" });
   });
 });
+
+describe("Runner: reading passages", () => {
+  it("sets the passage apart as text to read, with real headings and boxes, and keeps only the question in the problem heading", async () => {
+    const p = await learner("3");
+    const box = (it: Item) => it.passage?.[0].blocks.find((b) => b.kind === "box" && !b.text.includes("\n"));
+    const seed = seedWhere("e.text.features", 1, (it) => it.passage?.length === 1 && !!box(it));
+    const item = makeItem("e.text.features", 1, seed, "en");
+    const [text] = item.passage!;
+    await show(setOf(p, "pick", [{ skillId: "e.text.features", seed, role: "main", level: 1 }]), p);
+
+    const problem = document.getElementById("problem")!;
+    expect(problem).toHaveTextContent(item.say);
+    for (const b of text.blocks) expect(problem.textContent).not.toContain(b.text);
+    expect(screen.getByRole("heading", { level: 2, name: text.title })).toBeInTheDocument();
+    for (const b of text.blocks.filter((x) => x.kind === "heading")) expect(screen.getByRole("heading", { level: 3, name: b.text })).toBeInTheDocument();
+    expect(screen.getByText(box(item)!.text).tagName).toBe("ASIDE");
+  });
+});
