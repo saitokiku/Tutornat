@@ -392,18 +392,24 @@ export const EVENTS: readonly Event[] = [
  * Coins go by their US names in both languages ("3 dimes, 2 nickels y 4 pennies"), as Spanish speakers
  * in the US say them. A Spanish name like "moneda de 10 centavos" states the value, which would turn
  * the Spanish skill into plain addition and make "swapped-nickel-and-dime" a mistake no one could make.
+ * A Spanish read-aloud voice says the English words with Spanish sounds ("dime" is Spanish for "tell
+ * me"), so Spanish `say` lines spell the names the way they sound: "daim", "níquel", "péni", "cuórter".
  */
-type Coin = { v: number; name: Pair };
-const QUARTER: Coin = { v: 25, name: ["quarter", "quarters"] };
-const DIME: Coin = { v: 10, name: ["dime", "dimes"] };
-const NICKEL: Coin = { v: 5, name: ["nickel", "nickels"] };
-const PENNY: Coin = { v: 1, name: ["penny", "pennies"] };
+type Coin = { v: number; name: Pair; spokenEs: Pair };
+const QUARTER: Coin = { v: 25, name: ["quarter", "quarters"], spokenEs: ["cuórter", "cuórters"] };
+const DIME: Coin = { v: 10, name: ["dime", "dimes"], spokenEs: ["daim", "daims"] };
+const NICKEL: Coin = { v: 5, name: ["nickel", "nickels"], spokenEs: ["níquel", "níqueles"] };
+const PENNY: Coin = { v: 1, name: ["penny", "pennies"], spokenEs: ["péni", "pénies"] };
 const COINS = [QUARTER, DIME, NICKEL, PENNY];
 type Purse = [Coin, number][];
 const join = (items: string[], locale: Locale) => (items.length === 1 ? items[0] : `${items.slice(0, -1).join(", ")} ${tr(locale, "and", "y")} ${items[items.length - 1]}`);
 const coinName = (c: Coin, n: number) => c.name[n === 1 ? 0 : 1];
-/** "2 quarters, 1 dime and 3 pennies" / "2 quarters, 1 dime y 3 pennies". */
-const purseText = (p: Purse, locale: Locale) => join(p.map(([c, n]) => `${n} ${coinName(c, n)}`), locale);
+/** "2 quarters, 1 dime and 3 pennies" / "2 quarters, 1 dime y 3 pennies"; `spoken` gives the Spanish read-aloud spelling. */
+const purseText = (p: Purse, locale: Locale, spoken = false) =>
+  join(
+    p.map(([c, n]) => `${n} ${(spoken && locale === "es" ? c.spokenEs : c.name)[n === 1 ? 0 : 1]}`),
+    locale,
+  );
 const purseValue = (p: Purse) => p.reduce((s, [c, n]) => s + c.v * n, 0);
 /** What a purse is worth to a child who thinks a nickel is 10¢ and a dime 5¢. */
 const swappedValue = (p: Purse) => p.reduce((s, [c, n]) => s + (c === DIME ? NICKEL.v : c === NICKEL ? DIME.v : c.v) * n, 0);
@@ -2550,7 +2556,7 @@ export const MATH_K_2_MORE: Skill[] = [
         ];
         // Only the swap set may look right to a swapper, so its tag is the only diagnosis that fits.
         const picked = sets.filter(([p, why]) => p.length > 0 && purseValue(p) !== target && (swappedValue(p) === target) === (why === "swapped-nickel-and-dime"));
-        const opt = (p: Purse, why?: string): Choice => ({ label: purseText(p, locale), say: purseText(p, locale), ...(why ? { why } : {}) });
+        const opt = (p: Purse, why?: string): Choice => ({ label: purseText(p, locale), say: purseText(p, locale, true), ...(why ? { why } : {}) });
         const wrongs = picked.slice(0, 3).map(([p, why]) => opt(p, why));
         const check = picked[0][0];
         return {
@@ -2585,9 +2591,10 @@ export const MATH_K_2_MORE: Skill[] = [
       const [bc, bn] = purse[0];
       const subs = purse.map(([c, n]) => c.v * n);
       const have = tr(locale, `You have ${purseText(shown, "en")}.`, `Tienes ${purseText(shown, "es")}.`);
+      const heard = tr(locale, have, `Tienes ${purseText(shown, "es", true)}.`);
       return {
         prompt: [`${have} ${ask} `, blank, "¢"],
-        say: `${have} ${ask}`,
+        say: `${heard} ${ask}`,
         picture: "💰",
         alt: tr(locale, "A money bag", "Una bolsa de dinero"),
         input: "keypad",
