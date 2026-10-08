@@ -432,6 +432,8 @@ const en = {
   "practice.checkIntro": "{n} problems, no hints. This shows what you can do on your own. Your answers are checked at the end.",
   "practice.placementIntro": "A few problems to find a good starting point. No hints and no right-or-wrong until the end. Skip nothing; a guess is fine.",
   "practice.problemN": "Problem {n} of {total}",
+  "practice.readAbove": "Read the text above, then answer.",
+  "practice.readBothAbove": "Read both texts above, then answer.",
   "practice.right": "Right.",
   "practice.rightHelped": "Right, with help.",
   "practice.notYet": "Not yet. Try again, or take a hint.",

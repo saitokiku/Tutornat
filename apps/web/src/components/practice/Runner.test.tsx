@@ -310,9 +310,20 @@ describe("Runner: reading passages", () => {
 
     const problem = document.getElementById("problem")!;
     expect(problem).toHaveTextContent(item.say);
+    // Focus lands on the question, after the passage, so a screen reader hears that there is a text above.
+    expect(problem).toHaveTextContent(`Problem 1 of 1. Read the text above, then answer. ${item.say}`);
     for (const b of text.blocks) expect(problem.textContent).not.toContain(b.text);
     expect(screen.getByRole("heading", { level: 2, name: text.title })).toBeInTheDocument();
     for (const b of text.blocks.filter((x) => x.kind === "heading")) expect(screen.getByRole("heading", { level: 3, name: b.text })).toBeInTheDocument();
     expect(screen.getByText(box(item)!.text).tagName).toBe("ASIDE");
+  });
+
+  it("tells a screen reader that two texts sit above a compare question", async () => {
+    const p = await learner("5");
+    const seed = seedWhere("e.compare.texts", 1, (it) => it.passage?.length === 2);
+    const item = makeItem("e.compare.texts", 1, seed, "en");
+    await show(setOf(p, "pick", [{ skillId: "e.compare.texts", seed, role: "main", level: 1 }]), p);
+    expect(document.getElementById("problem")).toHaveTextContent(`Problem 1 of 1. Read both texts above, then answer. ${item.say}`);
+    for (const text of item.passage!) expect(screen.getByRole("heading", { level: 2, name: `${text.label}: ${text.title}` })).toBeInTheDocument();
   });
 });

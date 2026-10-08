@@ -434,6 +434,8 @@ const es: Record<Key, string> = {
   "practice.checkIntro": "{n} problemas, sin pistas. Esto muestra lo que puedes hacer tú solo. Tus respuestas se revisan al final.",
   "practice.placementIntro": "Unos problemas para encontrar un buen punto de partida. Sin pistas, y sin correcto o incorrecto hasta el final. Si no sabes, adivina.",
   "practice.problemN": "Problema {n} de {total}",
+  "practice.readAbove": "Lee el texto de arriba y luego responde.",
+  "practice.readBothAbove": "Lee los dos textos de arriba y luego responde.",
   "practice.right": "Correcto.",
   "practice.rightHelped": "Correcto, con ayuda.",
   "practice.notYet": "Todavía no. Inténtalo otra vez o pide una pista.",
