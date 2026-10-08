@@ -156,6 +156,38 @@ describe.each(Object.keys(GRAMMAR_3_5_LEVELS).map((id) => [id] as const))("%s ba
   });
 });
 
+describe("hints never hand over the key", () => {
+  // Closed word classes state their whole rule in hint 2 (and adds, but contrasts…; mi/mis, tu/tus; who, which,
+  // whose…), so their keys appear there by design. Affixes level 1 says "Many come from Greek or Latin".
+  const RULE_TABLES = new Set([
+    "e.possessives 1 es", "e.possessives 2 es", "e.conjunctions 1 en", "e.conjunctions 1 es", "e.conjunctions 2 en", "e.conjunctions 2 es",
+    "e.relative.words 1 en", "e.relative.words 1 es", "e.relative.words 2 en", "e.relative.words 2 es",
+    "e.correlative.conjunctions 1 en", "e.correlative.conjunctions 1 es", "e.greek.latin.affixes 1 en", "e.greek.latin.affixes 1 es",
+  ]);
+  const pickLevels = Object.entries(GRAMMAR_3_5_LEVELS).flatMap(([id, lvs]) => lvs.flatMap((lv, i) => (isLabel(lv) ? [] : [[id, i + 1, lv] as const])));
+
+  it("hints 1 and 2 of a level name none of its keys, outside closed word classes", () => {
+    for (const [id, n, lv] of pickLevels)
+      for (const l of LOCALES) {
+        if (RULE_TABLES.has(`${id} ${n} ${l}`)) continue;
+        for (const e of lv.bank.map((b) => b[l])) {
+          if (lc(e[1]) === lc(e[5] ?? "")) continue;
+          for (const h of lv.hints[l]) expect(hasWord(h, e[1]), `${id} L${n} ${l}: "${h}" names the key "${e[1]}"`).toBe(false);
+        }
+      }
+  });
+
+  it("hint 3 never names every wrong choice, so the key cannot be found by elimination", () => {
+    for (const [id, n, lv] of pickLevels)
+      for (const l of LOCALES) {
+        // Preposition clues restate the question ("Where did Mia put her shoes?"), which repeats the sentence's own words.
+        if (id === "e.prepositional.phrases" && n === 1) continue;
+        for (const e of lv.bank.map((b) => b[l]))
+          if (e[2].length >= 2) expect(e[2].every(([w]) => hasWord(e[3], w)), `${id} L${n} ${l}: ${e[3]}`).toBe(false);
+      }
+  });
+});
+
 function checkCopy(strings: string[], where: string) {
   for (const s of strings) {
     expect(s, `${where} exclamation`).not.toMatch(/[!¡]/);
@@ -292,6 +324,8 @@ describe("answer keys, checked another way (grade 3)", () => {
           expect(ABSTRACT.has(lc(keyOf(e))), keyOf(e)).toBe(true);
           for (const w of wrongOf(e)) expect(ABSTRACT.has(lc(w)), w).toBe(false);
           if (lv === 2) for (const c of [keyOf(e), ...wrongOf(e)]) expect(words(e[0]), `${c} in ${e[0]}`).toContain(c);
+          // Hint 3 runs the see-or-touch test on one concrete choice and leaves the rest to the learner.
+          expect([keyOf(e), ...wrongOf(e)].filter((c) => hasWord(e[3], c)), e[3]).toEqual([wrongOf(e).find((w) => hasWord(e[3], w))]);
         }
   });
 
@@ -334,11 +368,16 @@ describe("answer keys, checked another way (grade 3)", () => {
 
   it("possessives: English apostrophe rule; Spanish possessives agree with the thing owned", () => {
     const IRREGULAR_PLURAL = new Set(["children", "women", "men", "mice", "geese"]);
+    // The sentence itself says how many own it, so the other number's possessive is really wrong, not just less likely.
+    const ONE = /\b(Each|One|one|A|she|he|its)\b/;
+    const MANY = /\b(two|three|All|all|Both)\b/;
     for (const n of [1, 2])
       for (const e of picks("e.possessives", n, "en")) {
         const owner = e[5]!;
         expect(keyOf(e), e[0]).toBe(owner.endsWith("s") ? `${owner}'` : `${owner}'s`);
         expect(owner.endsWith("s") || IRREGULAR_PLURAL.has(owner), `${owner} plural at level ${n}`).toBe(n === 2);
+        if (n === 1) expect(/^[A-Z]/.test(owner) || ONE.test(e[0]), `${e[0]}: one owner is not fixed`).toBe(true);
+        else expect(IRREGULAR_PLURAL.has(owner) || MANY.test(e[0]), `${e[0]}: more than one owner is not fixed`).toBe(true);
       }
     for (const e of picks("e.possessives", 1, "es")) {
       expect(["mi", "mis", "tu", "tus", "su", "sus"], e[0]).toContain(lc(keyOf(e)));
@@ -368,6 +407,10 @@ describe("answer keys, checked another way (grade 3)", () => {
       if (when === "past") expect(key, s).toBe(ed(base!));
       if (when === "future") expect(key, s).toBe(`will ${base}`);
       if (when === "present") expect([base, s3(base!)], s).toContain(key);
+      // A future time word allows the present too ("Tomorrow the bus leaves at six"), so it is never a wrong choice there.
+      if (when === "future") for (const w of wrongOf(e)) expect([base, s3(base!)], `${s} offers ${w}`).not.toContain(w);
+      // "Every morning Kai walked his dog" is good English, so a present item joins a second present verb with "and".
+      if (when === "present") expect(s, s).toMatch(/ and /);
     }
     // Spanish regular conjugation for él/ella and ellos, with the stem changes and spelling changes these verbs need.
     const STEM: Record<string, string> = { contar: "cuent", nevar: "niev" };
@@ -383,6 +426,9 @@ describe("answer keys, checked another way (grade 3)", () => {
       const [inf, who] = base!.split("|");
       const when = /ayer|anoche|pasad|hace dos/i.test(s) ? "past" : /mañana |próximo|más tarde|en dos/i.test(s) ? "future" : "present";
       expect(key, s).toBe(conj(inf, who, when));
+      // Presente prospectivo ("Mañana salgo para Lima") is right with a future time word, so the present is never offered there.
+      if (when === "future") for (const w of wrongOf(e)) expect(w, `${s} offers the present`).not.toBe(conj(inf, who, "present"));
+      if (when === "present") expect(s, s).toMatch(/ y /);
     }
   });
 
@@ -408,6 +454,8 @@ describe("answer keys, checked another way (grade 3)", () => {
     for (const e of picks("e.comparatives", 2, "es")) {
       const [word, ...flags] = e[5]!.split("|");
       if (["grande", "grandes", "pequeño", "pequeña"].includes(word)) expect(flags, e[0]).toContain("edad");
+      // mayor or menor can only be decided when the sentence gives the ages (or says nobody is older).
+      if (flags.includes("edad")) expect((e[0].match(/\b(cinco|seis|siete|ocho|nueve|diez|once|doce)\b/g) ?? []).length >= 2 || /nadie tiene más años/.test(e[0]), e[0]).toBe(true);
       expect(keyOf(e), e[0]).toBe(ES_IRR[word] + (flags.includes("plural") ? "es" : ""));
     }
   });
@@ -535,6 +583,8 @@ describe("answer keys, checked another way (grade 4)", () => {
     for (const e of picks("e.progressive.tenses", 1, "es")) {
       const [inf, t, who] = e[5]!.split("|");
       expect(keyOf(e), e[0]).toBe(`${ESTAR[t][who]} ${gerund(inf)}`);
+      // Hint 2's rule: -er and -ir verbs whose stem ends in a vowel take -yendo (leer, leyendo).
+      if (!inf.endsWith("ar")) expect(keyOf(e).endsWith("yendo"), keyOf(e)).toBe(/[aeiou]$/.test(inf.slice(0, -2)));
     }
   });
 
@@ -554,7 +604,8 @@ describe("answer keys, checked another way (grade 4)", () => {
     for (const l of LOCALES)
       for (const e of labels("e.modal.verbs", 1, l)) {
         expect(MEANS[e[4]!], e[0]).toContain(e[1]);
-        expect(lc(e[0]), e[0]).toContain(e[4]!);
+        expect(lc(e[0].split("\n")[0]), e[0]).toContain(e[4]!);
+        expect(e[0].endsWith(`: ${e[4]}`), `${e[0]} names the word asked about`).toBe(true);
       }
   });
 
@@ -777,6 +828,7 @@ describe("answer keys, checked another way (grade 5)", () => {
         expect(tense(keyOf(e)), e[0]).not.toBe(tense(others[0]));
         expect(tense(e[5]!), `${e[0]} fix ${e[5]}`).toBe(tense(others[0]));
         for (const v of [keyOf(e), ...others]) expect(words(e[0]), `${v} in ${e[0]}`).toContain(v);
+        for (const v of [keyOf(e), ...others]) expect(hasWord(e[3], v), `hint 3 names ${v}`).toBe(false);
       }
   });
 
@@ -864,6 +916,8 @@ describe("answer keys, checked another way (grade 5)", () => {
       for (const e of picks("e.analogies", 2, l)) {
         expect(e[0], e[0]).toContain(e[5]!);
         expect(e[0].split("\n")[0].includes(e[5]!), `${e[5]} is in the sentence`).toBe(true);
+        // The worked line says "quiere decir …", so a meaning is never a bare "Del verbo …".
+        for (const m of [keyOf(e), ...wrongOf(e)]) expect(m, m).not.toMatch(/^Del /);
       }
     }
   });

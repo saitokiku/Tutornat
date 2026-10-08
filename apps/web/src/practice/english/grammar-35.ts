@@ -1525,8 +1525,8 @@ const PREPOSITIONS: Level[] = [
   {
     ask: bi("Which word is the preposition?", "¿Qué palabra es la preposición?"),
     hints: bi(
-      ["A preposition shows where, when, or how something is, compared with a noun.", "Prepositions include under, over, across, beside, behind, into, near, after, between, and around. Try putting each word before \"the box.\""],
-      ["Una preposición une una palabra con un sustantivo y dice dónde, cuándo o cómo.", "Algunas preposiciones son a, con, de, desde, durante, en, entre, hacia, hasta, para, por, sin, sobre y bajo."],
+      ["A preposition shows where, when, or how something is, compared with a noun.", "A preposition comes right before a noun and links it to the rest of the sentence, as in toward the door, against the wall, or through the rain. Nouns and action words do not do that job."],
+      ["Una preposición es la palabra que une un sustantivo y la oración; dice dónde, cuándo o cómo.", "Siempre la sigue un sustantivo: ante la puerta, contra la pared, tras la lluvia. Los sustantivos y los verbos no hacen ese trabajo."],
     ),
     seconds: 15,
     bank: pair(EN_PREP1.map(prepQ("en", false)), ES_PREP1.map(prepQ("es", false))),
