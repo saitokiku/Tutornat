@@ -3,7 +3,7 @@ import type { CatalogueEntry } from "./types";
 const rimasSilabasEs: CatalogueEntry = {
   id: "english-rhymes-syllables-es",
   title: "Rimas y sílabas",
-  summary: "Escucha palabras que riman, inventa rimas y aplaude las sílabas.",
+  summary: "Escucha rimas, inventa las tuyas y aplaude cada sílaba.",
   subject: "english",
   grade: "K",
   locale: "es",

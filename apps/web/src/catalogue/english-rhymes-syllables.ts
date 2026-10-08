@@ -3,7 +3,7 @@ import type { CatalogueEntry } from "./types";
 const rhymesSyllables: CatalogueEntry = {
   id: "english-rhymes-syllables",
   title: "Rhymes and syllables",
-  summary: "Hear rhymes, make rhymes, and clap the beats in words.",
+  summary: "Hear rhymes, make your own, and clap each syllable.",
   subject: "english",
   grade: "K",
   locale: "en",

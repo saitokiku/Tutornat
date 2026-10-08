@@ -5,15 +5,15 @@ import type { CatalogueEntry } from "./types";
 // sock") or heard in a whole word said slowly.
 const shortWords: CatalogueEntry = {
   id: "english-short-words",
-  title: "Reading short words",
-  summary: "Blend letter sounds to read short words and sentences.",
+  title: "Sound it out",
+  summary: "Phonics: blend letter sounds into cat, sun and pig. Then try short stories.",
   subject: "english",
   grade: "1",
   locale: "en",
   lessons: [
     {
       id: "sound-it-out",
-      title: "Sound it out",
+      title: "Letters and sounds",
       summary: "Say the sound of each letter. Then blend the sounds.",
       minutes: 10,
       scenes: [

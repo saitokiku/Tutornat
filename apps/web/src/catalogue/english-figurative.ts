@@ -66,24 +66,24 @@ const figurative: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Which sentence is literal?",
-              choices: ["The cat sat on the windowsill.", "The classroom was a zoo.", "Time flies when you're having fun."],
-              answer: 0,
+              choices: ["The classroom was a zoo.", "The cat sat on the windowsill.", "Time flies when you're having fun."],
+              answer: 1,
               hint: "Which one could happen exactly as it is written?",
               explain: "A cat really can sit on a windowsill. A classroom isn't a zoo, and time doesn't have wings.",
             },
             {
               id: "q2",
               prompt: "“This homework is a breeze.” What does the writer mean?",
-              choices: ["The homework is easy.", "The homework is about wind.", "The homework blew away."],
-              answer: 0,
+              choices: ["The homework is about wind.", "The homework blew away.", "The homework is easy."],
+              answer: 2,
               hint: "A breeze is a light, gentle wind. What would light homework be like?",
               explain: "Calling something a breeze means it is easy. It takes about as much effort as a gentle wind.",
             },
             {
               id: "q3",
               prompt: "Why might a writer say “my feet were blocks of ice” instead of “my feet were cold”?",
-              choices: ["To help the reader feel how cold they were", "Because the writer's feet turned into ice", "To make the sentence shorter"],
-              answer: 0,
+              choices: ["Because the writer's feet turned into ice", "To help the reader feel how cold they were", "To make the sentence shorter"],
+              answer: 1,
               hint: "Is the sentence meant to be true word for word?",
               explain: "Feet can't turn into ice. The picture of ice blocks makes you feel just how cold the writer's feet were.",
             },
@@ -181,8 +181,8 @@ const figurative: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Which sentence is a simile?",
-              choices: ["The test was as easy as pie.", "The test was easy.", "The test was a piece of cake."],
-              answer: 0,
+              choices: ["The test was easy.", "The test was a piece of cake.", "The test was as easy as pie."],
+              answer: 2,
               hint: "Look for like or as comparing two different things.",
               explain: "“As easy as pie” compares the test to pie using as. “A piece of cake” is an idiom with no like or as.",
             },
@@ -294,16 +294,16 @@ const figurative: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Coach said, “Hold your horses. The game hasn't started.” What did Coach mean?",
-              choices: ["Wait and be patient.", "Grab the horses.", "Run faster."],
-              answer: 0,
+              choices: ["Grab the horses.", "Wait and be patient.", "Run faster."],
+              answer: 1,
               hint: "There are no horses at the game. What is Coach asking the players to do?",
               explain: "“Hold your horses” means wait. The game hadn't started yet.",
             },
             {
               id: "q2",
               prompt: "Grandpa put down his newspaper and said, “I'm all ears.” What does he mean?",
-              choices: ["He is ready to listen.", "His ears are big.", "He cannot hear you."],
-              answer: 0,
+              choices: ["His ears are big.", "He cannot hear you.", "He is ready to listen."],
+              answer: 2,
               hint: "What are ears for? Why did he put down the paper?",
               explain: "“I'm all ears” means he is listening closely. Putting down the paper is a clue.",
             },
@@ -312,7 +312,7 @@ const figurative: CatalogueEntry = {
               prompt: "Lin planned a party before her parents said yes. Which proverb fits?",
               choices: ["Don't count your chickens before they hatch.", "Practice makes perfect.", "The early bird catches the worm."],
               answer: 0,
-              hint: "Lin is counting on something that hasn't happened yet.",
+              hint: "Lin is planning for something that may not happen.",
               explain: "Lin is planning a party that might not happen. That's counting your chickens before they hatch.",
             },
           ],
@@ -355,7 +355,7 @@ const figurative: CatalogueEntry = {
           blocks: [
             { type: "text", text: "Hyperbole is a huge exaggeration. The writer doesn't expect you to believe it." },
             { type: "points", items: ["I have a million things to do.", "I've told you a thousand times.", "This bag weighs a ton."] },
-            { type: "text", text: "Hyperbole shows how strongly someone feels: very busy, very annoyed, very tired." },
+            { type: "text", text: "Hyperbole says something very strongly: I'm very busy, I'm very annoyed, this bag is very heavy." },
           ],
         },
         {
@@ -386,16 +386,16 @@ const figurative: CatalogueEntry = {
             {
               id: "q1",
               prompt: "“The thunder grumbled in the distance.” What kind of figurative language is this?",
-              choices: ["Personification", "Simile", "Hyperbole"],
-              answer: 0,
+              choices: ["Simile", "Personification", "Hyperbole"],
+              answer: 1,
               hint: "Who usually grumbles?",
               explain: "People grumble. Giving that human action to thunder is personification.",
             },
             {
               id: "q2",
               prompt: "Which sentence is a hyperbole?",
-              choices: ["My backpack weighs a thousand pounds.", "My backpack is heavy.", "My backpack is like a turtle's shell."],
-              answer: 0,
+              choices: ["My backpack is heavy.", "My backpack is like a turtle's shell.", "My backpack weighs a thousand pounds."],
+              answer: 2,
               hint: "Which one is an exaggeration no one would believe?",
               explain: "No one could carry a thousand pounds, so the writer is exaggerating. “Like a turtle's shell” is a simile.",
             },
@@ -427,11 +427,11 @@ const figurative: CatalogueEntry = {
   ],
 };
 
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+/** Practice on the skill map that fits each lesson (lesson id → skill ids). Not linked from the lesson screen yet. */
 export const practice: Record<string, string[]> = {
   "literal-figurative": ["e.figurative"],
   "similes-metaphors": ["e.figurative"],
-  idioms: ["e.figurative"],
+  idioms: ["e.idioms.proverbs", "e.figurative"],
   "personification-hyperbole": ["e.figurative"],
 };
 

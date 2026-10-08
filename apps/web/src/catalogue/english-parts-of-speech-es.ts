@@ -3,7 +3,7 @@ import type { CatalogueEntry } from "./types";
 const partesOracionEs: CatalogueEntry = {
   id: "english-parts-of-speech-es",
   title: "Sustantivos, verbos y adjetivos",
-  summary: "Palabras que nombran, que dicen qué pasa y que describen.",
+  summary: "Los sustantivos nombran. Los verbos dicen qué pasa. Los adjetivos describen.",
   subject: "english",
   grade: "2",
   locale: "es",
@@ -36,11 +36,13 @@ const partesOracionEs: CatalogueEntry = {
         {
           id: "s2",
           kind: "slide",
-          title: "La prueba de el y la",
+          title: "¿Es un sustantivo?",
           blocks: [
-            { type: "text", text: "Los sustantivos suelen ir con el, la, un o una." },
-            { type: "text", text: "“La mesa” tiene sentido. Mesa es un sustantivo." },
-            { type: "text", text: "“El feliz” no tiene sentido. Feliz no es un sustantivo." },
+            { type: "text", text: "¿Nombra una persona, un animal, un lugar o una cosa?" },
+            { type: "text", text: "Lámpara nombra una cosa. Es un sustantivo." },
+            { type: "text", text: "También puedes contar: “dos lámparas” tiene sentido." },
+            { type: "text", text: "“Dos come” no tiene sentido. Come no es un sustantivo." },
+            { type: "points", items: ["Esta prueba sirve para muchos sustantivos.", "Los nombres como Ana no se cuentan. Igual son sustantivos."] },
           ],
         },
         {
@@ -60,7 +62,7 @@ const partesOracionEs: CatalogueEntry = {
           id: "s4",
           kind: "interactive",
           title: "¿Persona, lugar o cosa?",
-          prompt: "Ordena cada sustantivo. ¿Es una persona, un lugar o una cosa?",
+          prompt: "Clasifica cada sustantivo. ¿Es una persona, un lugar o una cosa?",
           widget: {
             kind: "sorter",
             categories: ["Persona", "Lugar", "Cosa"],
@@ -101,10 +103,10 @@ const partesOracionEs: CatalogueEntry = {
             {
               id: "q1",
               prompt: "¿Qué palabra es un sustantivo?",
-              choices: ["lámpara", "comer", "alto"],
-              answer: 0,
-              hint: "Prueba poner la o el antes de cada palabra.",
-              explain: "“La lámpara” tiene sentido. Una lámpara es una cosa.",
+              choices: ["come", "lámpara", "muy"],
+              answer: 1,
+              hint: "¿Cuál nombra una persona, un lugar o una cosa?",
+              explain: "“Dos lámparas” tiene sentido, y una lámpara es una cosa. Come dice lo que alguien hace. Muy dice cuánto.",
             },
             {
               id: "q2",
@@ -173,7 +175,7 @@ const partesOracionEs: CatalogueEntry = {
           id: "s3",
           kind: "interactive",
           title: "¿Sustantivo o verbo?",
-          prompt: "Ordena cada palabra. ¿Es un sustantivo o un verbo?",
+          prompt: "Clasifica cada palabra. ¿Es un sustantivo o un verbo?",
           widget: {
             kind: "sorter",
             categories: ["Sustantivo", "Verbo"],
@@ -213,8 +215,8 @@ const partesOracionEs: CatalogueEntry = {
             {
               id: "q1",
               prompt: "El bebé duerme en su cuna. ¿Qué palabra es el verbo?",
-              choices: ["bebé", "duerme", "cuna"],
-              answer: 1,
+              choices: ["bebé", "cuna", "duerme"],
+              answer: 2,
               hint: "¿De quién habla la oración? ¿Qué hace el bebé?",
               explain: "Duerme dice lo que hace el bebé. Por eso es el verbo.",
             },
@@ -229,8 +231,8 @@ const partesOracionEs: CatalogueEntry = {
             {
               id: "q3",
               prompt: "¿Qué verbo termina como comer?",
-              choices: ["correr", "cantar", "subir"],
-              answer: 0,
+              choices: ["cantar", "correr", "subir"],
+              answer: 1,
               hint: "Fíjate en las dos últimas letras.",
               explain: "Correr y comer terminan en er. Cantar termina en ar. Subir termina en ir.",
             },
@@ -282,7 +284,7 @@ const partesOracionEs: CatalogueEntry = {
           id: "s3",
           kind: "interactive",
           title: "¿Sustantivo, verbo o adjetivo?",
-          prompt: "Lee: El perro hambriento come un hueso grande. Ordena cada palabra.",
+          prompt: "Lee: El perro hambriento come un hueso grande. Clasifica cada palabra.",
           widget: {
             kind: "sorter",
             categories: ["Sustantivo", "Verbo", "Adjetivo"],
@@ -321,24 +323,24 @@ const partesOracionEs: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Comimos un durazno jugoso. ¿Qué palabra es el adjetivo?",
-              choices: ["jugoso", "Comimos", "durazno"],
-              answer: 0,
+              choices: ["Comimos", "durazno", "jugoso"],
+              answer: 2,
               hint: "Busca primero el sustantivo. Luego busca cómo es.",
               explain: "Durazno es el sustantivo. Jugoso dice cómo es el durazno.",
             },
             {
               id: "q2",
               prompt: "¿Cuál está bien dicho?",
-              choices: ["las flores amarillas", "las flores amarillo", "la flores amarillas"],
-              answer: 0,
+              choices: ["las flores amarillo", "las flores amarillas", "la flores amarillas"],
+              answer: 1,
               hint: "Flores es femenino y plural. ¿Y las otras palabras?",
               explain: "Flores es femenino y plural. Las y amarillas también. Las tres concuerdan.",
             },
             {
               id: "q3",
               prompt: "La biblioteca está tranquila. ¿Qué palabra dice cómo está?",
-              choices: ["está", "tranquila", "La"],
-              answer: 1,
+              choices: ["tranquila", "biblioteca", "está"],
+              answer: 0,
               hint: "¿Cómo está la biblioteca?",
               explain: "Tranquila describe la biblioteca. Aquí el adjetivo va después del verbo.",
             },
@@ -389,8 +391,8 @@ const partesOracionEs: CatalogueEntry = {
         {
           id: "s3",
           kind: "interactive",
-          title: "Ordena las palabras",
-          prompt: "Lee: La niña pequeña patea una pelota roja. Ordena cada palabra.",
+          title: "Clasifica las palabras",
+          prompt: "Lee: La niña pequeña patea una pelota roja. Clasifica cada palabra.",
           widget: {
             kind: "sorter",
             categories: ["Sustantivo", "Verbo", "Adjetivo"],
@@ -411,8 +413,8 @@ const partesOracionEs: CatalogueEntry = {
             {
               id: "q1",
               prompt: "¿Qué oración tiene un adjetivo?",
-              choices: ["El árbol alto se mueve.", "El árbol se mueve.", "Los árboles se mueven."],
-              answer: 0,
+              choices: ["El árbol se mueve.", "Los árboles se mueven.", "El árbol alto se mueve."],
+              answer: 2,
               hint: "Busca una palabra que diga cómo es el árbol.",
               explain: "Alto describe al árbol. Las otras dos oraciones no tienen adjetivo.",
             },

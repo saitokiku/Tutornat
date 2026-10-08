@@ -3,7 +3,7 @@ import type { CatalogueEntry } from "./types";
 const partsOfSpeech: CatalogueEntry = {
   id: "english-parts-of-speech",
   title: "Nouns, verbs and adjectives",
-  summary: "Find the words that name, show action, and describe.",
+  summary: "Nouns name. Verbs show action. Adjectives describe.",
   subject: "english",
   grade: "2",
   locale: "en",
@@ -88,8 +88,8 @@ const partsOfSpeech: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Which word is a noun?",
-              choices: ["lamp", "eat", "tall"],
-              answer: 0,
+              choices: ["eat", "lamp", "tall"],
+              answer: 1,
               hint: "Put the in front of each word.",
               explain: "“The lamp” makes sense. A lamp is a thing, so lamp is a noun.",
             },
@@ -103,11 +103,11 @@ const partsOfSpeech: CatalogueEntry = {
             },
             {
               id: "q3",
-              prompt: "Is happy a noun?",
+              prompt: "Rosa says happy is not a noun. Is she right?",
               choices: ["Yes", "No"],
-              answer: 1,
+              answer: 0,
               hint: "Does happy name a person, place or thing?",
-              explain: "Happy tells how someone feels. It does not name a person, place or thing.",
+              explain: "Rosa is right. Happy tells how someone feels. It does not name a person, place or thing.",
             },
           ],
         },
@@ -197,8 +197,8 @@ const partsOfSpeech: CatalogueEntry = {
             {
               id: "q1",
               prompt: "The baby sleeps in her crib. Which word is the verb?",
-              choices: ["baby", "sleeps", "crib"],
-              answer: 1,
+              choices: ["baby", "crib", "sleeps"],
+              answer: 2,
               hint: "Who is the sentence about? What does the baby do?",
               explain: "Sleeps tells what the baby does. So sleeps is the verb.",
             },
@@ -308,24 +308,24 @@ const partsOfSpeech: CatalogueEntry = {
             {
               id: "q1",
               prompt: "We ate a juicy peach. Which word is the adjective?",
-              choices: ["juicy", "ate", "peach"],
-              answer: 0,
+              choices: ["ate", "peach", "juicy"],
+              answer: 2,
               hint: "Find the noun first. Then find the word that tells about it.",
               explain: "Peach is the noun. Juicy tells what the peach is like.",
             },
             {
               id: "q2",
               prompt: "Which adjective tells a color?",
-              choices: ["purple", "loud", "tall"],
-              answer: 0,
+              choices: ["loud", "purple", "tall"],
+              answer: 1,
               hint: "Which word could you find in a box of crayons?",
               explain: "Purple is a color. Loud tells about sound. Tall tells about size.",
             },
             {
               id: "q3",
               prompt: "The library is quiet. Which word describes the library?",
-              choices: ["is", "quiet", "the"],
-              answer: 1,
+              choices: ["quiet", "library", "is"],
+              answer: 0,
               hint: "What is the library like?",
               explain: "Quiet tells what the library is like. Here the adjective comes after the noun.",
             },
@@ -398,10 +398,10 @@ const partsOfSpeech: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Which sentence has an adjective?",
-              choices: ["The tall tree sways.", "The tree sways.", "Trees sway."],
-              answer: 0,
-              hint: "Look for a word that describes the tree.",
-              explain: "Tall describes the tree. The other two sentences have no adjective.",
+              choices: ["Trees sway.", "Birds sing.", "Tall trees sway."],
+              answer: 2,
+              hint: "Look for a word that describes the trees.",
+              explain: "Tall describes the trees. The other two sentences have no adjective.",
             },
             {
               id: "q2",
@@ -439,7 +439,10 @@ const partsOfSpeech: CatalogueEntry = {
   ],
 };
 
-/** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+/**
+ * Practice on the skill map that fits each lesson (lesson id → skill ids). Not linked from the lesson screen yet.
+ * e.adjectives sits at grade 3 on the map (L.3.1a), but its items are this lesson's kind: find the word that describes.
+ */
 export const practice: Record<string, string[]> = {
   nouns: ["e.nouns.verbs"],
   verbs: ["e.nouns.verbs"],
