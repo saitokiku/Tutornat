@@ -8,8 +8,8 @@ import { bi, e, m, mx, type Bank } from "./shared";
 export const PHOTO_IO: Bank = {
   nudge: bi("Is this about making sugar or about using sugar?", "¿Se trata de producir azúcar o de usar azúcar?"),
   strategy: bi(
-    "Photosynthesis: carbon dioxide + water + light energy → sugar (glucose) + oxygen, in chloroplasts. Cellular respiration runs the other way: sugar + oxygen → carbon dioxide + water + usable energy, in mitochondria.",
-    "Fotosíntesis: dióxido de carbono + agua + energía de la luz → azúcar (glucosa) + oxígeno, en los cloroplastos. La respiración celular va al revés: azúcar + oxígeno → dióxido de carbono + agua + energía utilizable, en las mitocondrias.",
+    "First decide which process the question is about: the one that builds sugar using light, or the one that breaks sugar down to release energy. What comes out of one process is what goes into the other.",
+    "Primero decide de qué proceso trata la pregunta: el que produce azúcar con la luz o el que descompone el azúcar para liberar energía. Lo que sale de un proceso es lo que entra en el otro.",
   ),
   seconds: 25,
   items: [
@@ -19,7 +19,7 @@ export const PHOTO_IO: Bank = {
       [
         m("swapped-inputs-outputs", "Glucose and oxygen", "Glucosa y oxígeno"),
         m("thinks-plants-eat-soil", "Soil nutrients and oxygen", "Nutrientes del suelo y oxígeno"),
-        m("mixed-up-gases", "Oxygen, water, and light energy", "Oxígeno, agua y energía de la luz"),
+        m("mixed-up-gases", "Oxygen gas, water, and energy from light", "Oxígeno gaseoso, agua y energía que viene de la luz"),
       ],
       bi("A plant takes in a gas through its leaves and water through its roots.", "Una planta toma un gas por sus hojas y agua por sus raíces."),
       bi("Plants use light energy to combine carbon dioxide and water into sugar.", "Las plantas usan la energía de la luz para combinar dióxido de carbono y agua y formar azúcar."),
@@ -50,7 +50,7 @@ export const PHOTO_IO: Bank = {
       bi("What are the products of cellular respiration?", "¿Cuáles son los productos de la respiración celular?"),
       bi("Carbon dioxide, water, and usable energy", "Dióxido de carbono, agua y energía utilizable"),
       [
-        m("swapped-inputs-outputs", "Glucose and oxygen", "Glucosa y oxígeno"),
+        m("swapped-inputs-outputs", "Glucose, oxygen, and stored light energy", "Glucosa, oxígeno y energía de la luz guardada"),
         m("confused-photosynthesis-respiration", "Sugar and light", "Azúcar y luz"),
         m("mixed-up-gases", "Oxygen and water", "Oxígeno y agua"),
       ],
@@ -73,7 +73,7 @@ export const PHOTO_IO: Bank = {
     ),
     e(
       bi("Which living things carry out cellular respiration?", "¿Qué seres vivos realizan la respiración celular?"),
-      bi("Both plants and animals", "Tanto las plantas como los animales"),
+      bi("Both plants and animals", "Las plantas y los animales"),
       [
         m("thinks-plants-dont-respire", "Only animals", "Solo los animales"),
         m("confused-photosynthesis-respiration", "Only plants", "Solo las plantas"),
@@ -86,7 +86,7 @@ export const PHOTO_IO: Bank = {
       bi("Most of the dry mass of a big tree's wood came from where?", "¿De dónde vino la mayor parte de la masa seca de la madera de un árbol grande?"),
       bi("Carbon dioxide taken in from the air", "Del dióxido de carbono que tomó del aire"),
       [
-        m("thinks-mass-from-soil", "Minerals taken in from the soil", "De los minerales que tomó del suelo"),
+        m("thinks-mass-from-soil", "Minerals taken in from the soil by the roots", "De los minerales que sus raíces tomaron del suelo"),
         m("thinks-light-is-matter", "Sunlight that turned into wood", "De la luz del Sol que se convirtió en madera"),
         m("thinks-mass-from-soil", "Fertilizer added by people", "Del fertilizante que agregaron las personas"),
       ],
@@ -97,7 +97,7 @@ export const PHOTO_IO: Bank = {
       bi("How does carbon dioxide get into a leaf?", "¿Cómo entra el dióxido de carbono a una hoja?"),
       bi("Through tiny openings called stomata", "Por pequeñas aberturas llamadas estomas"),
       [
-        m("thinks-roots-take-co2", "Up through the roots from the soil", "Subiendo por las raíces desde el suelo"),
+        m("thinks-roots-take-co2", "Up through the roots from the soil around them", "Subiendo por las raíces desde el suelo que las rodea"),
         m("thinks-co2-made-in-leaf", "The leaf makes it from water", "La hoja lo produce a partir del agua"),
         m("thinks-plants-eat-soil", "Through the flowers, with pollen", "Por las flores, con el polen"),
       ],
@@ -117,7 +117,7 @@ export const PHOTO_IO: Bank = {
     ),
     e(
       bi("Photosynthesis changes light energy into which kind of energy?", "¿En qué tipo de energía convierte la fotosíntesis la energía de la luz?"),
-      bi("Chemical energy stored in sugar", "Energía química guardada en el azúcar"),
+      bi("Chemical energy", "Energía química"),
       [m("energy-type-mixup", "Thermal energy", "Energía térmica"), m("energy-type-mixup", "Kinetic energy", "Energía cinética"), m("energy-type-mixup", "Electrical energy", "Energía eléctrica")],
       bi("The energy ends up stored in the bonds of a molecule.", "La energía termina guardada en los enlaces de una molécula."),
       bi("The energy of light is stored as chemical energy in glucose, which cells release later in respiration.", "La energía de la luz se guarda como energía química en la glucosa, que las células liberan después en la respiración."),
@@ -131,7 +131,7 @@ export const PHOTO_IO: Bank = {
     ),
     e(
       bi("A plant sits in bright sunlight. Are its cells doing cellular respiration?", "Una planta está bajo luz solar intensa. ¿Sus células están haciendo respiración celular?"),
-      bi("Yes; plant cells respire all the time, day and night.", "Sí; las células de la planta respiran todo el tiempo, de día y de noche."),
+      bi("Yes; plant cells respire all the time, day and night.", "Sí; las células vegetales respiran de día y de noche."),
       [
         m("thinks-respiration-only-at-night", "No; plants respire only at night.", "No; las plantas solo respiran de noche."),
         m("thinks-plants-dont-respire", "No; plants never respire.", "No; las plantas nunca respiran."),
@@ -146,8 +146,8 @@ export const PHOTO_IO: Bank = {
 export const MATTER_ENERGY: Bank = {
   nudge: bi("Is the question about matter (atoms) or about energy?", "¿La pregunta trata de la materia (los átomos) o de la energía?"),
   strategy: bi(
-    "Matter cycles: the same atoms move between air, soil, and living things again and again. Energy flows one way: from the Sun to producers to consumers, and about 90% is given off as heat at each step.",
-    "La materia circula: los mismos átomos pasan una y otra vez entre el aire, el suelo y los seres vivos. La energía fluye en un solo sentido: del Sol a los productores y a los consumidores, y cerca del 90% se libera como calor en cada paso.",
+    "Decide whether the question follows matter (atoms you could count) or energy. Track it one step at a time, and ask where it goes next and whether living things can use it again.",
+    "Decide si la pregunta sigue a la materia (átomos que podrías contar) o a la energía. Síguela paso a paso y pregúntate a dónde va después y si los seres vivos la pueden volver a usar.",
   ),
   seconds: 30,
   items: [
@@ -155,7 +155,7 @@ export const MATTER_ENERGY: Bank = {
       bi("Which statement about an ecosystem is true?", "¿Qué enunciado sobre un ecosistema es verdadero?"),
       bi("Matter cycles, but energy flows through in one direction.", "La materia circula, pero la energía fluye en un solo sentido."),
       [
-        m("swapped-matter-energy", "Energy cycles, but matter flows through and is used up.", "La energía circula, pero la materia fluye y se gasta."),
+        m("swapped-matter-energy", "Energy cycles, but matter flows through once and is used up.", "La energía circula, pero la materia fluye una sola vez y se gasta."),
         m("thinks-matter-destroyed", "Both matter and energy are used up.", "Tanto la materia como la energía se gastan."),
         m("thinks-energy-recycles", "Both matter and energy cycle forever.", "Tanto la materia como la energía circulan para siempre."),
       ],
@@ -166,7 +166,7 @@ export const MATTER_ENERGY: Bank = {
       bi("What happens to most of the energy at each level of a food chain?", "¿Qué pasa con la mayor parte de la energía en cada nivel de una cadena alimentaria?"),
       bi("It is used for life processes and given off as heat.", "Se usa en los procesos de la vida y se libera como calor."),
       [
-        m("thinks-all-energy-passes", "It is all stored and passed to the next level.", "Toda se guarda y pasa al siguiente nivel."),
+        m("thinks-all-energy-passes", "It is all stored in the body and passed to the next level.", "Toda se guarda en el cuerpo y pasa completa al siguiente nivel."),
         m("thinks-energy-destroyed", "It is destroyed.", "Se destruye."),
         m("thinks-energy-recycles", "It returns to the Sun.", "Regresa al Sol."),
       ],
@@ -197,11 +197,11 @@ export const MATTER_ENERGY: Bank = {
     ),
     e(
       bi("What do decomposers do in the cycling of matter?", "¿Qué hacen los descomponedores en el ciclo de la materia?"),
-      bi("Break down dead matter and return nutrients to the soil and air", "Descomponen la materia muerta y devuelven nutrientes al suelo y al aire"),
+      bi("Break down dead matter and return nutrients to the soil", "Descomponen la materia muerta y devuelven nutrientes al suelo"),
       [
         m("confused-producers-decomposers", "Make food from sunlight", "Producen alimento con la luz del Sol"),
         m("confused-consumers-decomposers", "Hunt and eat living animals", "Cazan y comen animales vivos"),
-        m("thinks-matter-destroyed", "Destroy matter so that it is gone", "Destruyen la materia para que desaparezca"),
+        m("thinks-matter-destroyed", "Destroy dead matter so that it is gone from the ecosystem", "Destruyen la materia muerta para que desaparezca del ecosistema"),
       ],
       bi("Think of mushrooms and worms on a rotting log.", "Piensa en hongos y lombrices sobre un tronco que se pudre."),
       bi("Fungi and bacteria break down dead things into carbon dioxide, water, and nutrients that producers use again.", "Los hongos y las bacterias descomponen los seres muertos en dióxido de carbono, agua y nutrientes que los productores vuelven a usar."),
@@ -216,7 +216,7 @@ export const MATTER_ENERGY: Bank = {
     e(
       bi("Which process returns carbon to the air as carbon dioxide?", "¿Qué proceso devuelve carbono al aire en forma de dióxido de carbono?"),
       bi("Cellular respiration", "La respiración celular"),
-      [m("reversed-carbon-flow", "Photosynthesis", "La fotosíntesis"), m("confused-water-cycle", "Condensation", "La condensación"), m("confused-water-cycle", "Precipitation", "La precipitación")],
+      [m("reversed-carbon-flow", "Photosynthesis", "La fotosíntesis"), m("confused-water-cycle", "Evaporation of seawater", "La evaporación del agua de mar"), m("confused-water-cycle", "Precipitation", "La precipitación")],
       bi("You do this process every time you breathe out.", "Haces este proceso cada vez que exhalas."),
       bi("Living things break down sugar in respiration and release carbon dioxide into the air.", "Los seres vivos descomponen el azúcar en la respiración y liberan dióxido de carbono al aire."),
     ),
@@ -226,14 +226,14 @@ export const MATTER_ENERGY: Bank = {
       [
         m("ignores-energy-loss", "Hawks live longer, so fewer are needed.", "Los halcones viven más, así que se necesitan menos."),
         m("confused-producers-consumers", "Hawks make their own food.", "Los halcones producen su propio alimento."),
-        m("thinks-all-energy-passes", "Mice pass all of their energy to hawks.", "Los ratones pasan toda su energía a los halcones."),
+        m("thinks-all-energy-passes", "Mice pass all of the energy they eat to the hawks that eat them.", "Los ratones les pasan toda la energía que comen a los halcones que se los comen."),
       ],
       bi("Each level gets only a small part of the energy of the level below.", "Cada nivel recibe solo una pequeña parte de la energía del nivel de abajo."),
       bi("Because about 90% of the energy is lost at each step, the energy in many mice supports only a few hawks.", "Como cerca del 90% de la energía se pierde en cada paso, la energía de muchos ratones alcanza solo para unos pocos halcones."),
     ),
     e(
       bi("Where did the atoms in a rabbit's body come from?", "¿De dónde vinieron los átomos del cuerpo de un conejo?"),
-      bi("From the plants it ate, which built them from air, water, and soil minerals", "De las plantas que comió, que los tomaron del aire, del agua y de los minerales del suelo"),
+      bi("From the plants it ate", "De las plantas que comió"),
       [
         m("thinks-light-is-matter", "From sunlight that turned into matter", "De la luz del Sol que se convirtió en materia"),
         m("thinks-matter-created", "The rabbit's body made new atoms", "El cuerpo del conejo creó átomos nuevos"),
@@ -244,10 +244,10 @@ export const MATTER_ENERGY: Bank = {
     ),
     e(
       bi("A fallen log rots away over several years. What happens to its matter?", "Un tronco caído se pudre durante varios años. ¿Qué pasa con su materia?"),
-      bi("Decomposers change it into carbon dioxide, water, and nutrients that other living things use.", "Los descomponedores la convierten en dióxido de carbono, agua y nutrientes que otros seres vivos usan."),
+      bi("Decomposers turn it into gases and nutrients.", "Los descomponedores la convierten en gases y nutrientes."),
       [
         m("thinks-matter-destroyed", "It disappears completely.", "Desaparece por completo."),
-        m("thinks-matter-becomes-energy", "It turns into energy.", "Se convierte en energía."),
+        m("thinks-matter-becomes-energy", "It turns completely into heat energy that warms the forest.", "Se convierte por completo en energía térmica que calienta el bosque."),
         m("confused-water-cycle", "It evaporates like water.", "Se evapora como el agua."),
       ],
       bi("The atoms in the log have to go somewhere.", "Los átomos del tronco tienen que ir a algún lado."),
@@ -255,7 +255,7 @@ export const MATTER_ENERGY: Bank = {
     ),
     e(
       bi("Which level of an energy pyramid has the most energy?", "¿Qué nivel de una pirámide de energía tiene más energía?"),
-      bi("Producers, at the bottom", "Los productores, en la base"),
+      bi("Producers", "Los productores"),
       [m("inverted-pyramid", "Top predators", "Los superdepredadores"), m("inverted-pyramid", "Secondary consumers", "Los consumidores secundarios"), m("inverted-pyramid", "Primary consumers", "Los consumidores primarios")],
       bi("Energy is lost at every step up.", "Se pierde energía en cada paso hacia arriba."),
       bi("All the energy for the pyramid enters through the producers, and each level above has less.", "Toda la energía de la pirámide entra por los productores, y cada nivel de arriba tiene menos."),
@@ -285,14 +285,14 @@ export const MATTER_ENERGY: Bank = {
 
 const ELEMENT = bi("An element", "Un elemento");
 const COMPOUND = bi("A compound", "Un compuesto");
-const HOMO = bi("A homogeneous mixture (solution)", "Una mezcla homogénea (disolución)");
+const HOMO = bi("A homogeneous mixture", "Una mezcla homogénea");
 const HETERO = bi("A heterogeneous mixture", "Una mezcla heterogénea");
 
 export const MIXTURES: Bank = {
   nudge: bi("Is it one kind of atom, atoms joined in a fixed ratio, or substances just mixed together?", "¿Es un solo tipo de átomo, átomos unidos en una proporción fija o sustancias solo mezcladas?"),
   strategy: bi(
-    "An element has one kind of atom. A compound has elements chemically joined in a fixed ratio. A mixture has substances mixed in any amounts that can be separated by physical means, like filtering or evaporating.",
-    "Un elemento tiene un solo tipo de átomo. Un compuesto tiene elementos unidos químicamente en una proporción fija. Una mezcla tiene sustancias combinadas en cualquier cantidad que se pueden separar por medios físicos, como filtrar o evaporar.",
+    "Ask two questions. How many kinds of atoms are there? If more than one, are they chemically joined in a fixed ratio, or just mixed, so that a physical method could pull them apart?",
+    "Hazte dos preguntas. ¿Cuántos tipos de átomos hay? Si hay más de uno, ¿están unidos químicamente en una proporción fija o solo mezclados, de modo que un método físico podría separarlos?",
   ),
   seconds: 20,
   items: [
@@ -343,7 +343,7 @@ export const MIXTURES: Bank = {
       bi("Pour it through a filter", "Pasarla por un filtro"),
       [
         m("wrong-separation-method", "Use a magnet", "Usar un imán"),
-        m("loses-a-part", "Boil away the water", "Hervir el agua hasta que se evapore"),
+        m("loses-a-part", "Boil the water until it is gone", "Hervir el agua hasta que se evapore"),
         m("thinks-stirring-separates", "Stir it quickly", "Revolverla rápido"),
       ],
       bi("Sand grains are too big to pass through tiny holes.", "Los granos de arena son demasiado grandes para pasar por agujeros diminutos."),
@@ -375,7 +375,7 @@ export const MIXTURES: Bank = {
       bi("Sodium is a soft metal that reacts with water, and chlorine is a poisonous green gas. Together they form table salt, which is safe to eat. What does this show?", "El sodio es un metal blando que reacciona con el agua, y el cloro es un gas verde venenoso. Juntos forman la sal de mesa, que se puede comer. ¿Qué muestra esto?"),
       bi("A compound can have very different properties from its elements.", "Un compuesto puede tener propiedades muy distintas a las de sus elementos."),
       [
-        m("thinks-compound-keeps-properties", "A compound keeps the properties of its elements.", "Un compuesto conserva las propiedades de sus elementos."),
+        m("thinks-compound-keeps-properties", "A compound keeps all of the properties of the elements that form it.", "Un compuesto conserva todas las propiedades de los elementos que lo forman."),
         m("compound-mixture-mixup", "Table salt is a mixture of sodium and chlorine.", "La sal de mesa es una mezcla de sodio y cloro."),
         m("element-compound-mixup", "Table salt is an element.", "La sal de mesa es un elemento."),
       ],
@@ -429,8 +429,8 @@ const PHYSICAL = bi("A physical change", "Un cambio físico");
 export const REACTION_SIGNS: Bank = {
   nudge: bi("Did a new substance form, or did the same substance just change form?", "¿Se formó una sustancia nueva o la misma sustancia solo cambió de forma?"),
   strategy: bi(
-    "Signs of a chemical reaction: a gas forms (not from boiling), a new color appears, the temperature changes on its own, a solid (precipitate) forms from two liquids, light is given off, or a new smell appears. Melting, boiling, dissolving, and mixing colors are physical changes.",
-    "Señales de una reacción química: se forma un gas (no por hervir), aparece un color nuevo, la temperatura cambia sola, se forma un sólido (precipitado) a partir de dos líquidos, se emite luz o aparece un olor nuevo. Fundirse, hervir, disolverse y mezclar colores son cambios físicos.",
+    "Ask whether a substance with new properties formed. Could you get the starting substances back with a simple step such as cooling, drying, or sorting? If not, and something new appeared, a reaction happened.",
+    "Pregúntate si se formó una sustancia con propiedades nuevas. ¿Podrías recuperar las sustancias del principio con un paso sencillo, como enfriar, secar o separar? Si no, y apareció algo nuevo, ocurrió una reacción.",
   ),
   seconds: 25,
   items: [
@@ -448,7 +448,7 @@ export const REACTION_SIGNS: Bank = {
     e(
       bi("Two clear liquids are mixed, and a cloudy solid forms and settles to the bottom. What is the solid called?", "Se mezclan dos líquidos transparentes y se forma un sólido turbio que se asienta en el fondo. ¿Cómo se llama el sólido?"),
       bi("A precipitate", "Un precipitado"),
-      [m("precipitate-solution-mixup", "A solution", "Una disolución"), m("precipitate-solution-mixup", "A solvent", "Un disolvente"), m("physical-change-as-reaction", "Ice", "Hielo")],
+      [m("precipitate-solution-mixup", "A solution", "Una disolución"), m("precipitate-solution-mixup", "A solvent", "Un disolvente"), m("physical-change-as-reaction", "A block of ice", "Un bloque de hielo")],
       bi("It comes out of the liquid as a new solid.", "Sale del líquido como un sólido nuevo."),
       bi("A solid that forms when two liquids react is a precipitate, a sign that a new substance formed.", "Un sólido que se forma cuando reaccionan dos líquidos es un precipitado, una señal de que se formó una sustancia nueva."),
     ),
@@ -473,14 +473,14 @@ export const REACTION_SIGNS: Bank = {
     e(
       bi("A hand warmer packet gets hot when air reaches the iron powder inside. Which sign of a chemical reaction is this?", "Un calentador de manos se calienta cuando el aire llega al polvo de hierro de adentro. ¿Qué señal de reacción química es esta?"),
       bi("A temperature change", "Un cambio de temperatura"),
-      [m("wrong-sign-named", "A precipitate forms", "Se forma un precipitado"), m("wrong-sign-named", "A gas forms", "Se forma un gas"), m("wrong-sign-named", "Light is given off", "Se emite luz")],
+      [m("wrong-sign-named", "A precipitate forms", "Se forma un precipitado"), m("wrong-sign-named", "A gas forms and bubbles", "Se forma un gas con burbujas"), m("wrong-sign-named", "Light is given off", "Se emite luz")],
       bi("What do you feel with your hands?", "¿Qué sientes con las manos?"),
       bi("Iron reacting with oxygen releases energy as heat. The temperature rising on its own is the sign.", "El hierro que reacciona con el oxígeno libera energía en forma de calor. Que la temperatura suba sola es la señal."),
     ),
     e(
       bi("Bread is toasted. It turns brown and smells different. What kind of change is this?", "Se tuesta pan. Se pone café y huele distinto. ¿Qué tipo de cambio es este?"),
       CHEMICAL,
-      [mx("physical-change-as-reaction", PHYSICAL), m("thinks-heat-only-melts", "Melting", "Una fusión")],
+      [mx("physical-change-as-reaction", PHYSICAL), m("thinks-heat-only-melts", "A change of state, like melting", "Un cambio de estado, como fundirse")],
       bi("Can you turn toast back into bread?", "¿Puedes volver a convertir el pan tostado en pan?"),
       bi("Browning and a new smell show that new substances formed on the surface of the bread.", "El color café y el olor nuevo muestran que se formaron sustancias nuevas en la superficie del pan."),
     ),
@@ -504,9 +504,9 @@ export const REACTION_SIGNS: Bank = {
     ),
     e(
       bi("A shiny iron nail left outside slowly gets a flaky orange-brown coating. What happened?", "Un clavo de hierro brillante que se deja afuera se cubre poco a poco de una capa escamosa café anaranjada. ¿Qué pasó?"),
-      bi("Iron reacted with oxygen and water to form a new substance, rust.", "El hierro reaccionó con oxígeno y agua y formó una sustancia nueva, el óxido."),
+      bi("Iron reacted with oxygen and water to form rust.", "El hierro reaccionó con oxígeno y agua y formó óxido."),
       [
-        m("physical-change-as-reaction", "The iron got dirty, but it is still iron.", "El hierro se ensució, pero sigue siendo hierro."),
+        m("physical-change-as-reaction", "The iron got dirty from the rain, but it is still the same iron.", "El hierro se ensució con la lluvia, pero sigue siendo el mismo hierro."),
         m("color-mixing-as-reaction", "Orange paint from the air stuck to the nail.", "Pintura anaranjada del aire se pegó al clavo."),
         m("melting-as-reaction", "The iron melted in the sun.", "El hierro se derritió con el sol."),
       ],
@@ -534,15 +534,15 @@ export const REACTION_SIGNS: Bank = {
     e(
       bi("Milk left out too long smells sour and gets lumpy. What kind of change is this?", "La leche que se deja afuera demasiado tiempo huele agria y se pone grumosa. ¿Qué tipo de cambio es este?"),
       CHEMICAL,
-      [mx("physical-change-as-reaction", PHYSICAL), m("thinks-heat-only-melts", "Freezing", "Una congelación")],
+      [mx("physical-change-as-reaction", PHYSICAL), m("thinks-heat-only-melts", "A change of state, like freezing", "Un cambio de estado, como congelarse")],
       bi("A new smell is one of the signs.", "Un olor nuevo es una de las señales."),
       bi("Bacteria change sugar in the milk into an acid, a new substance, so the smell and texture change.", "Las bacterias convierten el azúcar de la leche en un ácido, una sustancia nueva, así que cambian el olor y la textura."),
     ),
     e(
       bi("Before: a shiny, silver metal ribbon. After burning: a white powder with different properties. Did a chemical reaction happen?", "Antes: una cinta de metal plateada y brillante. Después de arder: un polvo blanco con propiedades distintas. ¿Ocurrió una reacción química?"),
-      bi("Yes; the product has different properties, so it is a new substance.", "Sí; el producto tiene propiedades distintas, así que es una sustancia nueva."),
+      bi("Yes; the product is a new substance.", "Sí; el producto es una sustancia nueva."),
       [
-        m("physical-change-as-reaction", "No; the metal only changed shape.", "No; el metal solo cambió de forma."),
+        m("physical-change-as-reaction", "No; the metal only changed its shape.", "No; el metal solo cambió de forma al arder."),
         m("melting-as-reaction", "No; the metal only melted.", "No; el metal solo se derritió."),
         m("thinks-color-alone-decides", "Only if the powder is a new color.", "Solo si el polvo es de un color nuevo."),
       ],
@@ -557,17 +557,17 @@ export const REACTION_SIGNS: Bank = {
 export const RESOURCES: Bank = {
   nudge: bi("How long did this resource take to form, and what geologic process made it?", "¿Cuánto tardó en formarse este recurso y qué proceso geológico lo formó?"),
   strategy: bi(
-    "Fossil fuels formed from buried remains over millions of years; metal ores often formed near magma; salt formed where seas evaporated; groundwater collects in porous rock. Because each needs special conditions, resources are spread unevenly.",
-    "Los combustibles fósiles se formaron de restos enterrados durante millones de años; los minerales metálicos a menudo se formaron cerca del magma; la sal se formó donde se evaporaron mares; el agua subterránea se junta en roca porosa. Como cada uno necesita condiciones especiales, los recursos están repartidos de forma desigual.",
+    "Ask what special conditions the resource needed to form, and where on Earth those conditions happened. Then compare how long it takes to form with how fast people use it.",
+    "Pregúntate qué condiciones especiales necesitó el recurso para formarse y en qué lugares de la Tierra se dieron. Luego compara cuánto tarda en formarse con qué tan rápido lo usan las personas.",
   ),
   seconds: 30,
   items: [
     e(
       bi("Why are coal, oil, and natural gas called nonrenewable?", "¿Por qué el carbón, el petróleo y el gas natural se llaman no renovables?"),
-      bi("They take millions of years to form, far longer than we take to use them.", "Tardan millones de años en formarse, mucho más de lo que tardamos en usarlos."),
+      bi("They form far more slowly than we use them.", "Se forman mucho más despacio de lo que los usamos."),
       [
         m("uneven-means-nonrenewable", "They are found in only a few places.", "Se encuentran solo en algunos lugares."),
-        m("thinks-fuels-are-manufactured", "They are made in factories that are closing.", "Se fabrican en fábricas que están cerrando."),
+        m("thinks-fuels-are-manufactured", "They are made in factories that are closing down.", "Se fabrican en fábricas que poco a poco están cerrando."),
         m("renewable-nonrenewable-mixup", "They grow back each year, but slowly.", "Vuelven a crecer cada año, pero despacio."),
       ],
       bi("Compare how fast they form with how fast we burn them.", "Compara qué tan rápido se forman con qué tan rápido los quemamos."),
@@ -575,7 +575,7 @@ export const RESOURCES: Bank = {
     ),
     e(
       bi("Coal formed mostly from what?", "¿De qué se formó principalmente el carbón?"),
-      bi("Plants from ancient swamps that were buried and squeezed", "Plantas de pantanos antiguos que quedaron enterradas y comprimidas"),
+      bi("Ancient swamp plants", "Plantas de pantanos antiguos"),
       [
         m("dinosaur-myth", "Dinosaur bones", "Huesos de dinosaurio"),
         m("confused-igneous-origin", "Lava that cooled underground", "Lava que se enfrió bajo tierra"),
@@ -586,7 +586,7 @@ export const RESOURCES: Bank = {
     ),
     e(
       bi("Oil and natural gas formed mostly from what?", "¿De qué se formaron principalmente el petróleo y el gas natural?"),
-      bi("Remains of tiny ocean organisms buried in sediment", "Restos de organismos diminutos del océano enterrados en sedimento"),
+      bi("Tiny ocean organisms", "Organismos marinos diminutos"),
       [
         m("dinosaur-myth", "Dinosaur bodies", "Cuerpos de dinosaurios"),
         m("confused-igneous-origin", "Melted rock from volcanoes", "Roca fundida de los volcanes"),
@@ -604,9 +604,9 @@ export const RESOURCES: Bank = {
     ),
     e(
       bi("What is an aquifer?", "¿Qué es un acuífero?"),
-      bi("An underground layer of rock or sediment that holds water and lets it flow", "Una capa subterránea de roca o sedimento que guarda agua y la deja fluir"),
+      bi("An underground layer of rock or sediment that holds water", "Una capa subterránea de roca o sedimento que guarda agua"),
       [
-        m("underground-lake-myth", "A large lake inside an underground cave", "Un lago grande dentro de una cueva subterránea"),
+        m("underground-lake-myth", "A large lake that fills an underground cave, far below the surface", "Un lago grande que llena una cueva subterránea, muy por debajo de la superficie"),
         m("confused-aquifer-with-aqueduct", "A pipe that carries water to a city", "Un tubo que lleva agua a una ciudad"),
         m("confused-water-cycle", "A layer of clouds that holds rain", "Una capa de nubes que guarda la lluvia"),
       ],
@@ -618,7 +618,7 @@ export const RESOURCES: Bank = {
       bi("People pump out water faster than rain refills it.", "Las personas sacan agua más rápido de lo que la lluvia la repone."),
       [
         m("thinks-no-recharge", "Rainwater can never reach an aquifer.", "El agua de lluvia nunca puede llegar a un acuífero."),
-        m("thinks-sun-dries-aquifer", "The Sun evaporates water straight out of the aquifer.", "El Sol evapora el agua directamente del acuífero."),
+        m("thinks-sun-dries-aquifer", "The Sun evaporates water straight out of the aquifer through the soil.", "El Sol evapora el agua directamente del acuífero a través del suelo."),
         m("thinks-water-turns-to-rock", "The water slowly turns into rock.", "El agua se convierte lentamente en roca."),
       ],
       bi("Compare what goes in with what comes out.", "Compara lo que entra con lo que sale."),
@@ -626,10 +626,10 @@ export const RESOURCES: Bank = {
     ),
     e(
       bi("Many large copper deposits are found in the Andes Mountains, where one plate sinks under another. Why there?", "Muchos depósitos grandes de cobre están en la cordillera de los Andes, donde una placa se hunde bajo otra. ¿Por qué allí?"),
-      bi("Hot fluids from magma carried metals and left them in cracks in the rock.", "Fluidos calientes del magma llevaron metales y los dejaron en grietas de la roca."),
+      bi("Hot fluids from magma left metals in cracks in the rock.", "Fluidos calientes del magma dejaron metales en grietas de la roca."),
       [
         m("confused-with-fossil-fuels", "Buried ocean organisms turned into copper.", "Organismos marinos enterrados se convirtieron en cobre."),
-        m("confused-with-salt-deposits", "An ancient sea evaporated and left copper behind.", "Un mar antiguo se evaporó y dejó cobre."),
+        m("confused-with-salt-deposits", "An ancient sea evaporated there and left copper behind in the rock.", "Un mar antiguo se evaporó allí y dejó el cobre atrapado en la roca."),
         m("thinks-people-moved-resources", "People brought copper there long ago.", "Las personas llevaron cobre allí hace mucho tiempo."),
       ],
       bi("Sinking plates melt rock and make volcanoes and magma.", "Las placas que se hunden funden roca y forman volcanes y magma."),
@@ -637,7 +637,7 @@ export const RESOURCES: Bank = {
     ),
     e(
       bi("Thick layers of rock salt are found deep underground in some places. How did they most likely form?", "En algunos lugares hay capas gruesas de sal de roca en lo profundo. ¿Cómo se formaron con mayor probabilidad?"),
-      bi("Ancient seas or salty lakes evaporated and left the salt behind.", "Mares antiguos o lagos salados se evaporaron y dejaron la sal."),
+      bi("Ancient seas or salty lakes dried up.", "Mares antiguos o lagos salados se secaron."),
       [
         m("confused-igneous-origin", "Lava cooled into salt.", "La lava se enfrió y se volvió sal."),
         m("confused-with-fossil-fuels", "Plants were buried and pressed into salt.", "Plantas enterradas se comprimieron hasta volverse sal."),
@@ -655,16 +655,16 @@ export const RESOURCES: Bank = {
     ),
     e(
       bi("Which energy resource is nonrenewable?", "¿Qué recurso energético es no renovable?"),
-      bi("Uranium used in nuclear power plants", "El uranio que se usa en las plantas nucleares"),
+      bi("Uranium", "El uranio"),
       [m("renewable-nonrenewable-mixup", "Sunlight", "La luz del Sol"), m("renewable-nonrenewable-mixup", "Wind", "El viento"), m("renewable-nonrenewable-mixup", "Flowing river water", "El agua de los ríos")],
       bi("Which one is mined from the ground and used up?", "¿Cuál se extrae del suelo y se agota?"),
       bi("Uranium is a mineral resource that is mined and used up. Sunlight, wind, and flowing water are renewed constantly.", "El uranio es un recurso mineral que se extrae y se agota. La luz del Sol, el viento y el agua que fluye se renuevan constantemente."),
     ),
     e(
       bi("Iceland gets much of its energy from geothermal power. Why does it have so much?", "Islandia obtiene gran parte de su energía de la geotermia. ¿Por qué tiene tanta?"),
-      bi("It sits on a plate boundary, with hot rock and magma close to the surface.", "Está sobre un límite de placas, con roca caliente y magma cerca de la superficie."),
+      bi("It sits on a plate boundary, with magma close to the surface.", "Está sobre un límite de placas, con magma cerca de la superficie."),
       [
-        m("thinks-cold-places-have-heat", "Its cold climate makes the ground store more heat.", "Su clima frío hace que el suelo guarde más calor."),
+        m("thinks-cold-places-have-heat", "Its cold climate makes the ground store more heat from the summer sun.", "Su clima frío hace que el suelo guarde más calor del sol del verano."),
         m("confused-energy-sources", "It has huge coal mines underground.", "Tiene enormes minas de carbón bajo tierra."),
         m("thinks-people-moved-resources", "It imports hot water from other countries.", "Importa agua caliente de otros países."),
       ],
@@ -673,7 +673,7 @@ export const RESOURCES: Bank = {
     ),
     e(
       bi("Why are oil, metals, and groundwater not spread evenly around Earth?", "¿Por qué el petróleo, los metales y el agua subterránea no están repartidos de forma uniforme en la Tierra?"),
-      bi("Each formed through geologic processes that happened only in certain places.", "Cada uno se formó por procesos geológicos que ocurrieron solo en ciertos lugares."),
+      bi("Each formed only where certain geologic processes happened.", "Cada uno se formó donde hubo ciertos procesos geológicos."),
       [
         m("thinks-people-moved-resources", "People moved them to certain countries.", "Las personas los llevaron a ciertos países."),
         m("uneven-means-nonrenewable", "They were spread evenly at first, and only renewable ones stayed.", "Al principio estaban repartidos de forma uniforme y solo se quedaron los renovables."),
@@ -684,10 +684,10 @@ export const RESOURCES: Bank = {
     ),
     e(
       bi("Where do most natural diamonds form?", "¿Dónde se forman la mayoría de los diamantes naturales?"),
-      bi("Deep in the mantle, under very high pressure and temperature", "En lo profundo del manto, a muy alta presión y temperatura"),
+      bi("Deep in the mantle, under huge pressure", "En lo profundo del manto, a presión enorme"),
       [
         m("diamonds-from-coal", "From coal pressed in shallow mines", "Del carbón comprimido en minas poco profundas"),
-        m("wrong-rock-type", "In layers of sand at the bottom of lakes", "En capas de arena en el fondo de los lagos"),
+        m("wrong-rock-type", "In layers of sand at the bottom of lakes", "En capas de arena que hay en el fondo de los lagos"),
         m("confused-with-salt-deposits", "Where seawater evaporates", "Donde se evapora el agua de mar"),
       ],
       bi("They are carried up to the surface by rare, deep volcanic eruptions.", "Llegan a la superficie con erupciones volcánicas raras y profundas."),
