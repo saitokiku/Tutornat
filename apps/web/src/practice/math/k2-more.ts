@@ -424,16 +424,17 @@ function billText(bills: [number, number][], locale: Locale, spoken = false) {
 
 // ---- Data ----
 
-type Theme3 = { title: Pair; cats: readonly [Pair, Pair, Pair]; icons?: readonly [string, string, string] };
+/** A picture graph's question: three choices, each with the picture drawn under its group of votes. */
+type Theme3 = { title: Pair; cats: readonly [Pair, Pair, Pair]; icons: readonly [string, string, string] };
 const THEMES3: readonly Theme3[] = [
   { title: ["Kids voted for a favorite pet.", "Los niños votaron por su mascota favorita."], cats: [["cats", "gatos"], ["dogs", "perros"], ["fish", "peces"]], icons: ["🐱", "🐶", "🐟"] },
   { title: ["Kids voted for a favorite fruit.", "Los niños votaron por su fruta favorita."], cats: [["apples", "manzanas"], ["bananas", "plátanos"], ["grapes", "uvas"]], icons: ["🍎", "🍌", "🍇"] },
   { title: ["Kids voted for a favorite sport.", "Los niños votaron por su deporte favorito."], cats: [["soccer", "fútbol"], ["swimming", "natación"], ["basketball", "básquetbol"]], icons: ["⚽", "🏊", "🏀"] },
   { title: ["Kids voted for an instrument to play.", "Los niños votaron por un instrumento para tocar."], cats: [["drums", "tambor"], ["piano", "piano"], ["guitar", "guitarra"]], icons: ["🥁", "🎹", "🎸"] },
-  { title: ["Kids voted for a planet to visit.", "Los niños votaron por un planeta para visitar."], cats: [["Mars", "Marte"], ["Saturn", "Saturno"], ["Jupiter", "Júpiter"]] },
+  { title: ["Kids voted for a favorite season.", "Los niños votaron por su estación favorita."], cats: [["summer", "verano"], ["winter", "invierno"], ["fall", "otoño"]], icons: ["☀️", "❄️", "🍂"] },
   { title: ["Kids voted for a paint color.", "Los niños votaron por un color de pintura."], cats: [["red", "rojo"], ["blue", "azul"], ["green", "verde"]], icons: ["🟥", "🟦", "🟩"] },
   { title: ["Kids voted for a rainy-day game.", "Los niños votaron por un juego para un día de lluvia."], cats: [["puzzles", "rompecabezas"], ["blocks", "bloques"], ["cards", "cartas"]], icons: ["🧩", "🧱", "🃏"] },
-  { title: ["Kids voted for a snack.", "Los niños votaron por una merienda."], cats: [["popcorn", "palomitas"], ["yogurt", "yogur"], ["crackers", "galletas saladas"]] },
+  { title: ["Kids voted for a snack.", "Los niños votaron por una merienda."], cats: [["popcorn", "palomitas"], ["carrots", "zanahorias"], ["cheese", "queso"]], icons: ["🍿", "🥕", "🧀"] },
 ];
 type Theme4 = { title: Pair; unit: Pair; cats: readonly [Pair, Pair, Pair, Pair] };
 const THEMES4: readonly Theme4[] = [
@@ -766,39 +767,40 @@ export const MATH_K_2_MORE: Skill[] = [
       let b = a;
       if (!r.bool(level === 3 ? 0.25 : 0.15)) while (b === a) b = level === 3 ? Math.min(10, Math.max(1, a + r.pick([-1, 1]))) : r.int(1, 10);
       const same = a === b;
-      const leftWins = more ? a > b : a < b;
-      const index = same ? 2 : leftWins ? 0 : 1;
+      const aWins = more ? a > b : a < b;
+      const index = same ? 2 : aWins ? 0 : 1;
       const side = more ? "picked-fewer-for-more" : "picked-more-for-fewer";
+      // The groups are named by the letter drawn under each, never by left or right: tap-to-mark
+      // counters put each group on its own line on a phone, and the letter stays under its group.
       const base: Choice[] = [
-        { label: tr(locale, "Left", "Izquierda"), say: tr(locale, "The group on the left", "El grupo de la izquierda"), picture: "⬅️" },
-        { label: tr(locale, "Right", "Derecha"), say: tr(locale, "The group on the right", "El grupo de la derecha"), picture: "➡️" },
+        { label: "A", say: tr(locale, "Group A", "El grupo A"), picture: "🅰️" },
+        { label: "B", say: tr(locale, "Group B", "El grupo B"), picture: "🅱️" },
         { label: tr(locale, "Same", "Iguales"), say: tr(locale, "They are the same", "Son iguales"), picture: "⚖️" },
       ];
       const choices = base.map((c, i) => (i === index ? c : { ...c, why: same ? "missed-equal-groups" : i === 2 ? "said-same-when-different" : side }));
       const big = Math.max(a, b), small = Math.min(a, b);
-      const winner = leftWins ? tr(locale, "left", "izquierda") : tr(locale, "right", "derecha");
-      const ask = more ? tr(locale, "Which group has more dots?", "¿Qué grupo tiene más puntos?") : tr(locale, "Which group has fewer dots?", "¿Qué grupo tiene menos puntos?");
+      const winner = aWins ? "A" : "B";
+      const ask = more ? tr(locale, "Which group has more dots, A or B?", "¿Qué grupo tiene más puntos, el A o el B?") : tr(locale, "Which group has fewer dots, A or B?", "¿Qué grupo tiene menos puntos, el A o el B?");
       return {
         prompt: [`${ask} ${tr(locale, "Or are they the same?", "¿O son iguales?")}`],
         say: `${ask} ${tr(locale, "Or are they the same?", "¿O son iguales?")}`,
-        // Not markable on purpose: tap-to-mark counters wrap groups onto new lines on a phone, and this
-        // question needs the two groups side by side. The plain picture always keeps them in one row.
-        visual: dots([a, b]),
-        alt: tr(locale, "Two groups of dots, one on the left and one on the right", "Dos grupos de puntos, uno a la izquierda y otro a la derecha"),
+        visual: { kind: "dots", groups: [a, b], labels: ["A", "B"] },
+        alt: tr(locale, "Two groups of dots, group A and group B, each with its letter under it", "Dos grupos de puntos, el grupo A y el grupo B, cada uno con su letra debajo"),
+        markable: true,
         choices,
         input: "choices",
         answer: { kind: "choice", index },
         hints: [
           tr(locale, "Count each group.", "Cuenta cada grupo."),
           tr(locale, "Match dots one to one. Which group has extras?", "Empareja los puntos de uno en uno. ¿A qué grupo le sobran?"),
-          tr(locale, `The left group has ${a}.`, `El grupo de la izquierda tiene ${a}.`),
+          tr(locale, `Group A has ${a}.`, `El grupo A tiene ${a}.`),
         ],
         steps: same
-          ? [tr(locale, `Left: ${a}. Right: ${b}.`, `Izquierda: ${a}. Derecha: ${b}.`), tr(locale, `${a} and ${b} are the same.`, `${a} y ${b} son iguales.`)]
+          ? [`A: ${a}. B: ${b}.`, tr(locale, `${a} and ${b} are the same.`, `${a} y ${b} son iguales.`)]
           : [
-              tr(locale, `Left: ${a}. Right: ${b}.`, `Izquierda: ${a}. Derecha: ${b}.`),
+              `A: ${a}. B: ${b}.`,
               more ? tr(locale, `${big} is more than ${small}.`, `${big} es mayor que ${small}.`) : tr(locale, `${small} is less than ${big}.`, `${small} es menor que ${big}.`),
-              more ? tr(locale, `The ${winner} group has more.`, `El grupo de la ${winner} tiene más.`) : tr(locale, `The ${winner} group has fewer.`, `El grupo de la ${winner} tiene menos.`),
+              more ? tr(locale, `Group ${winner} has more.`, `El grupo ${winner} tiene más.`) : tr(locale, `Group ${winner} has fewer.`, `El grupo ${winner} tiene menos.`),
             ],
         seconds: 10,
       };
@@ -1240,8 +1242,10 @@ export const MATH_K_2_MORE: Skill[] = [
           say: ask,
           picture: o.pic,
           // A bar of n equal parts, all shaded: same-size blocks touching end to end, the way units are laid.
+          // The bar is drawn full width whatever n is, so the alt says what is drawn and never "as long as".
+          // Not markable: tap-to-mark draws loose dots with gaps, and units that measure must touch.
           visual: { kind: "fraction", parts: n, shaded: n },
-          alt: tr(locale, `A ${o.en}, and a row of same-size blocks, end to end with no gaps, as long as the ${o.en}`, `${cap(un(o))} ${o.es} y una fila de bloques iguales, uno junto a otro y sin espacios, tan larga como ${el(o)} ${o.es}`),
+          alt: tr(locale, `A ${o.en}, and a bar of same-size blocks laid end to end with no gaps`, `${cap(un(o))} ${o.es} y una barra de bloques iguales, uno junto a otro y sin espacios`),
           input: "keypad",
           answer: { kind: "number", value: n },
           wrong: misses(n, [[n - 1, "counted-the-gaps"], [n + 1, "miscounted-units"]]),
@@ -1384,7 +1388,8 @@ export const MATH_K_2_MORE: Skill[] = [
       if (q === "more" || q === "fewer") while (new Set(c).size === 1) c[r.int(0, 2)] = r.int(2, 5);
       const names = theme.cats.map((p) => t2(locale, p));
       const total = c[0] + c[1] + c[2];
-      const legend = tr(locale, `Each dot is one vote. Left to right: ${names.join(", ")}.`, `Cada punto es un voto. De izquierda a derecha: ${names.join(", ")}.`);
+      // Each group stands over its choice's picture, so the question names a choice, never a position.
+      const legend = tr(locale, "Each dot is one vote. The picture under each group shows its choice.", "Cada punto es un voto. El dibujo debajo de cada grupo muestra su opción.");
       const counts = names.map((nm, i) => `${cap(nm)}: ${c[i]}.`).join(" ");
       const pairsBig: [number, number][] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if (c[i] > c[j]) pairsBig.push([i, j]);
@@ -1402,16 +1407,20 @@ export const MATH_K_2_MORE: Skill[] = [
       const body = {
         prompt: [text],
         say: text,
-        // Not markable on purpose: the legend reads the groups left to right, and tap-to-mark counters
-        // wrap groups onto new lines on a phone. The plain picture always keeps the three in one row.
-        visual: dots(c),
-        alt: q === "count" ? tr(locale, "Three groups of dots in a row, one group for each choice", "Tres grupos de puntos en fila, uno para cada opción") : tr(locale, `Dots for each choice. ${counts}`, `Puntos para cada opción. ${counts}`),
+        // A picture graph: the dots can be marked while counting; on a phone each group may get its own
+        // line, and its picture stays under it.
+        visual: { kind: "dots" as const, groups: c, labels: [...theme.icons] },
+        markable: true,
+        alt:
+          q === "count"
+            ? tr(locale, `Three groups of dots. Under each group is a picture: ${join(names, "en")}.`, `Tres grupos de puntos. Debajo de cada grupo hay un dibujo: ${join(names, "es")}.`)
+            : tr(locale, `Three groups of dots, each over its picture. ${counts}`, `Tres grupos de puntos, cada uno sobre su dibujo. ${counts}`),
         seconds: level === 1 ? 15 : level === 2 ? 20 : 25,
       };
       if (q === "most" || q === "fewest") {
         const want = q === "most" ? c.indexOf(Math.max(...c)) : c.indexOf(Math.min(...c));
         const max = Math.max(...c), min = Math.min(...c);
-        const opts: Choice[] = names.map((nm, i) => ({ label: cap(nm), say: cap(nm), ...(theme.icons ? { picture: theme.icons[i] } : {}) }));
+        const opts: Choice[] = names.map((nm, i) => ({ label: cap(nm), say: cap(nm), picture: theme.icons[i] }));
         const wrong = opts
           .filter((_, i) => i !== want)
           .map((o) => {
@@ -1437,9 +1446,9 @@ export const MATH_K_2_MORE: Skill[] = [
           answer: { kind: "number", value: v },
           wrong: misses(v, [[v + 1, "miscounted"], [v - 1, "miscounted"]]),
           hints: [
-            tr(locale, `Find the group for ${X}.`, `Busca el grupo de ${X}.`),
+            tr(locale, `Find the picture of ${X} under a group.`, `Busca el dibujo de ${X} debajo de un grupo.`),
             tr(locale, "Point to each dot in that group once.", "Señala cada punto de ese grupo una vez."),
-            tr(locale, `It is group number ${xi + 1} from the left.`, `Es el grupo número ${xi + 1} desde la izquierda.`),
+            tr(locale, "Say one number for each dot, starting at 1.", "Di un número por cada punto, empezando por el 1."),
           ],
           steps: [tr(locale, `The ${X} group has ${v} dots.`, `El grupo de ${X} tiene ${v} puntos.`), tr(locale, `${v} kids picked ${X}.`, `${v} niños eligieron ${X}.`)],
         };
