@@ -80,8 +80,8 @@ const numbersTo10: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Sam counts his cars: 1, 2, 3, 4, 5. How many cars?",
-              choices: ["4", "5", "6"],
-              answer: 1,
+              choices: ["1", "4", "5"],
+              answer: 2,
               hint: "Listen for the last number Sam says.",
               explain: "The last number Sam says is 5. So there are 5 cars.",
             },
@@ -98,7 +98,7 @@ const numbersTo10: CatalogueEntry = {
               prompt: "Leo counts one dot two times. Is his count right?",
               choices: ["Yes", "No"],
               answer: 1,
-              hint: "Each dot gets just one number.",
+              hint: "How many numbers should each dot get?",
               explain: "No. Each dot gets one number. Counting a dot twice makes the count too big.",
             },
           ],
@@ -183,8 +183,8 @@ const numbersTo10: CatalogueEntry = {
             {
               id: "q1",
               prompt: "Which is more, 7 or 4?",
-              choices: ["4", "7"],
-              answer: 1,
+              choices: ["7", "4"],
+              answer: 0,
               hint: "Count up from 1. Which number do you say later?",
               explain: "You say 7 after 4. So 7 is more.",
             },
@@ -296,8 +296,8 @@ const numbersTo10: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Which two parts make 5?",
-              choices: ["2 and 2", "3 and 2", "4 and 2"],
-              answer: 1,
+              choices: ["2 and 2", "4 and 2", "3 and 2"],
+              answer: 2,
               hint: "Put the parts together. Count them all.",
               explain: "3 and 2 make 5. 2 and 2 make 4. 4 and 2 make 6.",
             },
@@ -396,16 +396,16 @@ const numbersTo10: CatalogueEntry = {
             {
               id: "q2",
               prompt: "A ten-frame has 2 empty boxes. How many dots are in it?",
-              choices: ["2", "8", "10"],
-              answer: 1,
+              choices: ["2", "10", "8"],
+              answer: 2,
               hint: "A full ten-frame has 10. Take away the 2 empty boxes.",
               explain: "8 dots and 2 empty boxes make 10. So there are 8 dots.",
             },
             {
               id: "q3",
               prompt: "Which pair makes 10?",
-              choices: ["5 and 4", "3 and 7", "6 and 3"],
-              answer: 1,
+              choices: ["3 and 7", "5 and 4", "6 and 3"],
+              answer: 0,
               hint: "Put the two numbers together. Do you get 10?",
               explain: "3 and 7 make 10. 5 and 4 make 9. 6 and 3 make 9.",
             },
@@ -433,7 +433,7 @@ const numbersTo10: CatalogueEntry = {
 export const practice: Record<string, string[]> = {
   "count-to-10": ["m.count.10"],
   "more-and-less": ["m.compare.10", "m.next.number"],
-  "number-pairs": ["m.add.5"],
+  "number-pairs": ["m.decompose.10", "m.add.5"],
   "make-10": ["m.make.10"],
 };
 
