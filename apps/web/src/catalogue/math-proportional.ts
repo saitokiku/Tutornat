@@ -96,7 +96,7 @@ const proportional: CatalogueEntry = {
               prompt: "A graph is a straight line through (0, 5) and (2, 9). Is the relationship proportional?",
               choices: ["Yes, because the graph is a straight line", "No, because the line doesn't pass through (0, 0)"],
               answer: 1,
-              hint: "Where must the graph of a proportional relationship start?",
+              hint: "What is y when x = 0?",
               explain: "When x = 0, y = 5, not 0. A straight line that misses the origin isn't proportional.",
             },
             {
@@ -299,7 +299,7 @@ const proportional: CatalogueEntry = {
               prompt: "Solve x/8 = 3/4.",
               choices: ["2", "24", "32/3", "6"],
               answer: 3,
-              hint: "Multiply across: 4 × x = 8 × 3.",
+              hint: "Multiply across the diagonals. Which number multiplies x?",
               explain: "4x = 24, so x = 6. Check: 6/8 simplifies to 3/4.",
             },
             {
@@ -307,7 +307,7 @@ const proportional: CatalogueEntry = {
               prompt: "5 bags of apples weigh 15 pounds in all, and each bag weighs the same. How much do 7 bags weigh?",
               choices: ["17 pounds", "21 pounds", "35 pounds", "105 pounds"],
               answer: 1,
-              hint: "Set up bags over pounds on both sides: 5/15 = 7/x.",
+              hint: "Write bags over pounds on both sides. Where does the 7 go?",
               explain: "5x = 105, so x = 21 pounds. Or use the unit rate: each bag weighs 3 pounds, and 7 × 3 = 21.",
             },
             {
@@ -450,8 +450,9 @@ const proportional: CatalogueEntry = {
 
 /** Practice on the skill map that fits each lesson (lesson id → skill ids). */
 export const practice: Record<string, string[]> = {
-  "proportional-or-not": ["m.proportion"],
-  constant: ["m.proportion", "m.ratio.unit"],
+  // m.proportion is "solve a/b = c/x" by cross products, which lesson 3 teaches.
+  "proportional-or-not": ["m.ratio.equiv"],
+  constant: ["m.ratio.unit"],
   "solving-proportions": ["m.proportion"],
   "scale-drawings": ["m.proportion"],
 };

@@ -348,7 +348,7 @@ const razonesEs: CatalogueEntry = {
         {
           id: "s1",
           kind: "slide",
-          title: "Usa la tasa de 1",
+          title: "Usa la tasa unitaria",
           blocks: [
             { type: "text", text: "Cuando conoces la tasa unitaria, puedes hallar cualquier cantidad. Una llave llena una tina a 3 litros por minuto." },
             {
@@ -443,7 +443,7 @@ const razonesEs: CatalogueEntry = {
           id: "s6",
           kind: "project",
           title: "Latidos por minuto",
-          brief: "Mide tu ritmo cardiaco, una tasa que tu cuerpo lleva todo el día.",
+          brief: "Mide tu pulso, un ritmo que tu cuerpo mantiene todo el día.",
           steps: [
             "Busca tu pulso: apoya con suavidad dos dedos en la parte de adentro de la muñeca o a un lado del cuello.",
             "Cuenta los latidos durante 15 segundos mientras alguien mide el tiempo.",

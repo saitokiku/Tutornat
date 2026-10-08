@@ -20,7 +20,8 @@ const linearFunctions: CatalogueEntry = {
           kind: "slide",
           title: "An input-output rule",
           blocks: [
-            { type: "text", text: "A function is a rule that gives exactly one output for each input." },
+            { type: "text", text: "On a snack machine, you press a button and get a snack. Press B, get pretzels. Press B again, and you get pretzels again." },
+            { type: "text", text: "A function works the same way: it is a rule that gives exactly one output for each input. The button is the input and the snack is the output." },
             { type: "text", text: "Rule: multiply by 2, then add 1. Input 3 gives output 7. Input 10 gives output 21." },
             {
               type: "points",
@@ -468,7 +469,8 @@ const linearFunctions: CatalogueEntry = {
 
 /** Practice on the skill map that fits each lesson (lesson id → skill ids). */
 export const practice: Record<string, string[]> = {
-  functions: ["m.func.eval"],
+  // m.linear.table uses the lesson's "the rule is y = mx + b"; m.func.eval is grade 9, with f(x) notation and x².
+  functions: ["m.linear.table"],
   "rate-initial": ["m.linear.table", "m.slope"],
   "linear-nonlinear": ["m.linear.table"],
   "reading-graphs": ["m.slope"],

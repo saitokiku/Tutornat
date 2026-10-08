@@ -55,6 +55,10 @@ const pitagorasEs: CatalogueEntry = {
             },
             { type: "text", text: "50 está mucho más cerca de 49 que de 64, así que √50 es apenas mayor que 7. Con calculadora da unos 7.07." },
             {
+              type: "text",
+              text: "A la décima más cercana: 7.1² = 50.41, así que √50 está entre 7.0 y 7.1. El punto medio es 7.05, y 7.05² = 49.7025. 50 es mayor que eso, así que √50 se redondea a 7.1.",
+            },
+            {
               type: "points",
               items: [
                 "√50 es irracional: sus decimales no terminan y no se repiten.",
@@ -74,7 +78,8 @@ const pitagorasEs: CatalogueEntry = {
           id: "s5",
           kind: "interactive",
           title: "Estima √30",
-          prompt: "Estima √30 a la décima más cercana. Eleva 5.4 y 5.5 al cuadrado para decidir. Mueve el marcador a tu estimación.",
+          prompt:
+            "Estima √30 a la décima más cercana. Eleva 5.4 y 5.5 al cuadrado para ver entre qué décimas está, y luego eleva al cuadrado 5.45, el punto medio, para decidir. Mueve el marcador a tu estimación.",
           widget: { kind: "number-line", min: 5, max: 6, step: 0.1, start: 5, target: 5.5 },
         },
         {
@@ -183,6 +188,7 @@ const pitagorasEs: CatalogueEntry = {
                 "El cuadrado grande y los cuatro triángulos son los mismos las dos veces, así que el espacio libre tiene que ser igual: c² = a² + b².",
               ],
             },
+            { type: "text", text: "Para verlo, ármalo: en el proyecto al final de esta lección recortas cuatro triángulos de papel y armas las dos formas." },
           ],
         },
         {
@@ -327,7 +333,7 @@ const pitagorasEs: CatalogueEntry = {
           questions: [
             {
               id: "q1",
-              prompt: "¿Unos lados de 7, 24 y 25 forman un triángulo rectángulo?",
+              prompt: "¿Un triángulo con lados de 7, 24 y 25 es rectángulo?",
               choices: ["Sí", "No"],
               answer: 0,
               hint: "Revisa si 7² + 24² es igual a 25².",
@@ -335,7 +341,7 @@ const pitagorasEs: CatalogueEntry = {
             },
             {
               id: "q2",
-              prompt: "¿Unos lados de 6, 7 y 9 forman un triángulo rectángulo?",
+              prompt: "¿Un triángulo con lados de 6, 7 y 9 es rectángulo?",
               choices: ["Sí", "No"],
               answer: 1,
               hint: "Eleva al cuadrado los dos lados más cortos y súmalos. Compara con el cuadrado del lado más largo.",

@@ -55,6 +55,10 @@ const pythagorean: CatalogueEntry = {
             },
             { type: "text", text: "50 is much closer to 49 than to 64, so √50 is just above 7. A calculator gives about 7.07." },
             {
+              type: "text",
+              text: "To the nearest tenth: 7.1² = 50.41, so √50 is between 7.0 and 7.1. Halfway is 7.05, and 7.05² = 49.7025. 50 is more than that, so √50 rounds to 7.1.",
+            },
+            {
               type: "points",
               items: [
                 "√50 is irrational: its decimal never ends and never repeats.",
@@ -74,7 +78,8 @@ const pythagorean: CatalogueEntry = {
           id: "s5",
           kind: "interactive",
           title: "Estimate √30",
-          prompt: "Estimate √30 to the nearest tenth. Square 5.4 and 5.5 to help you decide. Move the marker to your estimate.",
+          prompt:
+            "Estimate √30 to the nearest tenth. Square 5.4 and 5.5 to find the two tenths it's between, then square 5.45, the halfway point, to decide. Move the marker to your estimate.",
           widget: { kind: "number-line", min: 5, max: 6, step: 0.1, start: 5, target: 5.5 },
         },
         {
@@ -183,6 +188,7 @@ const pythagorean: CatalogueEntry = {
                 "The big square and the four triangles are the same both times, so the space left over must be the same: c² = a² + b².",
               ],
             },
+            { type: "text", text: "To see it, build it: the project at the end of this lesson has you cut out four paper triangles and make both arrangements." },
           ],
         },
         {
