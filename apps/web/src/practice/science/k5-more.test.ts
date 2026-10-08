@@ -75,6 +75,15 @@ const sentences = (text: string) => text.split(/[.?!:;]+/).map((s) => s.trim()).
 const wordCount = (s: string) => s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const containsPhrase = (text: string, phrase: string) => new RegExp(`(^|[^\\p{L}])${escapeRe(phrase)}([^\\p{L}]|$)`, "iu").test(text);
+// Words that carry no answer: articles, pronouns, linking verbs, short prepositions, yes and no.
+const STOPWORDS = new Set(
+  "a an the it its to of and or in on at by for from with into is are be your you they them their this that no not yes el la los las un una unos unas lo le les se de del al en con por para y o u su sus tu tus es son esta estan si ni".split(" "),
+);
+const fold = (w: string) => w.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+const contentWords = (text: string) => (text.match(/[\p{L}']+/gu) ?? []).map(fold).filter((w) => !STOPWORDS.has(w));
+/** One stem for "shakes" and "shake", "bounces" and "bounce", "calienta" and "caliente". */
+const stemOf = (w: string) => w.replace(/(ing|ed|es|as|os|an|en|s|e|a|o)$/, (end) => (w.length - end.length >= 3 ? "" : end));
+const usesWord = (text: string, w: string) => contentWords(text).some((v) => stemOf(v) === stemOf(w));
 
 const DICHOTOMIES = [
   ["Inherited", "Learned"],
@@ -214,8 +223,9 @@ describe.each(DRAFT.map((s) => [s.id, s] as const))("bank %s", (id, skill) => {
         const longest = multi.filter((e) => e.a.slice(1).every((c) => pick(c.t, locale).length < pick(e.a[0].t, locale).length));
         expect(longest.length, `${where} ${locale}: key is the longest choice in ${longest.length} of ${multi.length}`).toBeLessThanOrEqual(Math.floor(0.4 * multi.length));
       }
-      // Tapping one picture whenever it shows up must not beat reading: keys it marks, minus wrong
-      // choices it marks, stay at 40% of the level, and a picture never on a wrong choice marks at most 3 keys.
+      // Tapping one picture whenever it shows up must not beat reading: a picture marks the key in at
+      // most 40% of the level, a picture never on a wrong choice marks at most 2 keys, and a pre-reader
+      // who taps it whenever it shows (and guesses otherwise) scores at most 15 points above chance.
       const marks = new Map<string, { key: number; wrong: number }>();
       for (const e of level.items)
         e.a.forEach((c, i) => {
@@ -225,9 +235,17 @@ describe.each(DRAFT.map((s) => [s.id, s] as const))("bank %s", (id, skill) => {
           else m.wrong++;
           marks.set(c.pic, m);
         });
+      const n = level.items.length;
+      const chance = level.items.reduce((sum, e) => sum + 1 / e.a.length, 0) / n;
       for (const [pic, m] of marks) {
-        expect(m.key - m.wrong, `${where} picture ${pic} marks the key ${m.key} times, a wrong choice ${m.wrong}`).toBeLessThanOrEqual(Math.floor(0.4 * level.items.length));
-        if (m.wrong === 0) expect(m.key, `${where} picture ${pic} is only ever on the key`).toBeLessThanOrEqual(3);
+        expect(m.key, `${where} picture ${pic} marks the key ${m.key} times, a wrong choice ${m.wrong}`).toBeLessThanOrEqual(Math.floor(0.4 * n));
+        if (m.wrong === 0) expect(m.key, `${where} picture ${pic} is only ever on the key`).toBeLessThanOrEqual(2);
+        const tapping =
+          level.items.reduce((sum, e) => {
+            const i = e.a.findIndex((c) => c.pic === pic);
+            return sum + (i < 0 ? 1 / e.a.length : i === 0 ? 1 : 0);
+          }, 0) / n;
+        expect(tapping - chance, `${where} tapping ${pic} scores ${Math.round(100 * tapping)}%, chance ${Math.round(100 * chance)}%`).toBeLessThanOrEqual(0.15);
       }
     });
   });
@@ -257,6 +275,11 @@ describe.each(DRAFT.map((s) => [s.id, s] as const))("bank %s", (id, skill) => {
       level.items.forEach((e, ei) => {
         for (const locale of LOCALES) {
           const key = pick(e.a[0].t, locale);
+          // Nor in its words: a strategy that uses every content word of the key the question does not
+          // already use ("It shakes back and forth" / "Vibrate means shake back and forth") states it.
+          const strat = pick(e.strat ?? level.strat, locale);
+          const fresh = contentWords(key).filter((w) => !usesWord(pick(e.q, locale), w));
+          if (fresh.length) expect(fresh.every((w) => usesWord(strat, w)), `${id} L${li + 1} #${ei} ${locale} strategy "${strat}" states "${key}"`).toBe(false);
           if (key.length < 4) continue;
           expect(containsPhrase(pick(e.h[0], locale), key) || containsPhrase(pick(e.h[1], locale), key), `${id} L${li + 1} #${ei} ${locale} hint names "${key}"`).toBe(false);
           // The level-wide strategy may name a key the question itself names ("renewable or nonrenewable?").
@@ -780,7 +803,7 @@ describe("science facts in the banks", () => {
   const FACTS: [string, string, RegExp, RegExp][] = [
     ["dark colors warm more in sunlight", "s.sun.warms", /Which shirt gets warmer/, /^A black shirt$/],
     ["shade is cooler", "s.sun.warms", /Where do you feel cooler/, /shade/],
-    ["tornado: lowest room, no windows", "s.weather.ready", /tornado warning/, /no windows/],
+    ["tornado: lowest floor, no windows", "s.weather.ready", /tornado warning/, /no windows, on the lowest floor/],
     ["never cross floodwater", "s.weather.ready", /Floodwater covers the road/, /Turn around/],
     ["beavers build dams", "s.living.change", /beaver/, /dam/],
     ["sounds come from vibrations", "s.sound.vibrate", /What do all sounds come from/, /vibrate/],
@@ -845,6 +868,19 @@ describe("science facts in the banks", () => {
     const hits = entries(id).filter((e) => q.test(e.q[0]));
     expect(hits.length, "matcher found no entry").toBeGreaterThan(0);
     for (const e of hits) expect(keyOf(e), e.q[0]).toMatch(key);
+  });
+
+  it("keeps the safety advice and the key's picture true to the science, in both languages", () => {
+    const tornado = entries("s.weather.ready").filter((e) => /tornado warning/.test(e.q[0]));
+    expect(tornado.length).toBeGreaterThan(0);
+    for (const e of tornado) {
+      for (const text of [e.a[0].t[0], e.s.at(-1)![0]]) expect(text).toMatch(/lowest floor/);
+      for (const text of [e.a[0].t[1], e.s.at(-1)![1]]) expect(text).toMatch(/piso más bajo/);
+    }
+    // Melted snow freezes back into ice, not into falling snow.
+    const refreeze = entries("s.heat.cool").filter((e) => /freeze into ice again/.test(e.q[0]));
+    expect(refreeze.length).toBeGreaterThan(0);
+    for (const e of refreeze) expect(e.a[0].pic, e.q[0]).toBe("🧊");
   });
 
   it("never makes a common misconception the key, and does offer them as distractors", () => {
