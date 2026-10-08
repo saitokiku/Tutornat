@@ -13,7 +13,8 @@ import { type Ask, PASSAGES, type Passage, type Question, type Structure, type T
 
 type Bi<T> = { en: T; es: T };
 const lang = <T>(locale: Locale, b: Bi<T>): T => (locale === "es" ? b.es : b.en);
-const q = (s: string) => `“${s}”`;
+/** Quotes a phrase; dialogue already inside it drops to single marks, so the marks never double up. */
+const q = (s: string) => `“${s.replace(/“/g, "‘").replace(/”/g, "’")}”`;
 
 export type Focus = "central" | "infer" | "words" | "structure" | "theme" | "pov" | "argument" | "compare";
 export const focusOf = (ask: Ask) => ask.slice(0, ask.indexOf(".")) as Focus;
@@ -102,8 +103,8 @@ const HINTS: Record<Ask | "structure.overall", Bi<[string, string]>> = {
     es: ["¿Qué perdería el texto si se quitara esta parte?", "Fíjate en lo que viene justo antes y después. Decide si esta parte introduce, explica, da un ejemplo, muestra un cambio o concluye."],
   },
   "theme.statement": {
-    en: ["What does the main character or speaker learn or come to understand?", "A theme is a full sentence about life that the whole text supports. Rule out single words, retellings of the plot, and lessons the text never teaches."],
-    es: ["¿Qué aprende o llega a comprender el personaje principal o la voz poética?", "El mensaje es una oración completa sobre la vida que todo el texto apoya. Descarta palabras sueltas, resúmenes de lo que pasa y lecciones que el texto no enseña."],
+    en: ["What does the main character or speaker learn or come to understand?", "A theme is a message about life that the whole text supports, ending included. Test each choice against the ending: does the main character's change back it up, or only one scene, or someone else's view?"],
+    es: ["¿Qué aprende o llega a comprender el personaje principal o la voz poética?", "El mensaje es una idea sobre la vida que todo el texto apoya, también el final. Compara cada opción con el final: ¿la respalda el cambio del personaje principal, o solo una escena, o lo que piensa otra persona?"],
   },
   "theme.develop": {
     en: ["Themes grow through what characters do, say, and feel, especially when they change.", "Find the moment that most clearly carries the message, and rule out details from before the change or about someone else."],
@@ -202,6 +203,15 @@ export function locate(passage: Passage, quote: string, locale: Locale, article:
 
 const inPassage = (passage: Passage, locale: Locale, s: string) => lang(locale, passage).some((t) => t.paras.some((p) => p.includes(s)));
 
+/** Words of five letters or more, accents and case folded: enough to tell content from "the", "que". */
+const bigWords = (s: string) => new Set(s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().match(/\p{L}{5,}/gu) ?? []);
+/** The share of a choice's words that a text repeats. */
+function repeats(choice: string, text: string) {
+  const mine = bigWords(choice);
+  const there = bigWords(text);
+  return mine.size ? [...mine].filter((w) => there.has(w)).length / mine.size : 0;
+}
+
 /** A quote that ends a sentence: the period goes inside the marks in English and after them in Spanish. */
 function qEnd(locale: Locale, s: string) {
   const t = s.replace(/[,;:]$/, "");
@@ -240,8 +250,11 @@ function itemFor({ passage, question }: Entry, r: Rng, level: number, locale: Lo
   const choices = r.shuffle(options);
   const [h1, h2] = lang(locale, HINTS[question.ask]);
   const ruleOut = `${tr(locale, "Rule out", "Descarta")} ${qEnd(locale, wrong[0])} ${lang(locale, TAG_TEXT[question.tags[0]])}`;
-  // When the choices are quotes from the passage, pointing at the evidence would hand over the key.
+  // When the choices are quotes from the passage, pointing at the evidence would hand over the key; so
+  // it would when the key mostly restates the evidence and no wrong choice comes as close to it.
   const quoted = inPassage(passage, locale, right);
+  const near = repeats(right, evidence.join(" "));
+  const restated = near >= 0.4 && wrong.every((w) => repeats(w, evidence.join(" ")) < near);
   const and = tr(locale, " and ", " y ");
   const last = evidence.length - 1;
   const reread = `${tr(locale, "Reread", "Vuelve a leer")} ${evidence.map((e, i) => `${locate(passage, e, locale, true)}: ${i === last ? qEnd(locale, e) : qMid(e)}`).join(and)}`;
@@ -252,7 +265,7 @@ function itemFor({ passage, question }: Entry, r: Rng, level: number, locale: Lo
     choices,
     input: "choices",
     answer: { kind: "choice", index: choices.indexOf(options[0]) },
-    hints: [h1, h2, quoted ? ruleOut : reread],
+    hints: [h1, h2, quoted || restated ? ruleOut : reread],
     steps: [quoted ? ruleOut : cited, explain, `${tr(locale, "Answer", "Respuesta")}: ${right}`],
     seconds,
   };
