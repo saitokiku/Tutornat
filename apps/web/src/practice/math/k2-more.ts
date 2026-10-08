@@ -1647,7 +1647,10 @@ export const MATH_K_2_MORE: Skill[] = [
           break;
         }
         default: {
-          const a = r.int(10, 40), b = r.int(10, 40), c = r.int(a + b + 5, 100);
+          const a = r.int(10, 40), b = r.int(10, 40);
+          let c = r.int(a + b + 5, 100);
+          // At c = 2(a + b) the first step (hint 3) would already be the answer.
+          if (c === 2 * (a + b)) c += c < 100 ? 1 : -1;
           x = [a, b, c];
           ops = [[a, "+", b], [c, "−", a + b]];
         }
