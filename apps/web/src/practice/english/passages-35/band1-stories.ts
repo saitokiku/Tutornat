@@ -1,4 +1,4 @@
-import { Q, type Passage } from "./types";
+import { how, Q, type Passage } from "./types";
 
 // Band 1 stories, grade 2–3 text band (draft: written for KaizenEDU, not yet reviewed by a teacher).
 export const BAND1_STORIES: Passage[] = [
@@ -8,6 +8,7 @@ export const BAND1_STORIES: Passage[] = [
     band: 1,
     pov: "third",
     povEv: ["Amara patched the hole herself.", "Amara tapó el agujero ella sola."],
+    whoTells: true,
     title: ["Amara's Kite", "La cometa de Amara"],
     en: [
       "Amara and her grandfather spent Saturday morning building a kite. They used two thin sticks, a sheet of red paper, and a long tail made of ribbon. Grandpa showed her how to tie the sticks in the shape of a cross.",
@@ -37,6 +38,7 @@ export const BAND1_STORIES: Passage[] = [
     band: 1,
     pov: "first",
     povEv: ["This year, I wanted to help instead of just eating.", "Este año, yo quería ayudar en vez de solo comer."],
+    whoTells: true,
     title: ["Tamale Day", "Día de tamales"],
     en: [
       "Every December, my whole family makes tamales at my grandmother's house. This year, I wanted to help instead of just eating.",
@@ -142,6 +144,7 @@ export const BAND1_STORIES: Passage[] = [
       Q("theme", ["What is the lesson of this fable?", "¿Cuál es la enseñanza de esta fábula?"], ["Something that seems like a mistake can still do good.", "Algo que parece un error puede terminar haciendo bien."], [["A squirrel buries acorns and forgets where they are.", "Una ardilla entierra bellotas y olvida dónde están.", "plot-summary"], ["Always do what your friends say.", "Siempre haz lo que dicen tus amigos.", "unsupported-lesson"], ["Deer like to rest in the shade.", "A los venados les gusta descansar a la sombra.", "too-narrow"]], ["In the spring, Pip thinks his work was wasted. Was it?", "En la primavera, Pipo cree que trabajó para nada. ¿Fue así?"], ["Young oak trees now stood in rows where the bare ground had been.", "Donde antes había tierra pelada, ahora crecían filas de robles jóvenes."]),
       Q("character", ["How does Pip feel in the spring?", "¿Cómo se siente Pipo en la primavera?"], ["Upset that he forgot so many acorns", "Mal por haber olvidado tantas bellotas"], [["Proud of all his hard work", "Orgulloso de todo su trabajo", "opposite-of-text"], ["Amazed by the new trees", "Asombrado por los árboles nuevos", "wrong-order"], ["Angry at Dot", "Enojado con Pinta", "not-in-text"]], ["Read what Pip says in the spring and how he says it.", "Lee lo que dice Pipo en la primavera y cómo lo dice."], ["“All that work, wasted,” he sighed.", "“Tanto trabajo para nada”, suspiró."]),
       Q("words", ["In the sentence “Pip looked around in wonder,” what does “wonder” mean?", "En la oración “Pipo miró a su alrededor, asombrado”, ¿qué significa “asombrado”?"], ["Feeling great surprise at something amazing", "Con gran sorpresa por algo increíble"], [["Feeling sad about wasted work", "Con tristeza por el trabajo perdido", "ignored-context"], ["Feeling bored", "Con aburrimiento", "opposite-meaning"], ["Feeling afraid", "Con miedo", "ignored-context"]], ["Pip has just learned that the trees came from his acorns. How would that make you feel?", "Pipo acaba de saber que los árboles salieron de sus bellotas. ¿Cómo te sentirías tú?"], ["Pip looked around in wonder.", "Pipo miró a su alrededor, asombrado."]),
+      how(Q("pov", ["How do Pip and Dot see all the buried acorns differently?", "¿En qué se diferencia lo que piensan Pipo y Pinta de tantas bellotas enterradas?"], ["Pip keeps burying more, but Dot thinks he has far more than he needs.", "Pipo sigue enterrando más, pero Pinta cree que tiene muchas más de las que necesita."], [["Dot keeps burying more, but Pip thinks she has far more than she needs.", "Pinta sigue enterrando más, pero Pipo cree que ella tiene muchas más de las que necesita.", "swapped-views"], ["They both think Pip should bury even more.", "Los dos creen que Pipo debe enterrar todavía más.", "opposite-of-text"], ["Dot wants the acorns for herself.", "Pinta quiere las bellotas para ella.", "not-in-text"]], ["Read what Dot asks Pip, and what Pip does after she asks.", "Lee lo que Pinta le pregunta a Pipo y lo que hace Pipo después."], ["“You could never eat them all.”", "“Nunca podrías comértelas todas”"]), ["A character's point of view is how that character sees things. Compare what Dot says with what Pip does.", "El punto de vista de un personaje es cómo ve las cosas. Compara lo que dice Pinta con lo que hace Pipo."]),
     ],
   },
   {
@@ -179,6 +182,7 @@ export const BAND1_STORIES: Passage[] = [
     band: 1,
     pov: "first",
     povEv: ["I was so busy that I did not notice a girl sitting down across from me.", "Estaba tan ocupada que no me di cuenta de que una niña se sentó frente a mí."],
+    whoTells: true,
     title: ["A Friend in My Sketchbook", "Una amiga en mi cuaderno"],
     en: [
       "My family moved from Seattle to San Antonio in March, right in the middle of third grade. On my first day at Oak Hill Elementary, I did not know a single person. At lunch, I sat at the end of a long table and opened my sketchbook so I would not have to look at anyone.",
@@ -208,6 +212,7 @@ export const BAND1_STORIES: Passage[] = [
     band: 1,
     pov: "third",
     povEv: ["Sofia stood up.", "Sofía se levantó."],
+    whoTells: true,
     title: ["The Goalie", "La portera"],
     en: [
       "Sofia was the goalie for the Hornets, and the championship game was tied 1 to 1. With two minutes left, a player on the other team kicked the ball hard toward the corner of the net. Sofia dove, but the ball slipped past her fingertips.",

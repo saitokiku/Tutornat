@@ -83,7 +83,7 @@ describe("grades 3–5 reading: strand shape", () => {
       for (const band of [1, 2]) {
         const inBand = PASSAGES.filter((p) => p.band === band);
         let n = inBand.flatMap((p) => p.qs).filter((q) => q.skill === key).length;
-        if (key === "pov") n += inBand.filter((p) => p.kind === "fiction").length;
+        if (key === "pov") n += inBand.filter((p) => p.kind === "fiction" && p.whoTells).length;
         if (key === "compare") n += PAIRS.filter((pair) => BY_ID.get(pair.a)!.band === band).flatMap((pair) => pair.qs).length;
         expect(n, `${id} level ${band}`).toBeGreaterThanOrEqual(12);
       }
@@ -138,6 +138,18 @@ describe("grades 3–5 reading: passages", () => {
     }
   });
 
+  it("ask “who is telling this story?” of about half the stories, so it is at most a third of each point-of-view level", () => {
+    for (const p of PASSAGES) if (p.whoTells) expect(p.kind, p.id).toBe("fiction");
+    for (const band of [1, 2]) {
+      const stories = PASSAGES.filter((p) => p.band === band && p.kind === "fiction");
+      const narrator = stories.filter((p) => p.whoTells).length;
+      const others = PASSAGES.filter((p) => p.band === band).flatMap((p) => p.qs).filter((q) => q.skill === "pov").length;
+      expect(narrator / stories.length, `band ${band}: ${narrator} of ${stories.length} stories`).toBeGreaterThanOrEqual(1 / 3);
+      expect(narrator / stories.length, `band ${band}: ${narrator} of ${stories.length} stories`).toBeLessThanOrEqual(2 / 3);
+      expect(narrator * 3, `band ${band}: ${narrator} narrator items, ${others} other point-of-view questions`).toBeLessThanOrEqual(narrator + others);
+    }
+  });
+
   it("pair an article with a poem or story on its topic, in one band", () => {
     expect(PAIRS.length).toBeGreaterThanOrEqual(8);
     for (const pair of PAIRS) {
@@ -167,7 +179,10 @@ describe("grades 3–5 reading: questions", () => {
           expect(s, `${where} ${l}`).not.toMatch(/[!¡]|\p{Extended_Pictographic}| {2}/u);
         }
       }
-      for (const [en, es] of [q.q, q.right, q.clue]) expect(en, where).not.toBe(es);
+      for (const [en, es] of [q.q, q.right, q.clue, ...(q.how ? [q.how] : [])]) expect(en, where).not.toBe(es);
+      // Every text-feature question has its own hint 2; the generic one names no place to look.
+      if (q.skill === "features") expect(q.how, `${where} needs its own hint 2`).toBeDefined();
+      for (const l of LOCALES) for (const s of q.how ? [q.how[idx(l)]] : []) expect(s.trim() === s && !/[!¡]| {2}/.test(s), where).toBe(true);
       for (const [, , why, esWhy] of q.wrong) {
         expect(esWhy, `${where}: a Spanish tag only when it differs`).not.toBe(why);
         for (const tag of [why, ...(esWhy ? [esWhy] : [])]) {
@@ -193,7 +208,7 @@ describe("grades 3–5 reading: questions", () => {
       } else expect(q.ev2, where).toBeUndefined();
       for (const l of LOCALES) {
         const right = bare(q.right[idx(l)]);
-        for (const hint of [q.clue[idx(l)], q.ev[idx(l)], q.ev2?.[idx(l)] ?? ""]) expect(lc(hint), `${where} ${l} gives away “${right}”`).not.toContain(right);
+        for (const hint of [q.clue[idx(l)], q.ev[idx(l)], q.ev2?.[idx(l)] ?? "", q.how?.[idx(l)] ?? ""]) expect(lc(hint), `${where} ${l} gives away “${right}”`).not.toContain(right);
         // Anything the question quotes is in one of the texts it is about.
         const texts = [p, ...(b ? [b] : [])].map((x) => lc([x.title[idx(l)], ...blocks(x, l)].join("\n")).replace(/\s+/g, " "));
         for (const quote of quoted(q.q[idx(l)])) expect(texts.some((t) => t.includes(lc(quote))), `${where} ${l} quotes “${quote}”`).toBe(true);
@@ -245,18 +260,24 @@ describe("grades 3–5 reading: questions", () => {
   });
 });
 
-/** Finds the bank entry an item came from by its text alone, then returns the answer that entry says is right. */
-function expectedAnswer(item: Item, l: L): string {
+/** Finds the bank entry an item came from by its text alone (no question: the narrator item). */
+function entryOf(item: Item, l: L): { p: Passage; b?: Passage; q?: Question } {
   const prompt = promptText(item);
   const pair = PAIRS.find((x) => prompt.startsWith(l === "es" ? `Texto 1: ${BY_ID.get(x.a)!.title[1]}` : `Text 1: ${BY_ID.get(x.a)!.title[0]}`) && x.qs.some((q) => q.q[idx(l)] === item.say));
-  if (pair) return pair.qs.find((q) => q.q[idx(l)] === item.say)!.right[idx(l)];
+  if (pair) return { p: BY_ID.get(pair.a)!, b: BY_ID.get(pair.b)!, q: pair.qs.find((q) => q.q[idx(l)] === item.say)! };
   const p = PASSAGES.find((x) => prompt.startsWith(`${x.title[idx(l)]}\n\n${blocks(x, l)[0]}`))!;
   expect(p, `no passage for ${prompt.slice(0, 60)}`).toBeDefined();
   for (const b of blocks(p, l)) expect(prompt).toContain(b);
-  const q = p.qs.find((x) => x.q[idx(l)] === item.say);
+  return { p, q: p.qs.find((x) => x.q[idx(l)] === item.say) };
+}
+
+/** The answer the item's bank entry says is right. */
+function expectedAnswer(item: Item, l: L): string {
+  const { p, q } = entryOf(item, l);
   if (q) return q.right[idx(l)];
   // The narrator question: the key follows from the passage's point of view.
   expect(item.say).toBe(l === "es" ? "¿Quién cuenta esta historia?" : "Who is telling this story?");
+  expect(p.whoTells, `${p.id} is not asked who tells it`).toBe(true);
   const label = item.choices!.find((c) => (p.pov === "first" ? /“(I|yo)”/ : /outside|fuera/).test(c.label));
   return label!.label;
 }
@@ -300,8 +321,7 @@ describe.each(TABLE.map((t) => [t[0], t[4]] as const))("%s items", (id) => {
             expect(depth, `${where}: ${t}`).toBe(0);
           }
           expect(item.seconds >= 60 && item.seconds <= 300, `${where} ${item.seconds}s`).toBe(true);
-          const located = /paragraph (\d+)|stanza (\d+)|section “([^”]+)”/.exec(item.hints[1]);
-          if (located && l === "en") checkLocation(item, located);
+          checkLocation(item, l);
         }
         expect(keys[1], `${id} L${level} seed ${seed}: the key moves between languages`).toBe(keys[0]);
         expect(promptText(makeItem(id, level, seed, "es")), `${id} L${level} seed ${seed}`).not.toBe(promptText(makeItem(id, level, seed, "en")));
@@ -311,16 +331,37 @@ describe.each(TABLE.map((t) => [t[0], t[4]] as const))("%s items", (id) => {
   });
 });
 
-/** Hint 2 names a paragraph, stanza or section; the evidence quoted in hint 3 must really be there. */
-function checkLocation(item: Item, m: RegExpExecArray) {
-  const prompt = promptText(item);
-  const p = PASSAGES.find((x) => prompt.startsWith(`${x.title[0]}\n\n${x.en[0]}`))!;
-  // Quotation marks inside a quote are shown as single ones; the passage has double ones.
-  const quoted = /^Reread: “([\s\S]*)”$/.exec(item.hints[2])?.[1] ?? /^Reread: (“[\s\S]*”[\s\S]*)$/.exec(item.hints[2])![1];
-  const ev = quoted.replace(/‘/g, "“").replace(/’/g, "”");
-  const at = p.en.findIndex((b) => b.includes(ev));
-  expect(at, `${p.id} evidence ${ev}`).toBeGreaterThanOrEqual(0);
-  if (m[1]) expect(p.en.filter((b, i) => i <= at && (p.kind !== "info" || !heading(b))).length, `${p.id} paragraph`).toBe(Number(m[1]));
-  if (m[2]) expect(at + 1, `${p.id} stanza`).toBe(Number(m[2]));
-  if (m[3]) expect(sectionOf(p.en, at), `${p.id} section`).toBe(m[3]);
+/**
+ * Hint 2 ends by naming where the evidence is: a paragraph, stanza, section or box, and for a pair one
+ * place in each text. The evidence must really be there, in both languages. A text-feature question
+ * names no place, which would often be its answer, and a poem's point of view is about its speaker.
+ */
+function checkLocation(item: Item, l: L) {
+  const { p, b, q } = entryOf(item, l);
+  const hint = item.hints[1];
+  if (!q) return;
+  if (q.skill === "features") return expect(hint, p.id).toBe(q.how![idx(l)]);
+  if (q.skill === "pov" && p.kind === "poem") expect(hint, p.id).not.toMatch(/third-person|tercera persona/);
+  if (b) {
+    const m = (l === "es" ? /En el texto 1, mira ([^.]+)\. En el texto 2, mira ([^.]+)\.$/ : /In Text 1, look at ([^.]+)\. In Text 2, look at ([^.]+)\.$/).exec(hint);
+    expect(m, `${p.id} + ${b.id} ${l}: ${hint}`).not.toBeNull();
+    checkSpot(p, l, m![1], q.ev[idx(l)]);
+    checkSpot(b, l, m![2], q.ev2![idx(l)]);
+  } else {
+    const m = (l === "es" ? /Mira ([^.]+)\.$/ : /Look at ([^.]+)\.$/).exec(hint);
+    expect(m, `${p.id} ${l}: ${hint}`).not.toBeNull();
+    checkSpot(p, l, m![1], q.ev[idx(l)]);
+  }
+}
+
+function checkSpot(p: Passage, l: L, place: string, ev: string) {
+  const bs = blocks(p, l);
+  const at = bs.findIndex((x) => x.includes(ev));
+  expect(at, `${p.id} ${l} evidence ${ev}`).toBeGreaterThanOrEqual(0);
+  const m = /^(?:paragraph|el párrafo) (\d+)$|^(?:stanza|la estrofa) (\d+)$|^(?:the section|la sección) “([^”]+)”$|^(?:the part that begins|la parte que empieza con) “([^”]+)”$/.exec(place);
+  expect(m, `${p.id} ${l}: ${place}`).not.toBeNull();
+  if (m![1]) expect(bs.filter((x, i) => i <= at && (p.kind !== "info" || !heading(x))).length, `${p.id} ${l} paragraph`).toBe(Number(m![1]));
+  if (m![2]) expect([p.kind, at + 1], `${p.id} ${l} stanza`).toEqual(["poem", Number(m![2])]);
+  if (m![3]) expect(sectionOf(bs, at), `${p.id} ${l} section`).toBe(m![3]);
+  if (m![4]) expect(bs[at].startsWith(m![4]) && at > 0 && !heading(bs[at - 1]), `${p.id} ${l} box ${m![4]}`).toBe(true);
 }

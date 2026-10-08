@@ -43,6 +43,8 @@ export const TAGS: Record<string, Two> = {
   "too-broad": ["is too general; it could be about many texts.", "es demasiado general; podría ser de muchos textos."],
   "supports-other-point": ["is a detail, but it supports a different point.", "es un detalle, pero apoya otra idea."],
   "first-third-mixup": ["mixes up first person and third person.", "confunde la primera persona con la tercera."],
+  "dialogue-as-narrator": ["mixes up the characters who talk inside quotation marks with the narrator.", "confunde a los personajes que hablan entre comillas con quien narra."],
+  "swapped-views": ["switches what each one thinks or wants.", "cambia lo que piensa o quiere cada quien."],
   "no-narrator-clue": ["does not show who is telling the story.", "no muestra quién cuenta la historia."],
   "wrong-section": ["goes with a different part of the text.", "corresponde a otra parte del texto."],
   "wrong-feature": ["is the job of a different text feature.", "es la función de otra parte del texto."],
@@ -69,6 +71,12 @@ const STRATEGY: Record<SkillKey, Two> = {
   compare: ["Check each choice against Text 1, then against Text 2. Keep the one that matches what the question asks.", "Compara cada opción con el texto 1 y luego con el texto 2. Quédate con la que responde a lo que pide la pregunta."],
 };
 
+/** Hint 2 for a point-of-view question about a poem: the speaker, not a story's narrator. */
+const SPEAKER: Two = [
+  "The speaker is the voice of a poem. Look for who says I, my, or we, and for clues about where that voice is and who is around it.",
+  "Quien habla es la voz del poema. Busca quién dice yo, mi o nosotros, y pistas sobre dónde está esa voz y quién la rodea.",
+];
+
 // ---------------------------------------------------------------------------------------------------
 // Where the evidence sits, for hint 2: a stanza in a poem, a paragraph in a story, a section or a box
 // in an article.
@@ -77,23 +85,24 @@ const isHeading = (block: string) => !/[.?!:;”…)]$/.test(block) && block.spl
 /** "Fast fact: …", "Did you know? …", "Try it:\n…" — a labeled box, unless it sits right under a heading. */
 const boxLabel = (block: string) => /^(¿?\p{L}[\p{L}' ]{1,24}?)[:?…]+\s/u.exec(block)?.[1];
 
-function locate(p: Passage, locale: Locale, ev: string): string {
+/** The part of a text that holds `ev`, as words that follow "look at": "stanza 2", "the section “Steps”". */
+function spot(p: Passage, locale: Locale, ev: string): string {
   const blocks = locale === "es" ? p.es : p.en;
   const i = blocks.findIndex((b) => b.includes(ev));
   if (i < 0) return "";
-  if (p.kind === "poem") return tr(locale, `It is in stanza ${i + 1}.`, `Está en la estrofa ${i + 1}.`);
+  if (p.kind === "poem") return tr(locale, `stanza ${i + 1}`, `la estrofa ${i + 1}`);
   if (p.kind === "info") {
     const label = boxLabel(blocks[i]);
-    if (label && i > 0 && !isHeading(blocks[i - 1])) return tr(locale, `Look at the part that begins ${q(label)}.`, `Mira la parte que empieza con ${q(label)}.`);
-    for (let h = i; h >= 0; h--) if (isHeading(blocks[h])) return tr(locale, `Look in the section ${q(blocks[h])}.`, `Busca en la sección ${q(blocks[h])}.`);
+    if (label && i > 0 && !isHeading(blocks[i - 1])) return tr(locale, `the part that begins ${q(label)}`, `la parte que empieza con ${q(label)}`);
+    for (let h = i; h >= 0; h--) if (isHeading(blocks[h])) return tr(locale, `the section ${q(blocks[h])}`, `la sección ${q(blocks[h])}`);
   }
   const n = blocks.slice(0, i + 1).filter((b) => !isHeading(b)).length;
-  return tr(locale, `It is in paragraph ${n}.`, `Está en el párrafo ${n}.`);
+  return tr(locale, `paragraph ${n}`, `el párrafo ${n}`);
 }
 
 // ---------------------------------------------------------------------------------------------------
-// The pools: every question of a skill, by band. Stories also get the narrator question, built from
-// the passage's point of view.
+// The pools: every question of a skill, by band. About half the stories (whoTells) also get the
+// narrator question, built from the passage's point of view, so it stays a small share of its skill.
 
 type Entry = { p: Passage; b?: Passage; q: Question } | { p: Passage; narrator: true };
 
@@ -104,13 +113,14 @@ const KEYS: SkillKey[] = ["details", "sequence", "character", "features", "maini
 export const READING_POOLS = Object.fromEntries(KEYS.map((k) => [k, [[], []]])) as unknown as Record<SkillKey, [Entry[], Entry[]]>;
 for (const p of PASSAGES) {
   for (const question of p.qs) READING_POOLS[question.skill][p.band - 1].push({ p, q: question });
-  if (p.pov) READING_POOLS.pov[p.band - 1].push({ p, narrator: true });
+  if (p.pov && p.whoTells) READING_POOLS.pov[p.band - 1].push({ p, narrator: true });
 }
 for (const pair of PAIRS) {
   const [a, b] = [BY_ID.get(pair.a)!, BY_ID.get(pair.b)!];
   for (const question of pair.qs) READING_POOLS.compare[a.band - 1].push({ p: a, b, q: question });
 }
 
+/** The narrator choices: each point of view's label and why it is right, plus a choice that is never right. */
 const NARRATOR: Record<"first" | "third", [label: Two, why: Two]> = {
   first: [
     ["A character in the story, who tells it as “I”", "Un personaje de la historia, que la cuenta como “yo”"],
@@ -121,6 +131,7 @@ const NARRATOR: Record<"first" | "third", [label: Two, why: Two]> = {
     ["The narrator uses names and he or she, and never says “I” outside the quotation marks, so the narrator is outside the story.", "El narrador usa nombres y él o ella, y nunca dice “yo” fuera de las comillas, así que está fuera de la historia."],
   ],
 };
+const TAKING_TURNS: Two = ["Two characters who take turns telling it", "Dos personajes que se turnan para contarla"];
 
 const words = (s: string) => s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 const show = (p: Passage, locale: Locale) => [lang(locale, p.title), ...(locale === "es" ? p.es : p.en)];
@@ -131,13 +142,18 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
   if ("narrator" in e) {
     const pov = e.p.pov!;
     const ask = tr(locale, "Who is telling this story?", "¿Quién cuenta esta historia?");
-    const labels = (["first", "third"] as const).map((k): Choice => ({ label: lang(locale, NARRATOR[k][0]), ...(k === pov ? {} : { why: "first-third-mixup" }) }));
-    const index = pov === "first" ? 0 : 1;
+    const key: Choice = { label: lang(locale, NARRATOR[pov][0]) };
+    const choices = r.shuffle([
+      key,
+      { label: lang(locale, NARRATOR[pov === "first" ? "third" : "first"][0]), why: "first-third-mixup" },
+      { label: lang(locale, TAKING_TURNS), why: "dialogue-as-narrator" },
+    ]);
+    const index = choices.indexOf(key);
     const text = show(e.p, locale);
     return {
       prompt: [para(...text, ask)],
       say: ask,
-      choices: labels,
+      choices,
       input: "choices",
       answer: { kind: "choice", index },
       hints: [
@@ -148,7 +164,7 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
       steps: [
         tr(locale, `The text says: ${q(lang(locale, e.p.povEv!))}`, `El texto dice: ${q(lang(locale, e.p.povEv!))}`),
         lang(locale, NARRATOR[pov][1]),
-        tr(locale, `Answer: ${labels[index].label}`, `Respuesta: ${labels[index].label}`),
+        tr(locale, `Answer: ${key.label}`, `Respuesta: ${key.label}`),
       ],
       seconds: pace(text),
     };
@@ -167,7 +183,16 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
   const right = options[0].label;
   const ev = lang(locale, question.ev);
   const ev2 = question.ev2 ? lang(locale, question.ev2) : "";
-  const where = question.skill === "features" || question.skill === "compare" ? "" : locate(p, locale, ev);
+  // Hint 2: the question's own strategy when it has one (every text-feature question does), the
+  // speaker strategy for a poem, or the skill's; then where to look, except for text features, where
+  // the place is often the answer. A pair names the part of each text.
+  const strategy = lang(locale, question.how ?? (question.skill === "pov" && p.kind === "poem" ? SPEAKER : STRATEGY[question.skill]));
+  const where =
+    question.skill === "features"
+      ? ""
+      : b
+        ? tr(locale, `In Text 1, look at ${spot(p, locale, ev)}. In Text 2, look at ${spot(b, locale, ev2)}.`, `En el texto 1, mira ${spot(p, locale, ev)}. En el texto 2, mira ${spot(b, locale, ev2)}.`)
+        : tr(locale, `Look at ${spot(p, locale, ev)}.`, `Mira ${spot(p, locale, ev)}.`);
   const tempting = question.wrong[0];
   const why = locale === "es" ? (tempting[3] ?? tempting[2]) : tempting[2];
   const evidence = b
@@ -181,7 +206,7 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
     answer: { kind: "choice", index: choices.indexOf(options[0]) },
     hints: [
       lang(locale, question.clue),
-      [lang(locale, STRATEGY[question.skill]), where].filter(Boolean).join(" "),
+      `${strategy}${where ? ` ${where}` : ""}`,
       b
         ? tr(locale, `Reread these lines. Text 1: ${q(ev)} Text 2: ${q(ev2)}`, `Vuelve a leer estas líneas. Texto 1: ${q(ev)} Texto 2: ${q(ev2)}`)
         : tr(locale, `Reread: ${q(ev)}`, `Vuelve a leer: ${q(ev)}`),
