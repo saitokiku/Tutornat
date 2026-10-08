@@ -6,14 +6,14 @@ import { FractionVisual, LineGraphVisual, MoonVisual, NumberLineVisual, Particle
 import { ArrayVisual, BaseTenVisual, DotsVisual, TenFrameVisual } from "@/components/stage/visuals-practice";
 import type { Lesson, Subject, Visual, Widget } from "@/lib/types";
 
+/** Too small to read as a cover: base-ten blocks that are only a few single cubes. */
+const tiny = (v: Visual) => v.kind === "base-ten" && !v.hundreds && !v.tens;
+
 /** The first picture a course actually teaches with, so its cover shows the real idea. */
 function firstPicture(lessons: Lesson[]): Visual | Widget | null {
   for (const l of lessons)
     for (const s of l.scenes) {
-      if (s.kind === "slide") {
-        const v = s.blocks.find((b) => b.type === "visual");
-        if (v?.type === "visual") return v.visual;
-      }
+      if (s.kind === "slide") for (const b of s.blocks) if (b.type === "visual" && !tiny(b.visual)) return b.visual;
       if (s.kind === "interactive") return s.widget;
     }
   return null;
