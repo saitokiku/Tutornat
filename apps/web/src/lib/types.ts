@@ -88,7 +88,8 @@ export type Visual =
   | { kind: "array"; rows: number; cols: number }
   /** Kumon-style vertical arithmetic with the answer row left empty. */
   | { kind: "column"; op: "+" | "−" | "×"; top: number; bottom: number }
-  | { kind: "rect"; w: number; h: number; unit: string }
+  /** `splits` cuts it into parts (an area model): each list adds up to its side, and each part shows its area. */
+  | { kind: "rect"; w: number; h: number; unit: string; splits?: { w: number[]; h: number[] } }
   | { kind: "triangle"; base: number; height: number; unit: string }
   | { kind: "circle"; r: number; show: "r" | "d"; unit: string }
   | { kind: "right-triangle"; a: number | null; b: number | null; c: number | null; unit: string }

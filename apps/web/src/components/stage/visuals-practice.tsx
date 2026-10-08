@@ -202,13 +202,27 @@ const fit = (a: number, b: number, maxA: number, maxB: number) => {
   return ratio * maxB <= maxA ? [ratio * maxB, maxB] : [maxA, maxA / ratio];
 };
 
-export function RectVisual({ w, h, unit, alt, tint }: P & { w: number; h: number; unit: string }) {
+/** Each part of a side: its length, where it starts and how long it is drawn. */
+const cuts = (parts: number[], total: number, len: number) =>
+  parts.map((p, i) => ({ p, at: (parts.slice(0, i).reduce((s, x) => s + x, 0) / total) * len, len: (p / total) * len }));
+
+/** A rectangle with its sides labelled. With `splits` it is an area model: cut lines, each part's side, and its area inside it, all at one scale. */
+export function RectVisual({ w, h, unit, splits, alt, tint }: P & { w: number; h: number; unit: string; splits?: { w: number[]; h: number[] } }) {
   const [rw, rh] = fit(w, h, 220, 120);
+  const xs = splits ? cuts(splits.w, w, rw) : [];
+  const ys = splits ? cuts(splits.h, h, rh) : [];
   return (
     <svg viewBox={`0 0 ${rw + 90} ${rh + 50}`} role="img" aria-label={alt} className="w-full max-w-sm">
       <rect x={20} y={10} width={rw} height={rh} fill={tint} fillOpacity={0.15} stroke={tint} strokeWidth={2.5} rx={2} />
-      {label(20 + rw / 2, rh + 32, `${w} ${unit}`)}
-      {label(rw + 30, 10 + rh / 2 + 4, `${h} ${unit}`, "start")}
+      {xs.slice(1).map((c) => (
+        <line key={`x${c.at}`} x1={20 + c.at} x2={20 + c.at} y1={10} y2={10 + rh} stroke={tint} strokeWidth={1.5} />
+      ))}
+      {ys.slice(1).map((c) => (
+        <line key={`y${c.at}`} x1={20} x2={20 + rw} y1={10 + c.at} y2={10 + c.at} stroke={tint} strokeWidth={1.5} />
+      ))}
+      {ys.flatMap((y) => xs.map((x) => <g key={`${x.at}-${y.at}`}>{label(20 + x.at + x.len / 2, 10 + y.at + y.len / 2 + 4, String(x.p * y.p))}</g>))}
+      {splits ? xs.map((x) => <g key={`w${x.at}`}>{label(20 + x.at + x.len / 2, rh + 32, String(x.p))}</g>) : label(20 + rw / 2, rh + 32, `${w} ${unit}`)}
+      {splits ? ys.map((y) => <g key={`h${y.at}`}>{label(rw + 30, 10 + y.at + y.len / 2 + 4, String(y.p), "start")}</g>) : label(rw + 30, 10 + rh / 2 + 4, `${h} ${unit}`, "start")}
     </svg>
   );
 }
