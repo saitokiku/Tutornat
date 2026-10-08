@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { browserSpeechIn, browserSpeechOut, pickVoice, type Recognition, type RecognitionCtor } from "./browser";
+import { browserSpeechIn, browserSpeechOut, browserVoice, type Recognition, type RecognitionCtor } from "./browser";
 import { sentenceFeed } from "./chunk";
+import { chooseVoice } from "./voices";
 
 // ---- speech synthesis double
 
@@ -35,9 +36,10 @@ function synth(voices = VOICES) {
   return s;
 }
 
-function outSetup({ voices = VOICES, names = [] as string[], locale = "en" as "en" | "es" } = {}) {
+function outSetup({ voices = VOICES, names = [] as string[], locale = "en" as "en" | "es", online = false, band = "69" as "k2" | "35" | "69" } = {}) {
   const s = synth(voices);
-  const out = browserSpeechOut({ locale, names, synth: s as unknown as SpeechSynthesis, Utterance: FakeUtt as unknown as typeof SpeechSynthesisUtterance })!;
+  const pick = chooseVoice(voices, locale, { online });
+  const out = browserSpeechOut({ locale, pick, names, band, synth: s as unknown as SpeechSynthesis, Utterance: FakeUtt as unknown as typeof SpeechSynthesisUtterance })!;
   const seen = { starts: 0, ends: [] as boolean[], words: [] as number[], errors: [] as string[] };
   out.onStart(() => seen.starts++);
   out.onEnd((e) => seen.ends.push(e.cancelled));
@@ -46,17 +48,28 @@ function outSetup({ voices = VOICES, names = [] as string[], locale = "en" as "e
   return { s, out, seen };
 }
 
-const tick = () => new Promise((r) => setTimeout(r, 0));
+const tick = () => vi.advanceTimersByTimeAsync(0);
 
 describe("browser read-aloud", () => {
-  it("is null where the browser can't speak", () => {
-    expect(browserSpeechOut({ locale: "en", synth: undefined, Utterance: undefined })).toBeNull();
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("is null where the browser can't speak, or when only robots are on offer", () => {
+    expect(browserSpeechOut({ locale: "en", pick: null, synth: undefined, Utterance: undefined })).toBeNull();
+    const robots = [voice("Microsoft David - English (United States)", "en-US", true), voice("Zarvox", "en-US", true)];
+    const pick = chooseVoice(robots, "en", { online: true });
+    expect(pick).toBeNull();
+    expect(browserSpeechOut({ locale: "en", pick, synth: synth(robots) as unknown as SpeechSynthesis, Utterance: FakeUtt as unknown as typeof SpeechSynthesisUtterance })).toBeNull();
   });
 
-  it("prefers an on-device voice in the exact language", () => {
-    expect(pickVoice(VOICES, "en")?.name).toBe("Local US");
-    expect(pickVoice(VOICES, "es")?.name).toBe("Local MX");
-    expect(pickVoice([], "en")).toBeNull();
+  it("waits for the browser's voices before picking one", async () => {
+    let fire = () => {};
+    let list: SpeechSynthesisVoice[] = [];
+    const s = { ...synth(), getVoices: () => list, addEventListener: (_: string, fn: () => void) => (fire = fn), removeEventListener: () => {} };
+    const p = browserVoice({ locale: "es", online: false, synth: s as unknown as SpeechSynthesis });
+    list = VOICES;
+    fire();
+    expect((await p)?.voice.name).toBe("Local MX");
   });
 
   it("an on-device voice may say the learner's name; an online one never gets it", async () => {
@@ -64,16 +77,10 @@ describe("browser read-aloud", () => {
     void local.out.speak("Nice work, Ada.");
     await tick();
     expect(local.s.queue.map((u) => u.text)).toEqual(["Nice work, Ada."]);
-    // Spanish on a computer with only English voices: Chrome would use its online Spanish voice.
-    const online = outSetup({ names: ["Ada"], locale: "es", voices: [voice("Local US", "en-US", true), voice("Google español", "es-ES", false)] });
+    const online = outSetup({ names: ["Ada"], locale: "es", online: true, voices: [voice("Local US", "en-US", true), voice("Google español", "es-ES", false)] });
     void online.out.speak("Muy bien, Ada.");
     await tick();
     expect(online.s.queue.map((u) => u.text)).toEqual(["Muy bien."]);
-    // Voices not loaded yet: the browser picks its default, which may be online.
-    const unknown = outSetup({ names: ["Ada"], voices: [] });
-    void unknown.out.speak("Your turn, Ada.");
-    await tick();
-    expect(unknown.s.queue.map((u) => u.text)).toEqual(["Your turn."]);
   });
 
   it("dispose stops speaking", async () => {
@@ -85,27 +92,35 @@ describe("browser read-aloud", () => {
     expect(out.state).toBe("idle");
   });
 
-  it("speaks sentence by sentence, says math in words, and highlights the written words", async () => {
-    const { s, out, seen } = outSetup();
-    const done = out.speak("Shade 3/4. Count the dots.");
+  it("speaks sentence by sentence with the band's pause, says math in words, and highlights the written words", async () => {
+    const { s, out, seen } = outSetup({ band: "k2" });
+    const done = out.speak("Shade 3/4. Is it big?");
     await tick();
-    expect(s.queue.map((u) => u.text)).toEqual(["Shade three fourths.", "Count the dots."]);
-    expect(s.queue[0]).toMatchObject({ lang: "en-US", rate: 0.95 });
+    expect(s.queue.map((u) => u.text)).toEqual(["Shade three fourths."]);
+    expect(s.queue[0]).toMatchObject({ lang: "en-US", rate: 1 });
     expect(s.queue[0].voice?.name).toBe("Local US");
-    const [a, b] = s.queue;
+    const [a] = s.queue;
     expect(out.state).toBe("waiting");
     a.onstart!();
     expect(out.state).toBe("speaking");
     a.onboundary!({ name: "word", charIndex: 6 }); // "three"
     a.onboundary!({ name: "word", charIndex: 12 }); // "fourths."
+    expect(out.heardUpTo()).toBe(1);
     a.onend!();
+    // K–2: 400 ms after a sentence, 300 ms more before a question.
+    await vi.advanceTimersByTimeAsync(650);
+    expect(s.queue).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(60);
+    const b = s.queue[1];
+    expect(b.text).toBe("Is it big?");
     b.onstart!();
-    b.onboundary!({ name: "word", charIndex: 6 }); // "the"
+    b.onboundary!({ name: "word", charIndex: 3 }); // "it"
     b.onend!();
     await done;
     expect(seen.starts).toBe(1);
     expect(seen.words).toEqual([0, 1, 1, 2, 3]);
     expect(seen.ends).toEqual([false]);
+    expect(out.heardUpTo()).toBe(4);
     expect(out.state).toBe("idle");
   });
 
@@ -116,13 +131,14 @@ describe("browser read-aloud", () => {
     feed.write("First one. Seco");
     await tick();
     expect(s.queue.map((u) => u.text)).toEqual(["First one."]);
+    s.queue[0].onend!();
     feed.write("nd one.");
     feed.end();
-    await tick();
+    await vi.advanceTimersByTimeAsync(200);
     expect(s.queue.map((u) => u.text)).toEqual(["First one.", "Second one."]);
   });
 
-  it("cancel stops at once and reports it", async () => {
+  it("cancel stops at once and reports it; an aborted signal does the same", async () => {
     const { s, out, seen } = outSetup();
     const done = out.speak("One. Two.");
     await tick();
@@ -133,6 +149,11 @@ describe("browser read-aloud", () => {
     expect(seen.ends).toEqual([true]);
     expect(seen.errors).toEqual([]);
     expect(out.state).toBe("idle");
+    const ctl = new AbortController();
+    const again = out.speak("Three.", { signal: ctl.signal });
+    ctl.abort();
+    await again;
+    expect(seen.ends).toEqual([true, true]);
   });
 
   it("pauses and resumes", async () => {
@@ -159,6 +180,11 @@ describe("browser read-aloud", () => {
     await done;
     expect(seen.errors).toEqual(["speak"]);
     expect(seen.ends).toEqual([false]);
+  });
+
+  it("knows its tier: a natural voice may read by itself, a plain one only on a tap", () => {
+    expect(outSetup().out.tier).toBe("B");
+    expect(outSetup({ voices: [voice("Ava (Premium)", "en-US", true)] }).out.tier).toBe("A");
   });
 });
 
@@ -199,6 +225,7 @@ function inSetup() {
   input.onPartial((t) => seen.partial.push(t));
   input.onFinal((t) => seen.final.push(t));
   input.onEndOfTurn((t) => seen.turns.push(t));
+  expect(input.duplex).toBe(false); // the browser's recognizer is half duplex: the mic is closed while the tutor speaks
   input.onSpeechStart(() => seen.speech++);
   input.onError((e) => seen.errors.push(e.code));
   return { input, seen, rec: () => FakeRec.all[FakeRec.all.length - 1] };

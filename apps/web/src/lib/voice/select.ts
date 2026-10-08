@@ -1,17 +1,24 @@
 import type { Key } from "@/i18n/en";
 import type { Grade, Locale } from "@/lib/types";
-import { browserSpeechIn, browserSpeechOut } from "./browser";
+import { browserSpeechIn, browserSpeechOut, browserVoice } from "./browser";
 import { deepgramSpeechIn } from "./deepgram";
 import { elevenLabsSpeechOut } from "./elevenlabs";
 import { micSupported } from "./mic";
-import { asVoiceError, emitter, type SpeechIn, type SpeechOut, type Unsubscribe, type VoiceError, type VoiceErrorCode } from "./types";
+import { asVoiceError, emitter, type Band, type HeardWord, type SpeechIn, type SpeechOut, type TurnMeta, type Unsubscribe, type VoiceError, type VoiceErrorCode } from "./types";
 
-// Which voice a learner gets. The microphone is on offer only when a grown-up allowed it (the family
-// setting), at every age. The vendor voice (ElevenLabs, Deepgram) is used when this deployment has it
-// set up and, for a learner who may be under 13, only with that same consent; otherwise the browser's
-// own voice reads aloud. When the vendor recognizer can't be reached, listening moves to the
-// browser's recognizer. The learner's name is never sent: it is only used here, to keep it out of
-// anything that leaves the device (vendor text, online browser voices, recognizer hints).
+// Which voice a learner gets (live tutor spec §1.2, §4). One voice for the whole app, built once per
+// learner and language by VoiceRoot:
+//  - reading aloud: the vendor voice (ElevenLabs) when this deployment has it for the learner's
+//    language and, under 13, a grown-up allowed it; otherwise the best browser voice (./voices). A
+//    Tier A browser voice may read by itself; a Tier B one only when the learner taps Hear; robots
+//    never speak (text only);
+//  - listening: only with a grown-up's consent, at every age. Deepgram when set up, the browser's
+//    recognizer otherwise (and when Deepgram can't be reached);
+//  - conversation mode (the microphone reopening after the tutor's question) only with all three:
+//    consent, vendor listening, and the vendor voice or a Tier A one. Never with a robot or a
+//    half-duplex recognizer: that is where a tutor talks over itself.
+// The learner's name is never sent anywhere: it is used here only to keep it out of what leaves the
+// device (vendor text, online browser voices, recognizer hints).
 
 export type VoiceStatus = { tts: boolean; stt: boolean };
 
@@ -21,10 +28,11 @@ export type VoiceSetup = {
   consent: boolean;
   /** The learner may be under 13 (see mayBeUnder13). */
   under13: boolean;
+  band: Band;
   /** Names to keep out of anything that leaves the device. Never sent. */
   names?: string[];
-  /** K–5: slower speech and longer pauses before a turn ends. */
-  young?: boolean;
+  /** The learner's id on this device: their browser voice is remembered per learner and language. Never sent. */
+  learner?: string;
   fetch?: typeof fetch;
 };
 
@@ -35,21 +43,31 @@ export type Voice = {
   vendor: { out: SpeechOut["kind"] | null; in: SpeechIn["kind"] | null };
   /** The microphone is allowed for this learner. */
   allowed: boolean;
+  /** How natural the reading voice is: "A" may read by itself, "B" only on a Hear tap, null: text only. */
+  tier: "A" | "B" | null;
+  /** Replies and narration may be read aloud without a tap (vendor or Tier A only). */
+  autoRead: boolean;
+  /** Conversation mode is allowed (consent, vendor listening, and the vendor voice or a Tier A one). */
+  conversation: boolean;
+  /**
+   * A natural browser voice for the reply after the vendor voice failed ("Using this device's voice"),
+   * or null. Never used inside a reply: a voice never changes mid-reply.
+   */
+  deviceOut: SpeechOut | null;
+  /** No natural voice here: Settings shows the grown-up how to download one. */
+  tip: boolean;
 };
 
 /** Grades whose learners may be under 13 (K–8). Ages vary, so this errs toward asking a grown-up. */
 export const mayBeUnder13 = (g: Grade) => g !== "9" && g !== "adult";
 
-/** K–5. */
-export const isYoung = (g: Grade) => ["K", "1", "2", "3", "4", "5"].includes(g);
-
-/** What /api/voice/status says is set up; nothing on any failure. (The reply also renews the voice pass cookie the token routes need.) */
-export async function voiceStatus(f: typeof fetch = (...a) => fetch(...a)): Promise<VoiceStatus> {
+/** What /api/voice/status says is set up for this language; nothing on any failure. (The reply also renews the voice pass cookie the token routes need.) */
+export async function voiceStatus(f: typeof fetch = (...a) => fetch(...a), locale: Locale = "en"): Promise<VoiceStatus> {
   try {
     const res = await f("/api/voice/status", { cache: "no-store" });
     if (!res.ok) return { tts: false, stt: false };
-    const s = (await res.json()) as Partial<VoiceStatus>;
-    return { tts: s.tts === true, stt: s.stt === true };
+    const s = (await res.json()) as Partial<{ tts: boolean; ttsEs: boolean; stt: boolean }>;
+    return { tts: locale === "es" ? s.ttsEs === true : s.tts === true, stt: s.stt === true };
   } catch {
     return { tts: false, stt: false };
   }
@@ -60,18 +78,32 @@ const SWITCH_CODES = new Set<VoiceErrorCode>(["network", "unavailable"]);
 
 /**
  * A SpeechIn that uses `primary` until it can't reach its service, then the one `fallback()` makes
- * (from then on). kind follows whichever is in use.
+ * (from then on). kind and duplex follow whichever is in use.
  */
 export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null): SpeechIn {
-  const ev = { partial: emitter<[string]>(), final: emitter<[string]>(), turn: emitter<[string]>(), speech: emitter<[]>(), error: emitter<[VoiceError]>() };
+  const ev = {
+    partial: emitter<[string]>(),
+    final: emitter<[string]>(),
+    words: emitter<[HeardWord[]]>(),
+    turn: emitter<[string, TurnMeta]>(),
+    eager: emitter<[string, TurnMeta]>(),
+    resumed: emitter<[]>(),
+    speech: emitter<[]>(),
+    slow: emitter<[boolean]>(),
+    error: emitter<[VoiceError]>(),
+  };
   let active = primary;
   let starting = false;
   let moveOn = false; // the primary lost its service mid-stream: the next start uses the fallback
   const wire = (s: SpeechIn): Unsubscribe[] => [
     s.onPartial((t) => active === s && ev.partial.emit(t)),
     s.onFinal((t) => active === s && ev.final.emit(t)),
-    s.onEndOfTurn((t) => active === s && ev.turn.emit(t)),
+    s.onWords((w) => active === s && ev.words.emit(w)),
+    s.onEndOfTurn((t, m) => active === s && ev.turn.emit(t, m)),
+    s.onEagerEnd((t, m) => active === s && ev.eager.emit(t, m)),
+    s.onTurnResumed(() => active === s && ev.resumed.emit()),
     s.onSpeechStart(() => active === s && ev.speech.emit()),
+    s.onSlow((x) => active === s && ev.slow.emit(x)),
     s.onError((e) => {
       if (active !== s || (starting && s === primary)) return; // a failed start is decided in start()
       if (s === primary && SWITCH_CODES.has(e.code)) moveOn = true;
@@ -89,6 +121,9 @@ export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null)
   return {
     get kind() {
       return active.kind;
+    },
+    get duplex() {
+      return active.duplex;
     },
     get listening() {
       return active.listening;
@@ -117,34 +152,50 @@ export function withFallback(primary: SpeechIn, fallback: () => SpeechIn | null)
     level: () => active.level(),
     onPartial: ev.partial.on,
     onFinal: ev.final.on,
+    onWords: ev.words.on,
     onEndOfTurn: ev.turn.on,
+    onEagerEnd: ev.eager.on,
+    onTurnResumed: ev.resumed.on,
     onSpeechStart: ev.speech.on,
+    onSlow: ev.slow.on,
     onError: ev.error.on,
   };
 }
 
+const NONE: Voice = { out: null, in: null, vendor: { out: null, in: null }, allowed: false, tier: null, autoRead: false, conversation: false, deviceOut: null, tip: false };
+
 /** Builds the learner's voice. Call in an effect or a handler, never during render. */
 export async function voice(setup: VoiceSetup): Promise<Voice> {
-  if (typeof window === "undefined") return { out: null, in: null, vendor: { out: null, in: null }, allowed: false };
-  const { locale, consent, under13, young } = setup;
+  if (typeof window === "undefined") return NONE;
+  const { locale, consent, under13, band, learner } = setup;
   const names = setup.names ?? [];
-  const vendorAllowed = consent || !under13;
-  const status = vendorAllowed ? await voiceStatus(setup.fetch) : { tts: false, stt: false };
-  const rate = young ? 0.9 : 0.95;
-  const local = browserSpeechOut({ locale, rate, names });
-
-  const out: SpeechOut | null =
-    status.tts && typeof AudioContext !== "undefined"
-      ? elevenLabsSpeechOut({ locale, consent, under13, names, rate, fallback: local, fetch: setup.fetch })
-      : local;
+  // Vendor voices and online browser voices send text to a company: under 13 that needs the grown-up.
+  const mayLeave = consent || !under13;
+  const [status, pick] = await Promise.all([mayLeave ? voiceStatus(setup.fetch, locale) : Promise.resolve({ tts: false, stt: false }), browserVoice({ locale, online: mayLeave, learner })]);
+  const local = browserSpeechOut({ locale, pick, band, names });
+  const vendorOut = status.tts && typeof AudioContext !== "undefined";
+  const out: SpeechOut | null = vendorOut ? elevenLabsSpeechOut({ locale, consent, under13, names, band, fetch: setup.fetch }) : local;
+  const deviceOut = vendorOut && local?.tier === "A" ? local : null;
 
   let input: SpeechIn | null = null;
+  const vendorIn = consent && status.stt && micSupported();
   if (consent) {
-    const browserIn = () => browserSpeechIn({ locale, young });
-    input = status.stt && micSupported() ? withFallback(deepgramSpeechIn({ locale, consent, under13, names, young, fetch: setup.fetch }), browserIn) : browserIn();
+    const browserIn = () => browserSpeechIn({ locale, band });
+    input = vendorIn ? withFallback(deepgramSpeechIn({ locale, consent, under13, names, band, fetch: setup.fetch }), browserIn) : browserIn();
   }
 
-  return { out, in: input, vendor: { out: out?.kind ?? null, in: input?.kind ?? null }, allowed: consent };
+  const tier = out ? out.tier : null;
+  return {
+    out,
+    in: input,
+    vendor: { out: out?.kind ?? null, in: input?.kind ?? null },
+    allowed: consent,
+    tier,
+    autoRead: tier === "A",
+    conversation: vendorIn && tier === "A",
+    deviceOut,
+    tip: !vendorOut && tier !== "A",
+  };
 }
 
 /** The lines that tell a family where voice goes, for whatever is in use: listening first, then reading aloud. */

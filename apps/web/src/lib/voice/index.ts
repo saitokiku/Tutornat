@@ -15,7 +15,7 @@ export { isBackchannel, isFillerOnly, words } from "./backchannel";
 export { BARGE_IN_MS, echoScore, echoVerdict, echoWords, shouldBargeIn, type BargeInput } from "./bargein";
 export { TURN_DEFAULT, TURN_MANUAL, TURN_YOUNG, emptyTurn, finishTurn, nextCheckAt, shapeOf, silenceNeeded, stepTurn, turnText, turnTracker } from "./turn";
 export type { TurnEvent, TurnOptions, TurnShape, TurnState, TurnTracker } from "./turn";
-export { browserSpeechIn, browserSpeechOut, pickVoice, speechLang } from "./browser";
+export { browserSpeechIn, browserSpeechOut, browserVoice, speechLang } from "./browser";
 export { elevenLabsSpeechOut, pcm16ToFloat32 } from "./elevenlabs";
 export { deepgramSpeechIn } from "./deepgram";
 export {
@@ -34,5 +34,5 @@ export {
   type SelfTestStatus,
 } from "./mic";
 export { ECHO_LAG_MS, ECHO_TAIL_MS, converse, type ConverseOptions, type MicOffReason, type VoiceMetric } from "./converse";
-export { isYoung, mayBeUnder13, voice, voiceDisclosure, voiceStatus, withFallback, type Voice, type VoiceSetup, type VoiceStatus } from "./select";
+export { mayBeUnder13, voice, voiceDisclosure, voiceStatus, withFallback, type Voice, type VoiceSetup, type VoiceStatus } from "./select";
 export { useVoiceSession, type SessionOptions, type VoiceSession } from "./session";

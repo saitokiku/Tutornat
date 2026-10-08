@@ -1,128 +1,202 @@
 import type { Locale } from "@/lib/types";
+import { SENTENCE_PAUSE } from "./bands";
 import { sentencesFrom } from "./chunk";
+import { assertSpoken } from "./numbers";
 import { speakable, wordAt } from "./speakable";
-import { TURN_DEFAULT, TURN_MANUAL, TURN_YOUNG, turnTracker, type TurnTracker } from "./turn";
-import { countWords, emitter, VoiceError, type ListenOptions, type OutState, type SpeakSource, type SpeechIn, type SpeechOut, type VoiceErrorCode } from "./types";
+import { TURN_MANUAL, turnOptions, turnTracker, type TurnTracker } from "./turn";
+import {
+  countWords,
+  emitter,
+  finishedRun,
+  metaOf,
+  VoiceError,
+  type Band,
+  type HeardWord,
+  type ListenOptions,
+  type OutState,
+  type OutTiming,
+  type SpeakSource,
+  type SpeechIn,
+  type SpeechOut,
+  type SpeechRun,
+  type TurnMeta,
+  type VoiceErrorCode,
+} from "./types";
+import { chooseVoice, loadVoices, type VoicePick } from "./voices";
 
 // What every modern browser already has: speechSynthesis to read aloud and (Chrome, Edge, Safari)
-// SpeechRecognition to listen. No key, no vendor; the fallback whenever a vendor isn't set up.
+// SpeechRecognition to listen. No key, no vendor. Which browser voice may speak is decided by
+// ./voices (tiers): this file is the only place in the app that touches speechSynthesis.
 
 export const speechLang = (l: Locale) => (l === "es" ? "es-US" : "en-US");
 
-/** A voice for the language, preferring one that runs on the device (its text stays here). */
-export function pickVoice(voices: SpeechSynthesisVoice[], locale: Locale): SpeechSynthesisVoice | null {
-  const lang = speechLang(locale).toLowerCase();
-  const fits = voices.filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith(locale));
-  const rank = (v: SpeechSynthesisVoice) => (v.localService ? 0 : 2) + (v.lang.toLowerCase().replace("_", "-") === lang ? 0 : 1);
-  return fits.sort((a, b) => rank(a) - rank(b))[0] ?? null;
-}
+type Synth = Pick<SpeechSynthesis, "speak" | "cancel" | "pause" | "resume" | "getVoices"> & Partial<Pick<SpeechSynthesis, "addEventListener" | "removeEventListener">>;
 
-type Synth = Pick<SpeechSynthesis, "speak" | "cancel" | "pause" | "resume" | "getVoices">;
+const defaultSynth = (): Synth | undefined => (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis : undefined);
+
+/**
+ * The learner's browser voice, once the browser has listed its voices (up to a second): the best
+ * tier available in their language, online voices only when allowed. Null when only robots are on
+ * offer, or there is no speechSynthesis: then read-aloud is text only.
+ */
+export async function browserVoice({ locale, online, learner, synth }: { locale: Locale; online: boolean; learner?: string; synth?: Synth }): Promise<VoicePick<SpeechSynthesisVoice> | null> {
+  const s = synth ?? defaultSynth();
+  if (!s) return null;
+  return chooseVoice(await loadVoices(s), locale, { online, learner });
+}
 
 export type BrowserOutOptions = {
   locale: Locale;
-  /** 0.95 by default: a touch slower than the browser's default, easier for children to follow. */
-  rate?: number;
-  /** Learner names: left out whenever the voice may run online (not on this device). */
+  /** The voice to use (browserVoice()); without one nothing is spoken (returns null). */
+  pick: VoicePick<SpeechSynthesisVoice> | null;
+  band?: Band;
+  /** Learner names: left out whenever the voice runs online (not on this device). */
   names?: string[];
   synth?: Synth;
   Utterance?: typeof SpeechSynthesisUtterance;
+  now?: () => number;
 };
 
-export function browserSpeechOut({ locale, rate = 0.95, names = [], synth, Utterance }: BrowserOutOptions): SpeechOut | null {
-  const s = synth ?? (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis : undefined);
+export function browserSpeechOut({ locale, pick, band: ownBand = "69", names = [], synth, Utterance, now = () => performance.now() }: BrowserOutOptions): SpeechOut | null {
+  const s = synth ?? defaultSynth();
   const U = Utterance ?? (typeof SpeechSynthesisUtterance !== "undefined" ? SpeechSynthesisUtterance : undefined);
-  if (!s || !U) return null;
+  if (!s || !U || !pick) return null;
   const synthesis = s;
   const Utt = U;
+  const voice = pick.voice;
+  // An online voice sends the text to the company that runs it: names stay here.
+  const leaveOut = pick.online ? names : [];
 
-  const ev = { boundary: emitter<[number]>(), start: emitter<[]>(), end: emitter<[{ cancelled: boolean }]>(), error: emitter<[VoiceError]>() };
+  const ev = {
+    boundary: emitter<[number, number]>(),
+    scheduled: emitter<[number, number, number]>(),
+    start: emitter<[number]>(),
+    end: emitter<[{ cancelled: boolean }, number]>(),
+    error: emitter<[VoiceError, number]>(),
+    locked: emitter<[boolean]>(),
+    timing: emitter<[OutTiming]>(),
+  };
   let state: OutState = "idle";
-  let current: { finish: (cancelled: boolean) => void } | null = null;
+  let ids = 0;
+  let current: { id: number; finish: (cancelled: boolean) => void } | null = null;
+  let heard = -1;
   // Chrome drops events for utterances it has garbage-collected; keep them referenced while queued.
   let live: SpeechSynthesisUtterance[] = [];
 
   const out: SpeechOut = {
     kind: "browser",
+    tier: pick.tier,
     get state() {
       return state;
     },
-    speak(source: SpeakSource) {
+    locked: false,
+    speak(source: SpeakSource, opts = {}): SpeechRun {
       out.cancel();
+      const id = ++ids;
+      if (opts.signal?.aborted) return finishedRun(id);
+      const band = opts.band ?? ownBand;
       state = "waiting";
-      return new Promise<void>((resolve) => {
-        let done = false;
-        let pending = 0;
-        let streamDone = false;
-        let started = false;
-        let base = 0;
-        const me = {
-          finish(cancelled: boolean) {
-            if (done) return;
-            done = true;
-            if (current === me) current = null;
-            live = [];
-            state = "idle";
-            ev.end.emit({ cancelled });
-            resolve();
-          },
-        };
-        current = me;
-        const maybeDone = () => {
-          if (streamDone && pending === 0) me.finish(false);
-        };
-        const voice = pickVoice(synthesis.getVoices(), locale);
-        // An online voice (or the browser's default, when its voices haven't loaded) sends the text to
-        // the company that runs it: names stay here.
-        const leaveOut = voice?.localService ? [] : names;
-        void (async () => {
-          try {
-            for await (const sentence of sentencesFrom(source)) {
-              if (done) return;
-              const sp = speakable(sentence, locale, leaveOut);
-              const offset = base;
-              base += countWords(sentence);
-              if (!sp.text) continue;
-              const u = new Utt(sp.text);
-              u.lang = speechLang(locale);
-              u.voice = voice;
-              u.rate = rate;
-              u.onstart = () => {
-                if (done) return;
-                if (!started) {
-                  started = true;
-                  if (state === "waiting") state = "speaking";
-                  ev.start.emit();
-                }
-                ev.boundary.emit(offset + (sp.words[0] ?? 0)); // sentence-level highlight even for voices without word events
-              };
-              u.onboundary = (e) => {
-                if (done || (e.name && e.name !== "word")) return;
-                const k = Math.min(wordAt(sp.text, e.charIndex), sp.words.length - 1);
-                if (k > 0) ev.boundary.emit(offset + sp.words[k]);
-              };
-              u.onend = () => {
-                if (done) return;
-                pending--;
-                maybeDone();
-              };
-              u.onerror = (e) => {
-                if (done) return;
-                pending--;
-                if (e.error !== "interrupted" && e.error !== "canceled") ev.error.emit(new VoiceError("speak", e.error));
-                maybeDone();
-              };
-              pending++;
-              live.push(u);
-              synthesis.speak(u);
-            }
-          } catch {
-            // The caller's stream failed: speak what arrived.
+      heard = -1;
+      let resolve!: () => void;
+      const done = new Promise<void>((ok) => (resolve = ok));
+      let finished = false;
+      let started = false;
+      const queue: { text: string; offset: number; words: number[]; question: boolean; last: number }[] = [];
+      let streamDone = false;
+      let speaking = false;
+      let gap: ReturnType<typeof setTimeout> | undefined;
+      let firstSentenceAt: number | null = null;
+      const me = {
+        id,
+        finish(cancelled: boolean) {
+          if (finished) return;
+          finished = true;
+          clearTimeout(gap);
+          opts.signal?.removeEventListener("abort", onAbort);
+          if (current === me) current = null;
+          live = [];
+          state = "idle";
+          ev.end.emit({ cancelled }, id);
+          resolve();
+        },
+      };
+      const onAbort = () => {
+        if (current === me) out.cancel();
+      };
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
+      current = me;
+
+      // One sentence at a time, with the band's pause between them (pace from pauses, not slow words).
+      const next = () => {
+        if (finished || speaking) return;
+        const item = queue.shift();
+        if (!item) {
+          if (streamDone) me.finish(false);
+          return;
+        }
+        speaking = true;
+        const u = new Utt(item.text);
+        u.lang = speechLang(locale);
+        u.voice = voice;
+        u.rate = 1;
+        u.onstart = () => {
+          if (finished) return;
+          if (!started) {
+            started = true;
+            if (state === "waiting") state = "speaking";
+            ev.start.emit(id);
+            ev.timing.emit({ run: id, vendor: "browser", firstSentenceAt, firstChunkAt: null, firstAudibleAt: now(), underruns: 0, retried: false });
           }
-          streamDone = true;
-          maybeDone();
-        })();
-      });
+          ev.boundary.emit(item.offset + (item.words[0] ?? 0), id); // sentence-level highlight even for voices without word events
+        };
+        u.onboundary = (e) => {
+          if (finished || (e.name && e.name !== "word")) return;
+          const k = Math.min(wordAt(item.text, e.charIndex), item.words.length - 1);
+          if (k > 0) {
+            heard = Math.max(heard, item.offset + item.words[k - 1]);
+            ev.boundary.emit(item.offset + item.words[k], id);
+          }
+        };
+        const after = () => {
+          speaking = false;
+          heard = Math.max(heard, item.last);
+          if (!queue.length) return next();
+          const p = SENTENCE_PAUSE[band];
+          gap = setTimeout(next, p.after + (queue[0].question ? p.beforeQuestion : 0));
+        };
+        u.onend = () => {
+          if (!finished) after();
+        };
+        u.onerror = (e) => {
+          if (finished) return;
+          if (e.error !== "interrupted" && e.error !== "canceled") ev.error.emit(new VoiceError("speak", e.error), id);
+          after();
+        };
+        live.push(u);
+        assertSpoken(item.text, "the browser voice");
+        firstSentenceAt ??= now();
+        synthesis.speak(u);
+      };
+
+      void (async () => {
+        let base = 0;
+        try {
+          for await (const sentence of sentencesFrom(source)) {
+            if (finished) return;
+            const sp = speakable(sentence, locale, leaveOut);
+            const offset = base;
+            base += countWords(sentence);
+            if (!sp.text) continue;
+            queue.push({ text: sp.text, offset, words: sp.words, question: /[?¿]/.test(sentence), last: base - 1 });
+            next();
+          }
+        } catch {
+          // The caller's stream failed: speak what arrived.
+        }
+        streamDone = true;
+        if (!speaking && !queue.length) me.finish(false);
+      })();
+      return Object.assign(done, { id });
     },
     pause() {
       if (state !== "speaking" && state !== "waiting") return;
@@ -155,17 +229,24 @@ export function browserSpeechOut({ locale, rate = 0.95, names = [], synth, Utter
     dispose() {
       out.cancel();
     },
+    heardUpTo: () => heard,
+    // A browser voice plays outside the page's audio graph: it can't be ducked, only stopped.
+    duck() {},
+    unduck() {},
     onBoundary: ev.boundary.on,
+    onWordScheduled: ev.scheduled.on,
     onStart: ev.start.on,
     onEnd: ev.end.on,
     onError: ev.error.on,
+    onLocked: ev.locked.on,
+    onTiming: ev.timing.on,
   };
   return out;
 }
 
 // ---- Listening
 
-type RecResult = { isFinal: boolean; 0: { transcript: string }; length: number };
+type RecResult = { isFinal: boolean; 0: { transcript: string; confidence?: number }; length: number };
 type RecEvent = { resultIndex: number; results: ArrayLike<RecResult> };
 export type Recognition = {
   lang: string;
@@ -201,21 +282,29 @@ const REC_ERRORS: Record<string, VoiceErrorCode> = {
 
 export type BrowserInOptions = {
   locale: Locale;
-  /** K–5 learner: longer pauses before a turn ends. */
-  young?: boolean;
+  band?: Band;
   Recognition?: RecognitionCtor;
   now?: () => number;
 };
 
-export function browserSpeechIn({ locale, young = false, Recognition, now = () => Date.now() }: BrowserInOptions): SpeechIn | null {
+/**
+ * The browser's recognizer: the last resort (live tutor spec §2.2). Half duplex — the microphone is
+ * closed while the tutor speaks — and no restart loop of its own beyond the browser ending a quiet
+ * stream (Android beeps on every start).
+ */
+export function browserSpeechIn({ locale, band: ownBand = "69", Recognition, now = () => performance.now() }: BrowserInOptions): SpeechIn | null {
   const R = Recognition ?? recognitionCtor();
   if (!R) return null;
   const Rec = R;
   const ev = {
     partial: emitter<[string]>(),
     final: emitter<[string]>(),
-    turn: emitter<[string]>(),
+    words: emitter<[HeardWord[]]>(),
+    turn: emitter<[string, TurnMeta]>(),
+    eager: emitter<[string, TurnMeta]>(),
+    resumed: emitter<[]>(),
     speech: emitter<[]>(),
+    slow: emitter<[boolean]>(),
     error: emitter<[VoiceError]>(),
   };
   let listening = false;
@@ -226,7 +315,14 @@ export function browserSpeechIn({ locale, young = false, Recognition, now = () =
   let sessionFinals = 0;
   let quickEnds = 0;
   let startedAt = 0;
+  let heard: HeardWord[] = [];
   let pendingStart: { resolve: () => void; reject: (e: VoiceError) => void } | null = null;
+
+  const endTurn = (text: string) => {
+    const meta = metaOf(heard);
+    heard = [];
+    ev.turn.emit(text, meta);
+  };
 
   const fail = (code: VoiceErrorCode, detail?: string) => {
     const err = new VoiceError(code, detail);
@@ -249,7 +345,8 @@ export function browserSpeechIn({ locale, young = false, Recognition, now = () =
     tracker?.reset();
     listening = false;
     rec = null;
-    if (text) ev.turn.emit(text);
+    if (text) endTurn(text);
+    heard = [];
   };
 
   function open() {
@@ -272,18 +369,24 @@ export function browserSpeechIn({ locale, young = false, Recognition, now = () =
     r.onresult = (e) => {
       if (!tracker) return;
       let interim = "";
+      const at = now();
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const res = e.results[i];
         const text = res[0]?.transcript?.trim() ?? "";
         if (res.isFinal) {
           if (i < sessionFinals) continue;
           sessionFinals = i + 1;
-          tracker.feed({ type: "final", text, at: now(), speechFinal: true });
+          // No word times from the browser: each final's words are stamped when they arrived.
+          const confidence = typeof res[0]?.confidence === "number" && res[0].confidence > 0 ? res[0].confidence : null;
+          const ws = text.split(/\s+/).filter(Boolean).map((word) => ({ word, start: at, end: at, confidence }));
+          heard.push(...ws);
+          if (ws.length) ev.words.emit(ws);
+          tracker.feed({ type: "final", text, at, speechFinal: true });
           if (text) ev.final.emit(text);
         } else interim += (interim ? " " : "") + text;
       }
-      if (interim) tracker.feed({ type: "partial", text: interim, at: now() });
-      const so = tracker.text();
+      if (interim) tracker?.feed({ type: "partial", text: interim, at });
+      const so = tracker?.text();
       if (so) ev.partial.emit(so);
     };
     r.onerror = (e) => {
@@ -308,6 +411,7 @@ export function browserSpeechIn({ locale, young = false, Recognition, now = () =
 
   return {
     kind: "browser",
+    duplex: false,
     get listening() {
       return listening;
     },
@@ -317,9 +421,10 @@ export function browserSpeechIn({ locale, young = false, Recognition, now = () =
       stopping = false;
       discard = false;
       quickEnds = 0;
+      heard = [];
       tracker = turnTracker({
-        options: opts.turns === "auto" ? (young ? TURN_YOUNG : TURN_DEFAULT) : TURN_MANUAL,
-        onEnd: (text) => ev.turn.emit(text),
+        options: opts.turns === "auto" ? turnOptions(opts.band ?? ownBand, opts.answer) : TURN_MANUAL,
+        onEnd: (text) => endTurn(text),
         now,
       });
       return new Promise<void>((resolve, reject) => {
@@ -360,8 +465,12 @@ export function browserSpeechIn({ locale, young = false, Recognition, now = () =
     level: () => null, // the browser's recognizer has the microphone; we can't measure it
     onPartial: ev.partial.on,
     onFinal: ev.final.on,
+    onWords: ev.words.on,
     onEndOfTurn: ev.turn.on,
+    onEagerEnd: ev.eager.on,
+    onTurnResumed: ev.resumed.on,
     onSpeechStart: ev.speech.on,
+    onSlow: ev.slow.on,
     onError: ev.error.on,
   };
 }
