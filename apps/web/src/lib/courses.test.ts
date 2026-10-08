@@ -110,9 +110,12 @@ describe("the path", () => {
 
 describe("suggestNext", () => {
   it("suggests the nearest ready-made course the learner doesn't have, a step up before a step back", () => {
-    expect(suggestNext([], "math", "4", "en")?.id).toBe("math-fractions");
-    expect(suggestNext([{ catalogueId: "math-fractions" }], "math", "4", "en")?.id).toBe("math-negative");
-    expect(suggestNext([], "science", "4", "en")?.id).toBe("science-moon");
+    expect(suggestNext([], "math", "4", "en")?.id).toBe("math-multiply-bigger");
+    // Grade 5 (decimals) and grade 3 (fractions, multiplication) are one grade away: the step up wins.
+    expect(suggestNext([{ catalogueId: "math-multiply-bigger" }], "math", "4", "en")?.id).toBe("math-decimals");
+    // One grade back beats two grades up (grade 6).
+    expect(suggestNext([{ catalogueId: "math-multiply-bigger" }, { catalogueId: "math-decimals" }], "math", "4", "en")?.grade).toBe("3");
+    expect(suggestNext([{ catalogueId: "science-energy" }], "science", "4", "en")?.grade).toBe("5");
   });
 
   it("a course in either language counts as had", () => {
@@ -121,7 +124,9 @@ describe("suggestNext", () => {
   });
 
   it("suggests nothing more than two grades away", () => {
-    expect(suggestNext([{ catalogueId: "math-add-number-line" }], "math", "K", "en")).toBeNull();
+    const k2 = ["math-numbers-to-10", "math-add-number-line"].map((catalogueId) => ({ catalogueId }));
+    expect(suggestNext(k2, "math", "K", "en")?.grade).toBe("2");
+    expect(suggestNext([...k2, { catalogueId: "math-hundreds-tens-ones" }], "math", "K", "en")).toBeNull();
     expect(suggestNext([], "other", "4", "en")).toBeNull();
   });
 });

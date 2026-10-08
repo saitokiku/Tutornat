@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CATALOGUE, catalogueFor, matchEntry, relatedEntry } from ".";
+import { bandOf, CATALOGUE, catalogueFor, matchEntry, relatedEntry } from ".";
 
 const onStep = (v: number, min: number, step: number) => Math.abs((v - min) / step - Math.round((v - min) / step)) < 1e-9;
 
@@ -28,9 +28,9 @@ describe("catalogue", () => {
   });
 
   it("covers math, science and English in every school band", () => {
-    for (const grade of ["K", "4", "7"] as const) {
-      const band = catalogueFor(grade, "en").slice(0, 3).map((c) => c.subject).sort();
-      expect(band, grade).toEqual(["english", "math", "science"]);
+    for (const grade of ["K", "4", "7", "9"] as const) {
+      const band = catalogueFor(grade, "en").filter((c) => bandOf(c.grade) === bandOf(grade));
+      expect([...new Set(band.map((c) => c.subject))].sort(), grade).toEqual(["english", "math", "science"]);
     }
   });
 
@@ -41,7 +41,9 @@ describe("catalogue", () => {
   });
 
   it("finds a related ready-made course for an outline-only request", () => {
-    expect(relatedEntry("science", "1", "en")?.id).toBe("science-matter");
+    expect(relatedEntry("science", "1", "en")?.id).toBe("science-light-sound");
+    // No course is written for adults: the nearest grade (9) stands in.
+    expect(relatedEntry("science", "adult", "en")?.id).toBe("science-motion");
     expect(relatedEntry("math", "8", "en")?.subject).toBe("math");
     expect(relatedEntry("math", "3", "es")?.id).toBe("math-fractions-es");
   });

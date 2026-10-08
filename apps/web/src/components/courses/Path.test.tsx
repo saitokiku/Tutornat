@@ -70,15 +70,15 @@ describe("SubjectPath", () => {
   it("suggests the next ready-made course and adds it from the keyboard", async () => {
     render(<SubjectPath subject="math" learner={learner} now={0} />);
     expect(screen.getByText("No Math courses on your path yet.")).toBeInTheDocument();
-    const add = screen.getByRole("button", { name: "Add to my path: Fractions: parts of a whole" });
+    const add = screen.getByRole("button", { name: "Add to my path: Multiplying bigger numbers" });
     expect(screen.getByText(/Suggested next for Grade 4/)).toBeInTheDocument();
     add.focus();
     await userEvent.keyboard("{Enter}");
-    expect(rowTitles()).toEqual(["Fractions: parts of a whole"]);
-    await waitFor(() => expect(screen.getByRole("link", { name: "Fractions: parts of a whole" })).toHaveFocus());
+    expect(rowTitles()).toEqual(["Multiplying bigger numbers"]);
+    await waitFor(() => expect(screen.getByRole("link", { name: "Multiplying bigger numbers" })).toHaveFocus());
     expect(read().acts).toEqual([expect.objectContaining({ kind: "course", intent: "course-finished" })]);
     // The next suggestion takes its place.
-    expect(screen.getByRole("button", { name: "Add to my path: Negative numbers and the number line" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add to my path: Decimals and place value" })).toBeInTheDocument();
   });
 
   it("K–2 learners get 56px targets: start, move, add and the skill map", () => {

@@ -299,16 +299,21 @@ export function askOf(text: string, hasProblem: boolean): Ask {
 type LessonCard = Extract<BoardCard, { type: "lesson" }>;
 const slideText = (sc: Extract<Scene, { kind: "slide" }>) => `${sc.title} ${sc.blocks.map((b) => (b.type === "text" ? b.text : b.type === "points" ? b.items.join(" ") : "")).join(" ")}`;
 
-// In how many lessons each word appears: a word in many lessons ("number") can't pick one on its own.
+// In how many courses each word appears (a translation counts as the same course): a word across many
+// courses ("number") can't pick one on its own; a word one course is built on ("fallacy") can.
 let spread: Map<string, number> | null = null;
-function lessonsWith(word: string) {
+function coursesWith(word: string) {
   if (!spread) {
+    const byTopic = new Map<string, Set<string>>();
+    for (const entry of CATALOGUE) {
+      const topic = entry.id.replace(/-es$/, "");
+      const all = byTopic.get(topic) ?? new Set<string>();
+      for (const lesson of entry.lessons)
+        for (const w of tokens(`${entry.title} ${lesson.title} ${lesson.summary} ${lesson.scenes.flatMap((sc) => (sc.kind === "slide" ? [slideText(sc)] : [])).join(" ")}`)) all.add(w);
+      byTopic.set(topic, all);
+    }
     spread = new Map();
-    for (const entry of CATALOGUE)
-      for (const lesson of entry.lessons) {
-        const all = new Set(tokens(`${entry.title} ${lesson.title} ${lesson.summary} ${lesson.scenes.flatMap((sc) => (sc.kind === "slide" ? [slideText(sc)] : [])).join(" ")}`));
-        for (const w of all) spread.set(w, (spread.get(w) ?? 0) + 1);
-      }
+    for (const all of byTopic.values()) for (const w of all) spread.set(w, (spread.get(w) ?? 0) + 1);
   }
   return spread.get(word) ?? 0;
 }
@@ -329,8 +334,8 @@ export function lessonFor(topic: string, grade: Grade, locale: Locale): LessonCa
       const scored = slides.map((sc) => ({ sc, hit: matched(slideText(sc)) }));
       const top = scored.reduce((a, b) => (b.hit.length > a.hit.length ? b : a));
       const covered = new Set([...head, ...top.hit]);
-      // Every word found, or most of them including one that is specific to a few lessons.
-      const enough = covered.size === words.length || (covered.size * 2 >= words.length && [...covered].some((w) => lessonsWith(w) <= 3));
+      // Every word found, or most of them including one that is specific to a few courses.
+      const enough = covered.size === words.length || (covered.size * 2 >= words.length && [...covered].some((w) => coursesWith(w) <= 3));
       const score = head.length * 2 + top.hit.length;
       if (!enough || (best && score <= best.score)) continue;
       const scene = top.hit.length ? top.sc : slides[0];

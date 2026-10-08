@@ -176,15 +176,18 @@ describe("reading the learner's ask", () => {
 
 describe("our own lessons as knowledge", () => {
   it("finds the lesson that covers a topic, with its key points", () => {
+    // "fallacy" runs through a whole course (four lessons), and that still makes it the course's word.
     const card = lessonFor("logical fallacy", "8", "en");
-    expect(card).toMatchObject({ catalogueId: "english-rhetoric", lessonId: "misused-appeals" });
+    expect(card).toMatchObject({ catalogueId: "english-fallacies", lessonId: "attacks" });
     expect(card!.points.length).toBeGreaterThan(0);
-    expect(card!.points.join(" ")).toMatch(/False authority/);
+    expect(card!.points.join(" ")).toMatch(/A fallacy can make a weak argument feel strong/);
+    // A word one slide explains brings that slide's points, not the lesson's first slide.
+    expect(lessonFor("photosynthesis", "4", "en")!.points.join(" ")).toMatch(/This is photosynthesis/);
   });
 
   it("does not pick a lesson on a generic word alone", () => {
     expect(lessonFor("prime number", "4", "en")).toBeNull();
-    expect(lessonFor("photosynthesis", "4", "en")).toBeNull();
+    expect(lessonFor("número primo", "4", "es")).toBeNull();
   });
 });
 

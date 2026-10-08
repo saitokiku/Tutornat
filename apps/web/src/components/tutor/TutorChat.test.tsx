@@ -55,10 +55,10 @@ describe("Talk with the demo tutor", () => {
     expect(within(fact).getByText("Text from Wikipedia, CC BY-SA 4.0")).toBeInTheDocument();
     const practice = within(board).getByRole("article", { name: "Practice: Spot the fallacy" });
     expect(within(practice).getByText("Draft questions")).toBeInTheDocument();
-    expect(within(board).getByRole("article", { name: "When appeals mislead" })).toBeInTheDocument();
+    expect(within(board).getByRole("article", { name: "Attacking the person, twisting the point" })).toBeInTheDocument();
     expect(requests.some((u) => u.startsWith("/api/know/wiki?q=logical+fallacy&lang=en"))).toBe(true);
     // The cited fact leads; the reply's cards keep the tutor's order.
-    expect(within(board).getAllByRole("article").map((a) => a.getAttribute("aria-label"))).toEqual(["Fallacy", "When appeals mislead", "Practice: Spot the fallacy", "More to read and watch"]);
+    expect(within(board).getAllByRole("article").map((a) => a.getAttribute("aria-label"))).toEqual(["Fallacy", "Attacking the person, twisting the point", "Practice: Spot the fallacy", "More to read and watch"]);
 
     // The conversation points at the board; Enter on it moves focus to the newest card.
     const pointer = screen.getByRole("button", { name: "On the board: Wikipedia, lesson, practice, sources" });
