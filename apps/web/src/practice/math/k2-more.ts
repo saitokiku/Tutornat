@@ -370,24 +370,22 @@ export const EVENTS: readonly Event[] = [
 
 // ---- Money ----
 
-type Coin = { v: number; en: Pair; es: Pair; said: Pair };
-const QUARTER: Coin = { v: 25, en: ["quarter", "quarters"], es: ["moneda de 25¢", "monedas de 25¢"], said: ["moneda de 25 centavos", "monedas de 25 centavos"] };
-const DIME: Coin = { v: 10, en: ["dime", "dimes"], es: ["moneda de 10¢", "monedas de 10¢"], said: ["moneda de 10 centavos", "monedas de 10 centavos"] };
-const NICKEL: Coin = { v: 5, en: ["nickel", "nickels"], es: ["moneda de 5¢", "monedas de 5¢"], said: ["moneda de 5 centavos", "monedas de 5 centavos"] };
-const PENNY: Coin = { v: 1, en: ["penny", "pennies"], es: ["moneda de 1¢", "monedas de 1¢"], said: ["moneda de 1 centavo", "monedas de 1 centavo"] };
+/**
+ * Coins go by their US names in both languages ("3 dimes, 2 nickels y 4 pennies"), as Spanish speakers
+ * in the US say them. A Spanish name like "moneda de 10 centavos" states the value, which would turn
+ * the Spanish skill into plain addition and make "swapped-nickel-and-dime" a mistake no one could make.
+ */
+type Coin = { v: number; name: Pair };
+const QUARTER: Coin = { v: 25, name: ["quarter", "quarters"] };
+const DIME: Coin = { v: 10, name: ["dime", "dimes"] };
+const NICKEL: Coin = { v: 5, name: ["nickel", "nickels"] };
+const PENNY: Coin = { v: 1, name: ["penny", "pennies"] };
 const COINS = [QUARTER, DIME, NICKEL, PENNY];
 type Purse = [Coin, number][];
 const join = (items: string[], locale: Locale) => (items.length === 1 ? items[0] : `${items.slice(0, -1).join(", ")} ${tr(locale, "and", "y")} ${items[items.length - 1]}`);
-/** "2 quarters, 1 dime and 3 pennies"; spoken Spanish spells out "centavos". */
-function purseText(p: Purse, locale: Locale, spoken = false) {
-  return join(
-    p.map(([c, n]) => `${n} ${locale === "es" ? (spoken ? c.said : c.es)[n === 1 ? 0 : 1] : c.en[n === 1 ? 0 : 1]}`),
-    locale,
-  );
-}
-/** Spanish lists coins by value: "estas monedas: 2 de 25¢, 1 de 10¢ y 3 de 1¢". */
-const coinsEs = (p: Purse, spoken = false) =>
-  `estas monedas: ${join(p.map(([c, n]) => `${n} de ${spoken ? `${c.v} ${c.v === 1 ? "centavo" : "centavos"}` : `${c.v}¢`}`), "es")}`;
+const coinName = (c: Coin, n: number) => c.name[n === 1 ? 0 : 1];
+/** "2 quarters, 1 dime and 3 pennies" / "2 quarters, 1 dime y 3 pennies". */
+const purseText = (p: Purse, locale: Locale) => join(p.map(([c, n]) => `${n} ${coinName(c, n)}`), locale);
 const purseValue = (p: Purse) => p.reduce((s, [c, n]) => s + c.v * n, 0);
 /** What a purse is worth to a child who thinks a nickel is 10¢ and a dime 5¢. */
 const swappedValue = (p: Purse) => p.reduce((s, [c, n]) => s + (c === DIME ? NICKEL.v : c === NICKEL ? DIME.v : c.v) * n, 0);
@@ -2259,18 +2257,26 @@ export const MATH_K_2_MORE: Skill[] = [
         const purse: Purse = [[c1, r.int(1, top[c1.v])], [c2, r.int(1, top[c2.v])]];
         const target = purseValue(purse);
         const small = purse[1][0];
-        const more: Purse = tidy([...purse, [small, 1]]);
-        const fewer: Purse = purse[0][1] >= 2 ? tidy([[purse[0][0], purse[0][1] - 1], purse[1]]) : tidy([purse[0], [purse[1][0], purse[1][1] - 1]]);
-        const swapFrom = purse.find(([c]) => c === DIME) ? DIME : purse.find(([c]) => c === NICKEL) ? NICKEL : null;
-        const swapped: Purse | null = swapFrom ? tidy([...purse.map(([c, n]) => [c, c === swapFrom ? n - 1 : n] as [Coin, number]), [swapFrom === DIME ? NICKEL : DIME, 1]]) : null;
-        const opt = (p: Purse, why?: string): Choice => ({ label: purseText(p, locale), say: purseText(p, locale, true), ...(why ? { why } : {}) });
-        const wrongs = [swapped ? opt(swapped, "swapped-nickel-and-dime") : null, opt(more, "counted-one-too-many"), fewer.length ? opt(fewer, "counted-one-too-few") : null].filter((c): c is Choice => c !== null);
-        const check = swapped ?? more;
+        // The set a child who swaps nickel and dime would pick: every dime a nickel and every nickel a
+        // dime. To that child it is worth the target; it really is not (unless the swap changes nothing).
+        const swap = tidy(purse.map(([c, n]) => [c === DIME ? NICKEL : c === NICKEL ? DIME : c, n] as [Coin, number]));
+        const sets: [Purse, string][] = [
+          [swap, "swapped-nickel-and-dime"],
+          [tidy([...purse, [small, 1]]), "counted-one-too-many"],
+          [purse[0][1] >= 2 ? tidy([[purse[0][0], purse[0][1] - 1], purse[1]]) : tidy([purse[0], [purse[1][0], purse[1][1] - 1]]), "counted-one-too-few"],
+          [tidy([...purse, [purse[0][0], 1]]), "counted-one-too-many"],
+          [tidy([purse[0], [purse[1][0], purse[1][1] + 2]]), "miscounted-the-set"],
+        ];
+        // Only the swap set may look right to a swapper, so its tag is the only diagnosis that fits.
+        const picked = sets.filter(([p, why]) => p.length > 0 && purseValue(p) !== target && (swappedValue(p) === target) === (why === "swapped-nickel-and-dime"));
+        const opt = (p: Purse, why?: string): Choice => ({ label: purseText(p, locale), say: purseText(p, locale), ...(why ? { why } : {}) });
+        const wrongs = picked.slice(0, 3).map(([p, why]) => opt(p, why));
+        const check = picked[0][0];
         return {
           prompt: [tr(locale, `Which coins make ${target}¢?`, `¿Qué monedas forman ${target}¢?`)],
           say: tr(locale, `Which coins make ${target} cents?`, `¿Qué monedas forman ${target} centavos?`),
           picture: "💰",
-          alt: tr(locale, "Coins", "Monedas"),
+          alt: tr(locale, "A money bag", "Una bolsa de dinero"),
           ...choose(r, opt(purse), wrongs),
           hints: [
             tr(locale, "Find the value of each set.", "Busca cuánto vale cada grupo."),
@@ -2293,25 +2299,25 @@ export const MATH_K_2_MORE: Skill[] = [
       }
       const shown = level === 2 && r.bool(0.3) ? r.shuffle(purse) : purse;
       const total = purseValue(purse);
-      const dimes = purse.find(([c]) => c === DIME)?.[1] ?? 0, nickels = purse.find(([c]) => c === NICKEL)?.[1] ?? 0, pennies = purse.find(([c]) => c === PENNY)?.[1] ?? 0;
+      const pennies = purse.find(([c]) => c === PENNY)?.[1] ?? 0;
       const ask = tr(locale, "How many cents in all?", "¿Cuántos centavos tienes en total?");
       const [bc, bn] = purse[0];
       const subs = purse.map(([c, n]) => c.v * n);
-      const name = (c: Coin, n: number) => (locale === "es" ? c.es : c.en)[n === 1 ? 0 : 1];
+      const have = tr(locale, `You have ${purseText(shown, "en")}.`, `Tienes ${purseText(shown, "es")}.`);
       return {
-        prompt: [`${tr(locale, `You have ${purseText(shown, "en")}.`, `Tienes ${coinsEs(shown)}.`)} ${ask} `, blank, "¢"],
-        say: `${tr(locale, `You have ${purseText(shown, "en")}.`, `Tienes ${coinsEs(shown, true)}.`)} ${ask}`,
+        prompt: [`${have} ${ask} `, blank, "¢"],
+        say: `${have} ${ask}`,
         picture: "💰",
-        alt: tr(locale, "Coins", "Monedas"),
+        alt: tr(locale, "A money bag", "Una bolsa de dinero"),
         input: "keypad",
         answer: { kind: "number", value: total },
-        wrong: misses(total, [[purseCount(purse), "counted-coins-not-value"], dimes + nickels > 0 ? [total - 5 * dimes + 5 * nickels, "swapped-nickel-and-dime"] : null, pennies > 0 && purse.length > 1 ? [total - pennies, "left-out-the-pennies"] : null]),
+        wrong: misses(total, [[purseCount(purse), "counted-coins-not-value"], [swappedValue(purse), "swapped-nickel-and-dime"], pennies > 0 && purse.length > 1 ? [total - pennies, "left-out-the-pennies"] : null]),
         hints: [
-          tr(locale, `Start with the coin worth the most. A ${bc.en[0]} is ${bc.v}¢.`, `Empieza con las monedas que valen más: ${bc.es[1]}.`),
+          tr(locale, `Start with the coin worth the most. A ${bc.name[0]} is ${bc.v}¢.`, `Empieza con la moneda que vale más. Un ${bc.name[0]} vale ${bc.v}¢.`),
           tr(locale, `Count on: by ${purse.map(([c]) => c.v).join(", then by ")}.`, `Cuenta ${join(purse.map(([c]) => `de ${c.v} en ${c.v}`), "es")}.`),
-          bn === 1 ? tr(locale, `1 ${bc.en[0]} is ${bc.v}¢.`, `1 ${bc.es[0]} es ${bc.v}¢.`) : tr(locale, `${bn} ${bc.en[1]} make ${bc.v * bn}¢.`, `${bn} ${bc.es[1]} son ${bc.v * bn}¢.`),
+          bn === 1 ? tr(locale, `1 ${bc.name[0]} is ${bc.v}¢.`, `1 ${bc.name[0]} es ${bc.v}¢.`) : tr(locale, `${bn} ${bc.name[1]} make ${bc.v * bn}¢.`, `${bn} ${bc.name[1]} son ${bc.v * bn}¢.`),
         ],
-        steps: [purse.map(([c, n]) => `${n} ${name(c, n)}: ${c.v * n}¢`).join(". ") + ".", `${subs.join(" + ")} = ${total}`, tr(locale, `You have ${total}¢.`, `Tienes ${total}¢.`)],
+        steps: [purse.map(([c, n]) => `${n} ${coinName(c, n)}: ${c.v * n}¢`).join(". ") + ".", `${subs.join(" + ")} = ${total}`, tr(locale, `You have ${total}¢.`, `Tienes ${total}¢.`)],
         seconds: level === 1 ? 25 : 30,
       };
     },
