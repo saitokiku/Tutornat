@@ -63,11 +63,11 @@ const ROOT_MEANING: Bi<Entry>[] = [
   },
   {
     en: ["manuscript", "write", [["hand", "meaning-of-other-part"], ["book", "guessed-from-topic"]], "Think of “script” and “scribble.”", "“Script” means write; “manu” means hand.", "script"],
-    es: ["manuscrito", "escribir", [["mano", "meaning-of-other-part"], ["libro", "guessed-from-topic"]], "Piensa en “inscripción” y “escritor”.", "“Scri” viene de escribir; “manu” significa mano.", "scri"],
+    es: ["manuscrito", "mano", [["escribir", "meaning-of-other-part"], ["libro", "guessed-from-topic"]], "Piensa en “manual” y “manubrio”.", "“Manu” significa mano; “scrito” viene de escribir: un manuscrito está escrito a mano.", "manu"],
   },
   {
     en: ["pedestrian", "foot", [["child", "similar-root-mixup"], ["street", "guessed-from-topic"]], "Think of “pedal” and “pedicure.”", "In “pedestrian,” “ped” comes from the Latin word for foot.", "ped"],
-    es: ["pedal", "pie", [["niño", "similar-root-mixup"], ["bicicleta", "guessed-from-topic"]], "Piensa en “pedestre” y “pedicura”.", "En “pedal”, “ped” viene del latín y significa pie.", "ped"],
+    es: ["pedal", "pie", [["niño", "similar-root-mixup"], ["bicicleta", "guessed-from-topic"]], "Piensa en “bípedo” y “cuadrúpedo”.", "En “pedal”, “ped” viene del latín y significa pie.", "ped"],
   },
   {
     en: ["aquarium", "water", [["fish", "guessed-from-topic"], ["place", "meaning-of-other-part"]], "Think of “aquatic” and “aqueduct.”", "“Aqua” means water.", "aqua"],
@@ -113,8 +113,8 @@ const ROOT_WORDS: Bi<Entry>[] = [
     es: ["", "soporte de tres patas", [["viaje a pie", "guessed-from-topic"], ["grupo de tres personas", "meaning-of-other-part"], ["soporte de cuatro patas", "similar-root-mixup"]], "“Tri” significa tres, y “pode” viene del griego y significa pie.", "Junta las partes: tres pies.", "trípode"],
   },
   {
-    en: ["", "too quiet to be heard", [["very loud", "opposite-root"], ["easy to see", "similar-root-mixup"], ["able to be heard", "meaning-of-other-part"]], "“In” means not, “aud” means hear, and “ible” means able to be.", "Put the parts together: not able to be heard.", "inaudible"],
-    es: ["", "que no se puede oír", [["muy ruidoso", "opposite-root"], ["fácil de ver", "similar-root-mixup"], ["que se puede oír", "meaning-of-other-part"]], "“In” significa no, “aud” significa oír e “ible” significa que se puede.", "Junta las partes: que no se puede oír.", "inaudible"],
+    en: ["", "too quiet to be heard", [["very loud", "guessed-from-topic"], ["easy to see", "similar-root-mixup"], ["able to be heard", "opposite-root"]], "“In” means not, “aud” means hear, and “ible” means able to be.", "Put the parts together: not able to be heard.", "inaudible"],
+    es: ["", "que no se puede oír", [["muy ruidoso", "guessed-from-topic"], ["fácil de ver", "similar-root-mixup"], ["que se puede oír", "opposite-root"]], "“In” significa no, “aud” significa oír e “ible” significa que se puede.", "Junta las partes: que no se puede oír.", "inaudible"],
   },
   {
     en: ["", "easy to carry", [["easy to open", "similar-root-mixup"], ["made in a port city", "guessed-from-topic"], ["heavy and fixed in place", "opposite-root"]], "“Port” means carry, and “able” means can be.", "Put the parts together: can be carried.", "portable"],
@@ -190,11 +190,11 @@ const CONNOTATION_FIT: Bi<Entry>[] = [
   },
   {
     en: ["A museum guide praises the ___ car from 1965.", "classic", [["old", "neutral-connotation"], ["outdated", "opposite-connotation"]], "A guide praising the car wants it to sound special.", "“Classic” makes an old car sound valuable."],
-    es: ["El abuelo sonrió a su nieta ___, que no paraba de preguntar sobre las estrellas.", "curiosa", [["preguntona", "opposite-connotation"], ["entrometida", "opposite-connotation"]], "El abuelo sonríe, así que le gustan sus preguntas.", "“Curiosa” es alguien con ganas de aprender; “preguntona” y “entrometida” suenan a crítica."],
+    es: ["Desde el mirador, los turistas pasaron una hora ___ el atardecer en silencio.", "contemplando", [["mirando", "neutral-connotation"], ["fisgoneando", "opposite-connotation"]], "Pasar una hora en silencio frente al atardecer muestra admiración.", "“Contemplar” es mirar con calma y admiración; “mirar” es neutral, y “fisgonear” suena a meterse en lo ajeno."],
   },
   {
     en: ["Grandpa smiled at his ___ granddaughter, who was full of questions about the stars.", "inquisitive", [["questioning", "neutral-connotation"], ["nosy", "opposite-connotation"]], "Grandpa is smiling, so he likes her questions.", "“Inquisitive” means eager to learn; “nosy” would mean prying into other people's business."],
-    es: ["Cansada de las preguntas del vecino sobre su vida privada, Sara dijo que era ___.", "entrometido", [["curioso", "opposite-connotation"], ["inquisitivo", "opposite-connotation"]], "Sara está molesta, así que la palabra debe sonar negativa.", "“Entrometido” es quien se mete en asuntos que no son suyos."],
+    es: ["Cansada de que el vecino ___ por su ventana, Sara cerró las cortinas.", "fisgoneara", [["mirara", "neutral-connotation"], ["contemplara", "opposite-connotation"]], "Sara está molesta, así que la palabra debe sonar negativa.", "“Fisgonear” es mirar a escondidas lo que no es asunto tuyo; “mirar” es neutral y “contemplar” suena a admiración."],
   },
   {
     en: ["Tired of her neighbor's questions about her private life, Sara called him ___.", "nosy", [["interested", "neutral-connotation"], ["inquisitive", "opposite-connotation"]], "Sara is annoyed, so the word should sound negative.", "“Nosy” means prying into things that are not your business."],

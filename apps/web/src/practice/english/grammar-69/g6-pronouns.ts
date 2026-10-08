@@ -142,7 +142,7 @@ const INTENSIVE_PRONOUNS = skill(
       ask: CHOOSE,
       hints: {
         en: ["Find the word the pronoun points back to, or the person doing the action.", "A pronoun ending in -self or -selves must match that word in person and number, and it never stands alone as the subject."],
-        es: ["Busca a quién se refiere la palabra que falta.", "“Mismo” concuerda en género y número con la palabra a la que se refiere. El pronombre reflexivo concuerda con la persona del verbo."],
+        es: ["Busca a quién se refiere la palabra que falta.", "La palabra de énfasis concuerda en género y número con la palabra a la que se refiere: masculino o femenino, singular o plural. El pronombre reflexivo concuerda con la persona del verbo."],
       },
       seconds: 15,
     },

@@ -204,7 +204,7 @@ const PURPOSE_KIND = cats<Purpose>(
     },
     {
       en: ["The squirrel had a plan. He would sneak past the dog, grab the biggest pinecone in the yard, and become a legend. The dog, unfortunately, had a plan too.", "entertain", "Is this a story or a set of facts?", "The writer tells a playful story for enjoyment."],
-      es: ["La ardilla tenía un plan: pasar a escondidas junto al perro, robar la piña más grande del jardín y convertirse en leyenda. El perro, por desgracia, también tenía un plan.", "entertain", "¿Es una historia o una lista de datos?", "Quien escribe cuenta una historia divertida."],
+      es: ["La ardilla tenía un plan: pasar a escondidas junto al perro, robar la bellota más grande del jardín y convertirse en leyenda. El perro, por desgracia, también tenía un plan.", "entertain", "¿Es una historia o una lista de datos?", "Quien escribe cuenta una historia divertida."],
     },
     {
       en: ["A solar eclipse happens when the moon passes between Earth and the sun and blocks some or all of the sun's light.", "inform", "Does the writer give an opinion or ask you to do anything?", "The passage explains a fact of science."],

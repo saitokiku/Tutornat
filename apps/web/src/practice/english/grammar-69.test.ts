@@ -327,6 +327,17 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
         if (locale === "en") {
           expect(shown.endsWith("?"), shown).toBe(right === names[2]);
           if (right === names[3]) expect(shown, shown).toMatch(/\b(would|could)\b/);
+          // The question names the verb, and the named verb has the form its mood needs.
+          expect(occurrences(shown, target!), `${shown} names ${target}`).toBe(1);
+          const [indicative, imperative, interrogative, conditional, subjunctive] = names;
+          const form: Record<string, RegExp> = {
+            [indicative]: /^(is|\p{L}+s)$/u,
+            [imperative]: new RegExp(`^(please )?${esc(lc(target!))}\\b`),
+            [interrogative]: /^(did|do|does|have|has|is|are|will|can) \p{L}+/u,
+            [conditional]: /^(would|could) \p{L}+$/u,
+            [subjunctive]: /^(were|\p{L}*[^s])$/u,
+          };
+          expect(right === imperative ? lc(shown) : lc(target!), `${right}: ${target}`).toMatch(form[right]);
         } else expect(words(shown), shown).toContain(lc(target!));
       }
     }
@@ -355,6 +366,8 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
       expect(shown, shown).toContain(target!);
       expect(right.split(" ").length, `${right} vs ${target}`).toBeLessThan(target!.split(" ").length);
       for (const w of tagged(e, "still-wordy")) expect(w.split(" ").length, w).toBeGreaterThanOrEqual(2);
+      // The question asks for the shortest way to say it, so every still-wordy choice is longer than the key.
+      for (const w of tagged(e, "still-wordy")) expect(w.split(" ").length, `${w} vs ${right}`).toBeGreaterThan(right.split(" ").length);
     });
   });
 
@@ -473,7 +486,7 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
   it("MLA in-text citations: the key matches MLA's pattern and the page in the source; format mistakes do not", () => {
     const NAME = "\\p{Lu}[\\p{L}'-]+(?: \\p{Lu}[\\p{L}'-]+)?";
     const MLA = new RegExp(`^\\((?:(?:${NAME}(?: and ${NAME}| et al\\.)?|“[^”]+”)(?: \\d{1,3})?|\\d{1,3})\\)$`, "u");
-    const FORMAT = ["comma-in-citation", "page-abbreviation", "wrong-order", "apa-style", "missing-quotation-marks"];
+    const FORMAT = ["comma-in-citation", "page-abbreviation", "page-word", "wrong-order", "apa-style", "missing-quotation-marks"];
     each("e.mla.citation", 1, (e) => {
       const [shown, right] = e;
       expect(right, right).toMatch(MLA);
@@ -481,6 +494,9 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
       if (page) expect(right.endsWith(` ${page})`) || right === `(${page})`, `${right} page ${page}`).toBe(true);
       else expect(right, right).not.toMatch(/\d/);
       for (const tag of FORMAT) for (const w of tagged(e, tag)) expect(w, `${tag}: ${w}`).not.toMatch(MLA);
+      // The tag names the mark the choice really has: "p." / "pág." is an abbreviation, "page" is the word.
+      for (const w of tagged(e, "page-abbreviation")) expect(w, w).toMatch(/(?<![\p{L}])(p|pág)\./u);
+      for (const w of tagged(e, "page-word")) expect(w, w).toMatch(/(?<![\p{L}])(page|página) \d/u);
       for (const w of tagged(e, "partial-surname")) expect(right.includes(w.replace(/^\(| \d+\)$/g, "")) && w.length < right.length, w).toBe(true);
       if (tagged(e, "repeated-author").length) expect(right, right).toMatch(/^\(\d+\)$/);
     });
@@ -542,7 +558,11 @@ describe.each(ENGLISH_GRAMMAR_6_9.map((s) => [s.id, s] as const))("%s items", (i
           expect(lc(item.steps.at(-1)!), `${where} last step lacks ${right}`).toContain(lc(right));
           expect(hasPhrase(item.hints[2], right), `${where} hint 3 gives away ${right}`).toBe(false);
           if (right.includes(" ") && !order) item.hints.forEach((h, i) => expect(lc(h), `${where} hint ${i + 1} gives away ${right}`).not.toContain(lc(right)));
+          // Not even by coincidence: a short key ("then", "de", "short") must not appear as a word in any hint.
+          if (!order) item.hints.forEach((h, i) => expect(hasPhrase(h, right), `${where} hint ${i + 1} contains ${right}`).toBe(false));
           expect(item.say, where).not.toMatch(/\^|\d\/\d|\{|\}/);
+          // Read aloud, a word pair is "x and y", and the shown text ends before the question starts.
+          expect(item.say, `${where} say "${item.say}"`).not.toMatch(/ : |\p{Ll} (¿|What |How |Which |Who |Use |Is |Choose |Elige )/u);
           for (const t of [text, item.say, ...item.hints, ...item.steps, ...labels]) {
             expect(t, `${where} "${t}"`).not.toMatch(/[!¡]|\{t\}|undefined/);
             expect(t, `${where} "${t}"`).not.toMatch(/\p{Extended_Pictographic}/u);

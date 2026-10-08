@@ -283,7 +283,7 @@ const CONFUSED_2: Bi<Entry>[] = [
   },
   {
     en: ["Please keep your ___ belongings in your locker.", "personal", [["personnel", "look-alike-wrong-meaning"], ["personel", "misspelling"]], "The blank describes belongings that are your own.", "“Personal” means your own."],
-    es: ["La ___ sube por el tronco del árbol.", "savia", [["sabia", "sound-alike-wrong-meaning"], ["sabía", "sound-alike-wrong-meaning"]], "La palabra es el líquido que circula por las plantas.", "La “savia” (con v) es el líquido de las plantas. “Sabia” (con b) es una persona que sabe mucho."],
+    es: ["La ___ sube por el tronco del árbol.", "savia", [["sabia", "sound-alike-wrong-meaning"], ["sabía", "look-alike-wrong-meaning"]], "La palabra es el líquido que circula por las plantas.", "La “savia” (con v) es el líquido de las plantas. “Sabia” (con b) es una persona que sabe mucho."],
   },
   {
     en: ["The teacher read the poem ___ to the class.", "aloud", [["allowed", "sound-alike-wrong-meaning"], ["alowd", "misspelling"]], "The blank tells how she read: so everyone could hear.", "“Aloud” means out loud. “Allowed” means permitted."],
@@ -297,7 +297,7 @@ const CONFUSED_WORDS = skill(
     bank: [CONFUSED_1, CONFUSED_2][i],
     ask: CHOOSE,
     hints: {
-      en: ["These words look or sound alike but mean different things. What meaning does the sentence need?", "Decide what kind of word fits the blank (a verb? a noun? a describing word?), then pick the spelling with that meaning."] as [string, string],
+      en: ["These words look or sound alike but mean different things. What meaning does the sentence need?", "Decide what kind of word fits the blank (a verb? a noun? a describing word?), and pick the spelling with that meaning."] as [string, string],
       es: ["Estas palabras se parecen o suenan igual, pero significan cosas distintas. ¿Qué significado necesita la oración?", "Piensa qué clase de palabra va en el espacio (¿un verbo? ¿un sustantivo?) y si va junta, separada o con tilde. Luego elige la que tiene ese significado."] as [string, string],
     },
     seconds: 12,

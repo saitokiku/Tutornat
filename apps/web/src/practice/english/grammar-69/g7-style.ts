@@ -136,7 +136,7 @@ const WORDINESS = skill(
       ask: { en: "Which words can be cut without losing any meaning?", es: "¿Qué palabra o palabras sobran, porque repiten una idea o no hacen falta?" },
       hints: {
         en: ["Look for a word that repeats an idea another word already gives.", "Read the sentence without each choice. Keep the words that carry meaning; cut the one that only repeats."],
-        es: ["Busca una palabra que repita una idea que otra palabra ya da.", "Lee la oración sin cada opción. Quédate con las palabras que aportan significado y quita la que solo repite. Ojo con el “de” que sobra antes de “que” (dequeísmo)."],
+        es: ["Busca una palabra que repita una idea que otra palabra ya da.", "Lee la oración sin cada opción. Quédate con las palabras que aportan significado y quita la que solo repite una idea o no hace falta."],
       },
       seconds: 15,
     },

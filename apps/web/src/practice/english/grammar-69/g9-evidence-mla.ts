@@ -181,7 +181,7 @@ const IN_TEXT: Bi<Entry>[] = [
     es: ["Fuente: un libro de María Ruiz. La cita está en la página 42.", "(Ruiz 42)", [["(Ruiz, 42)", "comma-in-citation"], ["(María Ruiz 42)", "first-name-in-citation"], ["(Ruiz p. 42)", "page-abbreviation"]], "MLA usa el apellido del autor y el número de página.", "En MLA, la cita entre paréntesis lleva el apellido y la página, sin coma y sin “p.”."],
   },
   {
-    en: ["Source: an article by David Chen. The quotation is on page 7.", "(Chen 7)", [["(Chen, page 7)", "page-abbreviation"], ["(7 Chen)", "wrong-order"], ["(David Chen, 7)", "first-name-in-citation"]], "MLA uses the author's last name and the page number, in that order.", "The last name comes first, then the page number, with nothing between them but a space."],
+    en: ["Source: an article by David Chen. The quotation is on page 7.", "(Chen 7)", [["(Chen, page 7)", "page-word"], ["(7 Chen)", "wrong-order"], ["(David Chen, 7)", "first-name-in-citation"]], "MLA uses the author's last name and the page number, in that order.", "The last name comes first, then the page number, with nothing between them but a space."],
     es: ["Fuente: un libro de Gabriel García Márquez. La cita está en la página 45.", "(García Márquez 45)", [["(Márquez 45)", "partial-surname"], ["(Gabriel García Márquez 45)", "first-name-in-citation"], ["(García Márquez, 45)", "comma-in-citation"]], "En español, muchas personas tienen dos apellidos. ¿Cómo aparece el apellido completo de este autor?", "Los apellidos compuestos se escriben completos: García Márquez, y luego la página sin coma."],
   },
   {
@@ -222,15 +222,15 @@ const IN_TEXT: Bi<Entry>[] = [
   },
   {
     en: ["Source: an article with no author, titled “How Volcanoes Form.” The quotation is on page 2.", "(“How Volcanoes Form” 2)", [["(Unknown 2)", "anonymous-for-no-author"], ["(How Volcanoes Form 2)", "missing-quotation-marks"], ["(2)", "missing-title"]], "There is no author. What does MLA use instead?", "With no author, use the title of the article in quotation marks, then the page."],
-    es: ["Fuente: un libro de Priya Nair. Tu oración ya la nombra: Nair escribe que “todo mapa cuenta una historia”. La cita está en la página 14.", "(14)", [["(Nair 14)", "repeated-author"], ["(Nair, 14)", "comma-in-citation"], ["(página 14)", "page-abbreviation"]], "La oración ya nombra a la autora. ¿Qué falta dar?", "Si la autora ya aparece en la oración, en el paréntesis solo va la página."],
+    es: ["Fuente: un libro de Priya Nair. Tu oración ya la nombra: Nair escribe que “todo mapa cuenta una historia”. La cita está en la página 14.", "(14)", [["(Nair 14)", "repeated-author"], ["(Nair, 14)", "comma-in-citation"], ["(página 14)", "page-word"]], "La oración ya nombra a la autora. ¿Qué falta dar?", "Si la autora ya aparece en la oración, en el paréntesis solo va la página."],
   },
   {
-    en: ["Source: a book by Priya Nair. Your sentence already names her: Nair writes that “every map tells a story.” The quotation is on page 14.", "(14)", [["(Nair 14)", "repeated-author"], ["(Nair, 14)", "comma-in-citation"], ["(page 14)", "page-abbreviation"]], "The sentence already names the author. What is left to give?", "When the author is named in the sentence, the parentheses give only the page."],
+    en: ["Source: a book by Priya Nair. Your sentence already names her: Nair writes that “every map tells a story.” The quotation is on page 14.", "(14)", [["(Nair 14)", "repeated-author"], ["(Nair, 14)", "comma-in-citation"], ["(page 14)", "page-word"]], "The sentence already names the author. What is left to give?", "When the author is named in the sentence, the parentheses give only the page."],
     es: ["Fuente: un libro de Diego Torres Vega. La cita está en la página 9.", "(Torres Vega 9)", [["(Vega 9)", "partial-surname"], ["(Diego Torres Vega 9)", "first-name-in-citation"], ["(Torres Vega, p. 9)", "page-abbreviation"]], "El autor tiene dos apellidos. ¿Cuáles van en la cita?", "Los dos apellidos van completos, y después la página, sin coma ni abreviatura."],
   },
   {
     en: ["Source: a book by Sofia Reyes. The quotation is on page 77.", "(Reyes 77)", [["(Reyes, 77)", "comma-in-citation"], ["(Sofia Reyes, page 77)", "first-name-in-citation"], ["(Reyes 2019)", "apa-style"]], "MLA uses the author's last name and the page number.", "Last name, a space, and the page number: nothing else."],
-    es: ["Fuente: un artículo de David Chen. La cita está en la página 12.", "(Chen 12)", [["(Chen, página 12)", "page-abbreviation"], ["(12 Chen)", "wrong-order"], ["(Chen 2021)", "apa-style"]], "MLA usa el apellido del autor y el número de página, en ese orden.", "Primero el apellido, después la página, sin nada en medio más que un espacio."],
+    es: ["Fuente: un artículo de David Chen. La cita está en la página 12.", "(Chen 12)", [["(Chen, página 12)", "page-word"], ["(12 Chen)", "wrong-order"], ["(Chen 2021)", "apa-style"]], "MLA usa el apellido del autor y el número de página, en ese orden.", "Primero el apellido, después la página, sin nada en medio más que un espacio."],
   },
 ];
 
