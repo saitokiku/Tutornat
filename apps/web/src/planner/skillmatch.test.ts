@@ -97,6 +97,10 @@ describe("topic → skill", () => {
   it("does not mistake an everyday compound for a school word", () => {
     for (const q of ["what is a power plant", "what is a prime minister", "who invented the cell phone", "what is a rock band", "what is a volume knob", "¿qué es un primer ministro?", "¿quién inventó el teléfono celular?"])
       expect(matchSkills(q), q).toEqual([]);
+    // A compound is one word that matches only itself: "how does a cell phone work" is not "work" alone
+    // ("Titles of works"), and a solar cell, a prison cell or an atom bomb is not the cells or atoms skill.
+    for (const q of ["how does a cell phone work", "how does a solar cell work", "life in a prison cell", "battery cells", "what is an atom bomb", "¿qué es una célula solar?"])
+      expect(matchSkills(q), q).toEqual([]);
     // The school words themselves still work, next to a compound too.
     expect(matchSkills("what is a prime number")[0]).toBe("m.factors");
     expect(matchSkills("what do plants need")[0]).toBe("s.needs");

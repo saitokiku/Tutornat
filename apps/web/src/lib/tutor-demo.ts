@@ -3,7 +3,7 @@ import { t } from "@/i18n";
 import type { Book, Definition, Poem, WikiSummary } from "@/knowledge";
 import { addDays, fromLocalDate } from "@/planner/dates";
 import { readSchoolText } from "@/planner/intake";
-import { matchSkills, sameWord, tokens } from "@/planner/skillmatch";
+import { joinCompounds, matchSkills, sameWord, tokens } from "@/planner/skillmatch";
 import type { EventKind } from "@/planner/types";
 import { getSkill, SKILLS } from "@/practice/skills";
 import type { Item } from "@/practice/types";
@@ -309,7 +309,7 @@ function coursesWith(word: string) {
       const topic = entry.id.replace(/-es$/, "");
       const all = byTopic.get(topic) ?? new Set<string>();
       for (const lesson of entry.lessons)
-        for (const w of tokens(`${entry.title} ${lesson.title} ${lesson.summary} ${lesson.scenes.flatMap((sc) => (sc.kind === "slide" ? [slideText(sc)] : [])).join(" ")}`)) all.add(w);
+        for (const w of joinCompounds(tokens(`${entry.title} ${lesson.title} ${lesson.summary} ${lesson.scenes.flatMap((sc) => (sc.kind === "slide" ? [slideText(sc)] : [])).join(" ")}`))) all.add(w);
       byTopic.set(topic, all);
     }
     spread = new Map();
@@ -319,10 +319,11 @@ function coursesWith(word: string) {
 }
 
 export function lessonFor(topic: string, grade: Grade, locale: Locale): LessonCard | null {
-  const words = [...new Set(tokens(topic).filter((w) => w.length >= 4))];
+  // "cell phone" is not about cells: an everyday compound is one word, on both sides, as in matchSkills.
+  const words = [...new Set(joinCompounds(tokens(topic)).filter((w) => w.length >= 4))];
   if (!words.length) return null;
   const matched = (text: string) => {
-    const have = new Set(tokens(text));
+    const have = new Set(joinCompounds(tokens(text)));
     return words.filter((w) => have.has(w));
   };
   let best: { card: LessonCard; score: number } | null = null;
@@ -611,7 +612,9 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
   // Only a real topic is looked up (lookupTopic); any other sentence still finds the practice that fits,
   // but nothing of it leaves the device.
   const topic = ask.kind === "topic" ? ask.topic : undefined;
-  const skills = matchSkills(ctx.homework ? `${text} ${ctx.homework.title}` : text, undefined, 2, ctx.grade);
+  // "How does it work?": the closing verb belongs to the question, not to "Titles of works".
+  const asked = sentence(text).replace(/^((?:how|why)\b.*?)\s+(?:work|works|happen|happens)$/, "$1");
+  const skills = matchSkills(ctx.homework ? `${asked} ${ctx.homework.title}` : asked, undefined, 2, ctx.grade);
   const skillTitle = skills[0] ? getSkill(skills[0])!.title[l] : undefined;
   // A word or a two-word term ("photosynthesis", "logical fallacy") also gets its dictionary sense.
   const term = !!topic && topic.split(" ").length <= 2;

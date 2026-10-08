@@ -188,6 +188,18 @@ describe("our own lessons as knowledge", () => {
   it("does not pick a lesson on a generic word alone", () => {
     expect(lessonFor("prime number", "4", "en")).toBeNull();
     expect(lessonFor("número primo", "4", "es")).toBeNull();
+    // "Cell" is the Cells course's own word, but a cell phone is not about cells (see COMPOUNDS).
+    expect(lessonFor("cell phone", "8", "en")).toBeNull();
+    expect(lessonFor("teléfono celular", "8", "es")).toBeNull();
+    expect(lessonFor("how does a cell phone work", "8", "en")).toBeNull();
+    expect(lessonFor("prison cell", "8", "en")).toBeNull();
+    expect(lessonFor("atom bomb", "8", "en")).toBeNull();
+  });
+
+  it("reads an everyday compound as one word, in the ask and in the lesson", () => {
+    // The energy course says "a power plant", so a power plant finds it; a plant cell is still a cell.
+    expect(lessonFor("power plant", "6", "en")).toMatchObject({ catalogueId: "science-energy" });
+    expect(lessonFor("plant cell", "6", "en")).toMatchObject({ catalogueId: "science-cells" });
   });
 });
 
@@ -260,6 +272,14 @@ describe("the demo tutor on a topic", () => {
     expect(homework.cards.find((c) => c.type === "practice")).toEqual({ type: "practice", skillId: "m.div.long" });
     expect(homework.text).toMatch(/^That sounds like /);
     expect(f.wiki).not.toHaveBeenCalled();
+    // "How does it work?" has nothing to look up and no skill in it ("Titles of works" is not one).
+    for (const q of ["how does it work?", "How does this work"]) {
+      const r = await demoAnswer(q, ctx(), fresh(), f);
+      expect(r.cards, q).toEqual([]);
+      expect(r.text, q).toMatch(/^I'm not sure what to look up/);
+    }
+    const fractions = await demoAnswer("how do fractions work", ctx({ grade: "3" }), fresh(), f);
+    expect(fractions.cards.find((c) => c.type === "practice")).toEqual({ type: "practice", skillId: "m.frac.unit" });
   });
 
   it("never sends a search that is about the learner or names someone in the family", async () => {
