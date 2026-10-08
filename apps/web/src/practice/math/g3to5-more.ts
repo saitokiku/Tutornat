@@ -1824,6 +1824,8 @@ export const MATH_3_5_MORE: Skill[] = [
     grade: "3",
     title: { en: "Multiplication and division word problems", es: "Problemas de multiplicación y división" },
     standard: "3.OA.A.3",
+    // Level 3 is two-step problems.
+    levelStandards: { 3: "3.OA.D.8" },
     prereqs: ["m.mult.facts", "m.div.facts"],
     content: "computed",
     levels: 3,
@@ -2540,6 +2542,8 @@ export const MATH_3_5_MORE: Skill[] = [
     grade: "4",
     title: { en: "Place value to a million and rounding", es: "Valor posicional hasta un millón y redondeo" },
     standard: "4.NBT.A.2",
+    // Level 3 is rounding.
+    levelStandards: { 3: "4.NBT.A.3" },
     prereqs: ["m.round"],
     content: "computed",
     levels: 3,
@@ -2711,6 +2715,8 @@ export const MATH_3_5_MORE: Skill[] = [
     grade: "4",
     title: { en: "Times as many, and remainders in word problems", es: "Veces la cantidad y residuos en problemas" },
     standard: "4.OA.A.2",
+    // Level 3 is remainders in word problems.
+    levelStandards: { 3: "4.OA.A.3" },
     prereqs: ["m.mult.multi", "m.div.long"],
     content: "computed",
     levels: 3,
@@ -2912,6 +2918,8 @@ export const MATH_3_5_MORE: Skill[] = [
     grade: "4",
     title: { en: "Tenths and hundredths: add and compare", es: "Décimos y centésimos: sumar y comparar" },
     standard: "4.NF.C.5",
+    // Level 2 writes the sum as a decimal; level 3 compares decimals.
+    levelStandards: { 2: "4.NF.C.6", 3: "4.NF.C.7" },
     prereqs: ["m.dec.tenths"],
     content: "computed",
     levels: 3,
@@ -3190,6 +3198,8 @@ export const MATH_3_5_MORE: Skill[] = [
     grade: "4",
     title: { en: "Measure, add and classify angles", es: "Medir, sumar y clasificar ángulos" },
     standard: "4.MD.C.7",
+    // Level 1 classifies angles; level 2 measures them as parts of a turn.
+    levelStandards: { 1: "4.G.A.1", 2: "4.MD.C.5" },
     prereqs: ["m.time.clock", "m.addsub.3digit"],
     content: "computed",
     levels: 3,
@@ -3488,6 +3498,8 @@ export const MATH_3_5_MORE: Skill[] = [
     grade: "5",
     title: { en: "Compare, place and round decimals to thousandths", es: "Comparar, ubicar y redondear decimales hasta los milésimos" },
     standard: "5.NBT.A.3",
+    // Level 3 is rounding.
+    levelStandards: { 3: "5.NBT.A.4" },
     prereqs: ["m.dec.hundredths", "m.pow10"],
     content: "computed",
     levels: 3,
@@ -4131,6 +4143,8 @@ export const MATH_3_5_MORE: Skill[] = [
     grade: "5",
     title: { en: "Patterns and the coordinate plane", es: "Patrones y el plano de coordenadas" },
     standard: "5.OA.B.3",
+    // Level 1 names and locates points on the grid.
+    levelStandards: { 1: "5.G.A.1" },
     prereqs: ["m.mult.compare"],
     content: "computed",
     levels: 3,

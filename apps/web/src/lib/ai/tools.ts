@@ -7,7 +7,7 @@ import { audiobooks, cleanQuery, define, poemsBy, poemTitled, searchBooks, short
 import type { Grade } from "@/lib/types";
 import { check } from "@/practice/answer";
 import { randomSeed } from "@/practice/rng";
-import { getSkill, makeItem } from "@/practice/skills";
+import { getSkill, makeItem, standardAt } from "@/practice/skills";
 import { readSpoken } from "@/practice/spoken";
 import { matchSkills, sameWord } from "@/planner/skillmatch";
 import { linkOf, resourcesFor } from "@/resources";
@@ -259,7 +259,7 @@ export function knowledgeTools(ctx: TutorContext) {
         "The exact wording of a Common Core standard, by code (e.g. 4.NF.A.1) or for a skill on the map (defaults to the current problem's skill). Shown on the board with its official link. Use when someone asks what a standard says.",
       inputSchema: z.object({ code: z.string().max(20).optional(), skillId: z.string().max(60).optional() }),
       execute: async ({ code, skillId }) => {
-        const c = code?.trim() || (skillId ? getSkill(skillId)?.standard : undefined) || (ctx.item ? getSkill(ctx.item.skillId)?.standard : undefined);
+        const c = code?.trim() || (skillId ? getSkill(skillId)?.standard : undefined) || (ctx.item ? standardAt(getSkill(ctx.item.skillId) ?? {}, ctx.item.level) : undefined);
         if (!c || !STANDARD_CODE.test(c)) return notFound;
         return attempt(async () => {
           const s = await standardText(c);

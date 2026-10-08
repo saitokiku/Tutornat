@@ -2,19 +2,20 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Runner } from "@/components/practice/Runner";
+import { SkillMap } from "@/components/practice/SkillMap";
 import type { PracticeSet } from "@/learning/types";
 import { signUp } from "@/lib/auth";
 import { createLearner, selectLearner } from "@/lib/profiles";
 import { newId, read, resetMemory, update } from "@/lib/store";
 import type { Grade, Profile } from "@/lib/types";
-import { makeItem } from "../skills";
+import { getSkill, makeItem } from "../skills";
 import type { Item } from "../types";
 
 // The five levels of this strand that answer on a touch pad, played through the real Runner by keyboard:
 // the fraction bar (m.frac.equiv.model L1), the clock in 5- and 1-minute steps (m.time.elapsed L1, L3)
 // and the number line in thousandths and in fractions (m.dec.thousandths L2, m.frac.asdiv L3). Then the
 // two graphs a learner reads before answering: the bar graph (m.bargraph.scaled L2) and the line plot
-// (m.lineplot.frac).
+// (m.lineplot.frac). Last, a merged skill's standards on the skill map: every level's code, each with its wording.
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
@@ -155,5 +156,33 @@ describe("grades 3–5 (more): graphs in the Runner", () => {
     for (const label of ["0", "1/8", "1/4", "3/8", "1/2", "5/8", "3/4", "7/8", "1"]) expect([...plot.querySelectorAll("text")].map((x) => x.textContent)).toContain(label);
     await userEvent.keyboard(`${item.answer.value}{Enter}`);
     right(p, String(item.answer.value));
+  });
+});
+
+describe("grades 3–5 (more): every standard a merged skill practises, on the skill map", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("m.mult.compare shows 4.OA.A.2 and its level 3 code 4.OA.A.3, and opens the wording of the one tapped", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const code = new URL(url, "http://x").searchParams.get("q")!;
+        asked.push(code);
+        return Response.json({ standard: { code, text: `Wording of ${code}.`, subject: "Mathematics", grade: "4", source: "Common Core State Standards" } });
+      }),
+    );
+    await learner("4");
+    const skill = getSkill("m.mult.compare")!;
+    render(<SkillMap skills={[skill]} statuses={{}} now={Date.now()} locale="en" near="4" onPractice={vi.fn()} />);
+    const main = screen.getByRole("button", { name: "4.OA.A.2: show what this standard says" });
+    const level3 = screen.getByRole("button", { name: "4.OA.A.3: show what this standard says" });
+    await userEvent.click(level3);
+    expect(level3).toHaveAttribute("aria-expanded", "true");
+    expect(main).toHaveAttribute("aria-expanded", "false");
+    expect(await screen.findByText("Wording of 4.OA.A.3.")).toBeInTheDocument();
+    await userEvent.click(main);
+    expect(await screen.findByText("Wording of 4.OA.A.2.")).toBeInTheDocument();
+    expect(screen.queryByText("Wording of 4.OA.A.3.")).toBeNull();
+    expect(asked).toEqual(["4.OA.A.3", "4.OA.A.2"]);
   });
 });

@@ -29,7 +29,7 @@ import {
 } from "@/lib/review";
 import { useStore, type StoreState } from "@/lib/store";
 import type { Subject } from "@/lib/types";
-import { getSkill, SKILLS } from "@/practice/skills";
+import { getSkill, SKILLS, standardsOf } from "@/practice/skills";
 import type { Skill } from "@/practice/types";
 import { ItemPair } from "./ItemPair";
 
@@ -239,7 +239,9 @@ function SkillView({ skill, filters }: { skill: Skill; filters: ReviewFilters })
           <SubjectDot subject={skill.subject} />
           <span>{skill.id}</span>
           <span>· {gradeLabel(locale, skill.grade)}</span>
-          {skill.standard && <span>· {skill.standard}</span>}
+          {standardsOf(skill).map((code) => (
+            <span key={code}>· {code}</span>
+          ))}
           <span>· {t("trust.review.levels", { n: skill.levels })}</span>
           <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
         </p>

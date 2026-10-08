@@ -4,7 +4,7 @@ import { STATUS_DOT, statusLine } from "@/components/practice/status";
 import { gradeLabel, useT } from "@/i18n";
 import type { Statuses } from "@/learning/engine";
 import type { Grade, Locale, Subject } from "@/lib/types";
-import { skillsFor } from "@/practice/skills";
+import { skillsFor, standardsOf } from "@/practice/skills";
 import type { Skill } from "@/practice/types";
 import { DraftMark } from "./Verified";
 
@@ -38,10 +38,10 @@ export function SkillMap({ subject, statuses, locale, now }: { subject: Subject;
                   <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${STATUS_DOT[statuses[s.id]?.state ?? "new"]}`} />
                   <span className="font-medium text-ink">{s.title[locale]}</span>
                   <span className="text-muted">{statusLine(statuses[s.id], now, locale)}</span>
-                  {s.standard && (
+                  {standardsOf(s).length > 0 && (
                     <span className="font-opmono text-muted">
-                      <span className="sr-only">{t("lm.proved.code", { code: s.standard })}</span>
-                      <span aria-hidden="true">{s.standard}</span>
+                      <span className="sr-only">{t("lm.proved.code", { code: standardsOf(s).join(", ") })}</span>
+                      <span aria-hidden="true">{standardsOf(s).join(", ")}</span>
                     </span>
                   )}
                   <DraftMark skillId={s.id} />

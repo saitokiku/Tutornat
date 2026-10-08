@@ -1,6 +1,6 @@
 import type { ActivityEvent, Course, Locale, Profile, TeachingPrefs } from "@/lib/types";
 import type { SchoolResult } from "@/planner/types";
-import { getSkill, makeItem } from "@/practice/skills";
+import { getSkill, makeItem, standardsOf } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import type { Statuses } from "./engine";
 import { decided, helpedProblems, OUTCOME_RULES, resolveActs, type ResolvedAct, type Sentence } from "./outcomes";
@@ -373,8 +373,8 @@ function language(learner: ProfileInput["learner"]): TeachingProfile["language"]
 // ----- verified education -----
 
 export type Verified = {
-  /** Skills proved under the mastery law, newest first, with the standard behind each. */
-  proved: { skillId: string; provedAt: number; standard?: string; refresh: boolean }[];
+  /** Skills proved under the mastery law, newest first, with the standards behind each (a merged skill has several). */
+  proved: { skillId: string; provedAt: number; standards: string[]; refresh: boolean }[];
   /** Courses with lessons done and the lesson-check tally. */
   courses: { courseId: string; title: string; done: number; total: number; own: number; helped: number; missed: number }[];
   /** Scores from school, entered by a grown-up. Never mixed with proof. */
@@ -385,7 +385,7 @@ export type Verified = {
 export function verifiedEducation(input: { statuses: Statuses; activity: ActivityEvent[]; courses: Course[]; results: SchoolResult[] }): Verified {
   const proved = Object.values(input.statuses)
     .filter((s) => s.provedAt !== undefined && (s.state === "proved" || s.state === "refresh"))
-    .map((s) => ({ skillId: s.skillId, provedAt: s.provedAt!, standard: getSkill(s.skillId)?.standard, refresh: s.state === "refresh" }))
+    .map((s) => ({ skillId: s.skillId, provedAt: s.provedAt!, standards: standardsOf(getSkill(s.skillId) ?? {}), refresh: s.state === "refresh" }))
     .sort((a, b) => b.provedAt - a.provedAt);
   const courses = input.courses
     .filter((c) => c.status === "ready" && c.lessons.length)

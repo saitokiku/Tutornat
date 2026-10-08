@@ -3,7 +3,7 @@ import { CATALOGUE } from "@/catalogue";
 import { RULES } from "@/learning/engine";
 import type { Grade, Locale, Subject } from "@/lib/types";
 import { answerText } from "@/practice/answer";
-import { makeItem, SKILLS } from "@/practice/skills";
+import { makeItem, SKILLS, standardAt } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { resourcesFor } from "@/resources";
 
@@ -73,7 +73,7 @@ function heroSet(band: BandKey): HeroSet {
     skillId,
     title: skill.title,
     grade: skill.grade,
-    standard: skill.standard,
+    standard: standardAt(skill, level),
     items: { en: items("en"), es: items("es") },
     sources: resourcesFor({ skillId })
       .slice(0, 2)

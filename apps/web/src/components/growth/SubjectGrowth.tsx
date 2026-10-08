@@ -12,7 +12,7 @@ import { bucketOf, type LessonDone, type SchoolRow, type SubjectGrowth as Growth
 import { isReviewed } from "@/lib/review";
 import { useStore } from "@/lib/store";
 import { fromLocalDate } from "@/planner/dates";
-import { getSkill } from "@/practice/skills";
+import { getSkill, standardsOf } from "@/practice/skills";
 import { SERIES, Swatch, WeekChart } from "./WeekChart";
 
 // One subject's growth: where its skills stood week by week (a chart and the same numbers as a
@@ -254,7 +254,7 @@ function SkillList({ statuses, practiced, subject, now }: { statuses: Statuses; 
                 <span className="block text-sm text-ink">{skill.title[locale]}</span>
                 <span className="block text-xs text-muted">
                   {statusLine(x, now, locale)}
-                  {skill.standard && <span className="font-opmono"> · {skill.standard}</span>}
+                  {standardsOf(skill).length > 0 && <span className="font-opmono"> · {standardsOf(skill).join(", ")}</span>}
                   {x.stuck && <span className="text-warn"> · {t("child.stuck")}</span>}
                 </span>
               </span>

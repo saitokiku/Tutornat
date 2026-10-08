@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { IconArrowRight, IconCheckCircle, IconLayers } from "@/components/icons";
@@ -20,7 +20,7 @@ import { currentLearner } from "@/lib/profiles";
 import { isReviewed } from "@/lib/review";
 import { read, useStore } from "@/lib/store";
 import type { Profile, Subject } from "@/lib/types";
-import { getSkill, skillsFor } from "@/practice/skills";
+import { getSkill, skillsFor, standardsOf } from "@/practice/skills";
 
 export default function PracticePage() {
   return (
@@ -84,7 +84,7 @@ function Practice() {
     if (q.length < 2) return [];
     return skillsFor(subject)
       .concat(SUBJECTS.filter((x) => x !== subject).flatMap(skillsFor))
-      .filter((s) => s.title.en.toLowerCase().includes(q) || s.title.es.toLowerCase().includes(q) || s.standard?.toLowerCase().includes(q) || s.id.includes(q))
+      .filter((s) => s.title.en.toLowerCase().includes(q) || s.title.es.toLowerCase().includes(q) || standardsOf(s).some((c) => c.toLowerCase().includes(q)) || s.id.includes(q))
       .slice(0, 8);
   }, [query, subject]);
   const searching = query.trim().length >= 2;
@@ -136,12 +136,12 @@ function Practice() {
                 <span>{statusLine(statuses[upNext.id], now, locale)}</span>
                 <span aria-hidden="true">·</span>
                 <span className="font-opmono">{gradeLabel(locale, upNext.grade)}</span>
-                {upNext.standard && (
-                  <>
+                {standardsOf(upNext).map((code) => (
+                  <Fragment key={code}>
                     <span aria-hidden="true">·</span>
-                    <StandardCode code={upNext.standard} locale={locale} />
-                  </>
-                )}
+                    <StandardCode code={code} locale={locale} />
+                  </Fragment>
+                ))}
                 {!upNextReviewed && <Badge>{t("practice.draft")}</Badge>}
               </div>
               <div className="mt-5 flex flex-wrap items-center gap-3">

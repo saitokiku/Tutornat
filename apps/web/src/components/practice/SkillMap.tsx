@@ -8,7 +8,7 @@ import type { SkillState, Statuses } from "@/learning/engine";
 import { isReviewed } from "@/lib/review";
 import { useStore } from "@/lib/store";
 import type { Grade, Locale } from "@/lib/types";
-import { gradeIndex } from "@/practice/skills";
+import { gradeIndex, standardsOf } from "@/practice/skills";
 import type { Skill } from "@/practice/types";
 import { StandardButton, StandardPanel } from "./StandardText";
 
@@ -43,7 +43,9 @@ export function SkillRow({ skill, statuses, now, locale, onPractice }: { skill: 
   const reviewed = useStore((s) => isReviewed(s, skill));
   const status = statuses[skill.id];
   const panel = useId();
-  const [open, setOpen] = useState(false);
+  // A merged skill can practise more than one standard; one wording is open at a time.
+  const codes = standardsOf(skill);
+  const [open, setOpen] = useState<string | null>(null);
   return (
     // Phones: title on its own line, then the standard and the button beneath it. Wider: one row.
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:px-5">
@@ -54,12 +56,14 @@ export function SkillRow({ skill, statuses, now, locale, onPractice }: { skill: 
       </span>
       <span className="ml-5 flex items-center gap-2 sm:ml-0">
         {!reviewed && <Badge>{t("practice.draft")}</Badge>}
-        {skill.standard && <StandardButton code={skill.standard} open={open} onToggle={() => setOpen(!open)} panelId={panel} />}
+        {codes.map((code) => (
+          <StandardButton key={code} code={code} open={open === code} onToggle={() => setOpen(open === code ? null : code)} panelId={panel} />
+        ))}
       </span>
       <Button variant="secondary" onClick={onPractice} aria-label={`${t("practice.practiceThis")}: ${skill.title[locale]}`} className="ml-auto sm:ml-0">
         {t("practice.practiceThis")}
       </Button>
-      {open && skill.standard && <StandardPanel code={skill.standard} locale={locale} id={panel} />}
+      {open && <StandardPanel key={open} code={open} locale={locale} id={panel} />}
     </li>
   );
 }

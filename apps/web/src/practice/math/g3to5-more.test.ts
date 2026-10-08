@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { linePoints } from "@/components/practice/pad-math";
 import { answerText, check, misconceptionOf } from "../answer";
 import { evaluate, parse } from "../expr";
-import { makeItem } from "../skills";
+import { makeItem, standardAt, standardsOf } from "../skills";
 import type { Answer, Item } from "../types";
 import { MATH_3_5 } from "./g3to5";
 import { MATH_3_5_MORE, SYMMETRY_COUNT, SYMMETRY_YES_NO } from "./g3to5-more";
@@ -139,6 +139,56 @@ describe.each(MATH_3_5_MORE.map((s) => [s.id, s] as const))("%s: every item", (_
         expect(prompts.size, `${s.id} L${level} variety`).toBeGreaterThanOrEqual(5);
       }
     }
+  });
+});
+
+describe("grades 3–5 (more): the standard each level practises", () => {
+  // A merged skill reports every code its levels practise, so standards-based coverage is right.
+  const BY_LEVEL: Record<string, Record<number, string>> = {
+    "m.multdiv.word": { 3: "3.OA.D.8" },
+    "m.place.million": { 3: "4.NBT.A.3" },
+    "m.mult.compare": { 3: "4.OA.A.3" },
+    "m.dec.hundredths": { 2: "4.NF.C.6", 3: "4.NF.C.7" },
+    "m.angles": { 1: "4.G.A.1", 2: "4.MD.C.5" },
+    "m.dec.thousandths": { 3: "5.NBT.A.4" },
+    "m.patterns.coord": { 1: "5.G.A.1" },
+  };
+  it("names a level's own code only where its problems practise a different standard", () => {
+    for (const s of MATH_3_5_MORE) {
+      expect(s.levelStandards ?? {}, s.id).toEqual(BY_LEVEL[s.id] ?? {});
+      for (const [level, code] of Object.entries(s.levelStandards ?? {})) {
+        expect(Number(level)).toBeGreaterThanOrEqual(1);
+        expect(Number(level)).toBeLessThanOrEqual(s.levels);
+        expect(code).toMatch(/^[3-5]\.[A-Z]+\.[A-D]\.\d+[a-z]?$/);
+        expect(code).not.toBe(s.standard);
+        expect(code[0], `${s.id} L${level} stays in grade ${s.grade}`).toBe(s.grade);
+      }
+    }
+    expect(standardsOf(skill("m.dec.hundredths"))).toEqual(["4.NF.C.5", "4.NF.C.6", "4.NF.C.7"]);
+    expect(standardsOf(skill("m.area.word"))).toEqual(["4.MD.A.3"]);
+    expect([1, 2, 3].map((l) => standardAt(skill("m.angles"), l))).toEqual(["4.G.A.1", "4.MD.C.5", "4.MD.C.7"]);
+  });
+  it("each level's code fits what its problems ask", () => {
+    const every = (id: string, level: number, fits: (it: Item) => boolean) => {
+      for (const it of items(id, level)) expect(fits(it), `${id} L${level}: ${text(it)}`).toBe(true);
+    };
+    every("m.place.million", 3, (it) => /^Round /.test(text(it)));
+    every("m.dec.thousandths", 3, (it) => /^Round /.test(text(it)));
+    // Remainder problems: the worked steps divide with a remainder that is really there (q × b + r = a, 0 < r < b).
+    every("m.mult.compare", 3, (it) =>
+      it.steps.some((line) => {
+        const m = /(\d+) ÷ (\d+) = (\d+) R (\d+)/.exec(line);
+        if (!m) return false;
+        const [a, b, q, rem] = m.slice(1).map(Number);
+        return q * b + rem === a && rem > 0 && rem < b;
+      }),
+    );
+    every("m.dec.hundredths", 2, (it) => /Write the sum as a decimal/.test(text(it)));
+    every("m.dec.hundredths", 3, (it) => it.input === "choices");
+    every("m.angles", 1, (it) => (it.choices ?? []).map((c) => c.label).join() === "acute,right,obtuse");
+    every("m.angles", 2, (it) => /full turn|clock hands/.test(text(it)));
+    every("m.patterns.coord", 1, (it) => it.answer.kind === "pair" && /coordinates|origin/.test(text(it)));
+    every("m.multdiv.word", 3, (it) => it.steps.filter((line) => equations(line).length > 0).length >= 2);
   });
 });
 

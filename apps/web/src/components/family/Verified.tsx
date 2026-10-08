@@ -40,10 +40,10 @@ export function ProvedList({ proved, locale }: { proved: Verified["proved"]; loc
         {proved.map((p) => (
           <li key={p.skillId} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
             <span className="font-medium text-ink">{getSkill(p.skillId)?.title[locale] ?? p.skillId}</span>
-            {p.standard && (
+            {p.standards.length > 0 && (
               <span className="font-opmono text-muted">
-                <span className="sr-only">{t("lm.proved.code", { code: p.standard })}</span>
-                <span aria-hidden="true">{p.standard}</span>
+                <span className="sr-only">{t("lm.proved.code", { code: p.standards.join(", ") })}</span>
+                <span aria-hidden="true">{p.standards.join(", ")}</span>
               </span>
             )}
             <span className="font-opmono tabular-nums text-muted">{shortDate(p.provedAt, ui)}</span>

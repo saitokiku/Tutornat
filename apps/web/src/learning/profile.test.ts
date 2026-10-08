@@ -305,8 +305,8 @@ describe("verified education", () => {
       ],
     });
     expect(v.proved).toEqual([
-      { skillId: LINE, provedAt: T0 + DAY, standard: getSkill(LINE)!.standard, refresh: true },
-      { skillId: S, provedAt: T0, standard: getSkill(S)!.standard, refresh: false },
+      { skillId: LINE, provedAt: T0 + DAY, standards: [getSkill(LINE)!.standard], refresh: true },
+      { skillId: S, provedAt: T0, standards: [getSkill(S)!.standard], refresh: false },
     ]);
     expect(v.courses).toEqual([{ courseId: "a", title: "Course a", done: 1, total: 2, own: 1, helped: 1, missed: 1 }]);
     expect(v.school.map((r) => r.id)).toEqual(["r2", "r1"]);

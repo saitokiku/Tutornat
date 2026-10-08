@@ -79,6 +79,11 @@ export type Skill = {
   title: Record<Locale, string>;
   /** Common Core code where one fits. */
   standard?: string;
+  /**
+   * Levels of a merged skill that practise a different code than `standard`, by level: { 3: "4.OA.A.3" }.
+   * Wherever a skill's standard is shown, these are shown too (`standardsOf`); one level's code is `standardAt`.
+   */
+  levelStandards?: Record<number, string>;
   prereqs: string[];
   /** Difficulty steps inside the skill, 1-based. */
   levels: number;
