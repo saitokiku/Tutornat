@@ -82,6 +82,27 @@ export type VoiceProviderProps = {
   build?: (setup: VoiceSetup) => Promise<Voice>;
 };
 
+// For code that speaks outside React (components/stage/hear.tsx speakText): the mounted app voice.
+let mounted: { out: AppSpeechOut; band: Band; tier: () => Voice["tier"] } | null = null;
+
+/**
+ * Speaks through the app voice from anywhere (a Hear button's click handler). False when there is no
+ * voice to read with (no VoiceRoot, or only robots on this device): then nothing speaks — never a
+ * second voice. `onEnd` runs when this run ends, finished or replaced.
+ */
+export function appSay(source: SpeakSource, opts: Omit<SpeakOptions, "band"> & { onEnd?: () => void } = {}): boolean {
+  const m = mounted;
+  if (!m || m.tier() == null) return false;
+  const { onEnd, ...rest } = opts;
+  m.out.warm();
+  const run = m.out.speak(source, { kind: "hear", ...rest, band: m.band });
+  if (onEnd) void run.then(onEnd);
+  return true;
+}
+
+/** Stops whatever the app voice is reading (a Hear button pressed again, a sheet closing). */
+export const appSilence = () => mounted?.out.cancel();
+
 /** The app voice for one learner. VoiceRoot feeds it from the store; tests give it a learner. */
 export function VoiceProvider({ learner, children, build = buildVoice }: VoiceProviderProps) {
   const out = useMemo(() => appSpeechOut(), []);
@@ -123,6 +144,14 @@ export function VoiceProvider({ learner, children, build = buildVoice }: VoicePr
     const subs = [out.onLocked(setLocked), out.onDeviceVoice(setDeviceVoice)];
     return () => subs.forEach((u) => u());
   }, [out]);
+
+  useEffect(() => {
+    const me = { out, band, tier: () => v?.tier ?? null };
+    mounted = me;
+    return () => {
+      if (mounted === me) mounted = null;
+    };
+  }, [out, band, v]);
 
   // The first tap or key press anywhere unlocks audio for the whole visit.
   useEffect(() => {

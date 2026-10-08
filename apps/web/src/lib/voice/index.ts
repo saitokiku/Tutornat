@@ -46,6 +46,6 @@ export { addressesSomeoneElse } from "./addressee";
 export { GATES, metricOf, percentile, postMetric, segments, type Segments, type TurnMarks, type VoiceMetric } from "./metrics";
 export { mayBeUnder13, voice, voiceDisclosure, voiceStatus, withFallback, type Voice, type VoiceSetup, type VoiceStatus } from "./select";
 export { appSpeechOut, type AppSpeechOut } from "./app-out";
-export { useAppVoice, useSpeak, VoiceProvider, VoiceRoot, type AppVoice, type Speaker, type VoiceLearner } from "./root";
+export { appSay, appSilence, useAppVoice, useSpeak, VoiceProvider, VoiceRoot, type AppVoice, type Speaker, type VoiceLearner } from "./root";
 export { useTutorVoice, type SendInfo, type TutorVoice, type TutorVoiceOptions } from "./tutor-voice";
 export { useVoiceSession, type SessionOptions, type VoiceSession } from "./session";

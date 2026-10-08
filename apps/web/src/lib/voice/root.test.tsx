@@ -133,6 +133,23 @@ describe("VoiceProvider", () => {
     expect(out.said).toEqual([["Count the dots."]]);
   });
 
+  it("appSay speaks through the app voice from outside React, and is false with no voice (never a second one)", async () => {
+    const { appSay } = await import("./root");
+    expect(appSay("Count the dots.")).toBe(false);
+    const { build, out } = voices();
+    const { unmount } = renderHook(() => useAppVoice(), { wrapper: wrapper(build) });
+    await flush();
+    const ended = vi.fn();
+    expect(appSay("Count the dots.", { onEnd: ended })).toBe(true);
+    await flush();
+    expect(out.said.at(-1)).toEqual(["Count the dots."]);
+    act(() => out.finish());
+    await flush();
+    expect(ended).toHaveBeenCalledOnce();
+    unmount();
+    expect(appSay("Again.")).toBe(false);
+  });
+
   it("two speakers follow only their own runs", async () => {
     const { build, out } = voices();
     const { result } = renderHook(() => ({ hear: useSpeak("hear"), story: useSpeak("narration") }), { wrapper: wrapper(build) });
