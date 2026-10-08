@@ -127,6 +127,19 @@ describe("the player", () => {
     }
   });
 
+  it("a sentence that arrives after a gap longer than the pause gets no extra pause", () => {
+    const { ctx, player, advance } = setup("k2");
+    const s1 = send(player, ["One two."]);
+    for (const c of chunks(s1, [])) player.push(c.pcm, c.al);
+    advance(2000); // the first sentence has played; the model is slow with the second
+    const sp = speakable("Three four.", "en");
+    player.addSentence(sp.text, [2, 3], false);
+    for (const c of chunks(`${sp.text} `, [])) player.push(c.pcm, c.al);
+    player.end();
+    const last = ctx.sources[ctx.sources.length - 1];
+    expect(last.at).toBeCloseTo(ctx.currentTime + LEAD_MS / 1000, 5);
+  });
+
   it("keeps word indexes when the timings leave out or add spaces between sentences", () => {
     const { player, seen } = setup();
     const text = send(player, ["One two.", "Three four."]);

@@ -164,8 +164,9 @@ export function createPlayer(o: PlayerOptions) {
     while (scheduled < safe) {
       const k = sentences.findIndex((s, i) => i > 0 && s.sampleStart === scheduled && !s.paused);
       if (k > 0) {
+        // The band's pause after the last sentence; a sentence that arrived late has had its pause already.
         const p = SENTENCE_PAUSE[o.band];
-        nextStart = Math.max(nextStart, ctx.currentTime + LEAD_MS / 1000) + (p.after + (sentences[k].question ? p.beforeQuestion : 0)) / 1000;
+        nextStart = Math.max(nextStart + (p.after + (sentences[k].question ? p.beforeQuestion : 0)) / 1000, ctx.currentTime + LEAD_MS / 1000);
         sentences[k].paused = true;
       }
       const cut = sentences.map((s) => s.sampleStart).filter((x): x is number => x != null && x > scheduled && x <= safe);
