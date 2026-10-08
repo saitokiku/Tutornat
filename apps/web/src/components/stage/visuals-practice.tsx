@@ -1,7 +1,8 @@
 import { useId } from "react";
 
-// Practice pictures: counters, frames, blocks, clock, arrays, column sums, shapes and a coordinate
-// grid. Same rules as visuals.tsx — palette colors, role="img" with the item's alt text, deterministic.
+// Practice pictures: counters, frames, blocks, clock, arrays, column sums, shapes, a coordinate grid,
+// a bar graph and a line plot. Same rules as visuals.tsx — palette colors, role="img" with the item's
+// alt text, deterministic.
 
 const INK = "var(--color-ink)";
 const MUTED = "var(--color-muted)";
@@ -325,6 +326,75 @@ export function CoordVisual({ points, line, alt, tint }: P & { points: [number, 
       {points.map(([x, y]) => (
         <circle key={`${x},${y}`} cx={X(x)} cy={Y(y)} r={5} fill={tint} stroke="var(--color-panel)" strokeWidth={2} />
       ))}
+    </svg>
+  );
+}
+
+/** Vertical bars against numbered scale lines from 0. A bar between two lines ends where its value falls. */
+export function BarGraphVisual({ labels, values, scale, unit, alt, tint }: P & { labels: string[]; values: number[]; scale: number; unit: string }) {
+  const top = (Math.floor(Math.max(scale, ...values) / scale) + 1) * scale;
+  const L = 48, T = 10, W = 264, H = 150, B = T + H;
+  const y = (v: number) => B - (v / top) * H;
+  const lines = Array.from({ length: Math.round(top / scale) + 1 }, (_, i) => i * scale);
+  const slot = W / labels.length, bar = Math.min(48, slot * 0.55);
+  return (
+    <svg viewBox={`0 0 ${L + W + 8} ${B + 28}`} role="img" aria-label={alt} className="w-full max-w-md">
+      {lines.map((v) => (
+        <g key={v}>
+          <line x1={L} x2={L + W} y1={y(v)} y2={y(v)} stroke={LINE} />
+          <text x={L - 6} y={y(v) + 3.5} textAnchor="end" fontSize="10" fill={MUTED} fontFamily={MONO}>
+            {v}
+          </text>
+        </g>
+      ))}
+      {values.map((v, i) => (
+        <rect key={i} x={L + slot * (i + 0.5) - bar / 2} y={y(v)} width={bar} height={B - y(v)} fill={tint} />
+      ))}
+      <line x1={L} x2={L} y1={T - 4} y2={B} stroke={INK} strokeWidth={1.5} />
+      <line x1={L} x2={L + W} y1={B} y2={B} stroke={INK} strokeWidth={1.5} />
+      {labels.map((label, i) => (
+        <text key={i} x={L + slot * (i + 0.5)} y={B + 18} textAnchor="middle" fontSize="11" fill={INK}>
+          {label}
+        </text>
+      ))}
+      <text x={12} y={T + H / 2} textAnchor="middle" fontSize="11" fill={INK} transform={`rotate(-90 12 ${T + H / 2})`}>
+        {unit}
+      </text>
+    </svg>
+  );
+}
+
+const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+/** k/den in lowest terms with a true minus sign: 2/8 → 1/4, 8/8 → 1. */
+function lowest(k: number, den: number) {
+  const g = gcd(Math.abs(k), den), sign = k < 0 ? "\u2212" : "";
+  return den / g === 1 ? `${sign}${Math.abs(k) / g}` : `${sign}${Math.abs(k) / g}/${den / g}`;
+}
+
+/** A number line in 1/denominator steps, every tick labelled in lowest terms, with one X stacked above it per value. */
+export function LinePlotVisual({ min, max, denominator, values, unit, alt, tint }: P & { min: number; max: number; denominator: number; values: number[]; unit: string }) {
+  const first = Math.round(min * denominator), count = Math.round((max - min) * denominator);
+  const stacks = new Map<number, number>();
+  for (const v of values) stacks.set(Math.round(v * denominator), (stacks.get(Math.round(v * denominator)) ?? 0) + 1);
+  const cell = 16, w = 360, pad = 22, axis = 10 + Math.max(1, ...stacks.values()) * cell;
+  const x = (k: number) => pad + ((k - first) / count) * (w - pad * 2);
+  return (
+    <svg viewBox={`0 0 ${w} ${axis + 46}`} role="img" aria-label={alt} className="w-full max-w-md">
+      {[...stacks].map(([k, n]) =>
+        Array.from({ length: n }, (_, j) => <path key={`${k}-${j}`} d={crossPath(x(k), axis - 10 - j * cell, 5.5)} stroke={tint} strokeWidth={2.5} strokeLinecap="round" />),
+      )}
+      <line x1={pad - 8} x2={w - pad + 8} y1={axis} y2={axis} stroke={INK} strokeWidth={2} strokeLinecap="round" />
+      {Array.from({ length: count + 1 }, (_, i) => first + i).map((k) => (
+        <g key={k}>
+          <line x1={x(k)} x2={x(k)} y1={axis - 6} y2={axis + 6} stroke={INK} strokeWidth={1.5} />
+          <text x={x(k)} y={axis + 22} textAnchor="middle" fontSize="11" fill={MUTED} fontFamily={MONO}>
+            {lowest(k, denominator)}
+          </text>
+        </g>
+      ))}
+      <text x={w / 2} y={axis + 40} textAnchor="middle" fontSize="11" fill={INK}>
+        {unit}
+      </text>
     </svg>
   );
 }

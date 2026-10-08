@@ -1360,11 +1360,13 @@ const FRAC_SHARE_STORIES: ShareStory[] = [
   },
 ];
 
-type Plot = { intro: (c: number, n: string) => Pair; item: Pair; unit: Amount; liquid: boolean; count: [Pair, Pair]; diff: Pair; some: [Pair, Pair]; total: Pair; share?: Pair };
+/** A line plot story: `intro` says what was measured and that each X is one item; `one` is the item in the singular. */
+type Plot = { intro: (c: number, n: string) => Pair; item: Pair; one: Pair; unit: Amount; liquid: boolean; count: [Pair, Pair]; diff: Pair; some: [Pair, Pair]; total: Pair; share?: Pair };
 const PLOTS: Plot[] = [
   {
-    intro: (c, n) => [`${n} measured ${c} leaves. Their lengths in inches are `, `${n} midió ${c} hojas. Sus longitudes en pulgadas son `],
+    intro: (c, n) => [`${n} measured ${c} leaves and made a line plot of their lengths in inches. Each X is one leaf.`, `${n} midió ${c} hojas e hizo un diagrama de puntos con sus longitudes en pulgadas. Cada X es una hoja.`],
     item: ["leaves", "hojas"],
+    one: ["leaf", "hoja"],
     unit: ["inch", "inches", "pulgada", "pulgadas"],
     liquid: false,
     count: [["How many leaves are ", "¿Cuántas hojas miden "], [" inch long?", " de pulgada?"]],
@@ -1373,8 +1375,9 @@ const PLOTS: Plot[] = [
     total: ["What is the total length of all the leaves?", "¿Cuál es la longitud total de todas las hojas?"],
   },
   {
-    intro: (c, n) => [`${n} cut ${c} ribbons. Their lengths in feet are `, `${n} cortó ${c} listones. Sus longitudes en pies son `],
+    intro: (c, n) => [`${n} cut ${c} ribbons and made a line plot of their lengths in feet. Each X is one ribbon.`, `${n} cortó ${c} listones e hizo un diagrama de puntos con sus longitudes en pies. Cada X es un listón.`],
     item: ["ribbons", "listones"],
+    one: ["ribbon", "listón"],
     unit: ["foot", "feet", "pie", "pies"],
     liquid: false,
     count: [["How many ribbons are ", "¿Cuántos listones miden "], [" foot long?", " de pie?"]],
@@ -1383,8 +1386,9 @@ const PLOTS: Plot[] = [
     total: ["What is the total length of all the ribbons?", "¿Cuál es la longitud total de todos los listones?"],
   },
   {
-    intro: (c) => [`A class poured juice into ${c} glasses. The amounts in cups are `, `Una clase sirvió jugo en ${c} vasos. Las cantidades en tazas son `],
+    intro: (c) => [`A class poured juice into ${c} glasses and made a line plot of the amounts in cups. Each X is one glass.`, `Una clase sirvió jugo en ${c} vasos e hizo un diagrama de puntos con las cantidades en tazas. Cada X es un vaso.`],
     item: ["glasses", "vasos"],
+    one: ["glass", "vaso"],
     unit: ["cup", "cups", "taza", "tazas"],
     liquid: true,
     count: [["How many glasses have ", "¿Cuántos vasos tienen "], [" cup of juice?", " de taza de jugo?"]],
@@ -1394,8 +1398,9 @@ const PLOTS: Plot[] = [
     share: ["If all the juice were poured together and shared equally among the glasses, how much would each glass have?", "Si se juntara todo el jugo y se repartiera en partes iguales entre los vasos, ¿cuánto tendría cada vaso?"],
   },
   {
-    intro: (c) => [`A science class filled ${c} beakers with water. The amounts in liters are `, `Una clase de ciencias llenó ${c} vasos de precipitados con agua. Las cantidades en litros son `],
+    intro: (c) => [`A science class filled ${c} beakers with water and made a line plot of the amounts in liters. Each X is one beaker.`, `Una clase de ciencias llenó ${c} vasos de precipitados con agua e hizo un diagrama de puntos con las cantidades en litros. Cada X es un vaso de precipitados.`],
     item: ["beakers", "vasos de precipitados"],
+    one: ["beaker", "vaso de precipitados"],
     unit: ["liter", "liters", "litro", "litros"],
     liquid: true,
     count: [["How many beakers have ", "¿Cuántos vasos de precipitados tienen "], [" liter of water?", " de litro de agua?"]],
@@ -2398,7 +2403,7 @@ export const MATH_3_5_MORE: Skill[] = [
     id: "m.bargraph.scaled",
     subject: "math",
     grade: "3",
-    title: { en: "Scaled picture graphs and bar graph word problems", es: "Pictogramas con escala y problemas escritos sobre gráficas de barras" },
+    title: { en: "Scaled picture and bar graphs", es: "Pictogramas y gráficas de barras con escala" },
     standard: "3.MD.B.3",
     prereqs: ["m.mult.facts", "m.addsub.3digit"],
     content: "computed",
@@ -2461,9 +2466,8 @@ export const MATH_3_5_MORE: Skill[] = [
           seconds: 45,
         };
       }
-      // Level 2 is a word problem about a bar graph: the bars are described, because the Visual union has no
-      // bar graph yet. When it gets one, show the bars and scale lines here and drop the sentences.
-      // Bars end on a scale line or halfway between two lines.
+      // Level 2 reads a bar graph: bars end on a scale line or halfway between two lines. The sentences
+      // describing each bar are the alt text, for a learner who cannot see the graph.
       const k = r.pick([2, 4, 10, 5]);
       const half = k % 2 === 0;
       const steps = r.shuffle([2, 3, 4, 5, 6, 7, 8, 9]).slice(0, 3);
@@ -2473,7 +2477,13 @@ export const MATH_3_5_MORE: Skill[] = [
         i === halfAt
           ? t(`The bar for ${cats[i][0]} ends halfway between ${steps[i] * k} and ${steps[i] * k + k}.`, `La barra ${del(cats[i][1])} llega a la mitad entre ${steps[i] * k} y ${steps[i] * k + k}.`)
           : t(`The bar for ${cats[i][0]} ends at ${vals[i]}.`, `La barra ${del(cats[i][1])} llega hasta ${vals[i]}.`);
-      const intro = t(`In a bar graph of votes for the class's ${g.en}, the scale counts by ${k}.`, `En una gráfica de barras de los votos para elegir ${g.es} de la clase, la escala va de ${k} en ${k}.`);
+      const intro = t(`The bar graph shows votes for the class's ${g.en}.`, `La gráfica de barras muestra los votos para elegir ${g.es} de la clase.`);
+      const top = (Math.max(...steps) + 1) * k;
+      const visual = { kind: "bar-graph" as const, labels: cats.map((c) => cap(t(c[0], c[1].replace(/^(el|la|los|las) /, "")))), values: vals, scale: k, unit: t("Votes", "Votos") };
+      const alt = t(
+        `A bar graph of votes with scale lines from 0 to ${top}, counting by ${k}, and three bars from left to right. ${bar(0)} ${bar(1)} ${bar(2)}`,
+        `Una gráfica de barras de votos con líneas de escala de 0 a ${top}, de ${k} en ${k}, y tres barras de izquierda a derecha. ${bar(0)} ${bar(1)} ${bar(2)}`,
+      );
       const [i, j] = r.shuffle([0, 1, 2]).slice(0, 2);
       const kind = r.int(0, 2);
       const [hi, lo] = vals[i] > vals[j] ? [i, j] : [j, i];
@@ -2496,18 +2506,20 @@ export const MATH_3_5_MORE: Skill[] = [
         slips = [[Math.abs(vals[i] - vals[j]), "subtracted-instead-of-added"], [lineVal(i) + lineVal(j), "read-the-half-as-a-line"]];
         step1 = `${vals[i]} + ${vals[j]} = ${value}`;
       }
-      const text = `${intro} ${bar(0)} ${bar(1)} ${bar(2)} ${q}`;
+      const text = `${intro} ${q}`;
       const answer: Answer = { kind: "number", value };
       const used = kind === 2 ? [i, j] : [hi, lo];
       const halfUsed = used.find((x) => x === halfAt);
       return {
         prompt: [text],
         say: text,
+        visual,
+        alt,
         input: "keypad",
         answer,
         wrong: misses(answer, slips),
         hints: [
-          t("What number does each bar in the question end at?", "¿En qué número termina cada barra de la pregunta?"),
+          t("Find the top of each bar in the question, then look across to the scale.", "Busca la parte de arriba de cada barra de la pregunta y mira a qué número de la escala llega."),
           halfUsed !== undefined
             ? t(`Halfway between two lines is ${k / 2} more than the lower line.`, `La mitad entre dos líneas es ${k / 2} más que la línea de abajo.`)
             : kind === 2
@@ -3777,7 +3789,7 @@ export const MATH_3_5_MORE: Skill[] = [
     id: "m.lineplot.frac",
     subject: "math",
     grade: "5",
-    title: { en: "Measurement data in fractions", es: "Datos de medidas en fracciones" },
+    title: { en: "Line plots with fractions", es: "Diagramas de puntos con fracciones" },
     standard: "5.MD.B.2",
     prereqs: ["m.frac.addunlike", "m.frac.mult"],
     content: "computed",
@@ -3807,6 +3819,9 @@ export const MATH_3_5_MORE: Skill[] = [
         }
         if (new Set(data).size >= 3) break;
       }
+      // The line plot is the data: one X above the line for each measurement, so every question is read
+      // off the plot. The alt text lists each X in words, left to right, for a learner who cannot see it.
+      data.sort((x, y) => x - y);
       const c = data.length;
       const show = (k: number) => reduce(k, 8);
       const fparts = (k: number) => fr(...show(k));
@@ -3814,13 +3829,12 @@ export const MATH_3_5_MORE: Skill[] = [
       const fSay = (k: number) => sayFrac(...show(k), locale);
       /** The asked amount read aloud with its unit: "media pulgada", not "un medio de pulgada". */
       const askSay = (k: number, post: string) => (locale === "es" && fText(k) === "1/2" && post.startsWith(" de ") ? halfEs(post.slice(4)) : `${fSay(k)}${post}`);
-      const dataParts: MathPart[] = data.flatMap((k, i) => (i === 0 ? [fparts(k)] : [i === c - 1 ? t(" and ", " y ") : ", ", fparts(k)]));
       const intro = say2(locale, plot.intro(c, n));
-      const dataSay = listOf(data.map(fSay), locale);
-      // The data come as a list: the Visual union has no line plot (stacked Xs) yet. When it gets one, draw
-      // the plot from `data` here and let the questions point at it.
-      const visual = { kind: "number-line" as const, min: 0, max: 1, marks: [0, 1], denominator: 8 };
-      const alt = t("A number line from 0 to 1 marked in eighths", "Una recta numérica de 0 a 1 marcada en octavos");
+      const visual = { kind: "line-plot" as const, min: 0, max: 1, denominator: 8, values: data.map((k) => k / 8), unit: t(plot.unit[1], plot.unit[3]) };
+      const alt = t(
+        `A line plot from 0 to 1 ${plot.unit[0]}, marked in eighths, with one X for each ${plot.one[0]}. From left to right, the Xs are above ${listOf(data.map(fSay), "en")}.`,
+        `Un diagrama de puntos de 0 a 1 ${plot.unit[2]}, marcado en octavos, con una X por cada ${plot.one[1]}. De izquierda a derecha, las X están encima de ${listOf(data.map(fSay), "es")}.`,
+      );
       const eighths = data.map((k) => ft(k, 8)).join(", ");
       const S = data.reduce((s, k) => s + k, 0);
       const naiveSum = (() => {
@@ -3828,49 +3842,43 @@ export const MATH_3_5_MORE: Skill[] = [
         return ft(sh.reduce((s, [a]) => s + a, 0), sh.reduce((s, [, b]) => s + b, 0));
       })();
       const base = { visual, alt };
+      /** "There are 3 Xs above 3/8." */
+      const xsAbove = (count: number, k: number) => t(`There ${count === 1 ? "is 1 X" : `are ${count} Xs`} above ${fText(k)}.`, `Hay ${count} X encima de ${fText(k)}.`);
       if (level === 1) {
         const kind = r.int(0, 2);
         if (kind === 0) {
           const v = r.pick(data), count = data.filter((k) => k === v).length;
-          // A partial count, stopping before the last one, so the hint never gives the total.
-          const lastAt = data.lastIndexOf(v), before = data.slice(0, lastAt).filter((k) => k === v).length;
-          const partial =
-            lastAt < 2
-              ? t(`Start at the first measurement: it is ${fText(data[0])}.`, `Empieza por la primera medida: es ${fText(data[0])}.`)
-              : before === 0
-                ? t(`${fText(v)} does not appear in the first ${lastAt} measurements.`, `${fText(v)} no aparece en las primeras ${lastAt} medidas.`)
-                : t(`In the first ${lastAt} measurements, ${fText(v)} appears ${before} ${pl(before, "time", "times")}.`, `En las primeras ${lastAt} medidas, ${fText(v)} aparece ${before} ${pl(before, "vez", "veces")}.`);
           const answer: Answer = { kind: "number", value: count };
           const [pre, post] = plot.count.map((p) => say2(locale, p));
           return {
-            prompt: [intro, ...dataParts, ". ", pre, fparts(v), post],
-            say: `${intro}${dataSay}. ${pre}${askSay(v, post)}`,
+            prompt: [`${intro} ${pre}`, fparts(v), post],
+            say: `${intro} ${pre}${askSay(v, post)}`,
             ...base,
             input: "keypad",
             answer,
             wrong: misses(answer, [[c, "counted-every-piece"]]),
             hints: [
-              t(`Find every ${fText(v)} in the list.`, `Busca cada ${fText(v)} en la lista.`),
-              t(`Go through the list in order and make a tally mark for each ${fText(v)}.`, `Recorre la lista en orden y haz una marca de conteo por cada ${fText(v)}.`),
-              partial,
+              t(`Find ${fText(v)} on the line plot.`, `Busca ${fText(v)} en el diagrama de puntos.`),
+              t(`Each X is one measurement. Count the Xs stacked above ${fText(v)}.`, `Cada X es una medida. Cuenta las X que hay encima de ${fText(v)}.`),
+              t(`${fText(v)} is ${v} ${pl(v, "mark", "marks")} to the right of 0.`, `${fText(v)} está ${v} ${pl(v, "marca", "marcas")} a la derecha del 0.`),
             ],
-            steps: [t(`${fText(v)} appears ${count} ${pl(count, "time", "times")} in the list.`, `${fText(v)} aparece ${count} ${pl(count, "vez", "veces")} en la lista.`), `${count} ${say2(locale, plot.item)}`],
+            steps: [xsAbove(count, v), `${count} ${say2(locale, count === 1 ? plot.one : plot.item)}`],
             seconds: 30,
           };
         }
         if (kind === 1) {
-          const hi = Math.max(...data), lo = Math.min(...data), [hn, hd] = show(hi), [ln, ld] = show(lo);
+          const hi = data[c - 1], lo = data[0], [hn, hd] = show(hi), [ln, ld] = show(lo);
           const answer: Answer = { kind: "fraction", n: hi - lo, d: 8 };
           return {
-            prompt: [intro, ...dataParts, ". ", say2(locale, plot.diff)],
-            say: `${intro}${dataSay}. ${say2(locale, plot.diff)}`,
+            prompt: [`${intro} ${say2(locale, plot.diff)}`],
+            say: `${intro} ${say2(locale, plot.diff)}`,
             ...base,
             input: "fraction",
             answer,
             wrong: misses(answer, [[ft(Math.abs(hn - ln), Math.max(hd, ld)), "subtracted-without-common-denominator"], [fText(hi), "gave-the-biggest-value"]]),
             hints: [
-              t("Find the biggest and the smallest measurement in the list.", "Busca la medida más grande y la más pequeña de la lista."),
-              t("Write both with 8 on the bottom, then subtract.", "Escribe las dos con 8 abajo y luego resta."),
+              t("Find the X farthest to the left and the X farthest to the right.", "Busca la X que está más a la izquierda y la que está más a la derecha."),
+              t("Write both values with 8 on the bottom, then subtract.", "Escribe los dos valores con 8 abajo y luego resta."),
               t(`The biggest is ${fText(hi)} and the smallest is ${fText(lo)}.`, `La más grande es ${fText(hi)} y la más pequeña es ${fText(lo)}.`),
             ],
             steps: [
@@ -3887,16 +3895,16 @@ export const MATH_3_5_MORE: Skill[] = [
         const answer: Answer = { kind: "fraction", n: count * v, d: 8 };
         const [pre, post] = plot.some.map((p) => say2(locale, p));
         return {
-          prompt: [intro, ...dataParts, ". ", pre, fparts(v), post],
-          say: `${intro}${dataSay}. ${pre}${askSay(v, post)}`,
+          prompt: [`${intro} ${pre}`, fparts(v), post],
+          say: `${intro} ${pre}${askSay(v, post)}`,
           ...base,
           input: "fraction",
           answer,
           wrong: misses(answer, [[fText(v), "used-one-piece-only"], [ft(count * vn, count * vd), "multiplied-top-and-bottom"]]),
           hints: [
-            t(`How many times does ${fText(v)} appear in the list?`, `¿Cuántas veces aparece ${fText(v)} en la lista?`),
-            t(`Add ${fText(v)} once for each time it appears, or multiply.`, `Suma ${fText(v)} una vez por cada vez que aparece, o multiplica.`),
-            t(`${fText(v)} appears ${count} ${pl(count, "time", "times")}.`, `${fText(v)} aparece ${count} ${pl(count, "vez", "veces")}.`),
+            t(`How many Xs are above ${fText(v)}?`, `¿Cuántas X hay encima de ${fText(v)}?`),
+            t(`Add ${fText(v)} once for each X, or multiply.`, `Suma ${fText(v)} una vez por cada X, o multiplica.`),
+            xsAbove(count, v),
           ],
           steps: [`${count} × ${fText(v)} = ${ft(count * vn, vd)}`, ...(simplest(count * vn, vd) !== ft(count * vn, vd) ? [`${ft(count * vn, vd)} = ${simplest(count * vn, vd)}`] : []), amount(count * vn, vd, plot.unit, locale)],
           seconds: 45,
@@ -3906,8 +3914,8 @@ export const MATH_3_5_MORE: Skill[] = [
         const m = S / c;
         const answer: Answer = { kind: "fraction", n: m, d: 8 };
         return {
-          prompt: [intro, ...dataParts, ". ", say2(locale, plot.share!)],
-          say: `${intro}${dataSay}. ${say2(locale, plot.share!)}`,
+          prompt: [`${intro} ${say2(locale, plot.share!)}`],
+          say: `${intro} ${say2(locale, plot.share!)}`,
           ...base,
           input: "fraction",
           answer,
@@ -3915,7 +3923,7 @@ export const MATH_3_5_MORE: Skill[] = [
           hints: [
             t("First find the total amount.", "Primero encuentra la cantidad total."),
             t(`Then divide the total equally among the ${c} ${say2(locale, plot.item)}.`, `Luego divide el total en partes iguales entre los ${c} ${say2(locale, plot.item)}.`),
-            t(`In eighths, the amounts are ${eighths}.`, `En octavos, las cantidades son ${eighths}.`),
+            t(`In eighths, the Xs are above ${eighths}.`, `En octavos, las X están encima de ${eighths}.`),
           ],
           steps: [t(`Total: ${ft(S, 8)}`, `Total: ${ft(S, 8)}`), `${ft(S, 8)} ÷ ${c} = ${ft(m, 8)}`, amount(m, 8, plot.unit, locale)],
           seconds: 75,
@@ -3923,16 +3931,16 @@ export const MATH_3_5_MORE: Skill[] = [
       }
       const answer: Answer = { kind: "fraction", n: S, d: 8 };
       return {
-        prompt: [intro, ...dataParts, ". ", say2(locale, plot.total)],
-        say: `${intro}${dataSay}. ${say2(locale, plot.total)}`,
+        prompt: [`${intro} ${say2(locale, plot.total)}`],
+        say: `${intro} ${say2(locale, plot.total)}`,
         ...base,
         input: "fraction",
         answer,
         wrong: misses(answer, [[naiveSum, "added-denominators"], [ft(S, 8 * c), "divided-by-the-count"]]),
         hints: [
-          t("Add all the measurements.", "Suma todas las medidas."),
+          t("Add all the measurements on the plot.", "Suma todas las medidas del diagrama."),
           t("Write each one in eighths, then add the top numbers.", "Escribe cada una en octavos y luego suma los números de arriba."),
-          t(`In eighths: ${eighths}.`, `En octavos: ${eighths}.`),
+          t(`In eighths, the Xs are above ${eighths}.`, `En octavos, las X están encima de ${eighths}.`),
         ],
         steps: [t(`In eighths: ${eighths}`, `En octavos: ${eighths}`), t(`Total: ${ft(S, 8)}`, `Total: ${ft(S, 8)}`), amount(S, 8, plot.unit, locale)],
         seconds: 75,

@@ -4,12 +4,14 @@ import type { Locale, Visual } from "@/lib/types";
 import { useHear } from "./hear";
 import {
   ArrayVisual,
+  BarGraphVisual,
   BaseTenVisual,
   CircleVisual,
   ClockVisual,
   ColumnVisual,
   CoordVisual,
   DotsVisual,
+  LinePlotVisual,
   PrismVisual,
   RectVisual,
   RightTriangleVisual,
@@ -57,6 +59,10 @@ export function VisualView({ visual, alt, tint = "var(--color-math)" }: { visual
       return <PrismVisual {...visual} alt={alt} tint={tint} />;
     case "coord":
       return <CoordVisual {...visual} alt={alt} tint={tint} />;
+    case "bar-graph":
+      return <BarGraphVisual {...visual} alt={alt} tint={tint} />;
+    case "line-plot":
+      return <LinePlotVisual {...visual} alt={alt} tint={tint} />;
   }
 }
 

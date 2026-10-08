@@ -12,7 +12,9 @@ import type { Item } from "../types";
 
 // The five levels of this strand that answer on a touch pad, played through the real Runner by keyboard:
 // the fraction bar (m.frac.equiv.model L1), the clock in 5- and 1-minute steps (m.time.elapsed L1, L3)
-// and the number line in thousandths and in fractions (m.dec.thousandths L2, m.frac.asdiv L3).
+// and the number line in thousandths and in fractions (m.dec.thousandths L2, m.frac.asdiv L3). Then the
+// two graphs a learner reads before answering: the bar graph (m.bargraph.scaled L2) and the line plot
+// (m.lineplot.frac).
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
@@ -125,5 +127,33 @@ describe("grades 3–5 (more): touch pads in the Runner", () => {
     await placeOnLine(n - 1);
     await userEvent.click(screen.getByRole("button", { name: "Answer" }));
     expect(attemptsOf(q)).toEqual([expect.objectContaining({ correct: false, mode: "check", response: `${n - 1}/${d}`, why: "counted-ticks-not-jumps" })]);
+  });
+});
+
+describe("grades 3–5 (more): graphs in the Runner", () => {
+  it("m.bargraph.scaled L2: the bars are drawn, labelled and read to answer", async () => {
+    const seed = seedWhere("m.bargraph.scaled", 2);
+    const item = makeItem("m.bargraph.scaled", 2, seed, "en");
+    if (item.visual?.kind !== "bar-graph" || item.answer.kind !== "number") throw new Error("shape");
+    const p = await learner("3");
+    await play(p, "pick", "m.bargraph.scaled", 2, seed);
+    const graph = screen.getByRole("img", { name: item.alt });
+    expect(graph.querySelectorAll("rect")).toHaveLength(3);
+    for (const label of item.visual.labels) expect(graph).toHaveTextContent(label);
+    await userEvent.keyboard(`${item.answer.value}{Enter}`);
+    right(p, String(item.answer.value));
+  });
+
+  it("m.lineplot.frac: one X per measurement above the line, counted to answer", async () => {
+    const seed = seedWhere("m.lineplot.frac", 1, (it) => it.answer.kind === "number");
+    const item = makeItem("m.lineplot.frac", 1, seed, "en");
+    if (item.visual?.kind !== "line-plot" || item.answer.kind !== "number") throw new Error("shape");
+    const p = await learner("5");
+    await play(p, "pick", "m.lineplot.frac", 1, seed);
+    const plot = screen.getByRole("img", { name: item.alt });
+    expect(plot.querySelectorAll("path")).toHaveLength(item.visual.values.length);
+    for (const label of ["0", "1/8", "1/4", "3/8", "1/2", "5/8", "3/4", "7/8", "1"]) expect([...plot.querySelectorAll("text")].map((x) => x.textContent)).toContain(label);
+    await userEvent.keyboard(`${item.answer.value}{Enter}`);
+    right(p, String(item.answer.value));
   });
 });

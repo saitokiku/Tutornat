@@ -80,7 +80,8 @@ describe.each(MATH_3_5_MORE.map((s) => [s.id, s] as const))("%s: every item", (_
           const [en, es] = LOCALES.map((l) => makeItem(s.id, level, seed, l));
           const where = `${s.id} L${level} seed ${seed}`;
           expect(es.answer, `${where} answer differs by language`).toEqual(en.answer);
-          const shape = (it: Item) => (it.visual && "unit" in it.visual ? { ...it.visual, unit: "" } : it.visual);
+          // Unit names and graph labels are words in the learner's language; every number must match.
+          const shape = (it: Item) => (it.visual ? { ...it.visual, ...("unit" in it.visual && { unit: "" }), ...("labels" in it.visual && { labels: [] }) } : it.visual);
           expect(shape(es), `${where} visual differs by language`).toEqual(shape(en));
           expect(es.pad, where).toEqual(en.pad);
           expect(es.wrong, `${where} wrong values differ by language`).toEqual(en.wrong);
@@ -571,28 +572,30 @@ describe("m.bargraph.scaled", () => {
       }
     }
   });
-  it("level 2: reading each bar, halfway marks included", () => {
+  it("level 2: reading each bar of the graph, halfway marks included", () => {
     for (const it of items("m.bargraph.scaled", 2)) {
-      const t = text(it);
-      const k = Number(/the scale counts by (\d+)\./.exec(t)![1]);
-      const bars = new Map<string, number>();
-      for (const m of t.matchAll(/The bar for (.+?) ends (?:at (\d+)|halfway between (\d+) and (\d+))\./g)) {
-        if (m[2]) {
-          expect(Number(m[2]) % k).toBe(0);
-          bars.set(m[1], Number(m[2]));
-        } else {
-          expect(Number(m[4]) - Number(m[3])).toBe(k);
-          expect(Number(m[3]) % k).toBe(0);
-          bars.set(m[1], (Number(m[3]) + Number(m[4])) / 2);
-        }
-      }
+      const t = text(it), v = it.visual!;
+      if (v.kind !== "bar-graph") throw new Error("expected a bar graph");
+      // The prompt names no values: they are read off the graph.
+      expect(nums(t)).toEqual([]);
+      const k = v.scale;
+      const bars = new Map(v.labels.map((label, i) => [label.toLowerCase(), v.values[i]]));
       expect(bars.size).toBe(3);
+      for (const x of v.values) expect(x % k === 0 || x % k === k / 2, `${x} is on a line or halfway`).toBe(true);
+      // The alt text says the same bars, in words, for a learner who cannot see the graph.
+      const said = new Map<string, number>();
+      for (const m of it.alt!.matchAll(/The bar for (.+?) ends (?:at (\d+)|halfway between (\d+) and (\d+))\./g)) {
+        if (m[3]) expect(Number(m[4]) - Number(m[3])).toBe(k);
+        said.set(m[1].toLowerCase(), m[2] ? Number(m[2]) : (Number(m[3]) + Number(m[4])) / 2);
+      }
+      expect(said).toEqual(bars);
       let m: RegExpExecArray | null;
-      if ((m = /How many more votes were for (.+) than for (.+)\?$/.exec(t))) expect(numberOf(it.answer)).toBe(bars.get(m[1])! - bars.get(m[2])!);
-      else if ((m = /How many fewer votes were for (.+) than for (.+)\?$/.exec(t))) expect(numberOf(it.answer)).toBe(bars.get(m[2])! - bars.get(m[1])!);
+      const of = (name: string) => bars.get(name.toLowerCase())!;
+      if ((m = /How many more votes were for (.+) than for (.+)\?$/.exec(t))) expect(numberOf(it.answer)).toBe(of(m[1]) - of(m[2]));
+      else if ((m = /How many fewer votes were for (.+) than for (.+)\?$/.exec(t))) expect(numberOf(it.answer)).toBe(of(m[2]) - of(m[1]));
       else {
         m = /How many votes were for (.+) and (.+) together\?$/.exec(t)!;
-        expect(numberOf(it.answer)).toBe(bars.get(m[1])! + bars.get(m[2])!);
+        expect(numberOf(it.answer)).toBe(of(m[1]) + of(m[2]));
       }
       expect(numberOf(it.answer)).toBeGreaterThan(0);
     }
@@ -1082,13 +1085,17 @@ describe("m.frac.asdiv", () => {
 });
 
 describe("m.lineplot.frac", () => {
-  it("each question answered from the listed measurements", () => {
+  it("each question answered from the Xs on the line plot", () => {
     for (const level of [1, 2])
       for (const it of items("m.lineplot.frac", level)) {
-        const t = text(it), c = nums(t)[0], f = fracs(it);
-        const data = f.slice(0, c).map(([n, d]) => n / d);
+        const t = text(it), c = nums(t)[0], f = fracs(it), v = it.visual!;
+        if (v.kind !== "line-plot") throw new Error("expected a line plot");
+        expect([v.min, v.max, v.denominator]).toEqual([0, 1, 8]);
+        // One X per measurement; the prompt lists none of them, so the plot has to be read.
+        const data = v.values;
         expect(data.length).toBe(c);
-        const asked = f[c] ? f[c][0] / f[c][1] : NaN;
+        expect(f.length).toBeLessThanOrEqual(1);
+        const asked = f[0] ? f[0][0] / f[0][1] : NaN;
         const sum = data.reduce((s, x) => s + x, 0);
         const question = t.split(". ").pop()!;
         const matching = data.filter((x) => close(x, asked)).length;
@@ -1101,6 +1108,16 @@ describe("m.lineplot.frac", () => {
         if (Number.isFinite(asked)) expect(matching, t).toBeGreaterThanOrEqual(1);
         expect(close(valueOf(it.answer), want), t).toBe(true);
         for (const x of data) expect(Number.isInteger(x * 8)).toBe(true);
+        // The alt text names every X in words, left to right ("one fourth, 3 eighths and 3 eighths").
+        const said = /the Xs are above (.+)\.$/
+          .exec(it.alt!)![1]
+          .split(/, | and /)
+          .map((w) => {
+            const [n, den] = w.split(" ");
+            return (n === "one" ? 1 : Number(n)) / { half: 2, fourth: 4, fourths: 4, eighth: 8, eighths: 8 }[den]!;
+          });
+        expect(said.length).toBe(c);
+        said.forEach((x, i) => expect(close(x, data[i]), it.alt).toBe(true));
       }
   });
 });

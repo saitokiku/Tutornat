@@ -94,7 +94,11 @@ export type Visual =
   | { kind: "circle"; r: number; show: "r" | "d"; unit: string }
   | { kind: "right-triangle"; a: number | null; b: number | null; c: number | null; unit: string }
   | { kind: "prism"; l: number; w: number; h: number; unit: string }
-  | { kind: "coord"; points: [number, number][]; line?: boolean };
+  | { kind: "coord"; points: [number, number][]; line?: boolean }
+  /** Bars against scale lines every `scale` (from 0); a bar may end between two lines. `unit` labels the scale. */
+  | { kind: "bar-graph"; labels: string[]; values: number[]; scale: number; unit: string }
+  /** A line plot: a number line in 1/`denominator` steps with one X stacked above it per value. `unit` labels the line. */
+  | { kind: "line-plot"; min: number; max: number; denominator: number; values: number[]; unit: string };
 
 export type Widget =
   | { kind: "fraction-bar"; parts: number; shaded: number; target?: { parts: number; shaded: number } }
