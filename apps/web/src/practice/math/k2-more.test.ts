@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Locale } from "@/lib/types";
 import { counterCell, isMarkable, layoutCounters } from "@/components/practice/MarkCounters";
+import { labelWidth } from "@/components/stage/visuals-practice";
 import { barText, CLOCK_START } from "@/components/practice/pad-math";
 import { answerText, check, misconceptionOf } from "../answer";
 import { evaluate, parse } from "../expr";
@@ -260,25 +261,41 @@ describe("K–2 math: every item", () => {
     }
   }, 60_000);
 
-  it("a question about left and right is drawn in one row on a 320 px phone", () => {
-    // Tap-to-mark counters wrap groups onto new lines when the room runs out; the plain picture never
-    // does. So an item that names groups by position is either plain, or its marked layout keeps every
-    // group on the first line at phone width (the room the Runner gives counters there).
+  it("no group of dots is named by left or right; a named group's label stays under it on a 320 px phone", () => {
+    // Tap-to-mark counters put groups on new lines when the room runs out, so "left" and "right" can
+    // stop being true. Groups a question names carry a label instead, laid out under their own counters.
     const PHONE_ROOM = 320 - 2 * 16 - 2;
-    let positional = 0;
+    let named = 0;
     for (const skill of MATH_K_2_MORE)
       for (const level of levelsOf(skill.id))
         for (const locale of LOCALES)
           for (const it of items(skill.id, level, locale)) {
+            const v = it.visual;
+            if (v?.kind !== "dots" || v.groups.length < 2) continue;
             const copy = [text(it), it.say, it.alt ?? "", ...it.hints, ...it.steps, ...(it.choices ?? []).flatMap((c) => [c.label, c.say ?? ""])].join(" ");
-            if (!/\b(left|right)\b|izquierda|derecha/i.test(copy)) continue;
-            positional++;
-            if (!it.markable) continue;
-            if (!isMarkable(it.visual)) throw new Error(`${skill.id} markable without counters`);
-            const lay = layoutCounters(it.visual, PHONE_ROOM, counterCell(true));
-            expect(new Set(lay.counters.filter((c) => c.row === 0).map((c) => c.y)).size, `${skill.id} L${level} groups wrap`).toBe(1);
+            expect(copy, `${skill.id} L${level} names a group by position`).not.toMatch(/\b(left|right)\b|izquierda|derecha/i);
+            if (!v.labels) continue;
+            named++;
+            expect(v.labels.length).toBe(v.groups.length);
+            if (!it.markable || !isMarkable(v)) throw new Error(`${skill.id} L${level}: named groups are markable counters`);
+            const lay = layoutCounters(v, PHONE_ROOM, counterCell(true));
+            expect([lay.cell, lay.width <= PHONE_ROOM], `${skill.id} L${level} fits at 56 px`).toEqual([56, true]);
+            expect(lay.labels.map((l) => l.text)).toEqual(v.labels);
+            for (const l of lay.labels) {
+              const mine = lay.counters.filter((c) => c.group === l.group);
+              const left = Math.min(...mine.map((c) => c.x)), right = Math.max(...mine.map((c) => c.x)) + lay.cell;
+              const bottom = Math.max(...mine.map((c) => c.y)) + lay.cell;
+              expect(l.x > left && l.x < right && l.y > bottom, `${skill.id} label ${l.text} is not under its group`).toBe(true);
+              // Nothing else is drawn between a label and its group.
+              const between = lay.counters.filter((c) => c.group !== l.group && c.x < right && c.x + lay.cell > left && c.y >= bottom && c.y < l.y);
+              expect(between, `${skill.id} label ${l.text}`).toEqual([]);
+            }
+            // Labels on one line never run into each other.
+            for (const p of lay.labels)
+              for (const q of lay.labels)
+                if (p !== q && p.y === q.y) expect(Math.abs(p.x - q.x), `${p.text} / ${q.text}`).toBeGreaterThanOrEqual((labelWidth(p.text, lay.font) + labelWidth(q.text, lay.font)) / 2);
           }
-    expect(positional).toBeGreaterThan(500);
+    expect(named).toBeGreaterThan(400);
   });
 
   it("keeps the fact drill at fact-recall pace", () => {
@@ -358,18 +375,21 @@ describe("m.compare.groups", () => {
       for (const [en, es] of both("m.compare.groups", level)) {
         const v = en.visual!;
         if (v.kind !== "dots") throw new Error("expected dots");
+        // The groups are named by the letters drawn under them, A first.
+        expect(v.labels).toEqual(["A", "B"]);
         const [a, b] = v.groups.map((g) => Array.from({ length: g }).length);
         const more = /more/.test(text(en));
         expect(/más/.test(text(es))).toBe(more);
-        const want = a === b ? "Same" : (more ? a > b : a < b) ? "Left" : "Right";
+        const want = a === b ? "Same" : (more ? a > b : a < b) ? "A" : "B";
         expect(keyLabel(en)).toBe(want);
-        expect(en.choices!.map((c) => c.label)).toEqual(["Left", "Right", "Same"]);
-        expect(es.choices!.map((c) => c.label)).toEqual(["Izquierda", "Derecha", "Iguales"]);
+        expect(en.choices!.map((c) => c.label)).toEqual(["A", "B", "Same"]);
+        expect(es.choices!.map((c) => c.label)).toEqual(["A", "B", "Iguales"]);
+        expect(en.markable).toBe(true);
         if (level === 1) expect(more).toBe(true);
         if (level === 2) expect(more).toBe(false);
         seen.add(want);
       }
-    expect([...seen].sort()).toEqual(["Left", "Right", "Same"]);
+    expect([...seen].sort()).toEqual(["A", "B", "Same"]);
   });
 });
 
@@ -732,13 +752,23 @@ describe("m.time.set", () => {
 });
 
 describe("m.data.picture", () => {
-  it("every answer is recounted from the dots under the category the question names", () => {
+  // What each picture under a group stands for, written down here apart from the generator's themes.
+  const PICTURED: Record<string, string> = {
+    "🐱": "cats", "🐶": "dogs", "🐟": "fish", "🍎": "apples", "🍌": "bananas", "🍇": "grapes", "⚽": "soccer", "🏊": "swimming", "🏀": "basketball",
+    "🥁": "drums", "🎹": "piano", "🎸": "guitar", "☀️": "summer", "❄️": "winter", "🍂": "fall", "🟥": "red", "🟦": "blue", "🟩": "green",
+    "🧩": "puzzles", "🧱": "blocks", "🃏": "cards", "🍿": "popcorn", "🥕": "carrots", "🧀": "cheese",
+  };
+  it("every answer is recounted from the dots over the picture of the category the question names", () => {
     for (const level of levelsOf("m.data.picture"))
       for (const it of items("m.data.picture", level)) {
         const t = text(it);
-        const cats = /Left to right: (.+?)\./.exec(t)![1].split(", ");
         const v = it.visual!;
-        if (v.kind !== "dots") throw new Error("expected dots");
+        if (v.kind !== "dots" || !v.labels) throw new Error("expected labelled dots");
+        expect(it.markable).toBe(true);
+        const cats = v.labels.map((l) => PICTURED[l]);
+        expect(cats.every(Boolean), `${v.labels} pictures`).toBe(true);
+        // A choice's picture is the picture under that choice's group.
+        for (const c of it.choices ?? []) expect(PICTURED[c.picture!], c.label).toBe(c.label.toLowerCase());
         const count = (name: string) => {
           let n = 0;
           for (let k = 0; k < v.groups[cats.indexOf(name)]; k++) n++;
