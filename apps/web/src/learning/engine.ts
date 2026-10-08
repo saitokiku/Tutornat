@@ -251,26 +251,36 @@ export const setSize = (grade: Grade) => (["K", "1", "2"].includes(grade) ? 6 : 
 type Seeds = () => number;
 
 /**
- * Draws seeds so a set never shows the same problem twice while the skill has others. A hand-written bank
- * of 13–19 questions a level would otherwise repeat a whole passage and question in most 10-problem sets,
- * and a repeated check problem is not a fresh one. A main problem's level is only known as the set goes,
- * so its seed must be new at every level of the skill. After 100 draws a repeat is allowed.
+ * What the learner sees of a problem: everything on screen and the answer, with the choices in any
+ * order. Many skills ask the same question every time ("Which word comes first in ABC order?") and differ
+ * only in their choices, so those count too.
  */
-function freshSeeds(seed: Seeds) {
-  const seen = new Set<string>();
-  const key = (skillId: string, level: number, s: number) => {
-    const it = makeItem(skillId, level, s, "en");
-    return JSON.stringify([skillId, it.level, it.passage, it.prompt, it.say, it.picture, it.visual]);
-  };
+function lookOf(skillId: string, level: number, s: number) {
+  const it = makeItem(skillId, level, s, "en");
+  const key = it.answer.kind === "choice" ? it.choices?.[it.answer.index]?.label : it.answer;
+  return JSON.stringify([skillId, it.level, it.passage, it.prompt, it.say, it.picture, it.visual, it.choices?.map((c) => c.label).sort(), key]);
+}
+
+/**
+ * Draws seeds so a set never shows the same problem twice while the skill has others. A hand-written bank
+ * would otherwise repeat a whole passage and question in many 10-problem sets, and a repeated check
+ * problem is not a fresh one. A main problem's level is only known as the set goes, so its seed must be
+ * new at every level of the skill. `seen` is what the learner already met (a check skips the problems of
+ * their recent sets). After 100 draws a repeat is allowed, and the skill is not redrawn again in this set.
+ */
+function freshSeeds(seed: Seeds, seen: { skillId: string; level: number; seed: number }[] = []) {
+  const shown = new Set(seen.filter((a) => getSkill(a.skillId)).map((a) => lookOf(a.skillId, a.level, a.seed)));
+  const spent = new Set<string>();
   return (skillId: string, levels: number[]): number => {
-    if (!getSkill(skillId)) return seed();
+    if (!getSkill(skillId) || spent.has(skillId)) return seed();
     let s = seed();
-    let keys = levels.map((l) => key(skillId, l, s));
-    for (let tries = 1; tries < 100 && keys.some((k) => seen.has(k)); tries++) {
+    let keys = levels.map((l) => lookOf(skillId, l, s));
+    for (let tries = 1; tries < 100 && keys.some((k) => shown.has(k)); tries++) {
       s = seed();
-      keys = levels.map((l) => key(skillId, l, s));
+      keys = levels.map((l) => lookOf(skillId, l, s));
     }
-    for (const k of keys) seen.add(k);
+    if (keys.some((k) => shown.has(k))) spent.add(skillId);
+    for (const k of keys) shown.add(k);
     return s;
   };
 }
@@ -300,10 +310,14 @@ export function buildPracticeSlots(opts: { skillId: string; grade: Grade; status
   });
 }
 
-/** A check: fresh problems at the top level, no help available. */
-export function buildCheckSlots(skillId: string, seed: Seeds): Slot[] {
+/**
+ * A check: fresh problems at the top level, no help available. `seen` is the learner's recent answers on
+ * the skill: a problem they just practiced, with feedback and worked steps, is not fresh, so the check
+ * skips it while the skill has others.
+ */
+export function buildCheckSlots(skillId: string, seed: Seeds, seen: { skillId: string; level: number; seed: number }[] = []): Slot[] {
   const top = getSkill(skillId)?.levels ?? 1;
-  const fresh = freshSeeds(seed);
+  const fresh = freshSeeds(seed, seen);
   return Array.from({ length: RULES.checkSize }, () => ({ skillId, seed: fresh(skillId, [top]), role: "check" as const, level: top }));
 }
 

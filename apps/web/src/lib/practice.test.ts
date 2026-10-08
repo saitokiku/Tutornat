@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { signUp } from "./auth";
+import { makeItem } from "@/practice/skills";
 import { openPracticeAttempt, paceOf, recordAnswer, startSet, statusesOf, wholeMinutes } from "./practice";
 import { createLearner } from "./profiles";
 import { read, resetMemory, update } from "./store";
@@ -99,6 +100,24 @@ describe("recordAnswer", () => {
     const again = startSet(read(), { profile: p, kind: "check", skillIds: ["m.round"], now: NOW })!;
     for (let i = 0; i < 5; i++) recordAnswer(again, { slot: i, level: 2, correct: i !== 1, assisted: i === 0, seconds: 5 });
     expect(statusesOf(read(), p.id, NOW + 2000)["m.round"].state).toBe("practicing");
+  });
+
+  it("a check skips the reading problems the learner just answered in practice", async () => {
+    const p = await learner("4");
+    const skillId = "e.passage.words";
+    const practiced = Array.from({ length: 10 }, (_, i) => i * 31 + 7);
+    update((s) => {
+      practiced.forEach((seed, i) => s.attempts.push({ id: `a${i}`, profileId: p.id, at: NOW - 3600_000 + i, skillId, level: 2, seed, mode: "practice", correct: true, assisted: false, seconds: 40 }));
+    });
+    const look = (seed: number) => {
+      const it = makeItem(skillId, 2, seed, "en");
+      return JSON.stringify([it.passage, it.say]);
+    };
+    const seen = new Set(practiced.map(look));
+    const id = startSet(read(), { profile: p, kind: "check", skillIds: [skillId], now: NOW })!;
+    const slots = read().sets.find((x) => x.id === id)!.slots;
+    expect(slots).toHaveLength(5);
+    for (const slot of slots) expect(seen.has(look(slot.seed)), `seed ${slot.seed}`).toBe(false);
   });
 
   it("ignores answers to a finished set", async () => {

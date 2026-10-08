@@ -90,6 +90,13 @@ export function recentSkills(s: StoreState, profileId: string, now: number, subj
   return out;
 }
 
+/** The learner's last 20 answers on a skill (about two sets): a check skips those problems while it can. */
+const recentAnswersOn = (s: StoreState, profileId: string, skillId: string) =>
+  attemptsOf(s, profileId)
+    .filter((a) => a.skillId === skillId)
+    .sort((x, y) => y.at - x.at)
+    .slice(0, 20);
+
 const MODE: Record<SetKind, Mode> = {
   daily: "practice",
   pick: "practice",
@@ -126,7 +133,7 @@ export function startSet(state: StoreState, opts: StartOpts): string | null {
   if (kind === "placement") {
     const step = placementNext(getSkill(first)!.subject, grade, []);
     slots = "done" in step ? [] : [{ skillId: step.skillId, seed: seed(), role: "placement", level: getSkill(step.skillId)!.levels }];
-  } else if (kind === "check") slots = buildCheckSlots(first, seed);
+  } else if (kind === "check") slots = buildCheckSlots(first, seed, recentAnswersOn(state, profile.id, first));
   else if (kind === "review") slots = buildReviewSlots(skillIds, statuses, seed);
   else if (kind === "prep" || kind === "feedback") slots = buildMixedSlots(skillIds, statuses, grade, seed);
   else slots = buildPracticeSlots({ skillId: first, grade, statuses, now, seed, recent: recentSkills(state, profile.id, now, getSkill(first)!.subject) });
