@@ -132,4 +132,32 @@ describe("English K–5 ready-made courses", () => {
     ];
     for (const [goal, grade, locale, id] of asked) expect(readyMadeMatch(goal, "english", grade, locale)?.id, goal).toBe(id);
   });
+
+  it("are not offered for a request that shares one everyday word with them", () => {
+    // At bda48c5 each of these got a K–5 course from one shared word ("letter", "short", "name",
+    // "language", "mean", "pasa", "stories"), and one click would have enrolled the child in it.
+    const grades = (from: number, to: number) => ["K", "1", "2", "3", "4", "5", "6"].slice(from, to + 1) as Grade[];
+    const probes: [string, Grade[], Locale][] = [
+      ["capital letters", grades(0, 4), "en"],
+      ["write a short story", grades(0, 6), "en"],
+      ["short poems", grades(0, 4), "en"],
+      ["write my name", grades(0, 5), "en"],
+      ["writing his name", grades(0, 5), "en"],
+      ["english as a second language", grades(1, 6), "en"],
+      ["word meaning", grades(1, 2), "en"],
+      ["meaning of words", grades(1, 2), "en"],
+      ["qué pasa en el cuento", grades(0, 5), "es"],
+      ["stories", grades(0, 4), "en"],
+      ["bedtime stories", grades(0, 4), "en"],
+      ["write stories", grades(0, 4), "en"],
+    ];
+    for (const [goal, gs, locale] of probes)
+      for (const grade of gs)
+        for (const subject of ["english", "other"] as const) expect(IDS.has(readyMadeMatch(goal, subject, grade, locale)?.id ?? ""), `${goal} (${subject}, ${grade})`).toBe(false);
+    // Taking "words" out of the summaries must not hand these to the grade 7 vocabulary course instead.
+    for (const goal of ["sight words", "spelling words", "root words", "word families"])
+      for (const grade of ["4", "5"] as Grade[]) expect(readyMadeMatch(goal, "english", grade, "en")?.id ?? null, `${goal} (${grade})`).not.toBe("english-context-clues");
+    // Sound it out has a whole Word families lesson, and a K–1 learner is in its band.
+    for (const grade of ["K", "1"] as Grade[]) expect(readyMadeMatch("word families", "english", grade, "en")?.id, grade).toBe("english-short-words");
+  });
 });

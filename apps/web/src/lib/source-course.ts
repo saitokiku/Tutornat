@@ -1,4 +1,4 @@
-import { catalogueFor, type CatalogueEntry } from "@/catalogue";
+import { bandOf, CATALOGUE, catalogueFor, type CatalogueEntry } from "@/catalogue";
 import { t, type Key } from "@/i18n";
 import type { Book, Definition, WikiSummary } from "@/knowledge";
 import { topicsIn } from "@/knowledge/topics";
@@ -366,22 +366,49 @@ export function relatedLessons(query: { goal: string; title?: string; extract?: 
   return out;
 }
 
+/** Words that name a subject or a language say which subject, not what in it ("English as a second language"). */
+const SUBJECT_WORDS = new Set("english ingles spanish espanol language lenguaje lengua".split(" ").map(stem));
+
+// In how many ready-made courses each word appears anywhere (a translation counts as the same course):
+// a word few courses use ("phonics", "rhyme") can stand for one course; "word" or "name" can't.
+let spread: Map<string, number> | null = null;
+function coursesWith(word: string) {
+  if (!spread) {
+    const byTopic = new Map<string, Set<string>>();
+    for (const e of CATALOGUE) {
+      const topic = e.id.replace(/-es$/, "");
+      const all = byTopic.get(topic) ?? new Set<string>();
+      for (const w of words(`${e.title} ${e.summary} ${e.lessons.map((l) => `${l.title} ${lessonText(l)}`).join(" ")}`)) all.add(w);
+      byTopic.set(topic, all);
+    }
+    spread = new Map();
+    for (const all of byTopic.values()) for (const w of all) spread.set(w, (spread.get(w) ?? 0) + 1);
+  }
+  return spread.get(word) ?? 0;
+}
+
 /**
  * A whole ready-made course that already covers the request, for the builder to offer instead: same
  * subject, within three grades, sharing the most words that say what was asked (never "about" or
- * "what", never a name, never the "work" of "how does it work"). One shared word is enough only for
- * a one-word request: "ocean animals" is not Life cycles because its summary says "animal".
- * Null rather than a course about something else.
+ * "what", never a name, the subject's own name or the "work" of "how does it work"). One shared word is enough only when few courses
+ * use it, or when it is the whole request and in the course's title ("fractions"); otherwise it takes
+ * two, so "capital letters" or "write my name" never brings a phonics or grammar course. A course in
+ * the learner's band also counts its lesson titles ("word families"), below its own title and summary,
+ * and wins a tie. Null rather than a course about something else.
  */
 export function readyMadeMatch(goal: string, subject: Subject, grade: Grade, locale: Locale, avoid: string[] = []): CatalogueEntry | null {
-  const asked = new Set(words(topicOf(goal, avoid)).filter((w) => !LOGISTICS.has(w) && w !== "work"));
-  const need = Math.min(2, asked.size);
+  const asked = new Set(words(topicOf(goal, avoid)).filter((w) => !LOGISTICS.has(w) && !SUBJECT_WORDS.has(w) && w !== "work"));
+  const band = bandOf(grade);
   let best: CatalogueEntry | null = null;
   let most = 0;
+  // The learner's band comes first, so a tie stays in it.
   for (const e of catalogueFor(grade, locale)) {
     if ((subject !== "other" && e.subject !== subject) || Math.abs(gradeN(e.grade) - gradeN(grade)) > 3) continue;
-    const shared = words(`${e.title} ${e.summary}`).filter((w) => asked.has(w)).length;
-    if (shared >= need && shared > most) [best, most] = [e, shared];
+    const own = words(`${e.title} ${e.summary}`).filter((w) => asked.has(w));
+    const inLessons = bandOf(e.grade) === band ? words(e.lessons.map((l) => l.title).join(" ")).filter((w) => asked.has(w) && !own.includes(w)) : [];
+    const oneSays = own.length === 1 && !inLessons.length && (coursesWith(own[0]) <= 3 || (asked.size === 1 && words(e.title).includes(own[0])));
+    const score = own.length * 2 + inLessons.length;
+    if ((own.length + inLessons.length >= 2 || oneSays) && score > most) [best, most] = [e, score];
   }
   return best;
 }
