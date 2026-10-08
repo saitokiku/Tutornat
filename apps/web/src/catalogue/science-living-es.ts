@@ -95,7 +95,7 @@ const livingEs: CatalogueEntry = {
               prompt: "¿Cuál es un ser vivo?",
               choices: ["Una piedra", "Un perro", "Una cuchara"],
               answer: 1,
-              hint: "Pregúntate por cada uno. ¿Crece? ¿Necesita comida?",
+              hint: "Piensa en cada uno. ¿Crece? ¿Necesita comida?",
               explain: "Un perro come, bebe y crece. Puede tener cachorros. Es un ser vivo.",
             },
             {
