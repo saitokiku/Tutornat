@@ -315,8 +315,8 @@ async function applyAttempts(tx: Tx, accountId: string, pushed: PushRecord[], kn
       mode: a.mode,
       correct: verdict.correct,
       claimedCorrect: a.correct,
-      // Nothing in a check can be helped (lib/practice.ts records it the same way).
-      assisted: a.mode === "check" ? false : a.assisted,
+      // A helped check answer stays helped: it is not on the learner's own (lib/practice.ts recordAnswer).
+      assisted: a.assisted,
       seconds: Math.round(a.seconds),
       response: a.response ?? null,
       why: verdict.correct ? null : (a.why ?? null),

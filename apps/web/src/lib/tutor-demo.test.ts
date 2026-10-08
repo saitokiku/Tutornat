@@ -401,22 +401,27 @@ describe("the demo tutor beside a problem", () => {
   const item = makeItem("m.frac.addlike", 1, 7, "en");
   const c = ctx({ item, grade: "4" });
 
-  it("opens with the demo line once without instructional help", () => {
+  it("grades 3–9 open with the demo line and a question; K–2 open with the first vetted hint as its own help line", () => {
     const o = demoOpening(c);
-    expect(o.text.split("\n")[0]).toBe("I'm the demo tutor: I answer from real sources and our practice, without AI.");
-    expect(o.text).not.toContain(item.hints[0]);
+    expect(o.text.split("\n")).toEqual(["I'm the demo tutor: I answer from real sources and our practice, without AI.", "Which part is tricky?"]);
+    expect(o.help).toBeUndefined();
     expect(o.state).toMatchObject({ hintsGiven: 0, skillId: "m.frac.addlike" });
-    expect(demoOpening(ctx({ grade: "K" })).text.split("\n")[0]).toBe("I'm the demo tutor.");
+    const k = demoOpening(ctx({ item, grade: "K" }));
+    expect(k.text).toBe("I'm the demo tutor.");
+    expect(k.help).toBe(item.hints[0]);
+    expect(k.state.hintsGiven).toBe(1);
   });
 
-  it("continues the requested ladder past hints already opened on the problem", async () => {
+  it("continues the ladder past hints already opened on the problem", async () => {
     const opened = demoOpening({ ...c, hintsSeen: 2 });
     expect(opened.text).not.toContain(item.hints[2]);
     expect(opened.state.hintsGiven).toBe(2);
     expect((await demoAnswer("Give me a hint", c, opened.state, fakes())).text).toBe(item.hints[2]);
+    expect(demoOpening(ctx({ item, grade: "1", hintsSeen: 1 })).help).toBe(item.hints[1]);
     const all = demoOpening({ ...c, hintsSeen: item.hints.length });
-    expect(all.text.split("\n")[1]).toBe("What have you tried so far?");
+    expect(all.text.split("\n")[1]).toBe("Which part is tricky?");
     expect(all.state.hintsGiven).toBe(item.hints.length);
+    expect(demoOpening(ctx({ item, grade: "K", hintsSeen: item.hints.length })).help).toBeUndefined();
   });
 
   it("walks the hint ladder, then stops", async () => {
@@ -505,10 +510,10 @@ describe("the demo tutor beside a problem", () => {
   it("never gives a one-step solution as “the first step” before a try", async () => {
     const one = Array.from({ length: 50 }, (_, i) => makeItem("m.add.5", 1, i + 1, "en")).find((x) => x.steps.length === 1)!;
     const k = ctx({ item: one, grade: "K" });
-    const opened = demoOpening(k).state;
+    const opened = demoOpening(k).state; // a kindergartner's opening gave hint 1
     const r = await demoAnswer("Explain the first step", k, opened, fakes());
     expect(r.text).not.toBe(one.steps[0]);
-    expect(r.text).toBe(one.hints[0]);
+    expect(r.text).toBe(one.hints[1]);
     const after = await demoAnswer("Explain the first step", k, { ...opened, tries: 1 }, fakes());
     expect(after.text).toBe(one.steps[0]);
   });

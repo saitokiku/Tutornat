@@ -25,7 +25,7 @@ describe("AI suggested-reply admission", () => {
   for (const withText of [true, false]) it(`withholds model reply buttons and audio when help admission fails (${withText ? "text" : "reply only"})`, async () => {
     modelReply(withText);
     const speech = installSpeech();
-    const beforeHelp = vi.fn(() => false);
+    const beforeHelp = vi.fn((): true | "stale" => "stale");
     render(<TutorChat setup={{ learner, surface: "lesson", lesson: { title: "Parts", scene: "A square." }, title: "Parts", beforeHelp }} />);
     expect(screen.queryByRole("button", { name: reply })).toBeNull();
     await waitFor(() => expect(beforeHelp).toHaveBeenCalledWith("instruction"));
@@ -36,7 +36,7 @@ describe("AI suggested-reply admission", () => {
 
   it("releases a reply-only button after its originating entry is admitted", async () => {
     modelReply(false);
-    const beforeHelp = vi.fn(() => true);
+    const beforeHelp = vi.fn((): true => true);
     render(<TutorChat setup={{ learner, surface: "lesson", lesson: { title: "Parts", scene: "A square." }, title: "Parts", beforeHelp }} />);
     const button = await screen.findByRole("button", { name: reply });
     expect(beforeHelp).toHaveBeenCalledWith("instruction");

@@ -5,7 +5,8 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useRef, useState } from "react";
 import { IconArrowRight, IconSpeaker, IconStop, IconX } from "@/components/icons";
 import { speakText } from "@/components/stage/hear";
-import { Button, Notice, SubjectDot } from "@/components/ui";
+import { SaveNotice } from "@/components/practice/SaveNotice";
+import { Button, SubjectDot } from "@/components/ui";
 import { useT, type Key } from "@/i18n";
 import type { TutorContext } from "@/lib/ai/context";
 import { useAiMode } from "@/lib/ai/client";
@@ -50,9 +51,12 @@ export type ChatSetup = {
   lesson?: { title: string; scene: string };
   homework?: { title: string; notes?: string };
   title: string;
-  /** Commit the assistance latch before any instructional text, card or audio can be released. */
-  beforeHelp?: (deliveryId: string) => boolean;
+  /** Saves help before any tutor reply after the opening line shows (its text, cards, replies, audio). */
+  beforeHelp?: HelpGate;
 };
+
+/** True once the help is saved; otherwise why not, and the reply is held back while the chat says so. */
+export type HelpGate = (deliveryId: string) => true | "storage" | "stale";
 
 function opening(setup: ChatSetup, t: ReturnType<typeof useT>, choices: string[]): string {
   if (setup.item) return t("tutor.open.problem");
@@ -178,7 +182,11 @@ function DemoChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; 
   const [first] = useState(() => demoOpening(ctx));
   const state = useRef<DemoState>({ ...first.state, tries: setup.tries ?? 0 });
   const [skillIds, setSkillIds] = useState<string[]>(first.state.skillId ? [first.state.skillId] : []);
-  const [entries, setEntries] = useState<Entry[]>(() => [{ id: "open", role: "tutor", text: first.text, cards: first.cards }]);
+  // A young learner's opening hint is help: its own entry, so it waits for beforeHelp like any reply.
+  const [entries, setEntries] = useState<Entry[]>(() => [
+    { id: "open", role: "tutor", text: first.text, cards: first.cards },
+    ...(first.help ? [{ id: "open-hint", role: "tutor" as const, text: first.help, cards: [] }] : []),
+  ]);
   const [busy, setBusy] = useState(false);
   const photos = useRef<string[]>([]);
   useEffect(() => () => photos.current.forEach((u) => URL.revokeObjectURL(u)), []);
@@ -282,8 +290,10 @@ function ChatView({
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<"tut.photo.tooBig" | "tut.photo.unreadable" | null>(null);
   const skillId = skillIds.at(-1);
+  // Help is saved before it shows: a tutor entry after the opening line (and a safety reply, which is
+  // not help) waits until beforeHelp has saved it. Reply buttons belong to their entry, so they wait too.
   const [admitted, setAdmitted] = useState<ReadonlySet<string>>(() => new Set());
-  const [admissionFailed, setAdmissionFailed] = useState(false);
+  const [refused, setRefused] = useState<"storage" | "stale" | null>(null);
   const [admissionRetry, setAdmissionRetry] = useState(0);
   const beforeHelp = setup.beforeHelp;
   const entries = incoming.filter((e) => e.role === "learner" || e.id === "open" || e.flag || !beforeHelp || admitted.has(e.id));
@@ -291,21 +301,24 @@ function ChatView({
     if (!beforeHelp) return;
     let live = true;
     const ready: string[] = [];
-    let failed = false;
+    let failed: "storage" | "stale" | null = null;
     for (const e of incoming) {
       if (e.role !== "tutor" || e.id === "open" || e.flag || admitted.has(e.id) || (!e.text && !e.cards.length && !e.replies?.length)) continue;
-      if (beforeHelp(e.id)) ready.push(e.id);
-      else failed = true;
+      const saved = beforeHelp(e.id);
+      if (saved === true) ready.push(e.id);
+      else failed = saved;
     }
-    // Storage admission is synchronous; publish its acknowledgement on the next microtask.
-    // The current render still withholds text/cards/audio until that acknowledgement arrives.
+    // Saving is synchronous; the acknowledgement lands on the next microtask, and until then this
+    // render still holds the text, cards and audio back.
     queueMicrotask(() => {
       if (!live) return;
       if (ready.length) setAdmitted((ids) => new Set([...ids, ...ready]));
-      setAdmissionFailed(failed);
+      setRefused(failed);
     });
     if (failed) onStop?.();
-    return () => { live = false; };
+    return () => {
+      live = false;
+    };
   }, [incoming, beforeHelp, admitted, admissionRetry, onStop]);
   const replies = entries.at(-1)?.role === "tutor" ? entries.at(-1)?.replies ?? [] : [];
   // Whether the learner is moving by keyboard (not tapping), so a chip reached by Tab can say its name.
@@ -350,8 +363,9 @@ function ChatView({
         }
       });
     }
-    // Only released instructional replies log a teaching act; opening and failed delivery are neutral.
-    const talked = entries.some((e) => e.role === "tutor" && e.id !== "open" && !e.flag && (e.text || e.cards.length));
+    // Beside a problem the conversation is about its skill from the start (opening the drawer is help);
+    // elsewhere, once the learner has asked something and the talk has turned to a skill.
+    const talked = !!setup.item || entries.some((e) => e.role === "learner");
     for (const id of talked ? skillIds : []) {
       if (handled.current.has(`act:${id}`)) continue;
       handled.current.add(`act:${id}`);
@@ -455,7 +469,18 @@ function ChatView({
 
   const conversation = (
     <div className={`flex min-h-0 flex-1 flex-col ${board ? "lg:pr-6" : ""}`}>
-      {admissionFailed && <Notice tone="warn">{t("practice.evidenceSaveFailed")} <Button variant="ghost" onClick={() => setAdmissionRetry((n) => n + 1)}>{t("common.retry")}</Button></Notice>}
+      {refused && (
+        <SaveNotice
+          problem={refused}
+          young={young}
+          locale={locale}
+          action={
+            <Button variant="ghost" onClick={() => setAdmissionRetry((n) => n + 1)}>
+              {t("common.retry")}
+            </Button>
+          }
+        />
+      )}
       <div className={`flex-1 space-y-3 overflow-y-auto ${board ? "py-4" : "px-4 py-4"}`} role="log" aria-live="polite" aria-relevant="additions">
         <p className="text-xs text-muted">
           {t("tutor.disclosure")}

@@ -6,6 +6,8 @@ import { signUp } from "@/lib/auth";
 import { createLearner, selectLearner } from "@/lib/profiles";
 import { newId, read, resetMemory, update } from "@/lib/store";
 import type { Grade, Profile } from "@/lib/types";
+import { installSpeech } from "@/components/stage/speech-fake";
+import { answerText } from "@/practice/answer";
 import { makeItem } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { Runner, speakableSteps } from "./Runner";
@@ -71,31 +73,70 @@ describe("reading worked steps aloud", () => {
 });
 
 describe("Runner", () => {
-  it("does not reveal a hint when durable storage refuses it", async () => {
+  it("practice keeps working when storage is full: the hint shows, and the page says work isn't being saved", async () => {
     const p = await learner("3");
     const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
     await show(set, p);
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Full", "QuotaExceededError");
+    });
     await userEvent.click(screen.getByRole("button", { name: /^Hint/ }));
-    expect(screen.queryByText(makeItem("m.frac.unit", 1, 11, "en").hints[0])).not.toBeInTheDocument();
-    expect(screen.getByText("Your work couldn't be saved. Free some space or enable browser storage, then try again.")).toBeInTheDocument();
-    expect(read().helpExposures).toEqual([]);
+    expect(screen.getByText(makeItem("m.frac.unit", 1, 11, "en").hints[0])).toBeInTheDocument();
+    expect(screen.getByText("This browser isn't letting KaizenEDU save. Work will be lost when the tab closes.")).toBeInTheDocument();
+    await userEvent.keyboard("1/4{Enter}");
+    expect(screen.getByText("Right, with help.")).toBeInTheDocument();
+    expect(read().attempts).toEqual([expect.objectContaining({ correct: true, assisted: true })]);
   });
 
-  it("withholds feedback and stays on the question if the final answer cannot be saved", async () => {
+  it("a check answer this device can't keep is not taken: no next problem, and the page says what to do", async () => {
     const p = await learner("3");
-    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
+    const set = setOf(p, "check", [1, 2].map((i) => ({ skillId: "m.frac.unit", seed: 10 + i, role: "check" as const, level: 1 })));
     await show(set, p);
-    const save = Storage.prototype.setItem;
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
-      if (key.startsWith("kaizenedu.evidence.v1.attempts:")) throw new DOMException("Full", "QuotaExceededError");
-      return save.call(this, key, value);
+    const blocked = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Full", "QuotaExceededError");
     });
-    await userEvent.keyboard("1/4{Enter}");
-    expect(screen.queryByText("Right.", { exact: true })).not.toBeInTheDocument();
+    await userEvent.keyboard(`${answerText(makeItem("m.frac.unit", 1, 11, "en").answer)}{Enter}`);
     expect(screen.getByText("Your work couldn't be saved. Free some space or enable browser storage, then try again.")).toBeInTheDocument();
+    expect(screen.getByText(/Problem 1 of 2/)).toBeInTheDocument();
     expect(read().attempts).toEqual([]);
-    expect(read().responseEvents).toHaveLength(1);
+    // Once the device can save again, the next submit is the first answer saved.
+    blocked.mockRestore();
+    await userEvent.keyboard(`{Enter}`);
+    await waitFor(() => expect(read().attempts).toEqual([expect.objectContaining({ mode: "check", correct: true, assisted: false })]));
+  });
+
+  it("a K–2 learner whose check can't be saved hears that a grown-up is needed", async () => {
+    const p = await learner("1");
+    const seed = seedWhere("m.add.5", 1, () => true);
+    const set = setOf(p, "check", [{ skillId: "m.add.5", seed, role: "check", level: 1 }]);
+    await show(set, p);
+    const speech = installSpeech();
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Full", "QuotaExceededError");
+    });
+    const item = makeItem("m.add.5", 1, seed, "en");
+    await userEvent.click(screen.getByRole("button", { name: item.choices![0].label }));
+    expect(screen.getByText("This device can't save your work right now. Please get a grown-up.")).toBeInTheDocument();
+    expect(screen.getByText("Your work couldn't be saved. Free some space or enable browser storage, then try again.")).toBeInTheDocument();
+    expect(speech.spoken.map((u) => u.text)).toContain("This device can't save your work right now. Please get a grown-up.");
+  });
+
+  it("a question another tab pinned at another difficulty is loaded again, at that difficulty", async () => {
+    const p = await learner("3");
+    const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main" }]);
+    await show(set, p);
+    await waitFor(() => expect(read().sets.find((s) => s.id === set.id)!.slots[0].level).toBe(1));
+    // The other tab saved the same question at level 2 (this tab hasn't heard yet).
+    const doc = JSON.parse(localStorage.getItem("kaizenedu.v1")!);
+    doc.sets.find((s: PracticeSet) => s.id === set.id).slots[0].level = 2;
+    localStorage.setItem("kaizenedu.v1", JSON.stringify(doc));
+    await userEvent.keyboard("1/4{Enter}");
+    expect(await screen.findByText("This changed in another tab, so it has been loaded again.")).toBeInTheDocument();
+    expect(read().attempts).toEqual([]);
+    await settled();
+    await userEvent.keyboard(`${answerText(makeItem("m.frac.unit", 2, 11, "en").answer)}{Enter}`);
+    expect(await screen.findByText("Right.", { exact: true })).toBeInTheDocument();
+    expect(read().attempts).toEqual([expect.objectContaining({ level: 2, correct: true })]);
   });
 
   it("help_survives_reload_and_abandon", async () => {
@@ -125,14 +166,14 @@ describe("Runner", () => {
     expect(read().responseEvents).toEqual([expect.objectContaining({ correct: false, response: "2/4", assisted: false })]);
   });
 
-  it("opening the tutor without released content is neutral", async () => {
+  it("opening the tutor on the problem is help on it", async () => {
     const p = await learner("3");
     const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);
     await show(set, p);
     await userEvent.click(screen.getByRole("button", { name: /Ask the tutor/ }));
     await userEvent.keyboard("1/4{Enter}");
-    expect(openTutor).toHaveBeenCalledOnce();
-    expect(read().attempts).toEqual([expect.objectContaining({ correct: true, assisted: false })]);
+    expect(openTutor).toHaveBeenCalledWith(expect.objectContaining({ source: expect.objectContaining({ kind: "set-slot", setId: set.id, slotId: "0" }) }));
+    expect(read().attempts).toEqual([expect.objectContaining({ correct: true, assisted: true })]);
   });
 
   it("K counting: mark the dots while counting, tap the number; marking is not help", async () => {

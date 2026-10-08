@@ -8,17 +8,18 @@ import { useTitle } from "@/components/LangSync";
 import { SkillResources } from "@/components/resources/ResourceList";
 import { HearContext, Hear, speakText } from "@/components/stage/hear";
 import { VisualView } from "@/components/stage/visuals";
-import { Badge, Button, Notice, SUBJECT_TINT, btn } from "@/components/ui";
+import { StoreHealthNotice } from "@/components/gate";
+import { Badge, Button, SUBJECT_TINT, btn } from "@/components/ui";
 import { useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
 import { levelInSet, placementNext, RULES } from "@/learning/engine";
-import { assistanceFrom, attemptIdentity, firstResponseOf } from "@/learning/evidence";
+import { attemptIdentity } from "@/learning/evidence";
 import type { PracticeSet } from "@/learning/types";
 import { logAct } from "@/lib/acts";
 import { answersIn, finishSet, openPracticeAttempt, paceOf, practiceSource, recordAnswer, setStart, settingsOf, statusesOf, wholeMinutes } from "@/lib/practice";
-import { recordFirstResponse, recordHelpExposure } from "@/lib/evidence";
+import { attemptFor, evidenceProblem, recordFirstMiss, recordHelp } from "@/lib/evidence";
 import { isReviewed } from "@/lib/review";
-import { read, update, useStore } from "@/lib/store";
+import { read, reload, update, useStore } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { check, misconceptionOf, type Verdict } from "@/practice/answer";
 import { randomSeed } from "@/practice/rng";
@@ -29,6 +30,7 @@ import { isMarkable, MarkCounters } from "./MarkCounters";
 import { MathText } from "./MathText";
 import { nextOffer, offerTitle, planFinished, startOffer } from "./next";
 import { responseOf } from "./pad-math";
+import { SaveNotice } from "./SaveNotice";
 import { hearSize } from "./targets";
 import { useTutorDock } from "./tutor-dock";
 
@@ -100,7 +102,8 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   const [value, setValue] = useState("");
   const [picked, setPicked] = useState<number | undefined>();
   const [feedback, setFeedback] = useState<Feedback>(null);
-  const [saveFailed, setSaveFailed] = useState(false);
+  // Why the last save didn't happen, until the next one does (SaveNotice says it).
+  const [problem, setProblem] = useState<"storage" | "stale" | null>(null);
   const shownAt = useRef(0);
   const pad = useRef<HTMLDivElement>(null);
   /** What began the last press on Hint or Show me how ("mouse", "touch", "pen"), from its pointerdown. */
@@ -135,21 +138,38 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     if (slot && aiQ) return fromAi(aiQ, slot.skillId, slot.seed);
     return slot && slotSkill ? makeItem(slot.skillId, level, slot.seed, learner.locale) : undefined;
   }, [slot, slotSkill, aiQ, level, learner.locale]);
-  const attemptId = slot ? attemptIdentity(practiceSource(liveSet, index!, level)) : undefined;
-  const persisted = useStore((s) => {
-    const help = s.helpExposures.filter((h) => h.attemptId === attemptId);
-    return { help, first: firstResponseOf(attemptId ?? "", s.responseEvents), assistance: assistanceFrom(attemptId ?? "", help, s.responseEvents) };
-  });
-  const tries = Math.max(localTries, persisted.first?.correct === false ? 1 : 0);
-  const hints = Math.max(localHints, ...persisted.help.filter((h) => h.kind === "hint").map((h) => Number(h.detail) || 1));
-  const steps = localSteps || persisted.help.some((h) => h.kind === "steps");
+  // The question's identity, and the help and first miss saved for it: a reload brings them back, so
+  // help taken before it can't turn into "on your own".
+  const source = slot ? practiceSource(liveSet, index!, level) : undefined;
+  const attemptId = source ? attemptIdentity(source) : undefined;
+  const persisted = useStore((s) => (source ? attemptFor(source, s) : undefined));
+  const tries = Math.max(localTries, persisted?.firstResponse ? 1 : 0);
+  const hints = Math.max(localHints, ...(persisted?.help ?? []).filter((h) => h.kind === "hint").map((h) => Number(h.detail) || 1));
+  const steps = localSteps || !!persisted?.help.some((h) => h.kind === "steps");
+  /** A save that didn't happen: say why; another tab's change is read again. Anything else is a bug. */
+  const failed = (e: unknown) => {
+    const p = evidenceProblem(e);
+    setProblem(p);
+    if (p !== "stale") return;
+    // The question may come back different (another tab pinned its level): start it fresh.
+    setValue("");
+    setPicked(undefined);
+    setFeedback(null);
+    reload();
+  };
+  // The question's difficulty is pinned when it is shown (once per question, not per store write).
   useEffect(() => {
     if (index === undefined || !item) return;
     let live = true;
-    try { openPracticeAttempt(set.id, index, item.level); }
-    catch { queueMicrotask(() => live && setSaveFailed(true)); }
-    return () => { live = false; };
-    // Identity is fixed by the question; unrelated store writes must not repeat admission.
+    try {
+      openPracticeAttempt(set.id, index, item.level);
+    } catch (e) {
+      const p = evidenceProblem(e);
+      queueMicrotask(() => live && setProblem(p));
+    }
+    return () => {
+      live = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attemptId]);
 
@@ -170,24 +190,32 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   }, [unresolved.length, set.id, set.kind]);
 
   const dock = useTutorDock();
-  const helped = persisted.assistance.assisted || hints > 0 || steps || tries > 0 || tutored || dock.usedOn === item?.id;
+  const helped = !!persisted?.assistance.assisted || hints > 0 || steps || tries > 0 || tutored || dock.usedOn === item?.id;
   const say = (key: Key) => young && speakText(t(key), learner.locale);
   const labelOf = (response: string | number) => (typeof response === "number" ? (item?.choices?.[response]?.label ?? String(response)) : response);
 
-  /** Records the problem's one answer. A wrong one carries the misconception it shows, when tagged. */
+  /**
+   * Records the problem's one answer, before any feedback. A wrong one carries the misconception it
+   * shows, when tagged. False when it wasn't taken (a check this device can't keep, or a stale tab).
+   */
   const resolve = (correct: boolean, assisted: boolean, response?: string | number) => {
     if (index === undefined || !item) return false;
-    try { recordAnswer(set.id, {
-      slot: index,
-      level: item.level,
-      correct,
-      assisted,
-      seconds: (Date.now() - shownAt.current) / 1000,
-      response: response === undefined ? undefined : labelOf(response),
-      why: correct || response === undefined ? undefined : misconceptionOf(item, response),
-      attemptId,
-    }); }
-    catch { setSaveFailed(true); return false; }
+    try {
+      recordAnswer(set.id, {
+        slot: index,
+        level: item.level,
+        correct,
+        assisted,
+        seconds: (Date.now() - shownAt.current) / 1000,
+        response: response === undefined ? undefined : labelOf(response),
+        why: correct || response === undefined ? undefined : misconceptionOf(item, response),
+        attemptId,
+      });
+    } catch (e) {
+      failed(e);
+      return false;
+    }
+    setProblem(null);
     return true;
   };
 
@@ -211,20 +239,26 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     pad.current?.querySelector<HTMLElement>("[data-answer-target]")?.focus({ preventScroll: true });
   };
   const pressed = (e: PointerEvent) => void (pressedWith.current = e.pointerType);
+  /** Saves help before it shows. False when it wasn't saved, and then it doesn't show. */
+  const saveHelp = (kind: "hint" | "steps", n?: number) => {
+    if (!source) return false;
+    try {
+      recordHelp(source, n === undefined ? { kind } : { kind, key: String(n), detail: String(n) });
+    } catch (e) {
+      failed(e);
+      return false;
+    }
+    setProblem(null);
+    return true;
+  };
   const takeHint = (e: MouseEvent) => {
-    if (!attemptId) return;
-    try { recordHelpExposure({ attemptId, id: `${attemptId}:hint:${hints + 1}`, kind: "hint", detail: String(hints + 1) }); }
-    catch { setSaveFailed(true); return; }
-    setSaveFailed(false);
+    if (!saveHelp("hint", hints + 1)) return;
     setHints(hints + 1);
     helpAct("hint", String(hints + 1));
     toAnswer(e);
   };
   const showSteps = (e: MouseEvent) => {
-    if (!attemptId) return;
-    try { recordHelpExposure({ attemptId, id: `${attemptId}:steps`, kind: "steps" }); }
-    catch { setSaveFailed(true); return; }
-    setSaveFailed(false);
+    if (!saveHelp("steps")) return;
     setSteps(true);
     helpAct("steps");
     toAnswer(e);
@@ -234,11 +268,8 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     if (!item || feedback?.kind === "right") return;
     if (typeof response === "string" && !response.trim()) return;
     const verdict = check(item.answer, response);
-    try {
-      const attempt = openPracticeAttempt(set.id, index!, item.level);
-      recordFirstResponse({ attemptId: attempt.id, response: labelOf(response), correct: verdict.correct });
-    } catch { setSaveFailed(true); return; }
-    setSaveFailed(false);
+    // A check or placement answer is the problem's first and only one: saved whole, or not taken at
+    // all (then the next submit is the first saved answer). A right answer is saved before "Right."
     if (set.kind === "placement") {
       if (!resolve(verdict.correct, false, response)) return;
       const history = [...answers.filter((a) => a.mode === "placement"), { skillId: item.skillId, correct: verdict.correct }];
@@ -262,6 +293,14 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
       say(helped ? "practice.rightHelped" : "practice.right");
       return;
     }
+    // A miss: the first one is saved before "Not yet", so a reload keeps the next answer helped.
+    try {
+      recordFirstMiss(source!, { response: labelOf(response), ...(typeof response === "number" ? { choice: response } : {}) });
+    } catch (e) {
+      failed(e);
+      return;
+    }
+    setProblem(null);
     setTries((n) => n + 1);
     setLastMiss(response);
     setFeedback({ kind: "notYet", form: verdict.form });
@@ -278,9 +317,11 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
     setSkipped((s) => new Set(s).add(index));
   };
 
+  // Opening the tutor on a problem is help on it (the drawer saves it, TutorDrawer).
   const askTutor = () => {
     if (!item) return;
-    dock.open({ item, setId: set.id, attemptId, hints, tries, lastAnswer: value || (lastMiss !== undefined ? labelOf(lastMiss) : undefined) });
+    setTutored(true);
+    dock.open({ item, setId: set.id, source, hints, tries, lastAnswer: value || (lastMiss !== undefined ? labelOf(lastMiss) : undefined) });
   };
 
   const tally = {
@@ -328,7 +369,10 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
         </header>
 
         <main className="mx-auto max-w-3xl px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
-          {saveFailed && <Notice tone="warn">{t("practice.evidenceSaveFailed")}</Notice>}
+          <div className="mb-5 space-y-3 empty:hidden">
+            <StoreHealthNotice />
+            {problem && <SaveNotice problem={problem} young={young} locale={learner.locale} />}
+          </div>
           {silent && index === 0 && answers.length === 0 && (
             <p className="mb-5 rounded-md border border-border bg-panel2 px-4 py-3 text-sm text-ink">
               {set.kind === "check" ? t("practice.checkIntro", { n: RULES.checkSize }) : t("practice.placementIntro")}

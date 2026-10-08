@@ -106,38 +106,30 @@ describe("lesson facts", () => {
 });
 
 describe("Stage", () => {
-  it("withholds quiz success when the first response saves but final activity does not", async () => {
+  it("storage full: a lesson check still answers, and the page says work isn't being saved", async () => {
     render(<Stage course={course} lesson={lesson1} learner={learner} />);
     await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
     await userEvent.click(screen.getByLabelText("The Sun"));
-    const save = Storage.prototype.setItem;
-    const saving = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
-      if (key.startsWith("kaizenedu.evidence.v1.activity:")) throw new DOMException("Full", "QuotaExceededError");
-      save.call(this, key, value);
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Full", "QuotaExceededError");
     });
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
-    expect(screen.queryByText("That's right.")).toBeNull();
-    expect(read().responseEvents).toHaveLength(1);
-    expect(read().activity.filter((e) => e.type === "quiz_answered")).toEqual([]);
-    saving.mockRestore();
-    await userEvent.click(screen.getByRole("button", { name: "Check" }));
     expect(screen.getByText("That's right.")).toBeInTheDocument();
-    expect(read().activity.filter((e) => e.type === "quiz_answered")).toHaveLength(1);
+    expect(screen.getByText("This browser isn't letting KaizenEDU save. Work will be lost when the tab closes.")).toBeInTheDocument();
+    expect(read().activity.filter((e) => e.type === "quiz_answered")).toEqual([expect.objectContaining({ correct: true, assisted: false })]);
   });
 
-  it("withholds interactive feedback when the first response cannot be saved", async () => {
+  it("an answer for a learner removed in another tab isn't taken, and the page reads the change", async () => {
     const interactive: Lesson = { ...lesson1, scenes: [{ id: "f", kind: "interactive", title: "Shade", prompt: "Make three fourths.", widget: { kind: "fraction-bar", parts: 4, shaded: 2, target: { parts: 4, shaded: 3 } } }] };
     render(<Stage course={course} lesson={interactive} learner={learner} />);
     await userEvent.click(screen.getByRole("button", { name: "Part 3, not shaded" }));
-    const saving = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    const doc = JSON.parse(localStorage.getItem("kaizenedu.v1")!);
+    doc.profiles = doc.profiles.filter((p: Profile) => p.id !== learner.id);
+    localStorage.setItem("kaizenedu.v1", JSON.stringify(doc));
     await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
     expect(screen.queryByText("That's right.")).toBeNull();
-    expect(screen.getByText(/Your work couldn't be saved/)).toBeInTheDocument();
-    expect(read().responseEvents).toEqual([]);
-    saving.mockRestore();
-    await userEvent.click(screen.getByRole("button", { name: "Check my answer" }));
-    expect(screen.getByText("That's right.")).toBeInTheDocument();
-    expect(read().responseEvents).toHaveLength(1);
+    expect(screen.getByText("This changed in another tab, so it has been loaded again.")).toBeInTheDocument();
+    expect(read().activity.filter((e) => e.type === "quiz_answered")).toEqual([]);
   });
 
   it("shows the course's origin in the header", () => {
@@ -210,26 +202,32 @@ describe("Stage", () => {
     expect(row("Right on your own")).toBe("0");
   });
 
-  it("a tutor with no released content is neutral beside a scene", async () => {
+  it("an answer given while the tutor is open on that scene counts as helped", async () => {
     render(<Stage course={course} lesson={lesson1} learner={learner} />);
     await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
     await userEvent.click(screen.getByRole("button", { name: "Show tutor" }));
     await userEvent.click(screen.getByLabelText("The Sun"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
-    expect(read().activity.find((e) => e.type === "quiz_answered")).toMatchObject({ correct: true, assisted: false });
-    expect(screen.getByText("That's right.")).toBeInTheDocument();
+    expect(read().activity.find((e) => e.type === "quiz_answered")).toMatchObject({ correct: true, assisted: true });
+    expect(screen.getByText("That's right, with help.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Finish lesson/ }));
     const row = (label: string) => screen.getByText(label).parentElement!.querySelector("dd")!.textContent;
-    expect([row("Right on your own"), row("Right with help")]).toEqual(["1", "0"]);
+    expect([row("Right on your own"), row("Right with help")]).toEqual(["0", "1"]);
   });
 
-  it("keeping a neutral tutor open across scenes does not mark the next check helped", async () => {
-    render(<Stage course={course} lesson={lesson1} learner={learner} />);
+  it("the tutor opened on one scene and kept open marks the next scene's checks too, and that help is saved", async () => {
+    const first = render(<Stage course={course} lesson={lesson1} learner={learner} />);
     await userEvent.click(screen.getByRole("button", { name: "Show tutor" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+    expect(read().helpExposures).toEqual([expect.objectContaining({ kind: "tutor" })]);
+    // A reload before answering keeps it helped.
+    first.unmount();
+    resetMemory();
+    render(<Stage course={course} lesson={lesson1} learner={learner} />);
     await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
     await userEvent.click(screen.getByLabelText("The Sun"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
-    expect(read().activity.find((e) => e.type === "quiz_answered")).toMatchObject({ correct: true, assisted: false });
+    expect(read().activity.find((e) => e.type === "quiz_answered")).toMatchObject({ correct: true, assisted: true });
   });
 
   it("scene help survives a reload before answering", async () => {
@@ -240,10 +238,12 @@ describe("Stage", () => {
     resetMemory();
     render(<Stage course={course} lesson={lesson1} learner={learner} />);
     await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+    expect(screen.getByText("Think of daytime.")).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText("The Sun"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
     expect(read().activity.find((e) => e.type === "quiz_answered")).toMatchObject({ correct: true, assisted: true });
-    expect(read().helpExposures).toEqual([expect.objectContaining({ kind: "hint", questionId: "s2:q1" })]);
+    expect(read().helpExposures).toEqual([expect.objectContaining({ kind: "hint" })]);
+    expect(read().attemptContexts).toEqual([expect.objectContaining({ kind: "scene-question", courseId: "c1", questionId: "s2:q1" })]);
   });
 
   it("scene miss survives reload, and a later visit cannot record that check twice", async () => {
@@ -251,16 +251,21 @@ describe("Stage", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
     await userEvent.click(screen.getByLabelText("Earth"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
-    first.unmount(); resetMemory();
+    first.unmount();
+    resetMemory();
     const next = render(<Stage course={course} lesson={lesson1} learner={learner} />);
     await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+    // The miss comes back picked, with its verdict.
+    expect(screen.getByLabelText("Earth")).toBeChecked();
+    expect(screen.getByText("Not quite yet.")).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText("The Sun"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
     expect(read().activity.filter((e) => e.type === "quiz_answered")).toEqual([
-      expect.objectContaining({ correct: false, assisted: false }), expect.objectContaining({ correct: true, assisted: true }),
+      expect.objectContaining({ correct: false, assisted: false, response: "Earth", choice: 1 }),
+      expect.objectContaining({ correct: true, assisted: true, response: "The Sun", choice: 0 }),
     ]);
-    expect(read().responseEvents).toEqual([expect.objectContaining({ correct: false, response: "Earth" })]);
-    next.unmount(); resetMemory();
+    next.unmount();
+    resetMemory();
     render(<Stage course={course} lesson={lesson1} learner={learner} />);
     await userEvent.click(screen.getByRole("button", { name: /^Next/ }));
     // A completed answer is restored, with its original assistance, rather than asked again.

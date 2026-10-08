@@ -18,6 +18,7 @@ import {
   type SyncRequest,
   type SyncResponse,
 } from "./server/db/wire";
+import { getSkill } from "@/practice/skills";
 import { applyRemote, read, storeHealth, update, type StoreState } from "./store";
 import type { Account } from "./types";
 
@@ -358,6 +359,8 @@ const TIME_FIELD: Partial<Record<SyncList, string>> = {
 };
 /** The same caps the device keeps for its own writes (lib/acts.ts, lib/tutor.ts); the server keeps everything. */
 const DEVICE_CAP: Partial<Record<SyncList, number>> = { acts: 5000, threads: 200 };
+/** Fields the server doesn't store yet (it keeps fixed attempt columns): the device's copy keeps them. */
+const NOT_ON_SERVER: Partial<Record<SyncList, readonly string[]>> = { attempts: ["attemptId", "provenance", "receivedAt", "grantId"] };
 
 /** Puts the server's records into the store. Ids still waiting in the outbox with a newer change are left alone. */
 export function mergeRemote(s: StoreState, answer: Pick<SyncResponse, "changes" | "account">, accountId: string, skip: (list: SyncList | "account", id: string) => boolean) {
@@ -368,7 +371,7 @@ export function mergeRemote(s: StoreState, answer: Pick<SyncResponse, "changes" 
     const arr = s[list] as unknown as Rec[];
     const index = new Map(arr.map((r, i) => [idOf(list, r), i]));
     const removed = new Set<string>();
-    const keep = DEVICE_ONLY[list] ?? [];
+    const keep = [...(DEVICE_ONLY[list] ?? []), ...(NOT_ON_SERVER[list] ?? [])];
     let added = false;
     for (const r of recs as RemoteRecord[]) {
       if (skip(list, r.id)) continue;
@@ -380,7 +383,7 @@ export function mergeRemote(s: StoreState, answer: Pick<SyncResponse, "changes" 
       }
       if (!r.data || typeof r.data !== "object") continue;
       if (i !== undefined) {
-        // What only this device holds (a class's feed link) stays on it.
+        // What only this device holds (a class's feed link, an answer's question id) stays on it.
         const own = Object.fromEntries(keep.filter((k) => arr[i][k] !== undefined).map((k) => [k, arr[i][k]]));
         arr[i] = { ...(r.data as Rec), ...own };
       } else {
@@ -665,7 +668,7 @@ export async function signedOut(): Promise<SignOutNote | null> {
   if (!ended) setLocal(SIGNOUT_KEY, "1");
   const meta = loadMeta();
   const m = metaFor(meta, accountId);
-  const kept = pendingCount(m) + refusedCount(m);
+  const kept = pendingCount(m) + refusedCount(m) + unsentHelp(read(), accountId);
   if (kept === 0) {
     delete meta.accounts[accountId];
     saveMeta(meta);
@@ -674,6 +677,18 @@ export async function signedOut(): Promise<SignOutNote | null> {
   const note: SignOutNote | null = kept ? { reason: "kept", kept, ended } : ended ? null : { reason: "offline", ended: false };
   setLocal(NOTE_KEY, note ? JSON.stringify(note) : null);
   return note;
+}
+
+/**
+ * Help shown on this device that no synced answer carries yet: a hint on a problem left unanswered.
+ * Help lists stay on the device until they sync (T12), and the mastery law reads them (the check
+ * clock), so a sign-out keeps the family's copy here while any is left. Lesson questions and AI
+ * topics have no skill the law reads, so their help doesn't hold a sign-out.
+ */
+function unsentHelp(s: StoreState, accountId: string) {
+  const mine = new Set(s.profiles.filter((p) => p.accountId === accountId).map((p) => p.id));
+  const carried = new Set(s.attempts.map((a) => a.attemptId));
+  return s.helpExposures.filter((h) => mine.has(h.profileId) && !carried.has(h.attemptId) && getSkill(h.skillId)).length;
 }
 
 /** A sign-out that didn't reach the server: tried again on the next load and when back online. */

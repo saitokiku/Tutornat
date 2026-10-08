@@ -61,7 +61,8 @@ export type DemoState = {
   typed?: string[];
 };
 
-export type DemoTurn = { text: string; cards: BoardCard[]; state: DemoState };
+/** `help`: the opening's vetted hint for a young learner, shown as its own line once it is saved as help. */
+export type DemoTurn = { text: string; cards: BoardCard[]; state: DemoState; help?: string };
 
 export const young = (grade: Grade) => grade === "K" || grade === "1" || grade === "2";
 
@@ -406,9 +407,13 @@ export function demoOpening(ctx: DemoContext): DemoTurn {
   const intro = t(l, young(ctx.grade) ? "tut.demo.introYoung" : "tut.demo.intro");
   const state: DemoState = { hintsGiven: 0, tries: 0, shown: [] };
   if (ctx.item) {
-    // Presence is neutral. The first requested hint continues from the pad's saved ladder.
+    // The hint ladder continues from the hints already open on the pad.
     const seen = Math.min(Math.max(0, ctx.hintsSeen ?? 0), ctx.item.hints.length);
-    return { text: `${intro}\n${t(l, "tutor.open.problem")}`, cards: [], state: { ...state, hintsGiven: seen, skillId: ctx.item.skillId } };
+    const beside = { ...state, hintsGiven: seen, skillId: ctx.item.skillId };
+    // K–2: the next vetted hint, on its own line, so it is saved as help before it shows (live-tutor spec §2.5).
+    if (young(ctx.grade) && seen < ctx.item.hints.length) return { text: intro, cards: [], state: { ...beside, hintsGiven: seen + 1 }, help: ctx.item.hints[seen] };
+    // Grades 3–9: a question first. Opening the tutor is still help on the problem (TutorDrawer).
+    return { text: `${intro}\n${t(l, "tutor.open.problem")}`, cards: [], state: beside };
   }
   if (ctx.homework) return { text: `${intro}\n${t(l, "tutor.open.homework", { title: ctx.homework.title })}`, cards: [], state };
   if (ctx.lesson) return { text: `${intro}\n${t(l, "tutor.open.lesson")}`, cards: [], state: { ...state, topic: ctx.lesson.title } };

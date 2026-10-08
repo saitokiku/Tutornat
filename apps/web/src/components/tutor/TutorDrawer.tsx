@@ -6,31 +6,37 @@ import { IconX } from "@/components/icons";
 import { TutorDock, type DockContext } from "@/components/practice/tutor-dock";
 import { HearContext } from "@/components/stage/hear";
 import { useT } from "@/i18n";
+import { evidenceProblem } from "@/lib/evidence";
 import { recordTutorHelp } from "@/lib/practice";
-import { recordHelpExposure } from "@/lib/evidence";
 import type { Profile } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
-import { TutorChat } from "./TutorChat";
+import { TutorChat, type HelpGate } from "./TutorChat";
 
 /**
  * The tutor's seat beside a problem: a side panel on wide screens, a bottom sheet on phones. Opening it
- * is neutral; instructional content commits assistance before its text, cards or audio are released.
+ * on a problem marks that problem as helped and restarts that skill's check clock — honestly. The help
+ * is saved when it opens (a synced "tutor" row, and the question's help), and every tutor reply after
+ * the opening line waits until it is saved.
  */
 export function TutorDrawer({ learner, surface, children }: { learner: Profile; surface: "practice" | "lesson"; children: ReactNode }) {
   const [ctx, setCtx] = useState<DockContext | null>(null);
   const [usedOn, setUsedOn] = useState<string>();
+  /** Saves the tutor's help on the problem; saving it again on the same question writes nothing. */
+  const save = (c: DockContext): ReturnType<HelpGate> => {
+    try {
+      recordTutorHelp(learner.id, c.item.skillId, c.item.seed, c.item.level, c.source);
+      return true;
+    } catch (e) {
+      return evidenceProblem(e);
+    }
+  };
   const open = (c: DockContext) => {
     setCtx(c);
+    setUsedOn(c.item.id);
+    save(c);
   };
-  const beforeHelp = (id: string) => {
-    if (!ctx) return false;
-    try {
-      if (ctx.attemptId) recordHelpExposure({ attemptId: ctx.attemptId, id, kind: "tutor", delivery: "latched" });
-      else recordTutorHelp(learner.id, ctx.item.skillId, ctx.item.seed, ctx.item.level);
-      setUsedOn(ctx.item.id);
-      return true;
-    } catch { return false; }
-  };
+  // A problem with no set question had its one tutor row when the drawer opened.
+  const beforeHelp: HelpGate = () => (!ctx ? "stale" : ctx.source ? save(ctx) : true);
   return (
     <TutorDock.Provider value={{ open, usedOn }}>
       <div className={`transition-[padding] duration-200 ${ctx ? "lg:pr-[400px]" : ""}`}>{children}</div>
@@ -39,7 +45,7 @@ export function TutorDrawer({ learner, surface, children }: { learner: Profile; 
   );
 }
 
-function Panel({ ctx, learner, surface, onClose, beforeHelp }: { ctx: DockContext; learner: Profile; surface: "practice" | "lesson"; onClose: () => void; beforeHelp: (id: string) => boolean }) {
+function Panel({ ctx, learner, surface, onClose, beforeHelp }: { ctx: DockContext; learner: Profile; surface: "practice" | "lesson"; onClose: () => void; beforeHelp: HelpGate }) {
   const t = useT();
   const panel = useRef<HTMLElement>(null);
   const young = ["K", "1", "2"].includes(learner.grade);

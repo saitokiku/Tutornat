@@ -115,14 +115,15 @@ describe("sync", () => {
     expect((await device(acct).sync()).changes.attempts?.[0].data).toMatchObject({ correct: false });
   });
 
-  it("checks answers against their set and keeps a check unhelped", async () => {
+  it("checks answers against their set and keeps a helped check answer helped", async () => {
     const acct = await family();
     const a = device(acct);
     const x = attempt("p1", { mode: "check", setId: "s1", assisted: true });
     const set = { id: "s1", profileId: "p1", kind: "check", skillId: "m.add.10", slots: [{ skillId: "m.add.10", seed: x.seed, role: "check", level: 1 }] };
     const res = await a.sync({ profiles: [put(profile("p1"))], sets: [put(set)], attempts: [put(x)] });
     expect(res.flagged).toBe(0);
-    expect(res.changes.attempts?.[0].data).toMatchObject({ correct: true, assisted: false });
+    // Helped is not on the learner's own: the check is graded that way on every device.
+    expect(res.changes.attempts?.[0].data).toMatchObject({ mode: "check", correct: true, assisted: true });
     // A check answer for a problem that isn't in its set did not come from the app.
     const stray = attempt("p1", { mode: "check", setId: "s1" });
     expect((await a.sync({ attempts: [put(stray)] })).flagged).toBe(1);

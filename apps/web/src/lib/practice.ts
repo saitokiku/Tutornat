@@ -15,8 +15,9 @@ import { logAct, type ActInput } from "./acts";
 import { guessSubject } from "./generate";
 import { randomSeed } from "@/practice/rng";
 import { getSkill } from "@/practice/skills";
-import { appendEvidence, newId, read, update, type StoreState } from "./store";
-import { assistanceFor, openOrResumeAttempt } from "./evidence";
+import { attemptIdentity } from "@/learning/evidence";
+import { appendEvidence, EvidenceError, newId, read, update, type EvidenceRow, type StoreState } from "./store";
+import { assistanceFor, attemptFor, recordHelp } from "./evidence";
 import type { Grade, LearnerSettings, Profile, Subject } from "./types";
 
 // Practice actions screens call. Backend-shaped: when accounts move to a server, these bodies become
@@ -61,16 +62,14 @@ export const attemptsOf = (s: StoreState, profileId: string) => s.attempts.filte
 export const setsOf = (s: StoreState, profileId: string) => s.sets.filter((x) => x.profileId === profileId);
 export const getSet = (s: StoreState, setId: string, profileId: string) => s.sets.find((x) => x.id === setId && x.profileId === profileId);
 
-// Memoized by reference: the store hands out a new attempts array on every write, so this recomputes
+// Memoized by reference: the store hands out a new document on every write, so this recomputes
 // exactly when evidence changed. ponytail: one-entry cache; enough for one learner on screen.
 let memo: { state: StoreState; profileId: string; hour: number; out: Statuses } | null = null;
+/** Every skill's status for a learner: their answers, and the help they were shown (answered or not). */
 export function statusesOf(s: StoreState, profileId: string, now: number): Statuses {
   const hour = Math.floor(now / 3600_000);
   if (memo && memo.state === s && memo.profileId === profileId && memo.hour === hour) return memo.out;
-  const out = allStatuses(attemptsOf(s, profileId), now, undefined, {
-    help: s.helpExposures.filter((h) => h.profileId === profileId),
-    responses: s.responseEvents.filter((r) => r.profileId === profileId),
-  });
+  const out = allStatuses(attemptsOf(s, profileId), now, undefined, { help: s.helpExposures.filter((h) => h.profileId === profileId) });
   memo = { state: s, profileId, hour, out };
   return out;
 }
@@ -167,48 +166,84 @@ export function paceOf(seconds: number, standard: number): Pace {
 
 export type AnswerRecord = { slot: number; level: number; correct: boolean; assisted: boolean; seconds: number; response?: string; why?: string; attemptId?: string };
 
+/** A set's question: the slot, at the level it was shown. */
 export function practiceSource(set: PracticeSet, index: number, level: number): AttemptSource {
   const slot = set.slots[index];
   return { kind: "set-slot", profileId: set.profileId, skillId: slot.skillId, setId: set.id, slotId: String(index), itemFingerprint: `${slot.skillId}:${level}:${slot.seed}`, contentVersion: "legacy" };
 }
 
-/** Pin the difficulty when shown; an unfinished question does not change on reload. */
+/** Pins the difficulty when a question is shown, so an unfinished question does not change on reload. */
 export function openPracticeAttempt(setId: string, index: number, level: number) {
   const set = read().sets.find((s) => s.id === setId);
-  if (!set?.slots[index]) throw new Error("Unknown practice slot");
-  if (set.slots[index].level === undefined) update((s) => { s.sets.find((x) => x.id === setId)!.slots[index].level ??= level; });
-  const pinned = read().sets.find((s) => s.id === setId)!;
-  return openOrResumeAttempt(practiceSource(pinned, index, pinned.slots[index].level!));
+  if (!set?.slots[index]) throw new EvidenceError("stale");
+  if (set.slots[index].level === undefined)
+    update((s) => {
+      const slot = s.sets.find((x) => x.id === setId)?.slots[index];
+      if (slot) slot.level ??= level;
+    });
+  const pinned = read().sets.find((s) => s.id === setId);
+  const at = pinned?.slots[index]?.level;
+  if (!pinned || at === undefined) throw new EvidenceError("stale");
+  return attemptFor(practiceSource(pinned, index, at));
 }
 
+/**
+ * Records a question's one final answer, before its feedback shows. The row's id is the set and slot,
+ * so a second submit (another tab, a double tap) records nothing more. Help the question had, or a
+ * miss before a right answer, makes it helped. A check answer stays a check answer: helped, it is not
+ * on the learner's own and the check is graded that way. A check answer this device can't keep is not
+ * taken (EvidenceError "storage"); an answer at another difficulty than the one shown is stale.
+ */
 export function recordAnswer(setId: string, a: AnswerRecord) {
   const set = read().sets.find((x) => x.id === setId);
   if (!set || set.finishedAt || !set.slots[a.slot]) return;
-  const context = openPracticeAttempt(setId, a.slot, a.level);
-  if ((a.attemptId && a.attemptId !== context.id) || read().sets.find((s) => s.id === setId)!.slots[a.slot].level !== a.level) throw new Error("Stale practice attempt");
   const slot = set.slots[a.slot];
-  const evidence = assistanceFor(context.id);
-  // The current first miss is an independent wrong answer; a later correction is helped.
+  if (slot.level !== undefined && slot.level !== a.level) throw new EvidenceError("stale");
+  const attemptId = attemptIdentity(practiceSource(set, a.slot, a.level));
+  if (a.attemptId && a.attemptId !== attemptId) throw new EvidenceError("stale");
+  const evidence = assistanceFor(attemptId);
+  // The first miss itself is an independent wrong answer; a later correction is helped.
   const assisted = a.assisted || evidence.exposureIds.length > 0 || (a.correct && evidence.assisted);
-  appendEvidence("attempts", {
-    // Set slots are pinned above. Keep the final row compatible with the existing server ID limit.
-    id: `${setId}:${a.slot}`, attemptId: context.id, profileId: set.profileId, at: Date.now(),
-    skillId: slot.skillId, level: a.level, seed: slot.seed, setId, slotId: String(a.slot),
-    mode: set.kind === "check" && assisted ? "practice" : slot.role === "review" ? "review" : MODE[set.kind],
-    correct: a.correct, assisted, seconds: Math.min(Math.max(0, Math.round(a.seconds)), 3600),
-    response: a.response?.slice(0, 80), why: a.correct ? undefined : a.why?.slice(0, 40),
-    provenance: "local-recorded", contentVersion: context.source.contentVersion, itemFingerprint: context.source.itemFingerprint,
-  });
-  update((s) => {
-    const live = s.sets.find((x) => x.id === setId);
-    if (live) live.startedAt ??= Date.now();
-  });
+  const now = Date.now();
+  appendEvidence(
+    [{
+      list: "attempts",
+      record: {
+        id: `${setId}:${a.slot}`, attemptId, profileId: set.profileId, at: now,
+        skillId: slot.skillId, level: a.level, seed: slot.seed, setId,
+        mode: slot.role === "review" ? "review" : MODE[set.kind],
+        correct: a.correct, assisted, seconds: Math.min(Math.max(0, Math.round(a.seconds)), 3600),
+        ...(a.response !== undefined ? { response: a.response.slice(0, 80) } : {}),
+        ...(!a.correct && a.why ? { why: a.why.slice(0, 40) } : {}),
+        provenance: "local-recorded",
+      },
+    }],
+    {
+      proof: set.kind === "check",
+      also: (d) => {
+        const live = d.sets.find((x) => x.id === setId);
+        if (live && live.slots[a.slot].level !== undefined && live.slots[a.slot].level !== a.level) throw new EvidenceError("stale");
+        if (live) {
+          live.startedAt ??= now;
+          live.slots[a.slot].level ??= a.level;
+        }
+      },
+    },
+  );
 }
 
-/** Help from the tutor on a skill outside a set still counts as help (it restarts the check clock). */
-export function recordTutorHelp(profileId: string, skillId: string, seed: number, level: number) {
-  if (!getSkill(skillId)) return;
-  update((s) => void s.attempts.push({ id: newId(), profileId, at: Date.now(), skillId, level, seed, mode: "tutor", correct: false, assisted: true, seconds: 0 }));
+/**
+ * Help from the tutor beside a problem counts as help (it restarts the check clock): a synced "tutor"
+ * row, one per question, and on a set's question its help too, so a reload keeps it helped.
+ */
+export function recordTutorHelp(profileId: string, skillId: string, seed: number, level: number, source?: AttemptSource) {
+  if (!source) {
+    if (getSkill(skillId)) update((s) => void s.attempts.push({ id: newId(), profileId, at: Date.now(), skillId, level, seed, mode: "tutor", correct: false, assisted: true, seconds: 0 }));
+    return;
+  }
+  const attemptId = attemptIdentity(source);
+  const row: EvidenceRow = { list: "attempts", record: { id: `${attemptId}:tutor`, attemptId, profileId, at: Date.now(), skillId, level, seed, mode: "tutor", correct: false, assisted: true, seconds: 0 } };
+  recordHelp(source, { kind: "tutor", delivery: "latched" }, getSkill(skillId) ? [row] : []);
 }
 
 export function finishSet(setId: string) {

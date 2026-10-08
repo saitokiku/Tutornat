@@ -174,6 +174,17 @@ describe("test-goes-well", () => {
     expect(one(prep, { events: [event], attempts: ready }, new Date(2026, 9, 8, 20).getTime()).status).toBe("pending");
   });
 
+  it("is missed when a linked skill was proved but needs a refresh going into the test", () => {
+    const minute = (day: number, i = 0) => day * 24 * 60 + i;
+    const check = (setId: string, day: number) => Array.from({ length: 5 }, (_, i) => ans(setId, 100 + day * 10 + i, minute(day, i), { level: 2, mode: "check" }));
+    const proved = [...ready, ...check("c1", 3), ...check("c2", 10)];
+    const slipped = [...proved, ...[0, 1].map((i) => ans(undefined, 900 + i, minute(20, i), { level: 2, mode: "review", correct: false }))];
+    const later: SchoolEvent = { ...event, date: "2026-10-30" };
+    const day = new Date(2026, 9, 30, 10).getTime();
+    expect(one(prep, { events: [later], attempts: proved }, day)).toMatchObject({ status: "met", score: { n: 1, of: 1 } });
+    expect(one(prep, { events: [later], attempts: slipped }, day)).toMatchObject({ status: "missed", score: { n: 0, of: 1 } });
+  });
+
   it("shows a school result beside the outcome, never instead of it", () => {
     const results = [{ id: "r1", profileId: P, title: "addition quiz ", date: "2026-10-09", score: 18, outOf: 20 }];
     expect(one(prep, { events: [event], attempts: ready.slice(0, 3), results }, testDay)).toMatchObject({ status: "missed", school: { score: 18, outOf: 20 } });

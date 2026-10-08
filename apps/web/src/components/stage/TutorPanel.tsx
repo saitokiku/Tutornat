@@ -1,7 +1,7 @@
 "use client";
 
 import { KaizenMark } from "@/components/brand";
-import { TutorChat } from "@/components/tutor/TutorChat";
+import { TutorChat, type HelpGate } from "@/components/tutor/TutorChat";
 import { useT } from "@/i18n";
 import type { Profile, Scene } from "@/lib/types";
 import { sceneSpeech } from "./scenes";
@@ -13,7 +13,7 @@ function sceneText(scene: Scene) {
 }
 
 /** The tutor's seat on the lesson stage, aware of the scene on screen. */
-export function TutorPanel({ learner, lessonTitle, scene, beforeHelp }: { learner: Profile; lessonTitle: string; scene: Scene; beforeHelp?: (id: string) => boolean }) {
+export function TutorPanel({ learner, lessonTitle, scene, beforeHelp }: { learner: Profile; lessonTitle: string; scene: Scene; beforeHelp?: HelpGate }) {
   const t = useT();
   return (
     <aside aria-labelledby="tutor-title" className="flex h-full max-h-[70dvh] min-h-96 flex-col rounded-lg border border-border bg-panel">

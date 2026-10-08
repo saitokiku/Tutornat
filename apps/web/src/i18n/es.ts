@@ -438,6 +438,8 @@ const es: Record<Key, string> = {
   "practice.rightHelped": "Correcto, con ayuda.",
   "practice.notYet": "Todavía no. Inténtalo otra vez o pide una pista.",
   "practice.evidenceSaveFailed": "No se pudo guardar tu trabajo. Libera espacio o permite el almacenamiento del navegador y vuelve a intentarlo.",
+  "practice.evidenceSaveFailedYoung": "Este dispositivo no puede guardar tu trabajo ahora. Busca a una persona adulta.",
+  "practice.evidenceStale": "Esto cambió en otra pestaña, así que se volvió a cargar.",
   "practice.notYetSteps": "Todavía no. Puedes ver cómo se hace y luego responder.",
   "practice.hints": "Pistas",
   "practice.howTitle": "Cómo se hace",
@@ -637,7 +639,7 @@ const es: Record<Key, string> = {
   "school.fromSchool": "de la escuela",
   "nav.calendar": "Calendario",
 
-  "tutor.open.problem": "¿Qué has intentado hasta ahora?",
+  "tutor.open.problem": "¿Qué parte te cuesta?",
   "tutor.open.homework": "Veamos {title} juntos. ¿En qué parte vas?",
   "tutor.open.lesson": "¿Qué parte de esto quieres repasar?",
   "tutor.open.talk": "¿Qué te gustaría aprender o practicar?",

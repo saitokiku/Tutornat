@@ -21,10 +21,16 @@ export function saveCourse(course: Course) {
   });
 }
 
+/** Removes a course and everything done in it: its activity, and its lesson questions' help and first answers. */
 export function removeCourse(id: string) {
   update((s) => {
     s.courses = s.courses.filter((c) => c.id !== id);
     s.activity = s.activity.filter((e) => e.courseId !== id);
+    const gone = new Set(s.attemptContexts.filter((a) => a.kind === "scene-question" && a.courseId === id).map((a) => a.id));
+    if (!gone.size) return;
+    s.attemptContexts = s.attemptContexts.filter((a) => !gone.has(a.id));
+    s.helpExposures = s.helpExposures.filter((h) => !gone.has(h.attemptId));
+    s.responseEvents = s.responseEvents.filter((r) => !gone.has(r.attemptId));
   });
 }
 

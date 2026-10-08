@@ -168,8 +168,11 @@ export type ActivityEvent = {
   correct?: boolean;
   assisted?: boolean;
   seconds?: number;
+  /** A lesson answer: the question it answers (learning/evidence.ts attemptIdentity), and what was picked. */
   attemptId?: string;
   response?: string;
+  /** The choice picked on a multiple-choice question, so a reload shows it picked. */
+  choice?: number;
 };
 
 /** A note for the learner's grown-ups: written by a grown-up, or left by the tutor (`from: "tutor"`). */

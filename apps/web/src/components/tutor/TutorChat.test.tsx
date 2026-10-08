@@ -282,40 +282,54 @@ describe("the drawer beside a problem", () => {
   it("walks the vetted hints and shows a similar one worked out, by keyboard", async () => {
     const user = userEvent.setup();
     render(<TutorChat setup={{ learner: learner({ grade: "4" }), surface: "practice", item, tries: 0, title: "Fractions" }} />);
-    expect(await screen.findByRole("button", { name: "Give me a hint" })).toBeInTheDocument();
+    // Grades 3–9 open with a question, not a hint.
+    expect(await screen.findByText(/without AI\. Which part is tricky\?$/)).toBeInTheDocument();
     expect(screen.queryByText(item.hints[0])).not.toBeInTheDocument();
-    expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([]);
+    // Opening the tutor on a problem is help on that skill: one teaching act, before anything is typed.
+    await waitFor(() => expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ profileId: "p1", intent: "next-try-right", skillId: "m.frac.addlike" })]));
     await tabTo(user, screen.getByRole("button", { name: "Give me a hint" }));
     await user.keyboard("{Enter}");
     expect(await screen.findByText(item.hints[0])).toBeInTheDocument();
-    await waitFor(() => expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ profileId: "p1", intent: "next-try-right", skillId: "m.frac.addlike" })]));
     await user.click(screen.getByRole("button", { name: "Show a similar one" }));
     expect(await screen.findByText("Now try yours the same way.")).toBeInTheDocument();
     await act(async () => {});
     expect(read().acts.filter((a) => a.kind === "tutor")).toEqual([expect.objectContaining({ skillId: "m.frac.addlike" })]);
   });
 
-  it("opening a problem chat is neutral; help is admitted before instructional text appears", async () => {
+  it("every reply after the opening line waits until its help is saved", async () => {
     const released: string[] = [];
-    const beforeHelp = vi.fn((id: string) => {
+    const beforeHelp = vi.fn((id: string): true => {
       expect(screen.queryByText(item.hints[0])).not.toBeInTheDocument();
       released.push(id);
       return true;
     });
     render(<TutorChat setup={{ learner: learner({ grade: "4" }), surface: "practice", item, tries: 0, title: "Fractions", beforeHelp }} />);
     expect(await screen.findByRole("button", { name: "Give me a hint" })).toBeInTheDocument();
-    expect(screen.queryByText(new RegExp(item.hints[0].slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))).not.toBeInTheDocument();
     expect(beforeHelp).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Give me a hint" }));
     expect(await screen.findByText(item.hints[0])).toBeInTheDocument();
     expect(released).toHaveLength(1);
   });
 
-  it("refused help is neither displayed nor saved to the transcript", async () => {
-    render(<TutorChat setup={{ learner: learner({ grade: "4" }), surface: "practice", item, tries: 0, title: "Fractions", beforeHelp: () => false }} />);
+  it("a young learner's drawer opens with the first vetted hint, shown only once it is saved", async () => {
+    const young = makeItem("m.add.5", 1, 7, "en");
+    const beforeHelp = vi.fn((): true => true);
+    render(<TutorChat setup={{ learner: learner({ grade: "1" }), surface: "practice", item: young, tries: 0, title: "Adding", beforeHelp }} />);
+    expect(await screen.findByText(young.hints[0])).toBeInTheDocument();
+    expect(beforeHelp).toHaveBeenCalledWith("open-hint");
+    cleanup();
+    render(<TutorChat setup={{ learner: learner({ grade: "1" }), surface: "practice", item: young, tries: 0, title: "Adding", beforeHelp: () => "storage" }} />);
+    expect(await screen.findByText("This device can't save your work right now. Please get a grown-up.")).toBeInTheDocument();
+    expect(screen.getByText("Your work couldn't be saved. Free some space or enable browser storage, then try again.")).toBeInTheDocument();
+    expect(screen.queryByText(young.hints[0])).not.toBeInTheDocument();
+  });
+
+  it("refused help is neither displayed nor saved to the transcript, and says why", async () => {
+    render(<TutorChat setup={{ learner: learner({ grade: "4" }), surface: "practice", item, tries: 0, title: "Fractions", beforeHelp: () => "stale" }} />);
     await userEvent.click(await screen.findByRole("button", { name: "Give me a hint" }));
     await act(async () => {});
     expect(screen.queryByText(item.hints[0])).not.toBeInTheDocument();
+    expect(screen.getByText("This changed in another tab, so it has been loaded again.")).toBeInTheDocument();
     expect(read().threads.flatMap((thread) => thread.lines).some((line) => line.text.includes(item.hints[0]))).toBe(false);
   });
 });

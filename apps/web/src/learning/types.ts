@@ -3,7 +3,10 @@ import type { Subject } from "@/lib/types";
 /** Why an answer was given. Only "check" answers can prove a skill. */
 export type Mode = "practice" | "review" | "check" | "placement" | "prep" | "tutor";
 
-/** Identity is frozen when work is presented, before an answer or help exists. */
+/**
+ * Where a question came from, frozen when it is presented (a practice slot's level is pinned then),
+ * before an answer or help exists. Its digest is the question's attempt id (learning/evidence.ts).
+ */
 type SourceFacts = {
   profileId: string;
   skillId: string;
@@ -13,12 +16,19 @@ type SourceFacts = {
   grantId?: string;
 };
 export type AttemptSource = SourceFacts & ({ kind: "set-slot"; setId: string; slotId: string } | { kind: "scene-question"; courseId: string; sceneId: string; questionId: string });
-export type EvidenceSource = SourceFacts & ({ sourceKind: "set-slot"; setId: string; slotId: string } | { sourceKind: "scene-question"; courseId: string; sceneId: string; questionId: string });
 
-export type AttemptIdentity = { id: string; profileId: string; source: AttemptSource; openedAt: number };
-export type HelpExposure = EvidenceSource & {
+/**
+ * A question's source, kept once, in attemptContexts. It is written with the first help or the first
+ * miss on the question, and those rows point at it by `attemptId`. A question answered with nothing
+ * before it needs none: its final row (an attempt, or a lesson answer) carries the same facts.
+ */
+export type AttemptIdentity = AttemptSource & { id: string; openedAt: number };
+/** Help shown on one question, saved before it shows, so a reload cannot turn it into "on your own". */
+export type HelpExposure = {
   id: string;
   attemptId: string;
+  profileId: string;
+  skillId: string;
   kind: "hint" | "steps" | "tutor" | "explanation" | "demonstration";
   detail?: string;
   capturedAt: number;
@@ -26,18 +36,25 @@ export type HelpExposure = EvidenceSource & {
   /** A committed release stays assisted even if delivery is interrupted. */
   delivery: "latched" | "released";
 };
-export type ResponseEvent = EvidenceSource & {
+/** A first answer that was not the last (a miss), saved before its feedback shows. */
+export type ResponseEvent = {
   id: string;
   attemptId: string;
+  profileId: string;
+  skillId: string;
   capturedAt: number;
   receivedAt?: number;
   response: string;
+  /** The choice picked on a multiple-choice question (its label can be longer than `response` keeps). */
+  choice?: number;
   correct: boolean;
   assisted: boolean;
 };
 export type AssistanceState = { assisted: boolean; exposureIds: string[]; lastHelpAt?: number };
-export type AttemptContext = AttemptIdentity & { help: HelpExposure[]; firstResponse?: ResponseEvent; assistance: AssistanceState };
-export type EvidenceProvenance = "legacy-local" | "local-recorded" | "server-practice" | "server-check";
+/** A question as it stands now: its identity and what is saved for it. Computed, never stored. */
+export type AttemptContext = { id: string; source: AttemptSource; help: HelpExposure[]; firstResponse?: ResponseEvent; assistance: AssistanceState };
+/** How far an answer can be trusted. Left undefined when unknown (older rows, rows from another device). */
+export type EvidenceProvenance = "local-recorded" | "server-practice" | "server-check";
 
 /** One answer to one problem: the evidence ledger. Append-only; nothing rewrites it. */
 export type Attempt = {
@@ -58,12 +75,10 @@ export type Attempt = {
   /** The misconception the answer shows, when a wrong answer matches a tagged choice or wrong value. */
   why?: string;
   provenance?: EvidenceProvenance;
+  /** The question this answers (learning/evidence.ts attemptIdentity); its help and first miss point at it. */
   attemptId?: string;
-  contentVersion?: string;
-  itemFingerprint?: string;
   receivedAt?: number;
   grantId?: string;
-  slotId?: string;
 };
 
 export type SetKind = "daily" | "pick" | "review" | "check" | "placement" | "prep" | "feedback";

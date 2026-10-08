@@ -26,7 +26,7 @@ import { Act } from "./widgets/Stepper";
 export const TINT: Record<Subject, string> = SUBJECT_TINT;
 
 /** Everything a learner checks reports here: right or not, and whether help was used. */
-export type OnAnswer = (a: { sceneId: string; correct: boolean; assisted: boolean; response?: string }) => boolean | void;
+export type OnAnswer = (a: { sceneId: string; correct: boolean; assisted: boolean; response?: string; choice?: number }) => boolean | void;
 /** Reports that help was shown for a check (a hint), so a later answer counts as helped. */
 export type OnHelp = (sceneId: string, kind?: "hint" | "explanation") => boolean | void;
 export type QuizProgress = Record<string, { hint: boolean; why: boolean; result: boolean | null; choice: number | null; assisted: boolean }>;
@@ -141,7 +141,7 @@ export function InteractiveView({ scene, subject, onAnswer, onSay, lang }: { sce
  * Focus never drops to the page: Check stays in place (dimmed until a new choice), a hint or an
  * explanation takes focus when it opens, and the next question's prompt takes focus when it comes.
  */
-export function QuizView({ scene, onAnswer, onSay, onHelp, onPresent, saved = {}, helped = false }: { scene: QuizScene; onAnswer: OnAnswer; onSay?: OnSay; onHelp?: OnHelp; onPresent?: (id: string) => void; saved?: QuizProgress; helped?: boolean }) {
+export function QuizView({ scene, onAnswer, onSay, onHelp, saved = {}, helped = false }: { scene: QuizScene; onAnswer: OnAnswer; onSay?: OnSay; onHelp?: OnHelp; saved?: QuizProgress; helped?: boolean }) {
   const t = useT();
   const { young } = useHear();
   const [qi, setQi] = useState(0);
@@ -164,7 +164,6 @@ export function QuizView({ scene, onAnswer, onSay, onHelp, onPresent, saved = {}
   useEffect(() => {
     onSay?.([{ key: "quiz", text: quizSpeech(q).text }]);
   }, [q, onSay]);
-  useEffect(() => { onPresent?.(`${scene.id}:${q.id}`); }, [scene.id, q.id, onPresent]);
   useEffect(() => {
     if (qi > 0) prompt.current?.focus();
   }, [qi]);
@@ -178,7 +177,8 @@ export function QuizView({ scene, onAnswer, onSay, onHelp, onPresent, saved = {}
   const check = () => {
     if (choice === null) return;
     const correct = choice === q.answer;
-    if (onAnswer({ sceneId: `${scene.id}:${q.id}`, correct, assisted, response: q.choices[choice] }) === false) return;
+    // Saved before the verdict shows; not saved, nothing shows and Check stays ready.
+    if (onAnswer({ sceneId: `${scene.id}:${q.id}`, correct, assisted, response: q.choices[choice], choice }) === false) return;
     setResult(correct);
     if (!correct) setMissed(true);
   };

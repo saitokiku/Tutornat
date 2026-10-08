@@ -11,7 +11,7 @@ import type { Account, ActivityEvent, Course, Locale, ParentNote, Profile } from
 // (lib/sync.ts): every local write is handed to sync, which queues what changed and keeps the copy
 // in step with the family's record on the server; the server's changes come back in through
 // applyRemote, which is not queued again.
-// ponytail: whole-document writes; fine for a family-sized store.
+// ponytail: whole-document writes; fine for a family-sized store (store.test.ts holds the ceilings).
 
 export const STORE_KEY = "kaizenedu.v1";
 
@@ -73,6 +73,8 @@ export const emptyState = (): StoreState => ({
 const SERVER_SNAPSHOT = emptyState();
 let state: StoreState | null = null;
 let health: StoreHealth = "ok";
+/** Evidence journal keys the last load replayed: removed by the next document save that succeeds. */
+let leftover: string[] = [];
 const listeners = new Set<() => void>();
 
 function load(): StoreState {
@@ -88,8 +90,7 @@ function load(): StoreState {
     const parsed = JSON.parse(raw) as StoreState;
     if (!validShape(parsed)) throw new Error("shape");
     const loaded = { ...emptyState(), ...parsed };
-    loaded.attempts = loaded.attempts.map((a) => ({ ...a, provenance: a.provenance ?? "legacy-local" }));
-    mergeEvidenceJournal(loaded);
+    leftover = replayJournal(loaded);
     return loaded;
   } catch {
     health = "reset";
@@ -118,30 +119,51 @@ export function read(): StoreState {
   return (state ??= load());
 }
 
-// Another tab changed the document: drop the cached copy so the next read sees it.
+// Another tab changed the document (or logged evidence it could not save in it yet): drop the cached
+// copy so the next read sees it. A journal entry being cleared changes nothing here.
 if (typeof window !== "undefined")
   window.addEventListener("storage", (e) => {
-    if (e.key !== STORE_KEY && e.key !== null && !e.key.startsWith(EVIDENCE_PREFIX)) return;
+    if (e.key !== STORE_KEY && e.key !== null && !(e.key.startsWith(EVIDENCE_PREFIX) && e.newValue !== null)) return;
     state = null;
     listeners.forEach((fn) => fn());
   });
 
-function write(change: (draft: StoreState) => void, remote: boolean): StoreState {
+/** What a write logs ahead of the document: evidence rows, under one journal key. */
+type Journal = { key: string; rows: () => EvidenceRow[]; proof?: boolean };
+
+/**
+ * Applies `change` to what is saved now and saves the document. `change` returning false means there
+ * was nothing to do: no save, no notice. With a journal, the new evidence rows are written to their
+ * own key first; once the document holding them is saved the key is removed, together with every
+ * leftover key this load replayed (the document now holds those rows, or dropped them on purpose).
+ * If the document can't be saved the key stays, and the next load replays it.
+ */
+function write(change: (draft: StoreState) => void | false, remote: boolean, journal?: Journal): StoreState {
   // Start from what is saved now, not this tab's cached copy, so two open tabs never undo each other.
   if (typeof window !== "undefined" && health !== "memory") state = load();
   const prev = read();
   const draft = structuredClone(prev);
-  change(draft);
+  if (change(draft) === false) return prev;
   const removed = new Set(prev.profiles.filter((p) => !draft.profiles.some((n) => n.id === p.id)).map((p) => p.id));
   if (removed.size) for (const list of EVIDENCE_LISTS) {
-    (draft[list] as EvidenceLists[EvidenceList][]) = (draft[list] as EvidenceLists[EvidenceList][]).filter((r) => !removed.has(r.profileId));
+    (draft[list] as EvidenceRecord[]) = (draft[list] as EvidenceRecord[]).filter((r) => !removed.has(r.profileId));
   }
-  draft.attempts = draft.attempts.map((a) => ({ ...a, provenance: a.provenance ?? "legacy-local" }));
+  let logged = false;
+  if (journal) {
+    try {
+      localStorage.setItem(journal.key, JSON.stringify({ rows: journal.rows() }));
+      logged = true;
+    } catch (e) {
+      // A proof (a check answer) is never taken on a device that can't keep it.
+      if (journal.proof) throw new EvidenceError("storage", { cause: e });
+    }
+  }
   state = draft;
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(draft));
-    if (remote) reconcileRemoteJournal(prev, draft);
-    removeDeletedEvidence(prev, draft);
+    for (const key of leftover) localStorage.removeItem(key);
+    if (logged) localStorage.removeItem(journal!.key);
+    leftover = [];
   } catch {
     health = "memory";
   }
@@ -175,6 +197,7 @@ export function clearAll() {
     localStorage.removeItem(STORE_KEY);
     for (const key of journalKeys()) localStorage.removeItem(key);
   } catch {}
+  leftover = [];
   state = emptyState();
   listeners.forEach((fn) => fn());
 }
@@ -183,6 +206,14 @@ export function clearAll() {
 export function resetMemory() {
   state = null;
   health = "ok";
+  leftover = [];
+}
+
+/** Reads the saved document again (another tab changed what a screen holds). Kept in memory when storage is off. */
+export function reload() {
+  if (health === "memory") return;
+  state = null;
+  listeners.forEach((fn) => fn());
 }
 
 export function useStore<T>(select: (s: StoreState) => T): T {
@@ -192,13 +223,19 @@ export function useStore<T>(select: (s: StoreState) => T): T {
 
 export const newId = () => crypto.randomUUID();
 
-// Evidence uses immutable per-record keys as a write-ahead journal. A whole-document save from a
-// stale tab cannot overwrite them. Lists in the main document remain the export/domain boundary.
+// ---- learning evidence ------------------------------------------------------------------------------
+// Help shown, first misses and final answers are admitted through appendEvidence: written ahead to a
+// journal key of their own, then into the document, then the key is removed (see write). So evidence
+// a document save couldn't keep (storage full) is still on this device, and the next load replays it.
+// The document stays the only lasting copy and the export boundary; a journal key is a pending entry.
+
 const EVIDENCE_PREFIX = "kaizenedu.evidence.v1.";
 type EvidenceLists = { attemptContexts: AttemptIdentity; helpExposures: HelpExposure; responseEvents: ResponseEvent; attempts: Attempt; activity: ActivityEvent };
-type EvidenceList = keyof EvidenceLists;
+export type EvidenceList = keyof EvidenceLists;
+export type EvidenceRow = { [L in EvidenceList]: { list: L; record: EvidenceLists[L] } }[EvidenceList];
+type EvidenceRecord = EvidenceLists[EvidenceList];
 const EVIDENCE_LISTS: EvidenceList[] = ["attemptContexts", "helpExposures", "responseEvents", "attempts", "activity"];
-const journalKey = (list: EvidenceList, id: string) => `${EVIDENCE_PREFIX}${list}:${encodeURIComponent(id)}`;
+
 function journalKeys() {
   const keys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -208,66 +245,65 @@ function journalKeys() {
   return keys;
 }
 
-function mergeEvidenceJournal(s: StoreState) {
-  const profiles = new Set(s.profiles.map((p) => p.id));
-  for (const key of journalKeys()) {
+/** Puts journalled rows the document doesn't have into it (rows never change, so the document's copy wins). */
+function replayJournal(s: StoreState): string[] {
+  const keys = journalKeys();
+  if (!keys.length) return keys;
+  const learners = new Set(s.profiles.map((p) => p.id));
+  const held = new Map<EvidenceList, Set<string>>();
+  for (const key of keys) {
     try {
-      const saved = JSON.parse(localStorage.getItem(key) ?? "null") as { list: EvidenceList; record: EvidenceLists[EvidenceList]; canonical?: boolean };
-      if (!saved || !EVIDENCE_LISTS.includes(saved.list) || !saved.record || !profiles.has(saved.record.profileId)) continue;
-      const rows = s[saved.list] as EvidenceLists[EvidenceList][];
-      const i = rows.findIndex((r) => r.id === saved.record.id);
-      if (i < 0) rows.push(saved.record);
-      // A saved main row beats a provisional journal copy, including a server correction whose
-      // journal update failed. Successfully reconciled canonical journals also beat stale tab saves.
-      else if (saved.canonical) rows[i] = saved.record;
-    } catch { /* A malformed journal entry never resets the family's main document. */ }
+      const saved = JSON.parse(localStorage.getItem(key) ?? "null") as { rows?: EvidenceRow[] } | null;
+      for (const { list, record } of saved?.rows ?? []) {
+        if (!EVIDENCE_LISTS.includes(list) || !record || !learners.has(record.profileId)) continue;
+        let ids = held.get(list);
+        if (!ids) held.set(list, (ids = new Set((s[list] as EvidenceRecord[]).map((r) => r.id))));
+        if (ids.has(record.id)) continue;
+        ids.add(record.id);
+        (s[list] as EvidenceRecord[]).push(record);
+      }
+    } catch { /* A malformed journal entry never resets the family's document. */ }
+  }
+  return keys;
+}
+
+/** Why evidence was not taken: this device can't keep a proof, or the screen's copy is out of date. */
+export class EvidenceError extends Error {
+  constructor(readonly reason: "storage" | "stale", options?: ErrorOptions) {
+    super(reason === "storage" ? "Could not save learning evidence" : "Learning evidence is out of date", options);
+    this.name = "EvidenceError";
   }
 }
 
-function removeDeletedEvidence(prev: StoreState, next: StoreState) {
-  const removed = new Set(prev.profiles.filter((p) => !next.profiles.some((n) => n.id === p.id)).map((p) => p.id));
-  if (!removed.size) return;
-  for (const key of journalKeys()) {
-    try {
-      const saved = JSON.parse(localStorage.getItem(key) ?? "null");
-      if (removed.has(saved?.record?.profileId)) localStorage.removeItem(key);
-    } catch {}
-  }
+/** Whether `s` already holds this row; an id held for another learner or question is out of date. */
+function holds(s: StoreState, { list, record }: EvidenceRow) {
+  const have = (s[list] as EvidenceRecord[]).find((r) => r.id === record.id);
+  if (!have) return false;
+  const attempt = (r: EvidenceRecord) => ("attemptId" in r ? r.attemptId : undefined);
+  if (have.profileId !== record.profileId || attempt(have) !== attempt(record)) throw new EvidenceError("stale");
+  return true;
 }
 
-/** Server corrections/deletions replace provisional rows in the recovery journal as well. */
-function reconcileRemoteJournal(prev: StoreState, next: StoreState) {
-  for (const list of EVIDENCE_LISTS) for (const before of prev[list]) {
-    const key = journalKey(list, before.id);
-    if (!localStorage.getItem(key)) continue;
-    const after = next[list].find((r) => r.id === before.id);
-    if (!after) localStorage.removeItem(key);
-    else if (JSON.stringify(before) !== JSON.stringify(after)) localStorage.setItem(key, JSON.stringify({ list, record: after, canonical: true }));
-  }
-}
-
-/** A successful return means the evidence is durable; callers may then release help/feedback. */
-export function appendEvidence<L extends EvidenceList>(list: L, record: EvidenceLists[L]): EvidenceLists[L] {
-  // Always reload before admission: a cached tab cannot write for a deleted learner.
-  const fresh = load();
-  if (!state || JSON.stringify(state) !== JSON.stringify(fresh)) state = fresh;
-  const s = read();
-  if (!s.profiles.some((p) => p.id === record.profileId && p.accountId === s.session.accountId)) throw new Error("Unknown learner");
-  const existing = s[list].find((r) => r.id === record.id) as EvidenceLists[L] | undefined;
-  if (existing) {
-    if (existing.profileId !== record.profileId || ("attemptId" in existing && "attemptId" in record && existing.attemptId !== record.attemptId)) throw new Error("Evidence ID belongs to another attempt");
-    return existing;
-  }
-  try {
-    localStorage.setItem(journalKey(list, record.id), JSON.stringify({ list, record }));
-  } catch {
-    throw new Error("Could not save learning evidence");
-  }
-  const saved = update((draft) => {
-    const rows = draft[list] as EvidenceLists[L][];
-    if (!rows.some((r) => r.id === record.id)) rows.push(record);
-  });
-  // load() overlays the journal before update's diff; compare with the pre-journal snapshot too.
-  captureLocal(s, saved);
-  return record;
+/**
+ * Admits evidence rows in one write. Ids are deterministic and rows never change, so rows already held
+ * are left as they are and admitting them again writes nothing. `also` changes the document in the same
+ * write (a set's start time). When storage can't keep them the rows stay in memory for this page, under
+ * the store's "not saving" status, except a proof (a check answer): that throws EvidenceError("storage")
+ * and is not taken. A row for a learner not signed in here throws EvidenceError("stale").
+ */
+export function appendEvidence(rows: EvidenceRow[], opts: { proof?: boolean; also?: (draft: StoreState) => void } = {}) {
+  const fresh = rows.filter((r) => !holds(read(), r));
+  if (!fresh.length) return;
+  let added: EvidenceRow[] = [];
+  write(
+    (draft) => {
+      for (const r of fresh) if (!draft.profiles.some((p) => p.id === r.record.profileId && p.accountId === draft.session.accountId)) throw new EvidenceError("stale");
+      added = fresh.filter((r) => !holds(draft, r));
+      if (!added.length) return false;
+      for (const { list, record } of added) (draft[list] as EvidenceRecord[]).push(record);
+      opts.also?.(draft);
+    },
+    false,
+    { key: `${EVIDENCE_PREFIX}${fresh[0].list}:${encodeURIComponent(fresh[0].record.id)}`, rows: () => added, proof: opts.proof },
+  );
 }

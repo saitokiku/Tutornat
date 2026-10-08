@@ -1,32 +1,69 @@
-import { assistanceFrom, attemptIdentity, evidenceSource, firstResponseOf } from "@/learning/evidence";
+import { assistanceFrom, attemptIdentity, firstResponseOf } from "@/learning/evidence";
 import type { AttemptContext, AttemptSource, HelpExposure, ResponseEvent } from "@/learning/types";
-import { appendEvidence, newId, read } from "./store";
+import { appendEvidence, EvidenceError, read, type EvidenceRow, type StoreState } from "./store";
 
-export function assistanceFor(attemptId: string) {
-  const s = read();
-  return assistanceFrom(attemptId, s.helpExposures, s.responseEvents);
+// One question's evidence, as screens record it: help before it shows, a first miss before its
+// feedback. Final answers are recorded by practice.ts (recordAnswer) and Stage (lesson answers).
+// Backend-shaped: with T04 these become server calls that hand back grant-bound ids.
+
+/** A question as it stands: its id, and the help and first miss saved for it. Reads only. */
+export function attemptFor(source: AttemptSource, s: StoreState = read()): AttemptContext {
+  const id = attemptIdentity(source);
+  const help = s.helpExposures.filter((h) => h.attemptId === id);
+  return { id, source, help, firstResponse: firstResponseOf(id, s.responseEvents), assistance: assistanceFrom(id, help, s.responseEvents) };
 }
 
-export function openOrResumeAttempt(source: AttemptSource): AttemptContext {
-  const identity = appendEvidence("attemptContexts", { id: attemptIdentity(source), profileId: source.profileId, source, openedAt: Date.now() });
-  const s = read();
-  return { ...identity, help: s.helpExposures.filter((h) => h.attemptId === identity.id), firstResponse: firstResponseOf(identity.id, s.responseEvents), assistance: assistanceFor(identity.id) };
+export const assistanceFor = (attemptId: string, s: StoreState = read()) => assistanceFrom(attemptId, s.helpExposures, s.responseEvents);
+
+/** The question's source, written once, with the first row that points at it. `openedAt` is when that was. */
+const contextRow = (source: AttemptSource, id: string): EvidenceRow => ({ list: "attemptContexts", record: { ...source, id, openedAt: Date.now() } });
+
+/**
+ * Help shown on a question, saved before it shows. Its id is the question's id and the kind of help
+ * (`key` tells a second hint from the first), so saving it again (a reload, another tab, a second
+ * tutor reply) writes nothing. `extra` rows go in the same write.
+ */
+export function recordHelp(source: AttemptSource, input: { kind: HelpExposure["kind"]; key?: string; detail?: string; delivery?: HelpExposure["delivery"] }, extra: EvidenceRow[] = []): HelpExposure {
+  const attemptId = attemptIdentity(source);
+  const help: HelpExposure = {
+    id: `${attemptId}:${input.kind}${input.key ? `:${input.key}` : ""}`,
+    attemptId,
+    profileId: source.profileId,
+    skillId: source.skillId,
+    kind: input.kind,
+    ...(input.detail ? { detail: input.detail } : {}),
+    capturedAt: Date.now(),
+    delivery: input.delivery ?? "released",
+  };
+  appendEvidence([contextRow(source, attemptId), { list: "helpExposures", record: help }, ...extra]);
+  return read().helpExposures.find((h) => h.id === help.id) ?? help;
 }
 
-function sourceOf(attemptId: string) {
-  const source = read().attemptContexts.find((a) => a.id === attemptId)?.source;
-  if (!source) throw new Error("Unknown attempt");
-  return source;
-}
-
-export function recordHelpExposure(input: { attemptId: string; id?: string; kind: HelpExposure["kind"]; detail?: string; capturedAt?: number; delivery?: HelpExposure["delivery"] }): HelpExposure {
-  return appendEvidence("helpExposures", { ...evidenceSource(sourceOf(input.attemptId)), ...input, id: input.id ?? newId(), capturedAt: input.capturedAt ?? Date.now(), delivery: input.delivery ?? "released" });
-}
-
-export function recordFirstResponse(input: { attemptId: string; id?: string; response: string; correct: boolean; capturedAt?: number }): ResponseEvent {
-  // Opening a fresh snapshot also discovers another tab's immutable response candidates.
-  const source = sourceOf(input.attemptId);
-  const a = openOrResumeAttempt(source);
+/** A first answer that missed, saved before its feedback shows. A later miss on the question adds nothing. */
+export function recordFirstMiss(source: AttemptSource, input: { response: string; choice?: number }): ResponseEvent {
+  const a = attemptFor(source);
   if (a.firstResponse) return a.firstResponse;
-  return appendEvidence("responseEvents", { ...evidenceSource(source), ...input, id: input.id ?? newId(), response: input.response.slice(0, 80), capturedAt: input.capturedAt ?? Date.now(), assisted: a.assistance.assisted });
+  const miss: ResponseEvent = {
+    id: `${a.id}:first`,
+    attemptId: a.id,
+    profileId: source.profileId,
+    skillId: source.skillId,
+    capturedAt: Date.now(),
+    response: input.response.slice(0, 80),
+    ...(input.choice !== undefined ? { choice: input.choice } : {}),
+    correct: false,
+    assisted: a.assistance.assisted,
+  };
+  appendEvidence([contextRow(source, a.id), { list: "responseEvents", record: miss }]);
+  return read().responseEvents.find((r) => r.id === miss.id) ?? miss;
+}
+
+/**
+ * What went wrong saving evidence, for the screen to say: "storage" (this device can't keep it) or
+ * "stale" (another tab changed it: read it again). Anything else is a bug and is thrown on.
+ */
+export function evidenceProblem(e: unknown): "storage" | "stale" {
+  if (e instanceof EvidenceError) return e.reason;
+  if (e instanceof DOMException) return "storage";
+  throw e;
 }

@@ -46,7 +46,7 @@ describe("QuizView", () => {
     await userEvent.click(screen.getByRole("button", { name: /Show a hint/ }));
     await userEvent.click(screen.getByLabelText("1/2"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
-    expect(onAnswer).toHaveBeenCalledWith({ sceneId: "s5:q1", correct: true, assisted: true, response: "1/2" });
+    expect(onAnswer).toHaveBeenCalledWith({ sceneId: "s5:q1", correct: true, assisted: true, response: "1/2", choice: 0 });
     expect(screen.getByText("That's right, with help.")).toBeInTheDocument();
   });
 
@@ -55,10 +55,10 @@ describe("QuizView", () => {
     render(<QuizView scene={scene} onAnswer={onAnswer} />);
     await userEvent.click(screen.getByLabelText("1/4"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
-    expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s5:q1", correct: false, assisted: false, response: "1/4" });
+    expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s5:q1", correct: false, assisted: false, response: "1/4", choice: 1 });
     await userEvent.click(screen.getByLabelText("1/2"));
     await userEvent.click(screen.getByRole("button", { name: "Check" }));
-    expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s5:q1", correct: true, assisted: true, response: "1/2" });
+    expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s5:q1", correct: true, assisted: true, response: "1/2", choice: 0 });
   });
 });
 
@@ -82,7 +82,7 @@ describe("QuizView focus", () => {
     await user.click(screen.getByLabelText("1/2"));
     check.focus();
     await user.keyboard("{Enter}");
-    expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s6:q1", correct: true, assisted: true, response: "1/2" });
+    expect(onAnswer).toHaveBeenLastCalledWith({ sceneId: "s6:q1", correct: true, assisted: true, response: "1/2", choice: 0 });
     expect(document.activeElement).toBe(check);
     await user.click(screen.getByRole("button", { name: "Next question" }));
     expect(document.activeElement).toHaveTextContent("Which is less?");

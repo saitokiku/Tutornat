@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { signUp } from "./auth";
-import { openPracticeAttempt, paceOf, recordAnswer, startSet, wholeMinutes } from "./practice";
+import { openPracticeAttempt, paceOf, recordAnswer, startSet, statusesOf, wholeMinutes } from "./practice";
 import { createLearner } from "./profiles";
 import { read, resetMemory, update } from "./store";
 import type { Grade, Profile } from "./types";
@@ -57,11 +57,17 @@ describe("recordAnswer", () => {
     expect(right.why).toBeUndefined();
   });
 
-  it("a check asking for content help becomes assisted practice", async () => {
+  it("a helped check answer stays a check answer, marked helped, and the check is graded with it", async () => {
     const p = await learner();
     const id = startSet(read(), { profile: p, kind: "check", skillIds: ["m.round"], now: NOW })!;
     recordAnswer(id, { slot: 0, level: 2, correct: true, assisted: true, seconds: 5 });
-    expect(read().attempts[0]).toMatchObject({ mode: "practice", assisted: true });
+    expect(read().attempts[0]).toMatchObject({ mode: "check", assisted: true });
+    // Two misses and one helped: three of five aren't on the learner's own, so the check is not passed.
+    recordAnswer(id, { slot: 1, level: 2, correct: false, assisted: false, seconds: 5 });
+    recordAnswer(id, { slot: 2, level: 2, correct: false, assisted: false, seconds: 5 });
+    recordAnswer(id, { slot: 3, level: 2, correct: true, assisted: false, seconds: 5 });
+    recordAnswer(id, { slot: 4, level: 2, correct: true, assisted: false, seconds: 5 });
+    expect(read().attempts.filter((a) => a.setId === id).map((a) => a.mode)).toEqual(["check", "check", "check", "check", "check"]);
   });
 
   it("records one final answer for repeated submission of a slot", async () => {
@@ -78,8 +84,21 @@ describe("recordAnswer", () => {
     const p = await learner();
     const id = startSet(read(), { profile: p, kind: "pick", skillIds: ["m.round"], now: NOW })!;
     const a = openPracticeAttempt(id, 0, 1);
-    expect(() => recordAnswer(id, { slot: 0, level: 2, attemptId: a.id, correct: true, assisted: false, seconds: 5 })).toThrow(/stale/i);
+    expect(() => recordAnswer(id, { slot: 0, level: 2, attemptId: a.id, correct: true, assisted: false, seconds: 5 })).toThrow(expect.objectContaining({ reason: "stale" }));
     expect(read().attempts).toEqual([]);
+  });
+
+  it("the check law reads a helped check answer as not on the learner's own", async () => {
+    const p = await learner();
+    const id = startSet(read(), { profile: p, kind: "check", skillIds: ["m.round"], now: NOW })!;
+    // Four right on their own and one helped: still a pass (4 of 5)…
+    for (let i = 0; i < 5; i++) recordAnswer(id, { slot: i, level: 2, correct: true, assisted: i === 0, seconds: 5 });
+    const passed = statusesOf(read(), p.id, NOW + 1000)["m.round"];
+    expect(passed.state).toBe("checked");
+    // …and three on their own with one helped and one miss is a failed check, counted as one.
+    const again = startSet(read(), { profile: p, kind: "check", skillIds: ["m.round"], now: NOW })!;
+    for (let i = 0; i < 5; i++) recordAnswer(again, { slot: i, level: 2, correct: i !== 1, assisted: i === 0, seconds: 5 });
+    expect(statusesOf(read(), p.id, NOW + 2000)["m.round"].state).toBe("practicing");
   });
 
   it("ignores answers to a finished set", async () => {

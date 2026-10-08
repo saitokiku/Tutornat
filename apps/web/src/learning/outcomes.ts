@@ -202,7 +202,10 @@ function checkDecides(act: TeachingAct, ix: Index, now: number): Judged {
   return PENDING;
 }
 
-/** Prep before a school test → every linked skill secure (ready or better) going into the test day. */
+/**
+ * Prep before a school test → every linked skill secure going into the test day: ready, checked or
+ * proved. A proved skill that needs a refresh has slipped since, so it is not secure for the test.
+ */
 function testGoesWell(act: TeachingAct, ix: Index, now: number): Judged {
   const event = ix.r.events?.find((e) => e.id === act.ref && e.profileId === act.profileId);
   if (!event) return PENDING;
@@ -211,7 +214,11 @@ function testGoesWell(act: TeachingAct, ix: Index, now: number): Judged {
   const base = { about: event.title, school: school && { score: school.score, outOf: school.outOf } };
   const start = startOfDay(event.date);
   if (!linked.length || now < start) return { ...PENDING, ...base };
-  const secure = linked.filter((id) => isSecure(skillStatus(id, (ix.allBySkill.get(`${act.profileId}|${id}`) ?? []).filter((a) => a.at < start), start))).length;
+  const holding = (id: string) => {
+    const s = skillStatus(id, (ix.allBySkill.get(`${act.profileId}|${id}`) ?? []).filter((a) => a.at < start), start);
+    return isSecure(s) && s.state !== "refresh";
+  };
+  const secure = linked.filter(holding).length;
   return { ...base, status: secure === linked.length ? "met" : "missed", resolvedAt: start, score: { n: secure, of: linked.length } };
 }
 

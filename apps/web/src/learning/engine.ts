@@ -1,12 +1,23 @@
 import type { Grade, Subject } from "@/lib/types";
 import { getSkill, gradeIndex, skillsFor } from "@/practice/skills";
 import type { Skill } from "@/practice/types";
-import type { Attempt, HelpExposure, PracticeSet, ResponseEvent, Slot } from "./types";
+import type { Attempt, HelpExposure, PracticeSet, Slot } from "./types";
 
 // The learning engine. Every function here is pure: evidence in, decisions out, `now` passed in.
 // The rules are the owner-approved mastery law from the earlier repos (Kaizen-AI engine, trellis):
 // practice never proves anything; a skill is proved only by unassisted, code-checked checks on
 // fresh problems, delayed after the last help, passed on two different days.
+//
+// What counts as help (the check clock restarts at the last help on the skill). Current policy; the
+// owner has not been asked to change it (docs/DECISIONS.md):
+//   - a hint, the worked steps, a lesson explanation: help, from the moment it is shown, saved before
+//     it shows. A problem left unanswered after help still had help (its HelpExposure counts here).
+//   - opening the tutor beside a problem: help on that problem (a synced "tutor" row, and its exposure).
+//   - a missed first answer: not help to this law. The answer after it on the same problem is
+//     recorded as helped, and that helped answer is what restarts the clock.
+//   - a check answer with any help stays a check answer, marked helped: not on the learner's own.
+// A passed check after "needs a refresh" restores only the refresh before it; a later run of misses
+// opens a new refresh (replayed in time order). The RULES numbers are unchanged by that.
 
 export const RULES = {
   /** Correct-on-your-own answers in a row that move a learner up a level inside a skill. */
@@ -97,7 +108,10 @@ function checksOf(attempts: Attempt[]) {
 
 const dayKey = (t: number) => new Date(t).toDateString();
 
-export function skillStatus(skillId: string, all: Attempt[], now: number, evidence: { help?: readonly HelpExposure[]; responses?: readonly ResponseEvent[] } = {}): SkillStatus {
+/** Saved evidence beside the answers: help shown on questions, answered or not. */
+export type Evidence = { help?: readonly HelpExposure[] };
+
+export function skillStatus(skillId: string, all: Attempt[], now: number, evidence: Evidence = {}): SkillStatus {
   const skill = getSkill(skillId);
   const mine = all.filter((a) => a.skillId === skillId).sort((a, b) => a.at - b.at);
   // Tutor help rows mark help (they restart the check clock) but are not answers.
@@ -111,7 +125,6 @@ export function skillStatus(skillId: string, all: Attempt[], now: number, eviden
   const helpTimes = [
     ...mine.filter((a) => a.assisted).map((a) => a.at),
     ...(evidence.help ?? []).filter((h) => h.skillId === skillId).map((h) => h.receivedAt ?? h.capturedAt),
-    ...(evidence.responses ?? []).filter((r) => r.skillId === skillId && !r.correct).map((r) => r.receivedAt ?? r.capturedAt),
   ];
   const lastHelpAt = helpTimes.length ? Math.max(...helpTimes) : undefined;
   if (!skill || !mine.length) return { ...base, state: "new", level: 1, ...(lastHelpAt === undefined ? {} : { lastHelpAt }) };
@@ -183,10 +196,14 @@ export const isSecure = (s: SkillStatus) => s.state === "ready" || s.state === "
 
 export type Statuses = Record<string, SkillStatus>;
 
-export function allStatuses(attempts: Attempt[], now: number, subject?: Subject, evidence: { help?: readonly HelpExposure[]; responses?: readonly ResponseEvent[] } = {}): Statuses {
-  const ids = new Set([...attempts.map((a) => a.skillId), ...(evidence.help ?? []).map((h) => h.skillId), ...(evidence.responses ?? []).map((r) => r.skillId)]);
+/** Every skill in the record. Lesson questions and AI topics have no skill in the map, so no status. */
+export function allStatuses(attempts: Attempt[], now: number, subject?: Subject, evidence: Evidence = {}): Statuses {
+  const ids = new Set([...attempts.map((a) => a.skillId), ...(evidence.help ?? []).map((h) => h.skillId)]);
   const out: Statuses = {};
-  for (const id of ids) if (!subject || getSkill(id)?.subject === subject) out[id] = skillStatus(id, attempts, now, evidence);
+  for (const id of ids) {
+    const skill = getSkill(id);
+    if (skill && (!subject || skill.subject === subject)) out[id] = skillStatus(id, attempts, now, evidence);
+  }
   return out;
 }
 

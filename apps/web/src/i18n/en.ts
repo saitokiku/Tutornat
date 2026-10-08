@@ -436,6 +436,8 @@ const en = {
   "practice.rightHelped": "Right, with help.",
   "practice.notYet": "Not yet. Try again, or take a hint.",
   "practice.evidenceSaveFailed": "Your work couldn't be saved. Free some space or enable browser storage, then try again.",
+  "practice.evidenceSaveFailedYoung": "This device can't save your work right now. Please get a grown-up.",
+  "practice.evidenceStale": "This changed in another tab, so it has been loaded again.",
   "practice.notYetSteps": "Not yet. You can see how it's done, then answer.",
   "practice.hints": "Hints",
   "practice.howTitle": "How it's done",
@@ -635,7 +637,7 @@ const en = {
   "school.fromSchool": "from school",
   "nav.calendar": "Calendar",
 
-  "tutor.open.problem": "What have you tried so far?",
+  "tutor.open.problem": "Which part is tricky?",
   "tutor.open.homework": "Let's look at {title} together. Which part are you on?",
   "tutor.open.lesson": "What part of this would you like to go over?",
   "tutor.open.talk": "What would you like to learn or work on?",

@@ -1,18 +1,26 @@
+import { attemptIdentity } from "@/learning/evidence";
+import type { AttemptSource } from "@/learning/types";
 import { appendEvidence, newId, update } from "./store";
 import type { ActivityEvent, Course, Lesson } from "./types";
-import type { AttemptSource } from "@/learning/types";
 
 // Activity is a record of what happened. Nothing here computes mastery: completion and correct answers
 // stay separate from "with a hint", and none of it is turned into a score.
 
-/** Legacy lesson checks are practice, with a scoped identifier until reviewed skill mapping lands. */
-export function sceneAttemptSource(profileId: string, courseId: string, lessonId: string, sceneId: string, questionId: string): AttemptSource {
-  return { kind: "scene-question", profileId, courseId, sceneId: `${lessonId}/${sceneId}`, questionId, skillId: `scene:${courseId}:${lessonId}:${sceneId}`, itemFingerprint: `${lessonId}/${questionId}`, contentVersion: "legacy" };
+/**
+ * A lesson's check question. Lesson checks are practice: their skill is a scoped name, not a skill in
+ * the map, until reviewed skill mapping lands. `checkId` is the stage's "<scene>:<question>".
+ */
+export function sceneAttemptSource(profileId: string, courseId: string, lessonId: string, sceneId: string, checkId: string): AttemptSource {
+  return { kind: "scene-question", profileId, courseId, sceneId: `${lessonId}/${sceneId}`, questionId: checkId, skillId: `scene:${courseId}:${lessonId}:${sceneId}`, itemFingerprint: `${lessonId}/${checkId}`, contentVersion: "legacy" };
 }
 
+/** A lesson answer's id: one first answer and one right answer per question, however long the course's ids. */
+export const lessonAnswerId = (source: AttemptSource, correct: boolean) => `${attemptIdentity(source)}:${correct ? "right" : "miss"}`;
+
+/** Records what happened. With an `id` (a lesson answer), it is evidence: saved once, and before its feedback shows. */
 export function record(e: Omit<ActivityEvent, "id" | "at">, id?: string) {
   const row = { ...e, id: id ?? newId(), at: Date.now() };
-  if (id) appendEvidence("activity", row);
+  if (id) appendEvidence([{ list: "activity", record: row }]);
   else update((s) => void s.activity.push(row));
 }
 
