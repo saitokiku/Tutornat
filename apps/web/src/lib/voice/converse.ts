@@ -187,11 +187,12 @@ export function converse({
         held = null;
         const duckMs = duckedAt != null ? Math.round(duckedAt - a.onsetAt) : null;
         const stopMs = Math.round(now() + a.fadeMs - a.onsetAt);
+        // The caller hears of the barge-in first (while what was heard is still known), then the voice stops.
+        onBargeIn?.();
         output?.cancel({ fadeMs: a.fadeMs }); // ends the run, which resets the duck
         if (output) onMetric?.({ name: "barge-in", duckMs, stopMs, vendor: output.kind });
         duckedAt = null;
         onDuck?.(false);
-        onBargeIn?.();
       }
     }
   }

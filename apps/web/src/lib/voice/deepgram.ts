@@ -109,7 +109,7 @@ export type DeepgramOptions = {
   now?: () => number;
 };
 
-export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): void; dispose(): void } {
+export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): void; dispose(): void; readonly model: "flux" | "nova" | null } {
   const f = o.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const WS = o.WebSocket ?? WebSocket;
   const capture = o.capture ?? micCapture;
@@ -395,6 +395,10 @@ export function deepgramSpeechIn(o: DeepgramOptions): SpeechIn & { prepare(): vo
   const input = {
     kind: "deepgram" as const,
     duplex: true,
+    /** Which Deepgram model the last stream used, for the latency log. */
+    get model(): "flux" | "nova" | null {
+      return session ? (flux ? "flux" : "nova") : null;
+    },
     get listening() {
       return listening;
     },

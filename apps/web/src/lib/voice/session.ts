@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Key } from "@/i18n/en";
-import { converse, type MicOffReason, type VoiceMetric } from "./converse";
+import { converse, type ConverseMetric, type MicOffReason } from "./converse";
+import { useAppVoice, useHasAppVoice } from "./root";
 import { voice, voiceDisclosure, type Voice, type VoiceSetup } from "./select";
 import type { ListenOptions, SpeakSource, SpeechIn, VoiceErrorCode } from "./types";
 
-// One hook for a screen that talks: builds the learner's voice (vendor or browser), keeps the
-// microphone and the speaker in step (backchannels pass, barge-in stops the tutor, echo is set
-// aside) and exposes plain state for the UI. Nothing starts by itself: speaking and listening begin
-// only from the caller, and listening is push-to-talk unless the caller asks for turns: "auto".
+// One hook for a screen that talks: keeps the microphone and the speaker in step (backchannels pass,
+// barge-in stops the tutor, echo is set aside) and exposes plain state for the UI. Inside VoiceRoot it
+// uses the app's one voice (spec §2.7); outside it (tests, a standalone page) it builds its own.
+// Nothing starts by itself: speaking and listening begin only from the caller, and listening is
+// push-to-talk unless the caller asks for turns: "auto". The talking tutor uses useTutorVoice.
 
 export type VoiceSession = {
   /** voice() has finished choosing. */
@@ -61,7 +63,7 @@ export type SessionOptions = Omit<VoiceSetup, "fetch"> & {
   /** The learner talked over the tutor, or answered while the reply was on its way (its speech already stopped): stop the reply too. */
   onBargeIn?: () => void;
   /** Voice timings, for the quality bars (first audio < 1.5 s; barge-in ≈ 300 ms). */
-  onMetric?: (m: VoiceMetric) => void;
+  onMetric?: (m: ConverseMetric) => void;
 };
 
 export function useVoiceSession({ locale, consent, under13, band, learner, names, onTurn, onBargeIn, onMetric }: SessionOptions): VoiceSession {
@@ -82,15 +84,29 @@ export function useVoiceSession({ locale, consent, under13, band, learner, names
     handlers.current = { onTurn, onBargeIn, onMetric };
   });
   const nameKey = (names ?? []).join("\u0000");
+  const inRoot = useHasAppVoice();
+  const app = useAppVoice();
+  // Inside VoiceRoot: the app's voice, once it is built (never disposed here: the app owns it).
+  const shared: Voice | null = useMemo(
+    () =>
+      inRoot && app.ready
+        ? { out: app.out, in: app.in, vendor: { out: app.out.kind, in: app.in?.kind ?? null }, allowed: !!app.learner?.consent, tier: app.tier, autoRead: app.autoRead, conversation: app.conversation, deviceOut: null, tip: app.tip }
+        : null,
+    [inRoot, app.ready, app.out, app.in, app.learner, app.tier, app.autoRead, app.conversation, app.tip],
+  );
 
   useEffect(() => {
     let alive = true;
     let cleanup = () => {};
     const nameList = nameKey ? nameKey.split("\u0000") : [];
-    void voice({ locale, consent, under13, band, learner, names: nameList }).then((made) => {
+    if (inRoot && !shared) return;
+    const made$ = shared ? Promise.resolve(shared) : voice({ locale, consent, under13, band, learner, names: nameList });
+    void made$.then((made) => {
       if (!alive) {
-        made.out?.dispose();
-        made.in?.abort();
+        if (!shared) {
+          made.out?.dispose();
+          made.in?.abort();
+        }
         return;
       }
       const subs = [
@@ -130,7 +146,7 @@ export function useVoiceSession({ locale, consent, under13, band, learner, names
       cleanup = () => {
         c.dispose();
         subs.forEach((u) => u?.());
-        made.out?.dispose();
+        if (!shared) made.out?.dispose();
         made.in?.abort();
         talk.current = null;
       };
@@ -143,7 +159,7 @@ export function useVoiceSession({ locale, consent, under13, band, learner, names
       setSpeaking(false);
       setListening(false);
     };
-  }, [locale, consent, under13, band, learner, nameKey]);
+  }, [locale, consent, under13, band, learner, nameKey, inRoot, shared]);
 
   const say = useCallback((source: SpeakSource) => {
     setOutError(null);
