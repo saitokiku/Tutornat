@@ -282,6 +282,10 @@ function reading(focus: Focus, meta: Omit<Skill, "subject" | "levels" | "content
   };
 }
 
+// Each skill carries one Common Core code so the standard's wording can be looked up. Several skills mix
+// literary and informational passages under that one code (the paired texts include a poem beside an
+// article and a story beside an article, closer to RL/RI.x.9 than to RI.8.9); a teacher should confirm
+// the codes when the banks are reviewed.
 export const ENGLISH_READING_6_9: Skill[] = [
   reading("central", {
     id: "e.central.summary",
