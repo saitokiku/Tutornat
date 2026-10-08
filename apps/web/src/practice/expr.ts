@@ -200,10 +200,17 @@ export function isFactored(n: Node): boolean {
 
 /**
  * No parentheses left to multiply out: a sum of terms where no term multiplies a sum. A fraction
- * coefficient in parentheses, as in (3/2)x or −(7/3)x, has nothing to multiply out.
+ * coefficient in parentheses, as in (3/2)x or −(7/3)x, has nothing to multiply out, and neither has one
+ * term over a number, as in (7x)/4, −(7x)/3 or (7x/4).
  */
 export function isExpanded(src: string): boolean {
-  return !/[()]/.test(src.replace(/\^\(-?\d+\)/g, "").replace(/\(\s*[-−]?\s*\d+\s*\/\s*\d+\s*\)/g, ""));
+  return !/[()]/.test(
+    src
+      .replace(/\^\(-?\d+\)/g, "")
+      .replace(/\(\s*[-−]?\s*\d+\s*\/\s*\d+\s*\)/g, "")
+      .replace(/\(\s*[-−]?\s*\d*\s*\*?\s*[a-z]\s*\)(?=\s*\/\s*\d)/gi, "")
+      .replace(/\(\s*[-−]?\s*\d*\s*\*?\s*[a-z]\s*\/\s*\d+\s*\)/gi, ""),
+  );
 }
 
 /** The top-level terms of a sum: a + b − c → [a, b, c]. */

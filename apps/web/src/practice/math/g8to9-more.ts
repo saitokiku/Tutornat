@@ -4,9 +4,9 @@ import { gcd, lcm, type Rng } from "../rng";
 import { sayFrac, sayNum, show, tr } from "../text";
 import type { Answer, Choice, ItemBody, MathPart, Skill } from "../types";
 
-// Grades 8–9, second strand. Grade 8: irrational numbers and estimating roots, transformations, triangle
-// angles, volume of round solids, functions, comparing linear functions, lines of best fit, and equations
-// with no or many solutions. Grade 9: absolute value, standard form, elimination, domain and range,
+// Grades 8–9, second strand. Grade 8: rational and irrational numbers, estimating roots, transformations,
+// triangle angles, volume of round solids, functions, comparing linear functions, lines of best fit, and
+// equations with no or many solutions. Grade 9: absolute value, standard form, elimination, domain and range,
 // average rate of change, sequences, exponential models, radicals, the vertex and the quadratic formula.
 // Every problem is built backward from an exact answer (integers, or whole hundredths for decimals), and
 // every wrong choice or likely wrong value names the mistake it stands for.
@@ -290,7 +290,10 @@ function rootTenth(r: Rng, locale: Locale): ItemBody {
     hints: [
       tr(locale, `${k}² = ${k * k} and ${k + 1}² = ${(k + 1) ** 2}. Is ${n} nearer the start or the end of that gap?`, `${k}² = ${k * k} y ${k + 1}² = ${(k + 1) ** 2}. ¿${n} está más cerca del principio o del final de ese tramo?`),
       tr(locale, `Square tenths such as ${k}.1, ${k}.2 and so on until you pass ${n}. Then pick the tenth whose square is closer to ${n}.`, `Eleva al cuadrado décimas como ${k}.1, ${k}.2 y así hasta pasar ${n}. Luego elige la décima cuyo cuadrado está más cerca de ${n}.`),
-      tr(locale, `${low}² = ${lowSq}, which is less than ${n}.`, `${low}² = ${lowSq}, que es menor que ${n}.`),
+      // When the tenth below √n is k itself, hint 1 has already squared k, so the last hint squares k.1.
+      A % 10 === 0
+        ? tr(locale, `${high}² = ${highSq}, which is more than ${n}.`, `${high}² = ${highSq}, que es mayor que ${n}.`)
+        : tr(locale, `${low}² = ${lowSq}, which is less than ${n}.`, `${low}² = ${lowSq}, que es menor que ${n}.`),
     ],
     steps: [
       tr(locale, `${low}² = ${lowSq} and ${high}² = ${highSq}`, `${low}² = ${lowSq} y ${high}² = ${highSq}`),
@@ -1442,7 +1445,7 @@ function elimination(r: Rng, level: number, locale: Locale): ItemBody {
       level === 1
         ? tr(locale, "Look for a variable whose coefficients in the two equations are the same, opposites, or one a multiple of the other.", "Busca una variable cuyos coeficientes en las dos ecuaciones sean iguales, opuestos o uno múltiplo del otro.")
         : tr(locale, "Neither variable cancels yet. Pick one and multiply so its coefficients become opposites.", "Todavía no se cancela ninguna variable. Elige una y multiplica para que sus coeficientes queden opuestos."),
-      tr(locale, `${how} so that ${u} cancels. Solve for ${v}, then substitute back to find ${u}.`, `${how} para que ${u} se cancele. Resuelve para ${v} y luego sustituye para hallar ${u}.`),
+      tr(locale, `${how} so that ${u} cancels. Solve for ${v}, then substitute back to find ${u}.`, `${how} para que ${u} se cancele. Resuelve para ${v}. Luego sustituye para hallar ${u}.`),
       tr(locale, `That gives ${combined}.`, `Eso da ${combined}.`),
     ],
     steps: [K === 1 ? `${how}: ${combined}` : `${how}: ${combined}, ${so} ${v} = ${show(sol[j])}`, `${back}, ${so} ${u} = ${show(sol[k])}`, pt(sol[0], sol[1])],
@@ -1596,7 +1599,7 @@ function rateOfChange(r: Rng, level: number, locale: Locale): ItemBody {
       ]),
       hints: [
         meaning,
-        tr(locale, `Read ${f}(${show(a)}) and ${f}(${show(b)}) from the values. Subtract them in the same order as the inputs, then divide.`, `Lee ${f}(${show(a)}) y ${f}(${show(b)}) en los valores. Réstalos en el mismo orden que las entradas y luego divide.`),
+        tr(locale, `Find ${f}(${show(a)}) and ${f}(${show(b)}) in the list. Subtract them in the same order as the inputs, then divide.`, `Busca ${f}(${show(a)}) y ${f}(${show(b)}) en la lista de valores. Réstalos en el mismo orden que las entradas y luego divide.`),
         tr(locale, `${f}(${show(b)}) = ${show(fb)} and ${f}(${show(a)}) = ${show(fa)}.`, `${f}(${show(b)}) = ${show(fb)} y ${f}(${show(a)}) = ${show(fa)}.`),
       ],
       steps: [`${f}(${show(b)}) − ${f}(${show(a)}) = ${show(fb)} − ${par(fa)} = ${show(dy)}`, `${show(b)} − ${par(a)} = ${dx}`, `${show(dy)} ÷ ${dx} = ${fracShow(dy, dx)}`],
@@ -1843,9 +1846,15 @@ function expGrowth(r: Rng, level: number, locale: Locale): ItemBody {
     };
   }
   const kind = r.pick(["savings", "value", "town"] as const);
-  const t = kind === "town" ? r.int(2, 5) : r.int(2, 4);
-  const p = kind === "savings" ? r.pick([2, 3, 4, 5, 6, 8, 10]) : kind === "value" ? r.pick([10, 15, 20, 25]) : r.pick([2, 3, 4, 5]);
-  const start = kind === "savings" ? r.pick([200, 500, 800, 1000, 1500, 2000]) : kind === "value" ? r.pick([300, 400, 500, 600, 800]) : r.int(4, 18) * 500;
+  let t = 0, p = 0, start = 0;
+  // A town's count is accepted one person either way, so a town whose simple-growth count lands that
+  // close (3,500 people at 2% for 2 years: 3,641 compound, 3,640 simple) is drawn again; otherwise the
+  // strand's main mistake would be marked right. Money is never this close (8 cents or more).
+  do {
+    t = kind === "town" ? r.int(2, 5) : r.int(2, 4);
+    p = kind === "savings" ? r.pick([2, 3, 4, 5, 6, 8, 10]) : kind === "value" ? r.pick([10, 15, 20, 25]) : r.pick([2, 3, 4, 5]);
+    start = kind === "savings" ? r.pick([200, 500, 800, 1000, 1500, 2000]) : kind === "value" ? r.pick([300, 400, 500, 600, 800]) : r.int(4, 18) * 500;
+  } while (kind === "town" && Math.abs(roundDiv(start * (100 + p) ** t, 100 ** t) - (start * (100 + p * t)) / 100) <= 1);
   const up = kind !== "value";
   const f = up ? 100 + p : 100 - p;
   // Exact value = start · f^t / 100^t; money is rounded to whole cents, people to whole people.
@@ -2071,8 +2080,8 @@ function quadFormula(r: Rng, level: number, locale: Locale): ItemBody {
         const raw = [p * s, -(p * t + q * s), q * t];
         const g = gcd(gcd(Math.abs(raw[0]), Math.abs(raw[1])), Math.abs(raw[2])) || 1;
         [A, B, Cc] = raw.map((v) => v / g);
-        // Numbers a ninth grader can work by hand: a ≤ 10 and |b| ≤ 20.
-        if (A > 10 || Math.abs(B) > 20 || Math.abs(Cc) > 40) continue;
+        // Numbers a ninth grader can work by hand: a ≤ 10, |b| ≤ 20, and b² − 4ac ≤ 400 (a root of 20 at most).
+        if (A > 10 || Math.abs(B) > 20 || Math.abs(Cc) > 40 || B * B - 4 * A * Cc > 400) continue;
         roots = [[q, p], [t, s]];
       }
       break;
@@ -2159,9 +2168,11 @@ const skill = (id: string, grade: "8" | "9", en: string, es: string, standard: s
 });
 
 export const MATH_8_9_MORE: Skill[] = [
-  // One code per skill: levels 2 and 3 (estimating roots) are 8.NS.A.2; level 1 (rational or irrational) is 8.NS.A.1.
-  skill("m.irrational", "8", "Irrational numbers and estimating roots", "Números irracionales y estimación de raíces", "8.NS.A.2", ["m.sqrt", "m.dec.tenths"], 3, (r, level, locale) =>
-    level === 1 ? irrationalL1(r, locale) : level === 2 ? rootBetween(r, locale) : rootTenth(r, locale),
+  // One standard per skill, so telling rational from irrational (8.NS.A.1) and estimating roots (8.NS.A.2)
+  // are two skills, the first a step to the second.
+  skill("m.irrational.identify", "8", "Rational and irrational numbers", "Números racionales e irracionales", "8.NS.A.1", ["m.sqrt", "m.dec.tenths"], 1, (r, _level, locale) => irrationalL1(r, locale)),
+  skill("m.irrational", "8", "Estimate irrational square roots", "Estimar raíces cuadradas irracionales", "8.NS.A.2", ["m.irrational.identify", "m.sqrt", "m.dec.tenths"], 2, (r, level, locale) =>
+    level === 1 ? rootBetween(r, locale) : rootTenth(r, locale),
   ),
   skill("m.transform", "8", "Transformations on the coordinate plane", "Transformaciones en el plano de coordenadas", "8.G.A.3", ["m.int.addsub"], 2, transform),
   skill("m.angles.triangle", "8", "Angles in triangles", "Ángulos de los triángulos", "8.G.A.5", ["m.eq.twostep"], 3, triangleAngles),

@@ -56,7 +56,7 @@ const keyLabel = (item: Item) => {
 const text = (item: Item) => mathText(item.prompt);
 
 const IDS = [
-  "m.irrational", "m.transform", "m.angles.triangle", "m.volume.round", "m.func.identify", "m.linear.compare", "m.best.fit", "m.eq.solutions",
+  "m.irrational.identify", "m.irrational", "m.transform", "m.angles.triangle", "m.volume.round", "m.func.identify", "m.linear.compare", "m.best.fit", "m.eq.solutions",
   "m.abs.equation", "m.line.forms", "m.systems.elim", "m.domain.range", "m.rate.change", "m.sequences", "m.exp.growth", "m.radical.simplify", "m.quad.vertex", "m.quad.formula",
 ];
 /** Skills whose choice labels are words, so they are translated. */
@@ -76,7 +76,12 @@ describe("grades 8–9 second strand", () => {
       for (const p of s.prereqs) if (IDS.includes(p)) expect(seen.has(p), `${s.id} needs ${p} first`).toBe(true);
       seen.add(s.id);
     }
-    expect(MATH_8_9_MORE.filter((s) => s.grade === "8")).toHaveLength(8);
+    expect(MATH_8_9_MORE.filter((s) => s.grade === "8")).toHaveLength(9);
+    // One standard per skill: telling rational from irrational is 8.NS.A.1, estimating roots 8.NS.A.2.
+    const byId = new Map(MATH_8_9_MORE.map((s) => [s.id, s]));
+    expect(byId.get("m.irrational.identify")?.standard).toBe("8.NS.A.1");
+    expect(byId.get("m.irrational")?.standard).toBe("8.NS.A.2");
+    expect(byId.get("m.irrational")?.prereqs).toContain("m.irrational.identify");
     expect(MATH_8_9_MORE.filter((s) => s.grade === "9")).toHaveLength(10);
   });
 
@@ -143,6 +148,9 @@ describe("grades 8–9 second strand", () => {
             expect(`${text(item)} ${item.say}`, where).not.toMatch(/\btabl[ae]\b/i);
             if (item.visual || item.picture) expect(item.alt?.trim(), where).toBeTruthy();
           }
+          // Spanish never puts the conjunction right after the variable y ("resuelve para y y luego").
+          const esText = [...es.prompt.filter((p): p is string => typeof p === "string"), es.say, es.alt ?? "", ...es.hints, ...es.steps, ...(es.choices ?? []).flatMap((c) => [c.label, c.say ?? ""])];
+          for (const s of esText) expect(s, `${where}: ${s}`).not.toMatch(/\by y\b/);
           // Rule 16: every wrong choice names its mistake; likely wrong typed values are tagged and rejected.
           if (en.answer.kind === "choice") {
             en.choices!.forEach((c, i) => {
@@ -216,9 +224,9 @@ function isRational(label: string): boolean {
   throw new Error(`unknown number ${label}`);
 }
 
-describe("m.irrational", () => {
+describe("m.irrational.identify", () => {
   it("L1: exactly the keyed choice is of the kind asked for, and repeating decimals equal their fractions", () => {
-    each("m.irrational", 1, (item, where) => {
+    each("m.irrational.identify", 1, (item, where) => {
       const wantRational = /\brational\b/.test(item.prompt[0] as string) && !/irrational/.test(item.prompt[0] as string);
       item.choices!.forEach((c, i) => expect(isRational(c.label) === wantRational, `${where} ${c.label}`).toBe(i === (item.answer as { index: number }).index));
       // "0.454545… = 5/11": long division of the fraction gives the repeating block.
@@ -235,8 +243,11 @@ describe("m.irrational", () => {
       }
     });
   });
-  it("L2: the keyed whole numbers bracket the root, and no other choice does", () => {
-    each("m.irrational", 2, (item, where) => {
+});
+
+describe("m.irrational", () => {
+  it("L1: the keyed whole numbers bracket the root, and no other choice does", () => {
+    each("m.irrational", 1, (item, where) => {
       const n = num(/√(\d+)/.exec(item.prompt[0] as string)![1]);
       item.choices!.forEach((c, i) => {
         const [lo, hi] = nums(c.label.replace(/√\d+/, ""));
@@ -245,8 +256,9 @@ describe("m.irrational", () => {
       });
     });
   });
-  it("L3: the tapped point is √n to the nearest tenth, inside the pad, on a tick", () => {
-    each("m.irrational", 3, (item, where) => {
+  it("L2: the tapped point is √n to the nearest tenth, inside the pad, on a tick", () => {
+    let wholeBelow = 0;
+    each("m.irrational", 2, (item, where) => {
       const n = num(/√(\d+)/.exec(item.prompt[0] as string)![1]);
       if (item.answer.kind !== "number" || item.pad?.kind !== "number-line") throw new Error(where);
       expect(item.input, where).toBe("number-line");
@@ -263,11 +275,21 @@ describe("m.irrational", () => {
       const nearest = points.reduce((best, pt) => (Math.abs(pt.value - Math.sqrt(n)) < Math.abs(best.value - Math.sqrt(n)) ? pt : best));
       expect(points.filter((pt) => check(item.answer, pt.response).correct), where).toEqual([nearest]);
       for (const w of item.wrong!) expect(points.some((pt) => pt.response === w.value), `${where} ${w.value} is not a point`).toBe(true);
-      // The last hint squares one tenth, below √n; it never sets the two candidates side by side.
+      // The last hint squares one tenth next to √n, never the two side by side, and never a whole number,
+      // which hint 1 has already squared: the tenth below, or k.1 when the tenth below is k itself.
       const squared = [...item.hints[2].matchAll(/(\d+(?:\.\d)?)² = (\d+(?:\.\d+)?)/g)];
       expect(squared, `${where} ${item.hints[2]}`).toHaveLength(1);
-      expect(num(squared[0][1]) ** 2 < n && close(num(squared[0][1]) ** 2, num(squared[0][2])), `${where} ${item.hints[2]}`).toBe(true);
+      const [tenth, sq] = [num(squared[0][1]), num(squared[0][2])];
+      expect(close(tenth ** 2, sq), `${where} ${item.hints[2]}`).toBe(true);
+      expect(Number.isInteger(tenth), `${where} repeats hint 1: ${item.hints[2]}`).toBe(false);
+      const below = Math.floor(Math.sqrt(n) * 10 + 1e-9) / 10;
+      if (Number.isInteger(below)) {
+        wholeBelow++;
+        expect(close(tenth, below + 0.1) && sq > n && /more than/.test(item.hints[2]), `${where} ${item.hints[2]}`).toBe(true);
+      } else expect(close(tenth, below) && sq < n && /less than/.test(item.hints[2]), `${where} ${item.hints[2]}`).toBe(true);
+      for (const h of item.hints.slice(0, 2)) expect(h, where).not.toContain(squared[0][0]);
     });
+    expect(wholeBelow, "items where the tenth below √n is a whole number").toBeGreaterThan(0);
   });
 });
 
@@ -578,11 +600,15 @@ describe("m.line.forms", () => {
       const g = gcd(Math.abs(A), Math.abs(B)), [p, q] = [(-A / g) * Math.sign(B), Math.abs(B) / g], c = C / B;
       const tail = c === 0 ? "" : c < 0 ? ` - ${-c}` : ` + ${c}`;
       if (q !== 1) {
-        for (const form of [`(${p}/${q})x`, `${p < 0 ? "-" : ""}(${Math.abs(p)}/${q})x`, `${p}x/${q}`, `${p}/${q}x`, `${p}/${q} x`])
+        const neg = p < 0 ? "-" : "", ap = Math.abs(p);
+        const forms = [`(${p}/${q})x`, `${neg}(${ap}/${q})x`, `${p}x/${q}`, `${p}/${q}x`, `${p}/${q} x`, `(${p}x)/${q}`, `${neg}(${ap}x)/${q}`, `(${p}x/${q})`, `${neg}(${ap}x/${q})`];
+        for (const form of [...forms, ...forms.map((f) => f.replace(/-/g, "−"))])
           expect(check(item.answer, `y = ${form}${tail}`), `${where} y = ${form}${tail}`).toEqual({ correct: true });
         expect(item.steps[item.steps.length - 1], `${where} a bare n/d x reads as n/(dx)`).not.toMatch(/\d\/\d+ ?x/);
       }
+      // Still to multiply out: the whole right side over B, or 1/B times it.
       expect(check(item.answer, `y = (${C} - ${A}x)/${B}`), where).toEqual({ correct: false, form: "expanded" });
+      expect(check(item.answer, `y = (1/${B})(${C} - ${A}x)`), where).toEqual({ correct: false, form: "expanded" });
     });
   });
   it("L2: only the keyed choice is the same line, with whole-number coefficients, A positive and no common factor", () => {
@@ -647,7 +673,9 @@ describe("m.domain.range", () => {
 });
 
 describe("m.rate.change", () => {
-  it("L1: the fraction is the change in the table's outputs over the change in inputs, in lowest terms", () => {
+  it("L1: the fraction is the change in the listed outputs over the change in inputs, in lowest terms", () => {
+    for (const [locale, said] of [["en", /^Find [fh]\(−?\d+\) and [fh]\(−?\d+\) in the list\./], ["es", /^Busca [fh]\(−?\d+\) y [fh]\(−?\d+\) en la lista de valores\./]] as const)
+      each("m.rate.change", 1, (item, where) => expect(item.hints[1], where).toMatch(said), locale);
     each("m.rate.change", 1, (item, where) => {
       const t = item.prompt[0] as string;
       const m = /([xt]): ([^;]+); [fh]\([xt]\): ([^.]+)\./.exec(t)!;
@@ -765,6 +793,22 @@ describe("m.exp.growth", () => {
       expect(item.hints[0], where).toMatch(/drops/.test(t) ? /decay factor/ : /growth factor/);
     });
   });
+  it("L2: simple growth, the same amount each year, is always marked wrong and tagged (3,000 seeds)", () => {
+    // About 1 town in 60 would land within one person of the key if the generator did not draw it again.
+    let towns = 0;
+    for (let seed = 1; seed <= 3000; seed++) {
+      const item = makeItem("m.exp.growth", 2, seed, "en");
+      const where = `m.exp.growth L2 seed ${seed}`;
+      const t = item.prompt[0] as string;
+      const [start, p, years] = nums(t);
+      if (/people/.test(t)) towns++;
+      const simple = start * (1 + ((/drops/.test(t) ? -1 : 1) * p * years) / 100);
+      expect(check(item.answer, String(simple)).correct, `${where} ${t} simple growth ${simple} accepted`).toBe(false);
+      const tagged = item.wrong!.find((w) => w.why === "used-simple-growth-not-compound");
+      expect(!!tagged && close(Number(tagged.value), simple), `${where} simple growth ${simple} not tagged`).toBe(true);
+    }
+    expect(towns).toBeGreaterThan(500);
+  });
 });
 
 describe("m.radical.simplify", () => {
@@ -823,8 +867,9 @@ describe("m.quad.formula", () => {
         expect(new Set(item.answer.values).size, where).toBe(disc === 0 ? 1 : 2);
         if (item.answer.values.some((v) => !Number.isInteger(v))) fractional++;
         if (level === 1) expect(a, where).toBe(1);
-        // Worked by hand: no x² = 0, and level 2 keeps a ≤ 10 and |b| ≤ 20.
+        // Worked by hand: no x² = 0, b² − 4ac ≤ 400 (a root of 20 at most), and level 2 keeps a ≤ 10 and |b| ≤ 20.
         expect(b === 0 && c === 0, `${where} x² = 0`).toBe(false);
+        expect(disc, `${where} b² − 4ac`).toBeLessThanOrEqual(400);
         if (level === 2) expect(a <= 10 && Math.abs(b) <= 20, `${where} a = ${a}, b = ${b}`).toBe(true);
       });
       if (level === 2) expect(fractional).toBe(SEEDS.length);
