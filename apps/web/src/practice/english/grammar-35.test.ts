@@ -403,7 +403,9 @@ describe("answer keys, checked another way (grade 3)", () => {
     const s3 = (v: string) => (/(ch|sh|ss|x)$/.test(v) ? `${v}es` : `${v}s`);
     for (const e of picks("e.verb.tenses", 2, "en")) {
       const [s, key, , , , base] = e;
-      const when = /yesterday|last|ago/i.test(s) ? "past" : /tomorrow|next|later|in two/i.test(s) ? "future" : "present";
+      // Future time words are ones that cannot fit a past story: "Two weeks from now", not "In two weeks" (which can mean
+      // "within two weeks"). Any other time word is read as present here, and its future key then fails.
+      const when = /yesterday|last|ago/i.test(s) ? "past" : /tomorrow|next|later today|from now/i.test(s) ? "future" : "present";
       if (when === "past") expect(key, s).toBe(ed(base!));
       if (when === "future") expect(key, s).toBe(`will ${base}`);
       if (when === "present") expect([base, s3(base!)], s).toContain(key);
@@ -424,7 +426,9 @@ describe("answer keys, checked another way (grade 3)", () => {
     for (const e of picks("e.verb.tenses", 2, "es")) {
       const [s, key, , , , base] = e;
       const [inf, who] = base!.split("|");
-      const when = /ayer|anoche|pasad|hace dos/i.test(s) ? "past" : /mañana |próximo|más tarde|en dos/i.test(s) ? "future" : "present";
+      // "Más tarde Mía limpió su cuarto" and "En dos semanas presentó la obra" fit a past story, so only "mañana",
+      // "próximo/a" and "dentro de" count as future time words; any other reads as present and its future key fails.
+      const when = /ayer|anoche|pasad|hace dos/i.test(s) ? "past" : /mañana |próxim|dentro de/i.test(s) ? "future" : "present";
       expect(key, s).toBe(conj(inf, who, when));
       // Presente prospectivo ("Mañana salgo para Lima") is right with a future time word, so the present is never offered there.
       if (when === "future") for (const w of wrongOf(e)) expect(w, `${s} offers the present`).not.toBe(conj(inf, who, "present"));
@@ -459,6 +463,9 @@ describe("answer keys, checked another way (grade 3)", () => {
       if (flags.includes("edad")) expect((e[0].match(/\b(cinco|seis|siete|ocho|nueve|diez|once|doce)\b/g) ?? []).length, e[0]).toBeGreaterThanOrEqual(2);
       if (flags.includes("edad")) expect(e[0], e[0]).not.toMatch(/abuel/);
       expect(keyOf(e), e[0]).toBe(ES_IRR[word] + (flags.includes("plural") ? "es" : ""));
+      // Right before a plural noun, "más buenas" reads as a quantity ("saca más buenas notas": more good grades),
+      // which is correct Spanish, so it cannot be a wrong choice there.
+      if (flags.includes("plural") && !/___ que /.test(e[0])) for (const w of wrongOf(e)) expect(w, e[0]).not.toMatch(/^más (buen|mal)/);
     }
   });
 

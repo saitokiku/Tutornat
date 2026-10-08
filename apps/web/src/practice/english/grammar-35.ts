@@ -456,7 +456,7 @@ const timeQ = (locale: Locale) => ([s, cue, base, t, ...forms]: TimeFill): G => 
   tr(
     locale,
     `"${cue}" ${["means it already happened, so use the past tense", "means it happens again and again, so use the present tense, like the other verb", "means it has not happened yet, so use the future tense: will + the base verb"][t]}.`,
-    `"${cue}" ${["dice que ya pasó, así que va en pasado", "dice que pasa seguido, así que va en presente, como el otro verbo", "dice que todavía no pasa, así que va en futuro, con tilde al final"][t]}.`,
+    `"${cue}" ${["dice que ya pasó, así que va en pasado", "dice que pasa seguido, así que va en presente, como el otro verbo", "dice que todavía no pasa, así que va en futuro. Con él, ella o ellos, el futuro termina en -rá o -rán, con tilde"][t]}.`,
   ),
   base,
 ];
@@ -471,7 +471,7 @@ const EN_TIME: TimeFill[] = [
   ["Later today Mia ___ her room.", "Later today", "clean", 2, "cleaned", "cleans", "will clean"],
   ["Two days ago it ___ all night.", "Two days ago", "snow", 0, "snowed", "snows", "will snow"],
   ["Each spring the tulips grow tall and ___ in our yard.", "Each spring", "bloom", 1, "bloomed", "bloom", "will bloom"],
-  ["In two weeks our class ___ a play.", "In two weeks", "perform", 2, "performed", "performs", "will perform"],
+  ["Two weeks from now our class ___ a play.", "Two weeks from now", "perform", 2, "performed", "performs", "will perform"],
   ["Yesterday Grandpa ___ a fish.", "Yesterday", "catch", 0, "caught", "catches", "will catch"],
   ["Tomorrow Mom ___ pancakes.", "Tomorrow", "make", 2, "made", "makes", "will make"],
   ["On Saturdays Leila ___ the piano and then plays outside.", "On Saturdays", "practice", 1, "practiced", "practices", "will practice"],
@@ -486,10 +486,10 @@ const ES_TIME: TimeFill[] = [
   ["El próximo verano mi familia ___ a la playa.", "El próximo verano", "viajar|él", 2, "viajó", "viaja", "viajará"],
   ["Mi abuela lee un libro y ___ té todas las tardes.", "todas las tardes", "tomar|él", 1, "tomó", "toma", "tomará"],
   ["La semana pasada Omar ___ un cohete de juguete.", "La semana pasada", "construir|él", 0, "construyó", "construye", "construirá"],
-  ["Más tarde Mía ___ su cuarto.", "Más tarde", "limpiar|él", 2, "limpió", "limpia", "limpiará"],
+  ["Dentro de un rato Mía ___ su cuarto.", "Dentro de un rato", "limpiar|él", 2, "limpió", "limpia", "limpiará"],
   ["Hace dos días ___ toda la noche.", "Hace dos días", "nevar|él", 0, "nevó", "nieva", "nevará"],
   ["Cada primavera los tulipanes crecen y ___ en el jardín.", "Cada primavera", "florecer|ellos", 1, "florecieron", "florecen", "florecerán"],
-  ["En dos semanas nuestra clase ___ una obra de teatro.", "En dos semanas", "presentar|él", 2, "presentó", "presenta", "presentará"],
+  ["Dentro de dos semanas nuestra clase ___ una obra de teatro.", "Dentro de dos semanas", "presentar|él", 2, "presentó", "presenta", "presentará"],
   ["Ayer el abuelo ___ un pez.", "Ayer", "pescar|él", 0, "pescó", "pesca", "pescará"],
   ["Mañana mamá ___ panqueques.", "Mañana", "preparar|él", 2, "preparó", "prepara", "preparará"],
   ["Los sábados Leila ___ el piano y luego sale a jugar.", "Los sábados", "practicar|él", 1, "practicó", "practica", "practicará"],
@@ -513,7 +513,7 @@ const VERB_TENSES: Level[] = [
     ask: bi("Choose the verb that fits the time.", "Elige el verbo que va con el tiempo."),
     hints: bi(
       ["Find the words that tell when.", "Already happened: past. Happens again and again: present. Has not happened yet: will + the base verb (will jump, not will jumped)."],
-      ["Busca las palabras que dicen cuándo.", "Ya pasó: pasado. Pasa seguido: presente. Todavía no pasa: futuro, que lleva tilde al final (saltará, saltarán)."],
+      ["Busca las palabras que dicen cuándo.", "Ya pasó: pasado. Pasa seguido: presente. Todavía no pasa: futuro. Con él, ella o ellos, el futuro termina en -rá o -rán, con tilde (saltará, saltarán)."],
     ),
     seconds: 15,
     bank: pair(EN_TIME.map(timeQ("en")), ES_TIME.map(timeQ("es"))),
@@ -604,7 +604,7 @@ const ES_CMP2: Cmp[] = [
   ["Leo tiene seis años y su primo tiene nueve. Leo es ___ que su primo.", "pequeño|edad", "menor", [["mayor", "reversed-comparison"], ["más menor", "doubled-comparison"]], "Se comparan dos edades: seis años y nueve años."],
   ["Nuestro equipo jugó ___ que el otro equipo.", "bien", "mejor", [["más bien", "mas-bien-for-mejor"], ["más bueno", "mas-bueno-for-mejor"]], "Se comparan dos equipos, y la palabra es bien."],
   ["De todos los panaderos, mi abuela hace el ___ pan.", "bueno", "mejor", [["más bueno", "mas-bueno-for-mejor"], ["más mejor", "doubled-comparison"]], "Se compara a la abuela con todos los panaderos, y la palabra es bueno."],
-  ["Mía saca ___ notas en matemáticas que en ortografía.", "buenas|plural", "mejores", [["mejor", "number-agreement-slip"], ["más buenas", "mas-bueno-for-mejor"]], "Se comparan dos materias. Notas es plural."],
+  ["Mía saca ___ notas en matemáticas que en ortografía.", "buenas|plural", "mejores", [["mejor", "number-agreement-slip"], ["más mejores", "doubled-comparison"]], "Se comparan dos materias. Notas es plural."],
   ["Tengo más fiebre que el lunes. Hoy me siento ___ que el lunes.", "mal", "peor", [["mejor", "reversed-comparison"], ["más peor", "doubled-comparison"]], "Hoy hay más fiebre que el lunes, y la palabra es mal."],
   ["Este es el ___ libro que he leído.", "bueno", "mejor", [["más bueno", "mas-bueno-for-mejor"], ["más mejor", "doubled-comparison"]], "Este libro se compara con todos los que he leído, y la palabra es bueno."],
   ["La segunda canción fue ___ que la primera.", "buena", "mejor", [["más mejor", "doubled-comparison"], ["más buena", "mas-bueno-for-mejor"]], "Se comparan dos canciones, y la palabra es buena."],
@@ -1339,9 +1339,9 @@ const MODAL_TAGS = ["ability", "permission", "necessity", "possibility"];
 /** [sentence, meaning index, the helping verb] */
 type Modal = [string, number, string];
 const modalQ = (locale: Locale) => ([s, m, verb]: Modal): L => [
-  `“${s}”\n\n${tr(locale, "Helping verb", "Palabra clave")}: ${verb}`,
+  `“${s}”\n\n${tr(locale, "Helping verb", "Expresión clave")}: ${verb}`,
   m,
-  tr(locale, `The helping verb is "${verb}". Read the rest of the sentence: what does it tell you?`, `La palabra clave es "${verb}". Lee el resto de la oración: ¿qué te dice?`),
+  tr(locale, `The helping verb is "${verb}". Read the rest of the sentence: what does it tell you?`, `La expresión clave es "${verb}". Lee el resto de la oración: ¿qué te dice?`),
   tr(
     locale,
     [`Here "${verb}" tells what someone is able to do.`, `Here "${verb}" tells what someone is allowed to do.`, `Here "${verb}" tells what has to happen.`, `Here "${verb}" tells what may or may not happen.`][m],
@@ -1368,10 +1368,10 @@ const ES_MODAL: Modal[] = [
 
 const MODALS: Level[] = [
   {
-    ask: bi("What does the helping verb tell?", "¿Qué indica la palabra clave?"),
+    ask: bi("What does the helping verb tell?", "¿Qué indica la expresión clave?"),
     hints: bi(
       ["Find the helping verb. Then read the rest of the sentence for clues.", "can means able to or allowed to. could can mean was able to, or that something might happen. may can mean allowed to or might happen. must and have to mean has to. might means it might happen."],
-      ["Mira la palabra clave y el verbo que la acompaña. Luego lee el resto de la oración.", "poder puede indicar habilidad, permiso o posibilidad. saber + verbo indica habilidad. tener que, deber y hay que indican obligación. puede que y podría indican posibilidad."],
+      ["Mira la expresión clave y el verbo que la acompaña. Luego lee el resto de la oración.", "poder puede indicar habilidad, permiso o posibilidad. saber + verbo indica habilidad. tener que, deber y hay que indican obligación. puede que y podría indican posibilidad."],
     ),
     seconds: 15,
     labels: MODAL_LABELS,
@@ -1454,38 +1454,39 @@ const prepQ = (locale: Locale, phrase: boolean) => ([s, key, wrong, clue]: Prep)
     ? tr(locale, `"${key}" starts with a preposition and ends with the noun it connects.`, `"${key}" empieza con una preposición y llega hasta el sustantivo que une, con las palabras que lo describen.`)
     : tr(locale, `"${key}" connects a noun to the rest of the sentence.`, `"${key}" une un sustantivo con el resto de la oración.`),
 ];
-// Level 1 clues ask what the sentence tells (where, when, how) without pointing at a spot in it.
+// Level 1 clues ask what the sentence tells (where, when, how) and describe the link the preposition makes
+// (where it was, compared with the table), never the noun or verb that is a wrong choice.
 const EN_PREP1: Prep[] = [
-  ["The cat slept under the table.", "under", [["cat", "noun-not-preposition"], ["slept", "verb-not-preposition"]], "Where did the cat sleep? Look for the word that tells the position."],
-  ["We walked across the bridge.", "across", [["walked", "verb-not-preposition"], ["bridge", "noun-not-preposition"]], "Where did we walk? Look for the word that tells the path."],
-  ["Mia put her shoes beside the door.", "beside", [["shoes", "noun-not-preposition"], ["put", "verb-not-preposition"]], "Where did Mia put her shoes? Look for the word that tells the position."],
-  ["The bird flew over the house.", "over", [["bird", "noun-not-preposition"], ["flew", "verb-not-preposition"]], "Where did the bird fly? Look for the word that tells the path."],
-  ["Leo hid behind the big tree.", "behind", [["hid", "verb-not-preposition"], ["big", "adjective-not-preposition"]], "Where did Leo hide? Look for the word that tells the position."],
-  ["The ball rolled into the street.", "into", [["rolled", "verb-not-preposition"], ["ball", "noun-not-preposition"]], "Where did the ball roll? Look for the word that tells the direction."],
-  ["My grandma lives near the beach.", "near", [["lives", "verb-not-preposition"], ["beach", "noun-not-preposition"]], "Where does Grandma live? Look for the word that tells the position."],
-  ["We ate lunch after the game.", "after", [["ate", "verb-not-preposition"], ["lunch", "noun-not-preposition"]], "When did we eat? Look for the word that tells the time."],
-  ["The keys are inside the drawer.", "inside", [["keys", "noun-not-preposition"], ["are", "verb-not-preposition"]], "Where are the keys? Look for the word that tells the position."],
-  ["Ana sat between her two friends.", "between", [["sat", "verb-not-preposition"], ["friends", "noun-not-preposition"]], "Where did Ana sit? Look for the word that tells the position."],
-  ["The frog jumped onto the rock.", "onto", [["jumped", "verb-not-preposition"], ["frog", "noun-not-preposition"]], "Where did the frog jump? Look for the word that tells the direction."],
-  ["The plane flew above the clouds.", "above", [["plane", "noun-not-preposition"], ["flew", "verb-not-preposition"]], "Where did the plane fly? Look for the word that tells the position."],
-  ["Kai found his sock beneath the bed.", "beneath", [["found", "verb-not-preposition"], ["sock", "noun-not-preposition"]], "Where did Kai find his sock? Look for the word that tells the position."],
-  ["The children ran around the park.", "around", [["ran", "verb-not-preposition"], ["children", "noun-not-preposition"]], "Where did the children run? Look for the word that tells the path."],
+  ["The cat slept under the table.", "under", [["cat", "noun-not-preposition"], ["slept", "verb-not-preposition"]], "Where did the cat sleep? Look for the word that tells where it was, compared with the table."],
+  ["We walked across the bridge.", "across", [["walked", "verb-not-preposition"], ["bridge", "noun-not-preposition"]], "Where did we walk? Look for the word that tells which way we went, compared with the bridge."],
+  ["Mia put her shoes beside the door.", "beside", [["shoes", "noun-not-preposition"], ["put", "verb-not-preposition"]], "Where did Mia put her shoes? Look for the word that tells where they were, compared with the door."],
+  ["The bird flew over the house.", "over", [["bird", "noun-not-preposition"], ["flew", "verb-not-preposition"]], "Where did the bird fly? Look for the word that tells which way it went, compared with the house."],
+  ["Leo hid behind the big tree.", "behind", [["hid", "verb-not-preposition"], ["big", "adjective-not-preposition"]], "Where did Leo hide? Look for the word that tells where he was, compared with the tree."],
+  ["The ball rolled into the street.", "into", [["rolled", "verb-not-preposition"], ["ball", "noun-not-preposition"]], "Where did the ball roll? Look for the word that tells which way it went, compared with the street."],
+  ["My grandma lives near the beach.", "near", [["lives", "verb-not-preposition"], ["beach", "noun-not-preposition"]], "Where does Grandma live? Look for the word that tells where her home is, compared with the beach."],
+  ["We ate lunch after the game.", "after", [["ate", "verb-not-preposition"], ["lunch", "noun-not-preposition"]], "When did we eat? Look for the word that tells when, compared with the game."],
+  ["The keys are inside the drawer.", "inside", [["keys", "noun-not-preposition"], ["are", "verb-not-preposition"]], "Where are the keys? Look for the word that tells where they sit, compared with the drawer."],
+  ["Ana sat between her two friends.", "between", [["sat", "verb-not-preposition"], ["friends", "noun-not-preposition"]], "Where did Ana sit? Look for the word that tells where she was, compared with her two friends."],
+  ["The frog jumped onto the rock.", "onto", [["jumped", "verb-not-preposition"], ["frog", "noun-not-preposition"]], "Where did the frog jump? Look for the word that tells which way it went, compared with the rock."],
+  ["The plane flew above the clouds.", "above", [["plane", "noun-not-preposition"], ["flew", "verb-not-preposition"]], "Where did the plane fly? Look for the word that tells where it was, compared with the clouds."],
+  ["Kai found his sock beneath the bed.", "beneath", [["found", "verb-not-preposition"], ["sock", "noun-not-preposition"]], "Where did Kai find his sock? Look for the word that tells where it was, compared with the bed."],
+  ["The children ran around the park.", "around", [["ran", "verb-not-preposition"], ["children", "noun-not-preposition"]], "Where did the children run? Look for the word that tells which way they went, compared with the park."],
 ];
 const ES_PREP1: Prep[] = [
-  ["El gato durmió bajo la mesa.", "bajo", [["gato", "noun-not-preposition"], ["durmió", "verb-not-preposition"]], "¿Dónde durmió el gato? Busca la palabra que dice la posición."],
-  ["Caminamos hacia el puente.", "hacia", [["Caminamos", "verb-not-preposition"], ["puente", "noun-not-preposition"]], "¿Adónde caminamos? Busca la palabra que dice la dirección."],
-  ["Mía guardó los zapatos en el clóset.", "en", [["guardó", "verb-not-preposition"], ["zapatos", "noun-not-preposition"]], "¿Dónde guardó Mía los zapatos? Busca la palabra que dice el lugar."],
-  ["El pájaro voló sobre la casa.", "sobre", [["pájaro", "noun-not-preposition"], ["voló", "verb-not-preposition"]], "¿Por dónde voló el pájaro? Busca la palabra que dice la posición."],
-  ["Leo vino con su perro.", "con", [["vino", "verb-not-preposition"], ["perro", "noun-not-preposition"]], "¿Vino Leo solo? Busca la palabra que dice quién lo acompañó."],
-  ["La pelota rodó hasta la calle.", "hasta", [["rodó", "verb-not-preposition"], ["pelota", "noun-not-preposition"]], "¿Dónde terminó la pelota? Busca la palabra que dice el final del camino."],
-  ["Mi abuela viene desde Puebla.", "desde", [["viene", "verb-not-preposition"], ["abuela", "noun-not-preposition"]], "¿De dónde viene la abuela? Busca la palabra que dice el punto de partida."],
-  ["Jugamos durante el recreo.", "durante", [["Jugamos", "verb-not-preposition"], ["recreo", "noun-not-preposition"]], "¿Cuándo jugamos? Busca la palabra que dice el momento."],
-  ["Salí sin mi paraguas.", "sin", [["Salí", "verb-not-preposition"], ["paraguas", "noun-not-preposition"]], "¿Cómo salí? Busca la palabra que dice que algo faltaba."],
-  ["Ana se sentó entre sus dos amigas.", "entre", [["sentó", "verb-not-preposition"], ["amigas", "noun-not-preposition"]], "¿Dónde se sentó Ana? Busca la palabra que dice la posición."],
-  ["Le di un regalo a mi hermana.", "a", [["regalo", "noun-not-preposition"], ["di", "verb-not-preposition"]], "¿Quién recibió el regalo? Busca la palabra que dice quién lo recibió."],
-  ["El avión pasó por la ciudad.", "por", [["avión", "noun-not-preposition"], ["pasó", "verb-not-preposition"]], "¿Qué lugar cruzó el avión? Busca la palabra que dice el camino."],
-  ["Este regalo es para mi mamá.", "para", [["regalo", "noun-not-preposition"], ["es", "verb-not-preposition"]], "¿Quién va a recibir el regalo? Busca la palabra que dice a quién está destinado."],
-  ["El tren salió de la estación.", "de", [["tren", "noun-not-preposition"], ["salió", "verb-not-preposition"]], "¿Qué lugar dejó el tren? Busca la palabra que dice el lugar que quedó atrás."],
+  ["El gato durmió bajo la mesa.", "bajo", [["gato", "noun-not-preposition"], ["durmió", "verb-not-preposition"]], "¿Dónde durmió el gato? Busca la palabra que dice dónde estaba respecto a la mesa."],
+  ["Caminamos hacia el puente.", "hacia", [["Caminamos", "verb-not-preposition"], ["puente", "noun-not-preposition"]], "¿Adónde caminamos? Busca la palabra que dice en qué dirección íbamos respecto al puente."],
+  ["Mía guardó los zapatos en el clóset.", "en", [["guardó", "verb-not-preposition"], ["zapatos", "noun-not-preposition"]], "¿Dónde guardó Mía los zapatos? Busca la palabra que dice dónde quedaron respecto al clóset."],
+  ["El pájaro voló sobre la casa.", "sobre", [["pájaro", "noun-not-preposition"], ["voló", "verb-not-preposition"]], "¿Por dónde voló el pájaro? Busca la palabra que dice dónde iba respecto a la casa."],
+  ["Leo vino con su perro.", "con", [["vino", "verb-not-preposition"], ["perro", "noun-not-preposition"]], "¿Vino Leo solo? Busca la palabra que dice que Leo y su perro llegaron juntos."],
+  ["La pelota rodó hasta la calle.", "hasta", [["rodó", "verb-not-preposition"], ["pelota", "noun-not-preposition"]], "¿Dónde terminó la pelota? Busca la palabra que dice que la calle fue el final del recorrido."],
+  ["Mi abuela viene desde Puebla.", "desde", [["viene", "verb-not-preposition"], ["abuela", "noun-not-preposition"]], "¿De dónde viene la abuela? Busca la palabra que dice que Puebla es el punto de partida."],
+  ["Jugamos durante el recreo.", "durante", [["Jugamos", "verb-not-preposition"], ["recreo", "noun-not-preposition"]], "¿Cuándo jugamos? Busca la palabra que dice que el juego pasó mientras duraba el recreo."],
+  ["Salí sin mi paraguas.", "sin", [["Salí", "verb-not-preposition"], ["paraguas", "noun-not-preposition"]], "¿Cómo salí? Busca la palabra que dice que el paraguas no iba conmigo."],
+  ["Ana se sentó entre sus dos amigas.", "entre", [["sentó", "verb-not-preposition"], ["amigas", "noun-not-preposition"]], "¿Dónde se sentó Ana? Busca la palabra que dice dónde quedó respecto a sus dos amigas."],
+  ["Le di un regalo a mi hermana.", "a", [["regalo", "noun-not-preposition"], ["di", "verb-not-preposition"]], "¿Quién recibió el regalo? Busca la palabra que une el regalo con esa persona."],
+  ["El avión pasó por la ciudad.", "por", [["avión", "noun-not-preposition"], ["pasó", "verb-not-preposition"]], "¿Qué lugar cruzó el avión? Busca la palabra que dice dónde iba respecto a la ciudad."],
+  ["Este regalo es para mi mamá.", "para", [["regalo", "noun-not-preposition"], ["es", "verb-not-preposition"]], "¿Quién va a recibir el regalo? Busca la palabra que une el regalo con esa persona."],
+  ["El tren salió de la estación.", "de", [["tren", "noun-not-preposition"], ["salió", "verb-not-preposition"]], "¿Qué lugar dejó el tren? Busca la palabra que une el verbo salió con la estación."],
 ];
 
 const EN_PREP2: Prep[] = [
@@ -1526,7 +1527,7 @@ const PREPOSITIONS: Level[] = [
     ask: bi("Which word is the preposition?", "¿Qué palabra es la preposición?"),
     hints: bi(
       ["A preposition shows where, when, or how something is, compared with a noun.", "A preposition comes before a noun and links it to the rest of the sentence: toward the door, against the wall, through the rain. Words like the, my, or big can stand next to the noun. Nouns and action words do not do that job."],
-      ["Una preposición une un sustantivo y las demás palabras; dice dónde, cuándo o cómo.", "Luego viene un sustantivo, que puede llevar antes palabras como la o mi: ante la puerta, contra la pared, tras la lluvia. Los sustantivos y los verbos no hacen ese trabajo."],
+      ["Una preposición une un sustantivo al resto del enunciado: dice dónde, cuándo o cómo pasa algo.", "La preposición va antes del sustantivo: ante la puerta, contra la pared, tras la lluvia. Palabras como la o mi pueden ir justo antes del sustantivo. Los sustantivos y los verbos no hacen ese trabajo."],
     ),
     seconds: 15,
     bank: pair(EN_PREP1.map(prepQ("en", false)), ES_PREP1.map(prepQ("es", false))),
