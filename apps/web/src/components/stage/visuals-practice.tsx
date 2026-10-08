@@ -283,37 +283,39 @@ export function PrismVisual({ l, w, h, unit, alt, tint }: P & { l: number; w: nu
   );
 }
 
-export function CoordVisual({ points, line, alt, tint }: P & { points: [number, number][]; line?: boolean }) {
+export function CoordVisual({ points, line, firstQuadrant, alt, tint }: P & { points: [number, number][]; line?: boolean; firstQuadrant?: boolean }) {
   const clip = useId();
   const all = points.flat();
   const lim = Math.max(5, ...all.map((v) => Math.abs(v))) + 1;
-  const S = 240, pad = 14, scale = (S - pad * 2) / (lim * 2);
-  const X = (v: number) => pad + (v + lim) * scale, Y = (v: number) => pad + (lim - v) * scale;
-  const ticks = Array.from({ length: lim * 2 + 1 }, (_, i) => i - lim);
+  // A first-quadrant grid (scatter plots of times and amounts) starts both axes at 0, with room for the labels.
+  const lo = firstQuadrant ? 0 : -lim;
+  const S = 240, pad = 14, edge = firstQuadrant ? 26 : pad, scale = (S - pad - edge) / (lim - lo);
+  const X = (v: number) => edge + (v - lo) * scale, Y = (v: number) => pad + (lim - v) * scale;
+  const ticks = Array.from({ length: lim - lo + 1 }, (_, i) => i + lo);
   const step = lim > 10 ? 5 : lim > 6 ? 2 : 1;
   let seg: React.ReactNode = null;
   if (line && points.length >= 2) {
     const [[x1, y1], [x2, y2]] = points;
     if (x1 !== x2) {
       const m = (y2 - y1) / (x2 - x1), at = (x: number) => y1 + m * (x - x1);
-      seg = <line x1={X(-lim)} y1={Y(at(-lim))} x2={X(lim)} y2={Y(at(lim))} stroke={tint} strokeWidth={2} opacity={0.6} />;
-    } else seg = <line x1={X(x1)} y1={Y(-lim)} x2={X(x1)} y2={Y(lim)} stroke={tint} strokeWidth={2} opacity={0.6} />;
+      seg = <line x1={X(lo)} y1={Y(at(lo))} x2={X(lim)} y2={Y(at(lim))} stroke={tint} strokeWidth={2} opacity={0.6} />;
+    } else seg = <line x1={X(x1)} y1={Y(lo)} x2={X(x1)} y2={Y(lim)} stroke={tint} strokeWidth={2} opacity={0.6} />;
   }
   return (
     <svg viewBox={`0 0 ${S} ${S}`} role="img" aria-label={alt} className="w-full max-w-[300px]">
       <defs>
         <clipPath id={clip}>
-          <rect x={pad} y={pad} width={S - pad * 2} height={S - pad * 2} />
+          <rect x={X(lo)} y={Y(lim)} width={X(lim) - X(lo)} height={Y(lo) - Y(lim)} />
         </clipPath>
       </defs>
       {ticks.map((v) => (
         <g key={v}>
-          <line x1={X(v)} x2={X(v)} y1={pad} y2={S - pad} stroke={LINE} strokeWidth={v === 0 ? 0 : 1} />
-          <line y1={Y(v)} y2={Y(v)} x1={pad} x2={S - pad} stroke={LINE} strokeWidth={v === 0 ? 0 : 1} />
+          <line x1={X(v)} x2={X(v)} y1={Y(lim)} y2={Y(lo)} stroke={LINE} strokeWidth={v === 0 ? 0 : 1} />
+          <line y1={Y(v)} y2={Y(v)} x1={X(lo)} x2={X(lim)} stroke={LINE} strokeWidth={v === 0 ? 0 : 1} />
         </g>
       ))}
-      <line x1={X(0)} x2={X(0)} y1={pad} y2={S - pad} stroke={INK} strokeWidth={1.5} />
-      <line y1={Y(0)} y2={Y(0)} x1={pad} x2={S - pad} stroke={INK} strokeWidth={1.5} />
+      <line x1={X(0)} x2={X(0)} y1={Y(lim)} y2={Y(lo)} stroke={INK} strokeWidth={1.5} />
+      <line y1={Y(0)} y2={Y(0)} x1={X(lo)} x2={X(lim)} stroke={INK} strokeWidth={1.5} />
       {ticks
         .filter((v) => v !== 0 && v % step === 0 && Math.abs(v) < lim)
         .map((v) => (

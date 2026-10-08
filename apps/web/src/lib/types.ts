@@ -94,7 +94,8 @@ export type Visual =
   | { kind: "circle"; r: number; show: "r" | "d"; unit: string }
   | { kind: "right-triangle"; a: number | null; b: number | null; c: number | null; unit: string }
   | { kind: "prism"; l: number; w: number; h: number; unit: string }
-  | { kind: "coord"; points: [number, number][]; line?: boolean }
+  /** `line` draws the line through the first two points; `firstQuadrant` draws only x ≥ 0, y ≥ 0 (scatter plots). */
+  | { kind: "coord"; points: [number, number][]; line?: boolean; firstQuadrant?: boolean }
   /** Bars against scale lines every `scale` (from 0); a bar may end between two lines. `unit` labels the scale. */
   | { kind: "bar-graph"; labels: string[]; values: number[]; scale: number; unit: string }
   /** A line plot: a number line in 1/`denominator` steps with one X stacked above it per value. `unit` labels the line. */

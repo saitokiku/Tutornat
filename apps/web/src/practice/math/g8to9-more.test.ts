@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { check } from "../answer";
+import { linePoints } from "@/components/practice/pad-math";
+import { answerText, check, misconceptionOf } from "../answer";
 import { equivalent, evaluate, parse, type Node } from "../expr";
 import { gcd } from "../rng";
 import { makeItem } from "../skills";
@@ -80,6 +81,36 @@ describe("grades 8–9 second strand", () => {
   });
 
   describe.each(MATH_8_9_MORE.map((s) => [s.id, s] as const))("%s", (id, skill) => {
+    it("every key can be entered on the pad the item shows, the way that pad sends it", () => {
+      for (let level = 1; level <= skill.levels; level++)
+        each(id, level, (item, where) => {
+          const a = item.answer;
+          if (item.input === "choices") return expect(a.kind, where).toBe("choice");
+          if (item.input === "keypad") {
+            const typed = answerText(a);
+            expect(typed, where).toMatch(/^-?\d+(\.\d+)?$/);
+            if (typed.includes("-")) expect(item.keys, `${where} needs a minus key`).toContain("-");
+            if (typed.includes(".")) expect(item.keys, `${where} needs a point key`).toContain(".");
+            return expect(check(a, typed).correct, where).toBe(true);
+          }
+          if (item.input === "fraction") {
+            if (a.kind !== "fraction") throw new Error(where);
+            // The fraction pad sends "n/d", or just the top number when the bottom is left empty.
+            const sent = a.d === 1 ? String(a.n) : `${a.n}/${a.d}`;
+            expect(check(a, sent).correct, `${where} ${sent}`).toBe(true);
+            if (a.simplest) expect(text(item), where).toMatch(/whole number or a fraction in simplest form/);
+            return;
+          }
+          if (item.input === "number-line") {
+            if (item.pad?.kind !== "number-line") throw new Error(where);
+            const right = linePoints(item.pad).filter((pt) => check(a, pt.response).correct);
+            return expect(right.length, `${where} points that check right`).toBe(1);
+          }
+          expect(["text", "expr"], where).toContain(item.input);
+          expect(check(a, answerText(a)).correct, where).toBe(true);
+        });
+    });
+
     it("has complete bilingual copy, tagged mistakes, a hint ladder that holds back the answer, and steps that end on it", () => {
       for (let level = 1; level <= skill.levels; level++) {
         let withWrong = 0, typed = 0;
@@ -105,7 +136,11 @@ describe("grades 8–9 second strand", () => {
             const spoken = [item.say, ...(item.choices ?? []).map((c) => c.say ?? "")];
             for (const s of spoken) expect(s, `${where} spoken notation: ${s}`).not.toMatch(/[\^{}√∛²³⁻×÷·≤≥<>=−|°∠ₙ]|\d\/\d/);
             const all = [...item.prompt.filter((p): p is string => typeof p === "string"), item.say, item.alt ?? "", ...item.hints, ...item.steps, ...spoken];
-            for (const s of all) expect(s, `${where}: ${s}`).not.toMatch(/!|undefined|NaN|Infinity|\s{4,}$|\s\s[.,?]/);
+            for (const s of all) expect(s, `${where}: ${s}`).not.toMatch(/!|undefined|NaN|Infinity|\s{4,}$|\s\s[.,?]|,[.?]/);
+            // A number put into a rule: never "−0", and never "−2²", which many learners read as (−2)².
+            for (const s of all) expect(s, `${where}: ${s}`).not.toMatch(/−0(?![.\d])|−\d+[²³]/);
+            // The values are written out in the text, not drawn as a table, so nothing calls them one.
+            expect(`${text(item)} ${item.say}`, where).not.toMatch(/\btabl[ae]\b/i);
             if (item.visual || item.picture) expect(item.alt?.trim(), where).toBeTruthy();
           }
           // Rule 16: every wrong choice names its mistake; likely wrong typed values are tagged and rejected.
@@ -161,8 +196,8 @@ describe("grades 8–9 second strand", () => {
             }
           }
         }
-        // Most typed items carry at least one likely wrong value.
-        if (typed) expect(withWrong / typed, `${id} L${level} items with wrong values`).toBeGreaterThan(0.75);
+        // Every typed item carries at least one likely wrong value.
+        expect(withWrong, `${id} L${level} items with wrong values`).toBe(typed);
       }
     });
   });
@@ -222,6 +257,16 @@ describe("m.irrational", () => {
       expect(t >= min && t <= max, where).toBe(true);
       expect(close(Math.round((t - min) / step), (t - min) / step, 1e-6), where).toBe(true);
       for (const w of item.wrong!) expect(Number(w.value) >= min && Number(w.value) <= max, `${where} ${w.value} off the pad`).toBe(true);
+      // Of every tenth the pad can place, the one nearest √n in floating point is the only point that checks.
+      const points = linePoints(item.pad);
+      expect(points, where).toHaveLength(11);
+      const nearest = points.reduce((best, pt) => (Math.abs(pt.value - Math.sqrt(n)) < Math.abs(best.value - Math.sqrt(n)) ? pt : best));
+      expect(points.filter((pt) => check(item.answer, pt.response).correct), where).toEqual([nearest]);
+      for (const w of item.wrong!) expect(points.some((pt) => pt.response === w.value), `${where} ${w.value} is not a point`).toBe(true);
+      // The last hint squares one tenth, below √n; it never sets the two candidates side by side.
+      const squared = [...item.hints[2].matchAll(/(\d+(?:\.\d)?)² = (\d+(?:\.\d+)?)/g)];
+      expect(squared, `${where} ${item.hints[2]}`).toHaveLength(1);
+      expect(num(squared[0][1]) ** 2 < n && close(num(squared[0][1]) ** 2, num(squared[0][2])), `${where} ${item.hints[2]}`).toBe(true);
     });
   });
 });
@@ -319,6 +364,13 @@ describe("m.volume.round", () => {
         expect(check(item.answer, V.toFixed(2)).correct, `${where} ${V.toFixed(2)} rejected`).toBe(true);
         // The radius doubled (the diameter used as the radius) is far off and must be rejected.
         expect(check(item.answer, (V * (level === 3 ? 8 : 4)).toFixed(2)).correct, `${where} diameter as radius accepted`).toBe(false);
+        // A calculator's π key, and a sphere's 4/3 cut to 1.33 first, are named when they miss.
+        const piKey = (/cylinder/.test(t) ? Math.PI * r * r * h : /cone/.test(t) ? (Math.PI * r * r * h) / 3 : (4 / 3) * Math.PI * r ** 3).toFixed(2);
+        if (!check(item.answer, piKey).correct) expect(misconceptionOf(item, piKey), `${where} π key ${piKey}`).toBe("used-pi-key-not-3-14");
+        if (level === 3) {
+          const early = (1.33 * pi * r ** 3).toFixed(2);
+          if (!check(item.answer, early).correct) expect(misconceptionOf(item, early), `${where} 1.33 ${early}`).toBe("rounded-four-thirds-early");
+        }
       });
     });
   }
@@ -379,6 +431,8 @@ describe("m.linear.compare", () => {
           [nameA, nameB] = ["Function A", "Function B"];
         }
         const askRate = level === 1 ? !/ at \w+ 0\?$/.test(t) : /rate of change/.test(t);
+        // −5 is not a greater rate than 2, so the question asks for the greater number, not the faster change.
+        if (level === 2 && askRate) expect(t, where).toMatch(/rate of change is the greater number\?$/);
         const pick = (f: (s: typeof A) => number) => (f(A) > f(B) ? [nameA, A, B] : [nameB, B, A]) as [string, typeof A, typeof A];
         const [winner, W, L] = pick(askRate ? (s) => s.m : (s) => s.b);
         expect(askRate ? W.m !== L.m : W.b !== L.b, where).toBe(true);
@@ -409,6 +463,9 @@ describe("m.best.fit", () => {
         const m = (y2 - y1) / (x2 - x1), b = y1 - m * x1;
         if (item.visual?.kind !== "coord") throw new Error(where);
         expect(item.visual.line, where).toBe(true);
+        // Weeks, months and hours start at 0: the plot is drawn in the first quadrant only.
+        expect(item.visual.firstQuadrant, where).toBe(true);
+        if (/puppy/.test(t)) expect(b, `${where} a puppy that weighs 0 pounds`).toBeGreaterThanOrEqual(1);
         expect(item.visual.points.slice(0, 2), where).toEqual([[x1, y1], [x2, y2]]);
         const data = item.visual.points.slice(2);
         expect(data.length, where).toBeGreaterThanOrEqual(3);
@@ -437,6 +494,8 @@ describe("m.best.fit", () => {
             if (c.why === "confused-slope-and-intercept") expect(c.label, where).toMatch(/at (week|month|hour) 0\.$/);
             if (c.why === "reversed-the-variables") expect(c.label, where).toMatch(/takes about/);
             if (c.why === "used-intercept-as-rate") expect(c.label, where).toContain(` ${b} `);
+            // No "1 pounds" or "1 songs": the numbers put into these sentences are never 1.
+            expect(c.label, where).not.toMatch(/ 1 (pounds|inches|songs|weeks|months|hours)\b/);
           }
         }
       });
@@ -482,8 +541,11 @@ describe("m.abs.equation", () => {
         expect(Number.isInteger((d - c) / a), where).toBe(true);
         if (item.answer.kind !== "set") throw new Error(where);
         expect([...item.answer.values].sort((u, v) => u - v), `${where} ${item.prompt[1]}`).toEqual(search(f, d));
-        if (item.answer.values.length === 1) single++;
-        else expect(check(item.answer, String(item.answer.values[0])).correct, `${where} one root of two`).toBe(false);
+        if (item.answer.values.length === 1) {
+          single++;
+          // One solution: no hint asks for an equation for each sign.
+          for (const h of item.hints) expect(h, where).not.toMatch(/two equations/);
+        } else expect(check(item.answer, String(item.answer.values[0])).correct, `${where} one root of two`).toBe(false);
       });
       if (level === 2) expect(single).toBeGreaterThan(10);
     });
@@ -496,6 +558,8 @@ describe("m.abs.equation", () => {
       const count = search(f, d).length;
       seen[count]++;
       expect(item.answer, `${where} ${item.prompt[1]}`).toEqual({ kind: "choice", index: 2 - count });
+      // "Saw a negative" is a diagnosis only when a negative number is on screen.
+      if (item.choices!.some((ch) => ch.why === "saw-a-negative-and-said-no-solution")) expect(item.prompt[1], where).toMatch(/\| − \d|= −\d/);
     });
     for (const n of seen) expect(n).toBeGreaterThan(50);
   });
@@ -509,6 +573,16 @@ describe("m.line.forms", () => {
       const line = node(item.answer.expr);
       for (const x of [-3, -1, 0, 2, 5]) expect(close(val(m[1], { x, y: evaluate(line, { x }) }), num(m[2])), `${where} x = ${x}`).toBe(true);
       expect(check(item.answer, `y = ${item.answer.expr}`).correct, where).toBe(true);
+      // Every textbook way of writing a fraction slope is slope-intercept form; y = (C − Ax) ÷ B is not.
+      const [A, B] = [val(m[1], { x: 1, y: 0 }), val(m[1], { x: 0, y: 1 })], C = num(m[2]);
+      const g = gcd(Math.abs(A), Math.abs(B)), [p, q] = [(-A / g) * Math.sign(B), Math.abs(B) / g], c = C / B;
+      const tail = c === 0 ? "" : c < 0 ? ` - ${-c}` : ` + ${c}`;
+      if (q !== 1) {
+        for (const form of [`(${p}/${q})x`, `${p < 0 ? "-" : ""}(${Math.abs(p)}/${q})x`, `${p}x/${q}`, `${p}/${q}x`, `${p}/${q} x`])
+          expect(check(item.answer, `y = ${form}${tail}`), `${where} y = ${form}${tail}`).toEqual({ correct: true });
+        expect(item.steps[item.steps.length - 1], `${where} a bare n/d x reads as n/(dx)`).not.toMatch(/\d\/\d+ ?x/);
+      }
+      expect(check(item.answer, `y = (${C} - ${A}x)/${B}`), where).toEqual({ correct: false, form: "expanded" });
     });
   });
   it("L2: only the keyed choice is the same line, with whole-number coefficients, A positive and no common factor", () => {
@@ -680,6 +754,15 @@ describe("m.exp.growth", () => {
       const cents = /nearest cent/.test(t);
       expect(Math.abs(item.answer.value - v), `${where} ${t}: ${item.answer.value} vs ${v}`).toBeLessThanOrEqual((cents ? 0.005 : 0.5) + 1e-9);
       expect(close(Math.round(item.answer.value * (cents ? 100 : 1)), item.answer.value * (cents ? 100 : 1), 1e-12), where).toBe(true);
+      // Rounding every year (to the cent, as a bank does, or to whole people) is accepted too.
+      const unit = cents ? 100 : 1;
+      let yearly = start * unit;
+      for (let i = 0; i < years; i++) yearly = Math.round(yearly * (1 + ((/drops/.test(t) ? -1 : 1) * p) / 100));
+      expect(check(item.answer, String(yearly / unit)).correct, `${where} rounded each year: ${yearly / unit}`).toBe(true);
+      // Two cents or two people off is still wrong.
+      const key = Math.round(item.answer.value * unit);
+      for (const off of [-2, 2]) expect(check(item.answer, String((key + off) / unit)).correct, `${where} ${off} off`).toBe(false);
+      expect(item.hints[0], where).toMatch(/drops/.test(t) ? /decay factor/ : /growth factor/);
     });
   });
 });
@@ -697,6 +780,8 @@ describe("m.radical.simplify", () => {
         item.choices!.forEach((c, i) => {
           const { v, k } = value(c.label);
           expect(close(v, target, 1e-12) && squareFree(k), `${where} ${c.label} vs ${shownExpr}`).toBe(i === (item.answer as { index: number }).index);
+          // A root of a perfect square (8√16) is a choice nobody would pick.
+          expect(isSquare(k), `${where} dead choice ${c.label}`).toBe(false);
         });
       });
     });
@@ -738,21 +823,30 @@ describe("m.quad.formula", () => {
         expect(new Set(item.answer.values).size, where).toBe(disc === 0 ? 1 : 2);
         if (item.answer.values.some((v) => !Number.isInteger(v))) fractional++;
         if (level === 1) expect(a, where).toBe(1);
+        // Worked by hand: no x² = 0, and level 2 keeps a ≤ 10 and |b| ≤ 20.
+        expect(b === 0 && c === 0, `${where} x² = 0`).toBe(false);
+        if (level === 2) expect(a <= 10 && Math.abs(b) <= 20, `${where} a = ${a}, b = ${b}`).toBe(true);
       });
       if (level === 2) expect(fractional).toBe(SEEDS.length);
     });
   }
-  it("L3: both roots of the keyed choice make the polynomial 0, and every other choice misses", () => {
+  it("L3: the keyed choice gives both roots of the polynomial, and every other choice misses one", () => {
     each("m.quad.formula", 3, (item, where) => {
       const { f, b, c } = coefs((item.prompt[1] as string).replace(" = 0", ""));
       expect(isSquare(b * b - 4 * c), `${where} rational roots`).toBe(false);
+      // Both roots, found from the polynomial itself: x² + bx + c = 0 by completing the square.
+      const both = [-b / 2 - Math.sqrt(b * b / 4 - c), -b / 2 + Math.sqrt(b * b / 4 - c)];
+      for (const x of both) expect(Math.abs(f(x)), where).toBeLessThan(1e-9);
+      // b = 0 included: always four choices, never a 50/50 guess.
+      expect(item.choices, where).toHaveLength(4);
       item.choices!.forEach((ch, i) => {
-        const m = /^x = (?:(−?\d+) )?± ?(\d*)(?:√(\d+))?$/.exec(ch.label)!;
-        const center = m[1] ? num(m[1]) : 0, coef = Number(m[2] || 1), rad = m[3] ? Math.sqrt(Number(m[3])) : 1;
-        const roots = [center + coef * rad, center - coef * rad];
-        const ok = roots.every((x) => Math.abs(f(x)) < 1e-9);
+        const m = /^x = (?:(−?\d+) )?(± ?)?(\d*)(?:√(\d+))?$/.exec(ch.label);
+        if (!m) throw new Error(`${where} cannot read ${ch.label}`);
+        const center = m[1] ? num(m[1]) : 0, coef = Number(m[3] || 1), rad = m[4] ? Math.sqrt(Number(m[4])) : 1;
+        const roots = (m[2] ? [center - coef * rad, center + coef * rad] : [center + coef * rad]).sort((u, v) => u - v);
+        const ok = roots.length === 2 && roots.every((x, k) => close(x, both[k]));
         expect(ok, `${where} ${ch.label}`).toBe(i === (item.answer as { index: number }).index);
-        if (i === (item.answer as { index: number }).index && m[3]) expect(squareFree(Number(m[3])), where).toBe(true);
+        if (i === (item.answer as { index: number }).index && m[4]) expect(squareFree(Number(m[4])), where).toBe(true);
       });
     });
   });

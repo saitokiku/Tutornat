@@ -276,15 +276,12 @@ function rootTenth(r: Rng, locale: Locale): ItemBody {
   const lowSq = dec(A * A, 2), highSq = dec((A + 1) ** 2, 2);
   const answer: Answer = { kind: "number", value: t / 10 };
   const d = n - k * k;
-  // Typed on the keypad for now; when the number-line pad renders, this becomes a tap on the line
-  // (input "number-line", pad { min: k, max: k + 1, step: 0.1 }).
   return {
-    prompt: [tr(locale, `√${n} is between ${k} and ${k + 1}. Estimate √${n} to the nearest tenth.`, `√${n} está entre ${k} y ${k + 1}. Estima √${n} a la décima más cercana.`)],
-    say: tr(locale, `The square root of ${n} is between ${k} and ${k + 1}. Estimate the square root of ${n} to the nearest tenth.`, `La raíz cuadrada de ${n} está entre ${k} y ${k + 1}. Estima la raíz cuadrada de ${n} a la décima más cercana.`),
-    visual: { kind: "number-line", min: k, max: k + 1, marks: Array.from({ length: 11 }, (_, i) => (10 * k + i) / 10) },
-    alt: tr(locale, `A number line from ${k} to ${k + 1}, marked in tenths.`, `Una recta numérica de ${k} a ${k + 1}, marcada en décimas.`),
-    input: "keypad",
-    keys: ["."],
+    prompt: [tr(locale, `√${n} is between ${k} and ${k + 1}. Tap where it goes on the number line, to the nearest tenth.`, `√${n} está entre ${k} y ${k + 1}. Toca dónde va en la recta numérica, a la décima más cercana.`)],
+    say: tr(locale, `The square root of ${n} is between ${k} and ${k + 1}. Tap where it goes on the number line, to the nearest tenth.`, `La raíz cuadrada de ${n} está entre ${k} y ${k + 1}. Toca dónde va en la recta numérica, a la décima más cercana.`),
+    // The pad is the line from k to k + 1 in tenths; it sends the tapped point as "7.2".
+    input: "number-line",
+    pad: { kind: "number-line", min: k, max: k + 1, step: 0.1 },
     answer,
     wrong: wrongs(answer, [
       [decTyped(t === A ? A + 1 : A, 1), "rounded-to-wrong-tenth"],
@@ -869,7 +866,7 @@ function linearCompare(r: Rng, level: number, locale: Locale): ItemBody {
     : `${tr(locale, "Function B", "Función B")} — x: ${xs.map(show).join(", ")}; y: ${ys.map(show).join(", ")}.`;
   const tableSaid = story
     ? `${story.title(nameB, locale)}: ${xs.map((x, i) => `${xw} ${x}, ${amt(ys[i], true)}${story.money ? "" : ` ${yw}`}`).join("; ")}.`
-    : `${tr(locale, "Function B is a table", "La función B es una tabla")}: ${xs.map((x, i) => `x ${sayNum(x, locale)}, y ${sayNum(ys[i], locale)}`).join("; ")}.`;
+    : `${tr(locale, "Function B has these values", "La función B tiene estos valores")}: ${xs.map((x, i) => `x ${sayNum(x, locale)}, y ${sayNum(ys[i], locale)}`).join("; ")}.`;
   const first = story
     ? story.words(nameA, amt(A.b, false), amt(A.m, false), locale)
     : `${tr(locale, "Function A", "Función A")}: y = ${lin(A.m, A.b)}.`;
@@ -906,9 +903,11 @@ function linearCompare(r: Rng, level: number, locale: Locale): ItemBody {
           : tr(locale, "The initial value is the value of y when x = 0.", "El valor inicial es el valor de y cuando x = 0."),
       askRate
         ? story
-          ? tr(locale, `For the table, take two columns and divide the change in ${yw} by the number of ${story.xp[0]} between them.`, `En la tabla, toma dos columnas y divide el cambio en ${yw} entre el número de ${story.xp[1]} que hay entre ellas.`)
-          : tr(locale, "For the table, divide the change in y by the change in x between two columns.", "En la tabla, divide el cambio en y entre el cambio en x de dos columnas.")
-        : tr(locale, `If the table does not start at ${story ? `${xw} 0` : "x = 0"}, work back from its first column using the rate.`, `Si la tabla no empieza en ${story ? `${story.x[1] === "semana" ? "la" : "el"} ${xw} 0` : "x = 0"}, retrocede desde su primera columna usando la tasa.`),
+          ? tr(locale, `For ${nameB}, pick two of the listed values and divide the change in ${yw} by the number of ${story.xp[0]} between them.`, `Para ${nameB}, elige dos de los valores de la lista y divide el cambio en ${yw} entre el número de ${story.xp[1]} que hay entre ellos.`)
+          : tr(locale, "For Function B, divide the change in y by the change in x between two of its values.", "Para la función B, divide el cambio en y entre el cambio en x de dos de sus valores.")
+        : story
+          ? tr(locale, `If ${nameB}'s values do not start at ${xw} 0, work back from the first one using the rate.`, `Si los valores de ${nameB} no empiezan en ${story.x[1] === "semana" ? "la" : "el"} ${xw} 0, retrocede desde el primero usando la tasa.`)
+          : tr(locale, "If Function B's values do not start at x = 0, work back from the first one using the rate.", "Si los valores de la función B no empiezan en x = 0, retrocede desde el primero usando la tasa."),
       hintA,
     ],
     steps: [aLine, askRate ? bRate : bStart, last],
@@ -989,7 +988,7 @@ function bestFit(r: Rng, level: number, locale: Locale): ItemBody {
   const through = tr(locale, `The line of best fit passes through ${P1} and ${P2}.`, `La recta de mejor ajuste pasa por ${P1} y ${P2}.`);
   const throughSaid = tr(locale, `The line of best fit passes through the point ${sayPt(x1, y1, "en")} and the point ${sayPt(x2, y2, "en")}.`, `La recta de mejor ajuste pasa por el punto ${sayPt(x1, y1, "es")} y el punto ${sayPt(x2, y2, "es")}.`);
   const intro = tr(locale, story.intro[0], story.intro[1]);
-  const visual = { kind: "coord" as const, points: [[x1, y1], [x2, y2], ...data] as [number, number][], line: true };
+  const visual = { kind: "coord" as const, points: [[x1, y1], [x2, y2], ...data] as [number, number][], line: true, firstQuadrant: true };
   const alt = tr(
     locale,
     `A scatter plot of ${data.length + 2} points in the first quadrant, with a line of best fit drawn through ${P1} and ${P2}.`,
@@ -1007,8 +1006,8 @@ function bestFit(r: Rng, level: number, locale: Locale): ItemBody {
       ...base,
       prompt: [`${intro} ${through} ${ask}`],
       say: `${intro} ${throughSaid} ${ask}`,
-      // Typed, not the fraction pad: the pad cannot send a whole number yet, and half these slopes are whole.
-      input: "text",
+      // Half these slopes are whole numbers: on the fraction pad a whole number goes on top, the bottom left empty.
+      input: "fraction",
       answer,
       wrong: wrongs(answer, [[fracTyped(dx, dy), "inverted-rise-over-run"], [String(dy), "forgot-to-divide-by-run"]]),
       hints: [
@@ -1267,12 +1266,12 @@ function absEquation(r: Rng, level: number, locale: Locale): ItemBody {
 
 // ---------------------------------------------------------------- standard form and slope-intercept form
 
-/** A slope-intercept line for display, "y = −2/3 x + 4", and as typed, "-2/3x+4". */
+/** A slope-intercept line for display, "−(2/3)x + 4", and as typed, "-(2/3)x+4": a fraction slope in parentheses, never the ambiguous "2/3x". */
 function slopeIntercept(mn: number, md: number, b: number) {
   const [n, d] = reduce(mn, md);
-  const mag = Math.abs(n) === 1 && d === 1 ? "" : d === 1 ? String(Math.abs(n)) : `${Math.abs(n)}/${d} `;
+  const mag = Math.abs(n) === 1 && d === 1 ? "" : d === 1 ? String(Math.abs(n)) : `(${Math.abs(n)}/${d})`;
   const shownTxt = `${n < 0 ? "−" : ""}${mag}x${b ? ` ${b < 0 ? "−" : "+"} ${Math.abs(b)}` : ""}`;
-  const typedTxt = `${n < 0 ? "-" : ""}${mag.trim()}x${b ? `${b < 0 ? "-" : "+"}${Math.abs(b)}` : ""}`;
+  const typedTxt = `${n < 0 ? "-" : ""}${mag}x${b ? `${b < 0 ? "-" : "+"}${Math.abs(b)}` : ""}`;
   return { shown: shownTxt, typed: typedTxt };
 }
 /** Ax + By = C with A > 0 and no common factor, so equal lines get equal labels. */
@@ -1373,6 +1372,8 @@ function elimination(r: Rng, level: number, locale: Locale): ItemBody {
   let e1 = [0, 0], e2 = [0, 0], sol = [0, 0], k = 1;
   for (;;) {
     sol = [r.int(-6, 6), r.int(-6, 6)];
+    // (0, 0) makes both right sides 0, and swapping or flipping a sign gives the same pair.
+    if (!sol[0] && !sol[1]) continue;
     if (level === 1) {
       const b1 = nz(r, -5, 5), form = r.pick(["opp", "same", "mult"] as const);
       const b2 = form === "opp" ? -b1 : form === "same" ? b1 : r.pick([2, 3, -2, -3]) * b1;
@@ -1439,7 +1440,7 @@ function elimination(r: Rng, level: number, locale: Locale): ItemBody {
     ]),
     hints: [
       level === 1
-        ? tr(locale, "Look for a variable whose coefficients are the same or opposites in the two equations.", "Busca una variable cuyos coeficientes sean iguales u opuestos en las dos ecuaciones.")
+        ? tr(locale, "Look for a variable whose coefficients in the two equations are the same, opposites, or one a multiple of the other.", "Busca una variable cuyos coeficientes en las dos ecuaciones sean iguales, opuestos o uno múltiplo del otro.")
         : tr(locale, "Neither variable cancels yet. Pick one and multiply so its coefficients become opposites.", "Todavía no se cancela ninguna variable. Elige una y multiplica para que sus coeficientes queden opuestos."),
       tr(locale, `${how} so that ${u} cancels. Solve for ${v}, then substitute back to find ${u}.`, `${how} para que ${u} se cancele. Resuelve para ${v} y luego sustituye para hallar ${u}.`),
       tr(locale, `That gives ${combined}.`, `Eso da ${combined}.`),
@@ -1453,7 +1454,11 @@ function elimination(r: Rng, level: number, locale: Locale): ItemBody {
 
 const setShow = (vs: number[]) => `{${vs.map(show).join(", ")}}`;
 const uniqSorted = (vs: number[]) => [...new Set(vs)].sort((a, b) => a - b);
-/** "f(−2) = (−2)² + 1": a rule with the input put in, before the arithmetic. */
+/**
+ * "f(−2) = (−2)² + 1": a rule with the input put in, before the arithmetic. The input goes in
+ * parentheses after a coefficient or a minus sign, and when it is 0 or negative: 3(2), −(2)², (−2)², (0).
+ * Never "−2²", which many learners read as (−2)².
+ */
 function substitute(ts: Term[], x: number) {
   return ts
     .filter(([c]) => c !== 0)
@@ -1461,8 +1466,8 @@ function substitute(ts: Term[], x: number) {
       const mag = Math.abs(c);
       const sign = i ? (c < 0 ? " − " : " + ") : c < 0 ? "−" : "";
       if (!v) return sign + mag;
-      const base = x < 0 || (mag !== 1 && p === 1) ? `(${show(x)})` : show(x);
-      return sign + (mag === 1 ? "" : mag) + (p >= 2 ? `${x < 0 || mag !== 1 ? `(${show(x)})` : show(x)}${sup(p)}` : base);
+      const input = x <= 0 || mag !== 1 || c < 0 ? `(${show(x)})` : show(x);
+      return sign + (mag === 1 ? "" : mag) + input + (p >= 2 ? sup(p) : "");
     })
     .join("");
 }
@@ -1482,7 +1487,7 @@ function domainRange(r: Rng, level: number, locale: Locale): ItemBody {
     const asTable = r.bool();
     const what = askDomain ? tr(locale, "domain", "dominio") : tr(locale, "range", "rango");
     const given = asTable
-      ? tr(locale, `A function is shown in a table. x: ${xs.map(show).join(", ")}; y: ${ys.map(show).join(", ")}.`, `Una función se muestra en una tabla. x: ${xs.map(show).join(", ")}; y: ${ys.map(show).join(", ")}.`)
+      ? tr(locale, `A function pairs these x-values with these y-values, in order. x: ${xs.map(show).join(", ")}; y: ${ys.map(show).join(", ")}.`, `Una función empareja estos valores de x con estos valores de y, en orden. x: ${xs.map(show).join(", ")}; y: ${ys.map(show).join(", ")}.`)
       : tr(locale, `A function is the set of pairs ${pairsText(pairs)}.`, `Una función es el conjunto de pares ${pairsText(pairs)}.`);
     const givenSaid = tr(locale, `A function pairs ${pairs.map(([x, y]) => `x ${sayNum(x, "en")} with y ${sayNum(y, "en")}`).join(", ")}.`, `Una función empareja ${pairs.map(([x, y]) => `x ${sayNum(x, "es")} con y ${sayNum(y, "es")}`).join(", ")}.`);
     const [fx, fy] = pairs[0];
@@ -1507,12 +1512,15 @@ function domainRange(r: Rng, level: number, locale: Locale): ItemBody {
     };
   }
   const square = r.bool();
-  const ts: Term[] = square ? [[r.pick([1, 1, -1, 2]), "x", 2], [r.int(-5, 5), "", 0]] : [[nz(r, -4, 4), "x", 1], [r.int(-6, 6), "", 0]];
-  let dom: number[];
+  let ts: Term[], dom: number[], vals: number[];
+  // The range must differ from the domain: f(x) = x, or −x on a balanced domain, would give it away.
   do {
-    dom = uniqSorted(r.shuffle(Array.from({ length: 9 }, (_, i) => i - 4)).slice(0, 4));
-  } while (square && r.bool(0.7) && !dom.some((v) => v > 0 && dom.includes(-v)));
-  const vals = dom.map((x) => evalTerms(ts, x));
+    ts = square ? [[r.pick([1, 1, -1, 2]), "x", 2], [r.int(-5, 5), "", 0]] : [[nz(r, -4, 4), "x", 1], [r.int(-6, 6), "", 0]];
+    do {
+      dom = uniqSorted(r.shuffle(Array.from({ length: 9 }, (_, i) => i - 4)).slice(0, 4));
+    } while (square && r.bool(0.7) && !dom.some((v) => v > 0 && dom.includes(-v)));
+    vals = dom.map((x) => evalTerms(ts, x));
+  } while (uniqSorted(vals).join() === dom.join());
   const want = uniqSorted(vals);
   const answer: Answer = { kind: "set", values: want };
   const rule2 = fmt(ts);
@@ -1551,7 +1559,8 @@ function rateOfChange(r: Rng, level: number, locale: Locale): ItemBody {
     do {
       i = r.int(0, 4);
       j = r.int(i + 1, 5);
-    } while (!rocket && j - i < 2);
+      // Two zero outputs leave no likely wrong value but 0 itself.
+    } while ((!rocket && j - i < 2) || (ys[i] === 0 && ys[j] === 0));
     const [a, b, fa, fb] = [xs[i], xs[j], ys[i], ys[j]];
     const dy = fb - fa, dx = b - a;
     const [n, d] = reduce(dy, dx);
@@ -1559,18 +1568,21 @@ function rateOfChange(r: Rng, level: number, locale: Locale): ItemBody {
     const f = rocket ? "h" : "f", v0 = rocket ? "t" : "x";
     const table = `${v0}: ${xs.map(show).join(", ")}; ${f}(${v0}): ${ys.map(show).join(", ")}.`;
     const tableSaid = (l: Locale) => xs.map((x, k) => `${v0} ${sayNum(x, l)}, ${sayNum(ys[k], l)}`).join("; ");
+    // The values are listed as text (inputs, then outputs), not drawn as a table, so the words say "values".
     const intro = rocket
-      ? tr(locale, `The table shows the height h, in meters, of a model rocket t seconds after launch. ${table}`, `La tabla muestra la altura h, en metros, de un cohete de juguete t segundos después del lanzamiento. ${table}`)
-      : tr(locale, `The table shows a function f. ${table}`, `La tabla muestra una función f. ${table}`);
+      ? tr(locale, `A model rocket is launched. These values give its height h, in meters, t seconds after launch. ${table}`, `Se lanza un cohete de juguete. Estos valores dan su altura h, en metros, t segundos después del lanzamiento. ${table}`)
+      : tr(locale, `A function f has these values. ${table}`, `Una función f tiene estos valores. ${table}`);
     const introSaid = rocket
-      ? tr(locale, `The table shows the height, in meters, of a model rocket t seconds after launch: ${tableSaid("en")}.`, `La tabla muestra la altura, en metros, de un cohete de juguete t segundos después del lanzamiento: ${tableSaid("es")}.`)
-      : tr(locale, `The table shows a function f: ${tableSaid("en")}.`, `La tabla muestra una función f: ${tableSaid("es")}.`);
+      ? tr(locale, `A model rocket is launched. These values give its height in meters, t seconds after launch: ${tableSaid("en")}.`, `Se lanza un cohete de juguete. Estos valores dan su altura en metros, t segundos después del lanzamiento: ${tableSaid("es")}.`)
+      : tr(locale, `A function f has these values: ${tableSaid("en")}.`, `Una función f tiene estos valores: ${tableSaid("es")}.`);
+    // The fraction pad takes a whole number on top with the bottom left empty, so every key can be entered.
+    const form = tr(locale, "Write it as a whole number or a fraction in simplest form.", "Escríbela como número entero o como fracción en su mínima expresión.");
     const q = rocket
-      ? tr(locale, `What is the average rate of change of the height from t = ${a} to t = ${b}, in meters per second?`, `¿Cuál es la tasa de cambio promedio de la altura desde t = ${a} hasta t = ${b}, en metros por segundo?`)
-      : tr(locale, `What is the average rate of change of f from x = ${show(a)} to x = ${show(b)}? Write it in simplest form.`, `¿Cuál es la tasa de cambio promedio de f desde x = ${show(a)} hasta x = ${show(b)}? Escríbela en su mínima expresión.`);
+      ? tr(locale, `What is the average rate of change of the height from t = ${a} to t = ${b}, in meters per second? ${form}`, `¿Cuál es la tasa de cambio promedio de la altura desde t = ${a} hasta t = ${b}, en metros por segundo? ${form}`)
+      : tr(locale, `What is the average rate of change of f from x = ${show(a)} to x = ${show(b)}? ${form}`, `¿Cuál es la tasa de cambio promedio de f desde x = ${show(a)} hasta x = ${show(b)}? ${form}`);
     const qSaid = rocket
-      ? tr(locale, `What is the average rate of change of the height from t equals ${a} to t equals ${b}, in meters per second?`, `¿Cuál es la tasa de cambio promedio de la altura desde t igual a ${a} hasta t igual a ${b}, en metros por segundo?`)
-      : tr(locale, `What is the average rate of change of f from x equals ${sayNum(a, "en")} to x equals ${sayNum(b, "en")}? Write it in simplest form.`, `¿Cuál es la tasa de cambio promedio de f desde x igual a ${sayNum(a, "es")} hasta x igual a ${sayNum(b, "es")}? Escríbela en su mínima expresión.`);
+      ? tr(locale, `What is the average rate of change of the height from t equals ${a} to t equals ${b}, in meters per second? ${form}`, `¿Cuál es la tasa de cambio promedio de la altura desde t igual a ${a} hasta t igual a ${b}, en metros por segundo? ${form}`)
+      : tr(locale, `What is the average rate of change of f from x equals ${sayNum(a, "en")} to x equals ${sayNum(b, "en")}? ${form}`, `¿Cuál es la tasa de cambio promedio de f desde x igual a ${sayNum(a, "es")} hasta x igual a ${sayNum(b, "es")}? ${form}`);
     return {
       prompt: [`${intro} ${q}`],
       say: `${introSaid} ${qSaid}`,
@@ -1580,10 +1592,11 @@ function rateOfChange(r: Rng, level: number, locale: Locale): ItemBody {
       wrong: wrongs(answer, [
         ...(dy ? [[fracTyped(dx, dy), "inverted-rise-over-run"] as [string, string], [fracTyped(-dy, dx), "subtracted-in-different-orders"] as [string, string]] : []),
         [String(dy), "forgot-to-divide-by-change-in-x"],
+        [fracTyped(fb + fa, dx), "added-instead-of-subtracting"],
       ]),
       hints: [
         meaning,
-        tr(locale, `Read ${f}(${show(a)}) and ${f}(${show(b)}) from the table. Subtract them in the same order as the inputs, then divide.`, `Lee ${f}(${show(a)}) y ${f}(${show(b)}) en la tabla. Réstalos en el mismo orden que las entradas y luego divide.`),
+        tr(locale, `Read ${f}(${show(a)}) and ${f}(${show(b)}) from the values. Subtract them in the same order as the inputs, then divide.`, `Lee ${f}(${show(a)}) y ${f}(${show(b)}) en los valores. Réstalos en el mismo orden que las entradas y luego divide.`),
         tr(locale, `${f}(${show(b)}) = ${show(fb)} and ${f}(${show(a)}) = ${show(fa)}.`, `${f}(${show(b)}) = ${show(fb)} y ${f}(${show(a)}) = ${show(fa)}.`),
       ],
       steps: [`${f}(${show(b)}) − ${f}(${show(a)}) = ${show(fb)} − ${par(fa)} = ${show(dy)}`, `${show(b)} − ${par(a)} = ${dx}`, `${show(dy)} ÷ ${dx} = ${fracShow(dy, dx)}`],
@@ -1595,10 +1608,14 @@ function rateOfChange(r: Rng, level: number, locale: Locale): ItemBody {
   do {
     p = r.int(-4, 3);
     q = r.int(p + 1, 5);
-  } while (q - p === 1 && r.bool(0.7));
+    // A rate of 0 leaves no likely wrong value a keypad can type: −0 and the unscaled change are 0 too.
+  } while ((q - p === 1 && r.bool(0.7)) || evalTerms(ts, q) === evalTerms(ts, p));
   const fp = evalTerms(ts, p), fq = evalTerms(ts, q);
   const dy = fq - fp, dx = q - p, ans = dy / dx;
   const answer: Answer = { kind: "number", value: ans };
+  // (−3)² taken as −9: the x² term keeps the sign of x.
+  const negSq = (x: number) => ts[0][0] * x * Math.abs(x) + ts[1][0] * x + ts[2][0];
+  const ifWhole = (n: number, why: string): [string, string][] => (Number.isInteger(n) ? [[String(n), why]] : []);
   return {
     prompt: [tr(locale, `f(x) = ${fmt(ts)}. Find the average rate of change of f from x = ${show(p)} to x = ${show(q)}.`, `f(x) = ${fmt(ts)}. Halla la tasa de cambio promedio de f desde x = ${show(p)} hasta x = ${show(q)}.`)],
     say: tr(
@@ -1609,7 +1626,12 @@ function rateOfChange(r: Rng, level: number, locale: Locale): ItemBody {
     input: "keypad",
     keys: ["-"],
     answer,
-    wrong: wrongs(answer, [...(dx !== 1 ? [[String(dy), "forgot-to-divide-by-change-in-x"] as [string, string]] : []), [String(-ans), "subtracted-in-different-orders"]]),
+    wrong: wrongs(answer, [
+      ...(dx !== 1 ? [[String(dy), "forgot-to-divide-by-change-in-x"] as [string, string]] : []),
+      [String(-ans), "subtracted-in-different-orders"],
+      ...ifWhole((fq + fp) / dx, "added-instead-of-subtracting"),
+      ...ifWhole((negSq(q) - negSq(p)) / dx, "squared-negative-as-negative"),
+    ]),
     hints: [
       meaning,
       tr(locale, `Find f(${show(p)}) and f(${show(q)}), subtract, then divide by ${show(q)} − ${par(p)}.`, `Halla f(${show(p)}) y f(${show(q)}), réstalos y luego divide entre ${show(q)} − ${par(p)}.`),
@@ -1832,7 +1854,9 @@ function expGrowth(r: Rng, level: number, locale: Locale): ItemBody {
   const money2 = kind !== "town";
   const units = money2 ? toUnits(N, 100 ** (t - 1)) : toUnits(N, 100 ** t);
   const exact = money2 ? N % 100 ** (t - 1) === 0 : N % 100 ** t === 0;
-  const answer: Answer = { kind: "number", value: money2 ? units / 100 : units };
+  // Rounding once at the end gives the key. Rounding every year, as a bank does with cents, can land a
+  // cent or a person away, so one either way is accepted (0.015 leaves room for floating point).
+  const answer: Answer = { kind: "number", value: money2 ? units / 100 : units, tolerance: money2 ? 0.015 : 1 };
   const showVal = (u: number) => (money2 ? money(u) : String(u));
   const typedVal = (u: number) => (money2 ? decTyped(u, 2) : String(u));
   const factor = dec(f, 2);
@@ -1869,7 +1893,9 @@ function expGrowth(r: Rng, level: number, locale: Locale): ItemBody {
       [typedVal(offByOne), "off-by-one-exponent"],
     ]),
     hints: [
-      tr(locale, "Each year the amount is multiplied by the same growth factor.", "Cada año la cantidad se multiplica por el mismo factor de crecimiento."),
+      up
+        ? tr(locale, "Each year the amount is multiplied by the same growth factor.", "Cada año la cantidad se multiplica por el mismo factor de crecimiento.")
+        : tr(locale, "Each year the value is multiplied by the same decay factor.", "Cada año el valor se multiplica por el mismo factor de decaimiento."),
       up
         ? tr(locale, `Growing by ${p}% means multiplying by 1 + ${dec(p, 2)} = ${factor}. Do it once for each year.`, `Crecer ${p}% significa multiplicar por 1 + ${dec(p, 2)} = ${factor}. Hazlo una vez por cada año.`)
         : tr(locale, `Dropping by ${p}% means multiplying by 1 − ${dec(p, 2)} = ${factor}. Do it once for each year.`, `Bajar ${p}% significa multiplicar por 1 − ${dec(p, 2)} = ${factor}. Hazlo una vez por cada año.`),
@@ -1909,9 +1935,10 @@ function radicals(r: Rng, level: number, locale: Locale): ItemBody {
     // A proper factor t of s takes out only t², leaving n / t², which still holds a square.
     const partial = Array.from({ length: Math.max(0, s - 2) }, (_, i) => i + 2).filter((t) => s % t === 0);
     const t = partial.length ? r.pick(partial) : 0;
+    // s√(sk) is a dead option when sk is itself a perfect square (8√16); leaving the root as it is stands in.
     const wrong: Choice[] = [
       rc(s * s, k, "kept-the-square-not-its-root"),
-      rc(s, s * k, "divided-by-the-root-not-the-square"),
+      isSquare(s * k) ? rc(1, n, "not-fully-simplified") : rc(s, s * k, "divided-by-the-root-not-the-square"),
       ...(t ? [rc(t, n / (t * t), "did-not-use-the-largest-square")] : k !== s ? [rc(k, s, "swapped-root-and-radicand")] : []),
     ];
     return {
@@ -1945,7 +1972,8 @@ function radicals(r: Rng, level: number, locale: Locale): ItemBody {
     rc(C, n, "not-fully-simplified"),
     rc(C * s * s, k, "kept-the-square-not-its-root"),
     ...(coefs ? [rc(c1 + c2, n, "added-the-coefficients")] : isSquare(sum) ? [] : [rc(1, sum, "added-instead-of-multiplied")]),
-    rc(C * s, s * k, "divided-by-the-root-not-the-square"),
+    // C·s√(sk) is a dead option when sk is a perfect square; dropping the outside numbers stands in.
+    ...(!isSquare(s * k) ? [rc(C * s, s * k, "divided-by-the-root-not-the-square")] : coefs ? [rc(s, k, "dropped-the-coefficients")] : []),
   ];
   return {
     prompt: [tr(locale, `Multiply and simplify: ${shownExpr}.`, `Multiplica y simplifica: ${shownExpr}.`) + ask],
@@ -2031,7 +2059,8 @@ function quadFormula(r: Rng, level: number, locale: Locale): ItemBody {
     for (;;) {
       if (level === 1) {
         const r1 = r.int(-9, 9), r2 = r.bool(0.1) ? r1 : r.int(-9, 9);
-        if (Math.abs(r1 * r2) > 60) continue;
+        // x² = 0 needs no formula.
+        if (Math.abs(r1 * r2) > 60 || (r1 === 0 && r2 === 0)) continue;
         [A, B, Cc] = [1, -(r1 + r2), r1 * r2];
         roots = r1 === r2 ? [[r1, 1]] : [[r1, 1], [r2, 1]];
       } else {
@@ -2042,7 +2071,8 @@ function quadFormula(r: Rng, level: number, locale: Locale): ItemBody {
         const raw = [p * s, -(p * t + q * s), q * t];
         const g = gcd(gcd(Math.abs(raw[0]), Math.abs(raw[1])), Math.abs(raw[2])) || 1;
         [A, B, Cc] = raw.map((v) => v / g);
-        if (Math.abs(B) > 40 || Math.abs(Cc) > 40) continue;
+        // Numbers a ninth grader can work by hand: a ≤ 10 and |b| ≤ 20.
+        if (A > 10 || Math.abs(B) > 20 || Math.abs(Cc) > 40) continue;
         roots = [[q, p], [t, s]];
       }
       break;
@@ -2087,8 +2117,13 @@ function quadFormula(r: Rng, level: number, locale: Locale): ItemBody {
   const ch = (center: number, coef: number, rad: number, why?: string): Choice => ({ label: pm(center, coef, rad), say: sayPm(center, coef, rad, locale), ...(why ? { why } : {}) });
   const flipped = h * h + c;
   const [fs, fk] = flipped > 0 ? rootParts(flipped) : [0, 0];
+  // With b = 0 the b mistakes cannot happen, so the ± and the root are what get dropped: √10, or ±20 from (0 ± 40) ÷ 2.
+  const noB: Choice[] = [
+    { label: `x = ${rootShow(s, k)}`, say: `${tr(locale, "x equals", "x es igual a")} ${rootSay(s, k, locale)}`, why: "forgot-the-plus-or-minus" },
+    { label: `x = ±${2 * Dq}`, say: `${tr(locale, "x equals plus or minus", "x es igual a más o menos")} ${2 * Dq}`, why: "forgot-the-square-root" },
+  ];
   const wrong: Choice[] = [
-    ...(h ? [ch(-h, s, k, "forgot-the-negative-on-b"), ch(2 * h, s, k, "divided-only-part-by-2a")] : []),
+    ...(h ? [ch(-h, s, k, "forgot-the-negative-on-b"), ch(2 * h, s, k, "divided-only-part-by-2a")] : noB),
     ...(flipped > 0 && flipped !== Dq ? [ch(h, fs, fk, "sign-error-in-discriminant")] : []),
     ch(h, 2 * s, k, "did-not-divide-the-root-by-2a"),
   ];
@@ -2124,6 +2159,7 @@ const skill = (id: string, grade: "8" | "9", en: string, es: string, standard: s
 });
 
 export const MATH_8_9_MORE: Skill[] = [
+  // One code per skill: levels 2 and 3 (estimating roots) are 8.NS.A.2; level 1 (rational or irrational) is 8.NS.A.1.
   skill("m.irrational", "8", "Irrational numbers and estimating roots", "Números irracionales y estimación de raíces", "8.NS.A.2", ["m.sqrt", "m.dec.tenths"], 3, (r, level, locale) =>
     level === 1 ? irrationalL1(r, locale) : level === 2 ? rootBetween(r, locale) : rootTenth(r, locale),
   ),
