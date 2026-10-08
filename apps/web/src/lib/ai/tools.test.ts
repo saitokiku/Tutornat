@@ -10,7 +10,7 @@ import type { TutorContext } from "./context";
 import { makeItem } from "@/practice/skills";
 import { sayFrac } from "@/practice/text";
 import { systemPrompt } from "./prompts";
-import { hintsGiven, knowledgeTools, tutorTools } from "./tools";
+import { choiceSaid, hintsGiven, knowledgeTools, tutorTools } from "./tools";
 import { tutorTurn } from "./tutor";
 
 // Each knowledge tool, called by a mock model, runs against stubbed sources and ends up as a board card
@@ -293,6 +293,46 @@ describe("no answer key reaches the model", () => {
       expect(rest, `seed ${seed}`).not.toContain(sayFrac(n, d, "en"));
       expect(prompt).toMatch(/have not tried yet: do not reveal the answer/);
     }
+  });
+
+  it("choiceSaid keeps number choices exact: a number names a place only when no label is a number", () => {
+    const labels = ["−3", "3", "3/4"];
+    expect([choiceSaid(labels, "3"), choiceSaid(labels, "-3"), choiceSaid(labels, " 3/4 "), choiceSaid(labels, "the second one"), choiceSaid(labels, "the last one")]).toEqual([1, 0, 2, 1, 2]);
+    expect([choiceSaid(labels, "2"), choiceSaid(labels, "4"), choiceSaid(labels, "three")]).toEqual([null, null, null]);
+    expect([choiceSaid(["Cat", "Dog"], "B"), choiceSaid(["A", "B", "C"], "b"), choiceSaid(["A", "B", "C"], "option c")]).toEqual([1, 1, 2]);
+  });
+
+  it("check_answer on a reading item takes the choice's words, its number or letter, or its place, and says when it cannot tell", async () => {
+    const seedWhere = (skillId: string, locale: "en" | "es", ok: (it: ReturnType<typeof makeItem>) => boolean) => {
+      for (let s = 1; s < 2000; s++) if (ok(makeItem(skillId, 1, s, locale))) return s;
+      throw new Error(`no seed for ${skillId}`);
+    };
+    const keyOf = (it: ReturnType<typeof makeItem>) => (it.answer.kind === "choice" ? it.answer.index : -1);
+    const checkSaid = async (skillId: string, seed: number, locale: "en" | "es", answer: string) => {
+      const tools = tutorTools({ locale, grade: "4", surface: "practice", item: { skillId, level: 1, seed }, tries: 1 });
+      return ((await tools.check_answer.execute!({ answer }, { toolCallId: "c", messages: [] } as never)) as { correct: boolean | null }).correct;
+    };
+    // "Who is telling this story?" about a story told by a narrator outside it.
+    const pov = "e.point.of.view";
+    const seed = seedWhere(pov, "en", (it) => it.say === "Who is telling this story?" && it.choices![keyOf(it)].label.includes("outside"));
+    const item = makeItem(pov, 1, seed, "en");
+    const k = keyOf(item);
+    const other = (k + 1) % 3;
+    for (const said of [item.choices![k].label, `the ${["first", "second", "third"][k]} one`, String(k + 1), "abc"[k], `option ${"ABC"[k]}`, "a narrator outside the story", "Narrator outside the story."])
+      expect(await checkSaid(pov, seed, "en", said), said).toBe(true);
+    for (const said of [item.choices![other].label, `the ${["first", "second", "third"][other]} one`, String(other + 1), "a character who tells it as I"]) expect(await checkSaid(pov, seed, "en", said), said).toBe(false);
+    // Unclear, or words the key does not have: never marked right.
+    for (const said of ["the story", "not a narrator outside the story", "someone else", ""]) expect(await checkSaid(pov, seed, "en", said), said).toBeNull();
+
+    const esSeed = seedWhere(pov, "es", (it) => it.say === "¿Quién cuenta esta historia?" && it.choices![keyOf(it)].label.includes("fuera"));
+    const esKey = keyOf(makeItem(pov, 1, esSeed, "es"));
+    for (const said of [`la ${["primera", "segunda", "tercera"][esKey]}`, "un narrador fuera de la historia", "Un narrador fuera de la historia"]) expect(await checkSaid(pov, esSeed, "es", said), said).toBe(true);
+
+    // "Five books at most": the learner says "five". "two" is a place and a choice's word, so it is never taken as right.
+    const details = "e.key.details";
+    const books = seedWhere(details, "en", (it) => it.say === "How many books may Kenji borrow?");
+    expect(await checkSaid(details, books, "en", "five")).toBe(true);
+    expect(await checkSaid(details, books, "en", "two")).not.toBe(true);
   });
 
   it("check_answer tells the model only whether it is right, never what the key is", async () => {

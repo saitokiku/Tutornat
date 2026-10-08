@@ -50,6 +50,53 @@ export function hintsGiven(messages: UIMessage[]): number {
   return n;
 }
 
+const wordsOf = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+/** Words that carry no choice of their own, in English and Spanish. */
+const FILLER = new Set("a an the of to in on at by for and or is are was be it its that this who which with as i me my so el la los las un una unos unas de del al y o en es son que se lo le con por para su sus mi yo".split(" "));
+/** Words around a choice's place: "the second one", "option b", "la número 2". */
+const FRAME = new Set("the one choice option answer number letter it is its that el la lo opcion respuesta numero letra es de esa ese".split(" "));
+const ORDINAL: Partial<Record<string, number>> = { first: 0, second: 1, third: 2, fourth: 3, primera: 0, primero: 0, primer: 0, segunda: 1, segundo: 1, tercera: 2, tercero: 2, tercer: 2, cuarta: 3, cuarto: 3 };
+const NUMBER: Partial<Record<string, number>> = { "1": 0, "2": 1, "3": 2, "4": 3, two: 1, three: 2, four: 3, dos: 1, tres: 2, cuatro: 3 };
+const LETTER: Partial<Record<string, number>> = { a: 0, b: 1, c: 2, d: 3 };
+/** A label's or an answer's words that can pick out a choice: words with letters, singular. Numbers are left to the exact label. */
+const content = (s: string) => new Set(wordsOf(s).filter((w) => /\p{L}/u.test(w) && !FILLER.has(w)).map((w) => (w.length > 3 ? w.replace(/s$/, "") : w)));
+const asTyped = (s: string) => s.trim().toLowerCase().replace(/−/g, "-").replace(/\s+/g, " ");
+
+/**
+ * Which choice a learner means by what they said, or null when it cannot tell. Reading choices are whole
+ * sentences, so besides the label itself it takes the choice's place ("the second one", "b", "3", "the
+ * last one") and a choice's own words ("a narrator outside the story"): every word the learner said must
+ * be in that one choice and no other, so "not a narrator outside the story" is never taken for it. When
+ * the two readings disagree ("two", with a choice "Exactly two"), it cannot tell. Numbers and letters
+ * name a place only when no label is itself a number or a letter.
+ */
+export function choiceSaid(labels: string[], said: string): number | null {
+  const exact = labels.findIndex((l) => asTyped(l) === asTyped(said));
+  if (exact >= 0) return exact;
+  const words = wordsOf(said);
+  const place = words.filter((w) => !FRAME.has(w));
+  const same = labels.flatMap((l, i) => ([words.join(" "), place.join(" ")].includes(wordsOf(l).join(" ")) ? [i] : []));
+  if (same.length) return same.length === 1 ? same[0] : null;
+  const w = place.length === 1 ? place[0] : "";
+  const at =
+    ORDINAL[w] ??
+    (["last", "ultima", "ultimo"].includes(w) ? labels.length - 1 : undefined) ??
+    (labels.some((l) => /\d/.test(l)) ? undefined : NUMBER[w]) ??
+    (labels.some((l) => /^\s*\p{L}\s*$/u.test(l)) ? undefined : LETTER[w]);
+  const mine = content(said);
+  const fits = mine.size ? labels.flatMap((l, i) => ([...mine].every((m) => content(l).has(m)) ? [i] : [])) : [];
+  const byPlace = at !== undefined && at < labels.length ? at : null;
+  const byWords = fits.length === 1 ? fits[0] : null;
+  if (byPlace !== null && byWords !== null) return byPlace === byWords ? byPlace : null;
+  return byPlace ?? byWords;
+}
+
 /**
  * What the tools know about the conversation besides the context: how many hints were already given,
  * what the learner typed (so a worked example never has the numbers of their own problem), and the
@@ -74,13 +121,18 @@ export function tutorTools(ctx: TutorContext, history: TurnFacts = {}) {
       },
     }),
     check_answer: tool({
-      description: "Check something the learner said against the current problem's answer, using the deterministic checker. Returns correct, and a form note when the value is right but the form is not.",
-      inputSchema: z.object({ answer: z.string().max(80).describe("Exactly what the learner said, e.g. '7/12' or '42'") }),
+      description:
+        "Check something the learner said against the current problem's answer, using the deterministic checker. Returns correct, and a form note when the value is right but the form is not. For a multiple-choice problem the learner may give the choice's words, its number or letter, or 'the second one'; correct is null when it cannot tell which choice they mean.",
+      inputSchema: z.object({ answer: z.string().max(200).describe("Exactly what the learner said, e.g. '7/12', '42', 'the second one', or a choice's words") }),
       execute: async ({ answer }) => {
         const item = current();
         if (!item) return { correct: null, note: "No current problem to check against." };
-        const index = item.choices?.findIndex((c) => c.label.trim().toLowerCase() === answer.trim().toLowerCase()) ?? -1;
-        const verdict = check(item.answer, item.answer.kind === "choice" ? index : answer);
+        if (item.answer.kind === "choice") {
+          const index = choiceSaid(item.choices?.map((c) => c.label) ?? [], answer);
+          if (index === null) return { correct: null, form: null, note: "Could not tell which choice that is. Ask the learner to read the choice they mean or say its number." };
+          return { correct: check(item.answer, index).correct, form: null };
+        }
+        const verdict = check(item.answer, answer);
         return { correct: verdict.correct, form: verdict.form ?? null };
       },
     }),
