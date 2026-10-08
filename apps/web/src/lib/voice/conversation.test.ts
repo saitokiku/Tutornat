@@ -175,6 +175,8 @@ describe("thinking", () => {
     const r = run([{ type: "mic", at: 0 }, turn("seven", 1000), turn("can you help me", 3500)], o);
     expect(r.types).toEqual(["open-mic", "send", "abort-request", "send"]);
     expect(r.effects.at(-1)).toEqual({ type: "send", text: "seven can you help me", speculative: false });
+    // "ok" while it thinks is listening, not a second turn.
+    expect(run([{ type: "mic", at: 0 }, turn("seven", 1000), turn("ok", 2000)], o).types).toEqual(["open-mic", "send"]);
     // Once the tutor is talking, the reply stops first.
     const talking = run([{ type: "mic", at: 0 }, turn("seven", 1000), { type: "first-audio", at: 2000 }, turn("wait", 2500)], o);
     expect(talking.types.slice(-3)).toEqual(["stop-voice", "stop-reply", "send"]);

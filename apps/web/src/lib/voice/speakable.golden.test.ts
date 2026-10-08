@@ -109,6 +109,8 @@ const EN: [string, string][] = [
   // a dash between numbers: minus, unless it is a range
   ["What is 10-4?", "What is ten minus four?"],
   ["Take 5-10 minutes.", "Take five to ten minutes."],
+  ["Count 1-2-3!", "Count one, two, three!"],
+  ["Is it ( 3 or 4 )?", "Is it three or four)?"],
   // number plurals and years, the way people say them
   ["Count on by 4s from there.", "Count on by fours from there."],
   ["Count by 2s", "Count by twos"],

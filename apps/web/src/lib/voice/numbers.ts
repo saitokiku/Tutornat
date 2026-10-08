@@ -433,6 +433,9 @@ export function sayNumbers(word: string, locale: Locale, ctx: NumberContext = {}
   // Negative numbers: a sign before a digit at the start, or after a space or "("
   s = s.replace(new RegExp(String.raw`(^|[\s(])[−-](?=(?:${lit}))`, "g"), `$1${w.neg} `);
 
+  // Counting with dashes ("1-2-3"): a list, said as one.
+  if (/^\d{1,2}(?:-\d{1,2}){2,}[^\p{L}\p{N}]*$/u.test(s)) s = s.replace(/-/g, ", ");
+
   // A dash between two numbers: a range (3–5, "pages 3-5", "5-10 minutes") or minus ("What is 10-4?").
   const range = (dash: string) => dash === "–" || RANGE_BEFORE.has(prev) || (!MATH_BEFORE.has(prev) && /^\p{L}/u.test(ctx.next ?? ""));
   s = s.replace(new RegExp(String.raw`(${lit})([–-])(?=${lit})`, "g"), (_, x: string, dash: string) => `${x} ${range(dash) ? w.to : w.minus} `);

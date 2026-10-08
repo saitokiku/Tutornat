@@ -283,9 +283,10 @@ export function speakable(sentence: string, locale: Locale, names: string[] = []
       }
     }
     said ??= sayToken(tok, ctx(i));
-    // Punctuation on its own ("Really ?", the end of "p. m.") belongs to the word before; never a word of its own.
+    // Punctuation on its own is never a word: a closing mark ("Really ?", the end of "p. m.") joins
+    // the word before; an opening one ("¿", "(") carries no sound and goes.
     if (said && !/[\p{L}\p{N}]/u.test(said)) {
-      if (out.length) out[out.length - 1] += said.trim();
+      if (out.length && /^[.,!?;:)\]"”’»…]+$/.test(said.trim())) out[out.length - 1] += said.trim();
       return;
     }
     for (const w of said.split(/\s+/).filter(Boolean)) {

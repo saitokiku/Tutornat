@@ -1,4 +1,4 @@
-import { isHolding, words } from "./backchannel";
+import { isBackchannel, isHolding, words } from "./backchannel";
 import { REOPEN_IDLE_MS } from "./bands";
 import type { Band } from "./types";
 
@@ -174,7 +174,8 @@ function takeTurn(s: ConvState, e: TurnIn & { at: number }): Out {
   const pending = s.phase === "thinking" && s.turn && !s.turn.speculative && !s.turn.firstAudio ? s.turn : null;
   const talking = s.phase === "speaking" && s.turn && !s.turn.speculative ? s.turn : null;
   const said = e.text.trim();
-  if (!said && pending) return { state: s, effects: [] };
+  // "ok", "mhm" while the tutor thinks: listening, not a new turn to send.
+  if (pending && (!said || isBackchannel(said))) return { state: s, effects: [] };
   const text = [s.mergeFrom, pending?.text, said].filter(Boolean).join(" ").trim();
   const merged = !!s.mergeFrom || !!pending;
   // Speaking in a reopened window breaks a run of empty reopenings; a turn after tapping the mic doesn't.
