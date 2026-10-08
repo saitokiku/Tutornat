@@ -770,7 +770,11 @@ const REMAINDER_STORIES: Rem[] = [
 // ---------- grade 4 fractions and decimals ----------
 
 const DENS4 = [2, 3, 4, 5, 6, 8, 10, 12];
-type FracStory = { en: [string, string]; es: [string, string]; sayEn: (f: string, w: number, n: string) => string; sayEs: (f: string, w: number, n: string) => string; unit: Amount };
+/**
+ * A fraction-of-a-unit story. `dens` are the denominators that fit the setting (measuring cups come in halves,
+ * thirds, fourths and eighths). `sayEs` gets the whole Spanish amount ("3 cuartos de taza", "media taza").
+ */
+type FracStory = { en: [string, string]; es: [string, string]; sayEn: (f: string, w: number, n: string) => string; sayEs: (f: string, w: number, n: string) => string; esNoun: string; dens: number[]; unit: Amount };
 /** A unit for fraction amounts: [English one, English many, Spanish one, Spanish many]. */
 type Amount = [string, string, string, string];
 /** "3/4 mile", "1 mile", "2 1/4 miles" / "3/4 de milla", "1 milla", "2 1/4 millas". */
@@ -779,48 +783,69 @@ function amount(n: number, d: number, u: Amount, locale: Locale) {
   if (n < d) return tr(locale, `${x} ${u[0]}`, `${x} de ${u[2]}`);
   return n === d ? tr(locale, `1 ${u[0]}`, `1 ${u[2]}`) : tr(locale, `${x} ${u[1]}`, `${x} ${u[3]}`);
 }
+/** Spanish nouns that take "media" for one half: "media taza", but "medio pie". */
+const FEM_ES = new Set(["taza", "milla", "hora", "pizza", "pared", "pulgada", "vuelta", "yarda", "libra", "pinta"]);
+/** Spanish one half of a noun, dropping its article: "media taza de jugo?", "medio pie?", "media pizza". */
+function halfEs(noun: string) {
+  const bare = noun.replace(/^una? /, "");
+  return `${FEM_ES.has(bare.split(/[ ?.,]/)[0]) ? "media" : "medio"} ${bare}`;
+}
+/** A fraction of a unit read aloud in Spanish: "3 cuartos de taza", and "media taza", not "un medio de taza". */
+const ofEs = (n: number, d: number, noun: string) => (n === 1 && d === 2 ? halfEs(noun) : `${sayFrac(n, d, "es")} de ${noun}`);
 /** Prompt halves around the fraction: [before, after]; {w} is the whole number, {n} a name. */
 const FRAC_TIMES_STORIES: FracStory[] = [
   {
     en: ["Each bowl of oatmeal uses ", " cup of oats. How many cups of oats do {w} bowls use?"],
     es: ["Cada plato de avena lleva ", " de taza de avena. ¿Cuántas tazas de avena llevan {w} platos?"],
     sayEn: (f, w) => `Each bowl of oatmeal uses ${f} cup of oats. How many cups of oats do ${w} bowls use?`,
-    sayEs: (f, w) => `Cada plato de avena lleva ${f} de taza de avena. ¿Cuántas tazas de avena llevan ${w} platos?`,
+    sayEs: (f, w) => `Cada plato de avena lleva ${f} de avena. ¿Cuántas tazas de avena llevan ${w} platos?`,
+    esNoun: "taza",
+    dens: [2, 3, 4, 8],
     unit: ["cup", "cups", "taza", "tazas"],
   },
   {
     en: ["{n} runs ", " of a mile each day. How many miles does {n} run in {w} days?"],
     es: ["{n} corre ", " de milla cada día. ¿Cuántas millas corre en {w} días?"],
     sayEn: (f, w, n) => `${n} runs ${f} of a mile each day. How many miles does ${n} run in ${w} days?`,
-    sayEs: (f, w, n) => `${n} corre ${f} de milla cada día. ¿Cuántas millas corre en ${w} días?`,
+    sayEs: (f, w, n) => `${n} corre ${f} cada día. ¿Cuántas millas corre en ${w} días?`,
+    esNoun: "milla",
+    dens: [2, 4, 5, 8, 10],
     unit: ["mile", "miles", "milla", "millas"],
   },
   {
     en: ["Each poster uses ", " of a jar of paint. How many jars of paint do {w} posters use?"],
-    es: ["Cada cartel usa ", " de un frasco de pintura. ¿Cuántos frascos de pintura usan {w} carteles?"],
+    es: ["Cada cartel usa ", " de frasco de pintura. ¿Cuántos frascos de pintura usan {w} carteles?"],
     sayEn: (f, w) => `Each poster uses ${f} of a jar of paint. How many jars of paint do ${w} posters use?`,
-    sayEs: (f, w) => `Cada cartel usa ${f} de un frasco de pintura. ¿Cuántos frascos de pintura usan ${w} carteles?`,
+    sayEs: (f, w) => `Cada cartel usa ${f} de pintura. ¿Cuántos frascos de pintura usan ${w} carteles?`,
+    esNoun: "frasco",
+    dens: [2, 3, 4, 5, 6, 8, 10],
     unit: ["jar", "jars", "frasco", "frascos"],
   },
   {
     en: ["A puppy eats ", " cup of food at each meal. How many cups of food does it eat in {w} meals?"],
     es: ["Un cachorro come ", " de taza de alimento en cada comida. ¿Cuántas tazas de alimento come en {w} comidas?"],
     sayEn: (f, w) => `A puppy eats ${f} cup of food at each meal. How many cups of food does it eat in ${w} meals?`,
-    sayEs: (f, w) => `Un cachorro come ${f} de taza de alimento en cada comida. ¿Cuántas tazas de alimento come en ${w} comidas?`,
+    sayEs: (f, w) => `Un cachorro come ${f} de alimento en cada comida. ¿Cuántas tazas de alimento come en ${w} comidas?`,
+    esNoun: "taza",
+    dens: [2, 3, 4, 8],
     unit: ["cup", "cups", "taza", "tazas"],
   },
   {
     en: ["{n} practices guitar for ", " of an hour each day. How many hours does {n} practice in {w} days?"],
     es: ["{n} practica guitarra ", " de hora cada día. ¿Cuántas horas practica en {w} días?"],
     sayEn: (f, w, n) => `${n} practices guitar for ${f} of an hour each day. How many hours does ${n} practice in ${w} days?`,
-    sayEs: (f, w, n) => `${n} practica guitarra ${f} de hora cada día. ¿Cuántas horas practica en ${w} días?`,
+    sayEs: (f, w, n) => `${n} practica guitarra ${f} cada día. ¿Cuántas horas practica en ${w} días?`,
+    esNoun: "hora",
+    dens: [2, 3, 4, 5, 6, 10, 12],
     unit: ["hour", "hours", "hora", "horas"],
   },
   {
     en: ["Each model rocket needs ", " of a meter of tape. How many meters of tape do {w} rockets need?"],
-    es: ["Cada cohete de modelo necesita ", " de metro de cinta. ¿Cuántos metros de cinta necesitan {w} cohetes?"],
+    es: ["Cada cohete a escala necesita ", " de metro de cinta. ¿Cuántos metros de cinta necesitan {w} cohetes?"],
     sayEn: (f, w) => `Each model rocket needs ${f} of a meter of tape. How many meters of tape do ${w} rockets need?`,
-    sayEs: (f, w) => `Cada cohete de modelo necesita ${f} de metro de cinta. ¿Cuántos metros de cinta necesitan ${w} cohetes?`,
+    sayEs: (f, w) => `Cada cohete a escala necesita ${f} de cinta. ¿Cuántos metros de cinta necesitan ${w} cohetes?`,
+    esNoun: "metro",
+    dens: [2, 4, 5, 10],
     unit: ["meter", "meters", "metro", "metros"],
   },
 ];
@@ -1896,21 +1921,24 @@ export const MATH_3_5_MORE: Skill[] = [
             es: ["comió ", " de una pizza.", " de una pizza del mismo tamaño. ¿Quién comió más pizza?"],
             same: ["They ate the same amount", "Comieron lo mismo"],
             sayEn: (x: string, y: string) => `${n1} ate ${x} of a pizza. ${n2} ate ${y} of a pizza of the same size. Who ate more pizza?`,
-            sayEs: (x: string, y: string) => `${n1} comió ${x} de una pizza. ${n2} comió ${y} de una pizza del mismo tamaño. ¿Quién comió más pizza?`,
+            esNoun: "una pizza",
+            sayEs: (x: string, y: string) => `${n1} comió ${x}. ${n2} comió ${y} del mismo tamaño. ¿Quién comió más pizza?`,
           },
           {
             en: ["painted ", " of a wall.", " of a wall of the same size. Who painted more?"],
             es: ["pintó ", " de una pared.", " de una pared del mismo tamaño. ¿Quién pintó más?"],
             same: ["They painted the same amount", "Pintaron lo mismo"],
             sayEn: (x: string, y: string) => `${n1} painted ${x} of a wall. ${n2} painted ${y} of a wall of the same size. Who painted more?`,
-            sayEs: (x: string, y: string) => `${n1} pintó ${x} de una pared. ${n2} pintó ${y} de una pared del mismo tamaño. ¿Quién pintó más?`,
+            esNoun: "una pared",
+            sayEs: (x: string, y: string) => `${n1} pintó ${x}. ${n2} pintó ${y} del mismo tamaño. ¿Quién pintó más?`,
           },
           {
             en: ["ran ", " of a mile.", " of a mile. Who ran farther?"],
             es: ["corrió ", " de milla.", " de milla. ¿Quién corrió más lejos?"],
             same: ["They ran the same distance", "Corrieron la misma distancia"],
             sayEn: (x: string, y: string) => `${n1} ran ${x} of a mile. ${n2} ran ${y} of a mile. Who ran farther?`,
-            sayEs: (x: string, y: string) => `${n1} corrió ${x} de milla. ${n2} corrió ${y} de milla. ¿Quién corrió más lejos?`,
+            esNoun: "milla",
+            sayEs: (x: string, y: string) => `${n1} corrió ${x}. ${n2} corrió ${y}. ¿Quién corrió más lejos?`,
           },
         ] as const);
         const words = locale === "es" ? story.es : story.en;
@@ -1921,7 +1949,7 @@ export const MATH_3_5_MORE: Skill[] = [
         const picked = choose(r, right, others);
         return {
           prompt: [`${n1} ${words[0]}`, fr(a, b), `${words[1]} ${n2} ${words[0]}`, fr(c, d), words[2]],
-          say: locale === "es" ? story.sayEs(sayFrac(a, b, locale), sayFrac(c, d, locale)) : story.sayEn(sayFrac(a, b, locale), sayFrac(c, d, locale)),
+          say: locale === "es" ? story.sayEs(ofEs(a, b, story.esNoun), ofEs(c, d, story.esNoun)) : story.sayEn(sayFrac(a, b, locale), sayFrac(c, d, locale)),
           ...picked,
           hints,
           steps: [reason, `${ft(a, b)} ${symOf(diff)} ${ft(c, d)}`, t(`Answer: ${winner}`, `Respuesta: ${winner}`)],
@@ -2780,7 +2808,8 @@ export const MATH_3_5_MORE: Skill[] = [
           seconds: 15,
         };
       }
-      const b = r.pick(DENS4), a = properReduced(r, b), w = r.int(2, 9), P = w * a;
+      const st = r.pick(FRAC_TIMES_STORIES);
+      const b = r.pick(level === 3 ? st.dens : DENS4), a = properReduced(r, b), w = r.int(2, 9), P = w * a;
       const answer: Answer = { kind: "fraction", n: P, d: b };
       const hints = [
         t(`${w} × ${ft(a, b)} means ${w} groups of ${ft(a, b)}.`, `${w} × ${ft(a, b)} son ${w} grupos de ${ft(a, b)}.`),
@@ -2799,11 +2828,11 @@ export const MATH_3_5_MORE: Skill[] = [
           seconds: 20,
         };
       }
-      const st = r.pick(FRAC_TIMES_STORIES), n = r.pick(NAMES);
+      const n = r.pick(NAMES);
       const parts = locale === "es" ? st.es : st.en;
       return {
         prompt: [fill(parts[0], w, n), fr(a, b), fill(parts[1], w, n)],
-        say: locale === "es" ? st.sayEs(sayFrac(a, b, locale), w, n) : st.sayEn(sayFrac(a, b, locale), w, n),
+        say: locale === "es" ? st.sayEs(ofEs(a, b, st.esNoun), w, n) : st.sayEn(sayFrac(a, b, locale), w, n),
         input: "fraction",
         answer,
         wrong: misses(answer, slipsFor(w, a, b)),
@@ -3183,7 +3212,7 @@ export const MATH_3_5_MORE: Skill[] = [
         const answer: Answer = { kind: "number", value: deg };
         return {
           prompt: [t("How many degrees is ", "¿Cuántos grados son "), fr(n, d), t(" of a full turn?", " de una vuelta completa?"), " ", blank, "°"],
-          say: t(`How many degrees is ${sayFrac(n, d, locale)} of a full turn?`, `¿Cuántos grados son ${sayFrac(n, d, locale)} de una vuelta completa?`),
+          say: t(`How many degrees is ${sayFrac(n, d, locale)} of a full turn?`, n === 1 && d === 2 ? "¿Cuántos grados son media vuelta?" : `¿Cuántos grados son ${sayFrac(n, d, locale)} de una vuelta completa?`),
           input: "keypad",
           answer,
           wrong: misses(answer, [
@@ -3477,7 +3506,7 @@ export const MATH_3_5_MORE: Skill[] = [
             t(`There are 10 equal steps of ${stepS}. Count steps from ${loS}.`, `Hay 10 pasos iguales de ${stepS}. Cuenta los pasos desde ${loS}.`),
             t(`${xs} is ${loS} and ${k} ${unitName} more.`, `${xs} es ${loS} y ${k} ${unitName} más.`),
           ],
-          steps: [t(`Each step is ${stepS}.`, `Cada paso vale ${stepS}.`), t(`Count ${k} steps from ${loS} to reach ${xs}.`, `Cuenta ${k} pasos desde ${loS} para llegar a ${xs}.`)],
+          steps: [t(`Each step is ${stepS}.`, `Cada paso vale ${stepS}.`), t(`Count ${k} ${pl(k, "step", "steps")} from ${loS} to reach ${xs}.`, `Cuenta ${k} ${pl(k, "paso", "pasos")} desde ${loS} para llegar a ${xs}.`)],
           seconds: 20,
         };
       }
@@ -3728,6 +3757,8 @@ export const MATH_3_5_MORE: Skill[] = [
       const fparts = (k: number) => fr(...show(k));
       const fText = (k: number) => ft(...show(k));
       const fSay = (k: number) => sayFrac(...show(k), locale);
+      /** The asked amount read aloud with its unit: "media pulgada", not "un medio de pulgada". */
+      const askSay = (k: number, post: string) => (locale === "es" && fText(k) === "1/2" && post.startsWith(" de ") ? halfEs(post.slice(4)) : `${fSay(k)}${post}`);
       const dataParts: MathPart[] = data.flatMap((k, i) => (i === 0 ? [fparts(k)] : [i === c - 1 ? t(" and ", " y ") : ", ", fparts(k)]));
       const intro = say2(locale, plot.intro(c, n));
       const dataSay = listOf(data.map(fSay), locale);
@@ -3758,7 +3789,7 @@ export const MATH_3_5_MORE: Skill[] = [
           const [pre, post] = plot.count.map((p) => say2(locale, p));
           return {
             prompt: [intro, ...dataParts, ". ", pre, fparts(v), post],
-            say: `${intro}${dataSay}. ${pre}${fSay(v)}${post}`,
+            say: `${intro}${dataSay}. ${pre}${askSay(v, post)}`,
             ...base,
             input: "keypad",
             answer,
@@ -3802,7 +3833,7 @@ export const MATH_3_5_MORE: Skill[] = [
         const [pre, post] = plot.some.map((p) => say2(locale, p));
         return {
           prompt: [intro, ...dataParts, ". ", pre, fparts(v), post],
-          say: `${intro}${dataSay}. ${pre}${fSay(v)}${post}`,
+          say: `${intro}${dataSay}. ${pre}${askSay(v, post)}`,
           ...base,
           input: "fraction",
           answer,
@@ -3923,13 +3954,13 @@ export const MATH_3_5_MORE: Skill[] = [
           const answer: Answer = { kind: "number", value: ans };
           return {
             prompt: [`${w} `, fr(1, 2), ` ${uMany(c.big, locale)} = `, blank, ` ${small}`],
-            say: t(`${w} and a half ${uMany(c.big, locale)} equals how many ${small}?`, `¿${w} ${uMany(c.big, locale)} y ${c.big[4] ? "media" : "medio"} son ${cuantos(c.small).toLowerCase()} ${small}?`),
+            say: t(`${w} and a half ${uMany(c.big, locale)} equals how many ${small}?`, `¿${w} ${uName(c.big, w, locale)} y ${c.big[4] ? "media" : "medio"} son ${cuantos(c.small).toLowerCase()} ${small}?`),
             input: "keypad",
             answer,
             wrong: misses(answer, [[w * c.f, "forgot-the-half"], ((2 * w + 1) * c.wf) % 2 === 0 && [((2 * w + 1) * c.wf) / 2, c.wfWhy]]),
             hints: [
               t(`How many ${small} make 1 ${bigOne}?`, `¿${cuantos(c.small)} ${small} forman 1 ${bigOne}?`),
-              t(`1 ${bigOne} = ${c.f} ${small}, so half of a ${bigOne} is ${c.f / 2} ${uName(c.small, c.f / 2, "en")}.`, `1 ${bigOne} = ${c.f} ${small}, así que ${c.big[4] ? "media" : "medio"} ${bigOne} ${pl(c.f / 2, "es", "son")} ${c.f / 2} ${uName(c.small, c.f / 2, "es")}.`),
+              t(`1 ${bigOne} = ${c.f} ${small}, so half ${bigOne === "hour" ? "an" : "a"} ${bigOne} is ${c.f / 2} ${uName(c.small, c.f / 2, "en")}.`, `1 ${bigOne} = ${c.f} ${small}, así que ${c.big[4] ? "media" : "medio"} ${bigOne} ${pl(c.f / 2, "es", "son")} ${c.f / 2} ${uName(c.small, c.f / 2, "es")}.`),
               `${w} × ${c.f} = ${w * c.f}.`,
             ],
             steps: [`${w} × ${c.f} = ${w * c.f}`, `${w * c.f} + ${c.f / 2} = ${ans}`, `${ans} ${small}`],
