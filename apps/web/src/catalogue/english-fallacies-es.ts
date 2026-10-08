@@ -25,7 +25,7 @@ const falaciasEs: CatalogueEntry = {
               type: "text",
               text: "Don Ernesto dice que hace falta un semáforo en la esquina de la escuela. Alguien responde: “Ni siquiera sabe usar su celular, así que no le hagas caso”.",
             },
-            { type: "text", text: "Esa respuesta suena a razón, pero no dice nada de la esquina. Es una falacia." },
+            { type: "text", text: "Esa respuesta parece una razón, pero no dice nada de la esquina. Es una falacia." },
             {
               type: "text",
               text: "Un argumento da razones para apoyar una afirmación. Una falacia es un error en ese razonamiento: las razones no apoyan de verdad la afirmación, aunque suenen convincentes.",
@@ -127,7 +127,7 @@ const falaciasEs: CatalogueEntry = {
               choices: [
                 "Atacó el carácter de Lucía en vez de su idea",
                 "Señaló un costo real de empezar más tarde",
-                "Cambió su idea por una versión exagerada",
+                "Cambió la idea de Lucía por una versión exagerada",
                 "Dio pruebas de que empezar tarde no funciona",
               ],
               answer: 2,

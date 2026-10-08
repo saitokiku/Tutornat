@@ -265,7 +265,7 @@ const parrafoEs: CatalogueEntry = {
                 "La piscina donde aprendí está junto al parque de la colonia.",
                 "La natación forma parte de los Juegos Olímpicos desde hace más de cien años.",
                 "Mi traje de baño es verde y mis lentes de natación son azules.",
-                "Me daba miedo saltar a la parte honda, pero al día siguiente volví a saltar.",
+                "La primera vez que salté a la parte honda tenía miedo, pero al día siguiente volví a saltar.",
               ],
               answer: 3,
               hint: "¿Qué detalle muestra a alguien volviéndose más valiente?",

@@ -251,7 +251,7 @@ const fallacies: CatalogueEntry = {
           prompt: "Sort each statement. Is it a bandwagon fallacy, an appeal to authority that trusts the wrong expert, or a fair use of evidence?",
           widget: {
             kind: "sorter",
-            categories: ["Bandwagon", "Appeal to authority", "Fair evidence"],
+            categories: ["Bandwagon", "Appeal to authority (wrong expert)", "Fair evidence"],
             items: [
               { id: "dentists", text: "Dentists recommend brushing twice a day, so I brush twice a day.", answer: 2 },
               { id: "watch", text: "Everybody in my class is getting a smartwatch, so I need one too.", answer: 0 },

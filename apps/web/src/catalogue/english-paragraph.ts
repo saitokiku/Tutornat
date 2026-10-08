@@ -258,7 +258,7 @@ const paragraph: CatalogueEntry = {
                 "The pool where I learned is next to the library on Main Street.",
                 "Swimming has been part of the Olympic Games for more than a hundred years.",
                 "My swimsuit is green, and my goggles are blue.",
-                "I was scared to jump in the deep end, but I jumped again the next day.",
+                "I was scared the first time I jumped in the deep end, but I jumped again the next day.",
               ],
               answer: 3,
               hint: "Which detail shows the writer becoming braver?",

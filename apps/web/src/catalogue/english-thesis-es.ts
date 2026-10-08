@@ -315,13 +315,13 @@ const tesisEs: CatalogueEntry = {
               choices: [
                 "La contaminación es un problema muy grande en todo el mundo, y cada año se vuelve peor.",
                 "La contaminación es mala, y todos deberíamos hacer más para detenerla.",
-                "La ciudad debería prohibir los motores encendidos frente a las escuelas a la salida.",
+                "La ciudad debería prohibir que los coches esperen con el motor encendido frente a las escuelas a la hora de la salida.",
                 "Hay muchos tipos de contaminación, como la del aire y la del agua.",
               ],
               answer: 2,
               hint: "Busca un quién, un dónde y una afirmación clara.",
               explain:
-                "La tesis sobre los motores encendidos acota el lugar, la causa y la acción, así que un ensayo corto podría demostrarla. Las demás siguen siendo vagas, amplias o simples datos.",
+                "La tesis sobre los coches con el motor encendido acota el lugar, la causa y la acción, así que un ensayo corto podría demostrarla. Las demás siguen siendo vagas, amplias o simples datos.",
             },
             {
               id: "q4",
@@ -447,7 +447,7 @@ const tesisEs: CatalogueEntry = {
                 "La piscina se construyó en 1985, y el verano pasado la pintaron de nuevo y le pusieron camastros nuevos.",
                 "Nadar es buen ejercicio para personas de todas las edades.",
                 "La piscina tiene un tobogán azul donde los niños más chicos hacen fila.",
-                "En una encuesta a usuarios de la piscina, la mayoría de los padres dijo trabajar hasta las 18:00 o más.",
+                "En una encuesta a usuarios de la piscina, la mayoría de los padres dijo trabajar hasta las 18:00 o más tarde.",
               ],
               answer: 3,
               hint: "¿Qué dato explica por qué las familias no pueden ir antes?",
