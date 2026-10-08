@@ -67,24 +67,24 @@ const hundredsTensOnes: CatalogueEntry = {
             {
               id: "q1",
               prompt: "How many tens make 1 hundred?",
-              choices: ["10", "100", "1"],
-              answer: 0,
+              choices: ["1", "10", "100"],
+              answer: 1,
               hint: "Count by tens to 100. How many tens did you say?",
               explain: "10, 20, 30, 40, 50, 60, 70, 80, 90, 100. That is 10 tens.",
             },
             {
               id: "q2",
               prompt: "How many ones are in 1 hundred?",
-              choices: ["10", "100", "1,000"],
-              answer: 1,
+              choices: ["1", "10", "100"],
+              answer: 2,
               hint: "1 hundred is 10 tens. Each ten is 10 ones.",
               explain: "10 tens of 10 ones each is 100 ones.",
             },
             {
               id: "q3",
               prompt: "What number is 6 tens and 4 ones?",
-              choices: ["46", "64", "10"],
-              answer: 1,
+              choices: ["10", "46", "64"],
+              answer: 2,
               hint: "6 tens is 60. Then add the ones.",
               explain: "6 tens is 60. 60 and 4 ones make 64.",
             },
@@ -187,9 +187,9 @@ const hundredsTensOnes: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Which number has 2 hundreds, 0 tens and 7 ones?",
-              choices: ["27", "207", "270"],
-              answer: 1,
-              hint: "Write one digit for each place. Use 0 for no tens.",
+              choices: ["207", "27", "270"],
+              answer: 0,
+              hint: "Which place does each digit go in: hundreds, tens or ones?",
               explain: "2 hundreds, 0 tens and 7 ones is 207.",
             },
             {
@@ -250,7 +250,7 @@ const hundredsTensOnes: CatalogueEntry = {
               visual: { kind: "number-line", min: 0, max: 1000, marks: [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] },
               alt: "A number line from 0 to 1,000. It has a mark at every hundred.",
             },
-            { type: "text", text: "On this line, each jump is 100." },
+            { type: "text", text: "On this line, each mark is 100 more." },
             { type: "text", text: "Take 1 hundred away from 234. You get 134." },
           ],
         },
@@ -294,7 +294,7 @@ const hundredsTensOnes: CatalogueEntry = {
               prompt: "What is 10 more than 452?",
               choices: ["453", "462", "552"],
               answer: 1,
-              hint: "10 more changes the tens digit.",
+              hint: "Count on by ten from 452. What do you say next?",
               explain: "The tens digit goes from 5 to 6. 452 + 10 = 462.",
             },
             {
@@ -302,7 +302,7 @@ const hundredsTensOnes: CatalogueEntry = {
               prompt: "What is 100 less than 608?",
               choices: ["508", "598", "607"],
               answer: 0,
-              hint: "100 less changes the hundreds digit.",
+              hint: "Count back 100 from 608. How many hundreds are left?",
               explain: "The hundreds digit goes from 6 to 5. 608 − 100 = 508.",
             },
             {
@@ -410,18 +410,18 @@ const hundredsTensOnes: CatalogueEntry = {
             {
               id: "q2",
               prompt: "Which one is true?",
-              choices: ["251 > 215", "251 < 215", "251 = 215"],
-              answer: 0,
+              choices: ["251 < 215", "251 = 215", "251 > 215"],
+              answer: 2,
               hint: "The hundreds match. Now compare the tens.",
               explain: "Both have 2 hundreds. 5 tens is more than 1 ten. So 251 > 215.",
             },
             {
               id: "q3",
-              prompt: "Kai says 98 is greater than 102. Is he right?",
+              prompt: "Kai says 102 is greater than 98. Is he right?",
               choices: ["Yes", "No"],
-              answer: 1,
+              answer: 0,
               hint: "How many hundreds does each number have?",
-              explain: "No. 102 has 1 hundred. 98 has no hundreds. So 102 is greater.",
+              explain: "Yes. 102 has 1 hundred. 98 has no hundreds. So 102 is greater.",
             },
           ],
         },
@@ -446,9 +446,9 @@ const hundredsTensOnes: CatalogueEntry = {
 /** Practice on the skill map that fits each lesson (lesson id → skill ids). */
 export const practice: Record<string, string[]> = {
   "ten-tens": ["m.place.tens", "m.skip.count"],
-  "three-digits": ["m.place.tens"],
-  "skip-count": ["m.skip.count", "m.addsub.1000"],
-  compare: ["m.compare.100"],
+  "three-digits": ["m.place.1000"],
+  "skip-count": ["m.skip.count"],
+  compare: ["m.compare.1000"],
 };
 
 export default hundredsTensOnes;
