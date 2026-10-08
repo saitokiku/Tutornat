@@ -42,6 +42,11 @@ export const TutorContext = z.object({
   /** Skills the learner is practicing or found hard lately (ids), for examples and suggestions. */
   working: z.array(z.string().max(60)).max(8).optional(),
   teaching: TeachingBlock.optional(),
+  /**
+   * How this turn was said: "voice" when the learner's last message is a speech transcript (it may be
+   * misheard, and the reply will be spoken). Per turn; "text" when left out.
+   */
+  input: z.enum(["voice", "text"]).optional(),
 });
 
 export type TutorContext = z.infer<typeof TutorContext>;

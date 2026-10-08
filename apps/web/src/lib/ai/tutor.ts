@@ -6,16 +6,26 @@ import {
   streamText,
   toUIMessageStream,
   type LanguageModel,
+  type StopCondition,
   type UIMessage,
 } from "ai";
+import { check } from "@/practice/answer";
+import { getSkill, makeItem } from "@/practice/skills";
+import { readSpoken, voiceAnswerable } from "@/practice/spoken";
 import { daysBetween, fromLocalDate, localDate } from "@/planner/dates";
 import { TutorContext } from "./context";
-import { band, systemPrompt, TAP_REPLIES } from "./prompts";
+import { systemParts } from "./prompts";
 import { screen } from "./safety";
-import { hintsGiven, tutorTools } from "./tools";
+import { hintsGiven, tutorTools, type TutorTools } from "./tools";
 
 // One tutor turn. The safety screen runs first and can answer without any model. Kept free of
 // provider setup so tests can pass a mock model.
+//
+// A spoken turn follows the cascade (live tutor spec §2.1; the only path for minors): speech-to-text
+// in the browser → this safety screen → names already taken out by the browser (aiFetch) → one model
+// call → text-to-speech, which takes names out again. A spoken answer to a practice problem is read
+// and checked here, in code, before the model call, so the reply needs that one call and no
+// check_answer step.
 
 export const LIMITS = { messages: 40, chars: 2000 };
 
@@ -101,6 +111,70 @@ const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday
 export const todayLine = (today: string) =>
   `Today is ${WEEKDAY[fromLocalDate(today).getDay()]}, ${today}. Work out any day the learner mentions ("Friday", "tomorrow", "next week") from today. A school date for add_to_calendar is today or later, as YYYY-MM-DD; if they didn't say which day, ask.`;
 
+/** Tools whose execute only echoes their input for the board: a step made only of these leaves the model nothing to read. */
+export const BOARD_TOOLS = ["show_visual", "start_practice", "add_to_calendar", "note_for_grownup", "offer_replies"] as const;
+
+/**
+ * Stop after a step whose tool calls are all board tools, once the reply has its words ("Words first;
+ * board tools go after your words"): another model call would only add latency. A board tool that
+ * leads (a picture before any words) still gets its words, and one that sent back a note to act on
+ * (a date it couldn't offer) gets read.
+ */
+export const afterBoardOnly: StopCondition<TutorTools> = ({ steps }) => {
+  const last = steps.at(-1);
+  if (!last || !last.toolCalls.length || !last.toolCalls.every((c) => (BOARD_TOOLS as readonly string[]).includes(c.toolName))) return false;
+  if (!steps.some((s) => s.text.trim())) return false;
+  return last.toolResults.every((r) => !(r.output && typeof r.output === "object" && "note" in r.output));
+};
+
+/**
+ * A judgment that may decline (live tutor spec §2.5, models spec): "abstain" (couldn't tell what was
+ * said) and "unavailable" (this can't be judged by voice at all) are never turned into "wrong" or "right".
+ */
+export type JudgmentResult<T> = { status: "ok"; value: T } | { status: "abstain" | "unavailable"; reason: string };
+
+export type SpokenVerdict = {
+  transcript: string;
+  /** What it was read as ("7", "3/4", "3:30", a choice's label). */
+  reading: string;
+  verdict: "correct" | "not-yet" | "form";
+  /** The next vetted hint, when it wasn't right. */
+  hint: string | null;
+};
+
+/**
+ * The spoken answer to the problem on screen, checked by code: rebuilt from (skill, level, seed), read
+ * by practice/spoken.ts, decided by practice/answer.ts check(). `given`: hints already given.
+ */
+export function spokenPrecheck(ctx: TutorContext, said: string, given: number): JudgmentResult<SpokenVerdict> {
+  if (!ctx.item || !getSkill(ctx.item.skillId)) return { status: "unavailable", reason: "no-item" };
+  const item = makeItem(ctx.item.skillId, ctx.item.level, ctx.item.seed, ctx.locale);
+  if (!voiceAnswerable(ctx.item.skillId, item)) return { status: "unavailable", reason: "type-it" };
+  const r = readSpoken(said, item, ctx.locale);
+  if (!r) return { status: "abstain", reason: "unparsed" };
+  const v = check(item.answer, r.response);
+  const verdict = v.correct ? "correct" : v.form ? "form" : "not-yet";
+  return { status: "ok", value: { transcript: said, reading: r.reading, verdict, hint: verdict === "correct" ? null : (item.hints[Math.min(given, item.hints.length - 1)] ?? null) } };
+}
+
+const VERDICT = { correct: "correct", "not-yet": "not yet", form: "right value, not in simplest form" } as const;
+
+/** The lines a precheck adds to the system prompt. */
+export function precheckPrompt(p: JudgmentResult<SpokenVerdict>): string {
+  if (p.status !== "ok") {
+    if (p.status === "abstain") return "You couldn't tell what they said as an answer. Ask them to say it again or tap it in. Never call it wrong.";
+    return p.reason === "type-it" ? "This problem can't be answered out loud: spelling, capitals and punctuation need the pad. Ask them to tap or type the answer. Don't judge what they said." : "";
+  }
+  const { transcript, reading, verdict, hint } = p.value;
+  const said = transcript.replace(/["\r\n]+/g, " ").trim().slice(0, 200);
+  return [
+    `The learner answered by voice: "${said}". Read as ${reading}. The checker says: ${VERDICT[verdict]}. Do not call check_answer for this answer.`,
+    hint ? `If they need a hint, use this vetted hint: "${hint}"` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promise<Response> {
   const parsed = TutorContext.safeParse(body.context);
   if (!parsed.success || !Array.isArray(body.messages)) return Response.json({ error: "bad_request" }, { status: 400 });
@@ -117,16 +191,31 @@ export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promi
   const photos = checkPhotos(messages);
   if (photos.error) return Response.json({ error: photos.error }, { status: photos.error === "photo_too_big" ? 413 : 400 });
   const today = learnerToday(body.today);
-  const system = [systemPrompt(ctx), todayLine(today), band(ctx.grade) === "young" ? TAP_REPLIES : "", photos.hasPhoto ? PHOTO_RULES : ""].filter(Boolean).join("\n\n");
+  const voice = ctx.input === "voice";
+  const given = (ctx.item ? hintCount(body.hintsSeen) : 0) + hintsGiven(messages);
+  // A spoken answer is checked here, after the safety screen and before the model.
+  const pre = voice && ctx.item && last?.role === "user" ? spokenPrecheck(ctx, lastText(last), given) : null;
+  const gaveHint = pre?.status === "ok" && pre.value.hint ? 1 : 0;
+  // Judged in code (right, not yet, couldn't tell, or "type it"): the model has no check_answer to call.
+  const judged = !!pre && !(pre.status === "unavailable" && pre.reason === "no-item");
+  const { stable, turn } = systemParts(ctx);
+  const perTurn = [turn, todayLine(today), photos.hasPhoto ? PHOTO_RULES : "", pre ? precheckPrompt(pre) : ""].filter(Boolean).join("\n\n");
   // Everything the learner typed, message by message: a worked example never has the numbers of one.
   const typed = messages.filter((m) => m.role === "user").map((m) => lastText(m).slice(0, LIMITS.chars)).filter(Boolean);
+  const tools = tutorTools(ctx, { hintsGiven: given + gaveHint, typed, today });
   const result = streamText({
     model,
-    system,
+    // The rules, tools, band and language are the same every turn: cached by the provider.
+    system: [
+      { role: "system", content: stable, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
+      { role: "system", content: perTurn },
+    ],
     messages: await convertToModelMessages(photos.messages),
-    tools: tutorTools(ctx, { hintsGiven: (ctx.item ? hintCount(body.hintsSeen) : 0) + hintsGiven(messages), typed, today }),
-    stopWhen: isStepCount(5),
-    maxOutputTokens: 700,
+    tools,
+    // The code already judged a spoken answer: no check_answer step to wait for.
+    activeTools: judged ? (Object.keys(tools) as (keyof TutorTools)[]).filter((k) => k !== "check_answer") : undefined,
+    stopWhen: [isStepCount(5), afterBoardOnly],
+    maxOutputTokens: voice ? 300 : 700,
   });
   return createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) });
 }

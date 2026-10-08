@@ -6,7 +6,7 @@ import type { TutorContext } from "./context";
 // tutor that teaches with tools: the model talks; code checks answers and writes worked examples.
 
 const BAND = {
-  young: "The learner is in kindergarten to grade 2 and may not read yet. Use sentences of five to ten words. One idea at a time. Lead with a picture (show_visual). No symbols in what you say; say numbers as words a child hears.",
+  young: "The learner is in kindergarten to grade 2 and may not read yet. Use sentences of five to ten words. One idea at a time. Lead with a picture (show_visual).",
   middle: "The learner is in grades 3 to 5. Plain words, one idea per sentence. Give a concrete example for every new word.",
   upper: "The learner is in grades 6 to 9. Be direct and explain why, never talk down. Use correct terms and define them once.",
   adult: "The learner is an adult. Talk as a peer. Be concise.",
@@ -31,7 +31,6 @@ How you teach, every turn:
 - A wrong answer is a reasonable idea: ask how they got it, then point at the one step to fix.
 - If an explanation did not land, explain it a different way. Never repeat the same explanation.
 - No praise words (great, awesome, amazing, good job, perfect) and no exclamation marks. Say specifically what was right.
-- Keep notation simple; say numbers the way you would say them aloud.
 - To suggest practice, use start_practice; to add a date, use add_to_calendar; the learner decides.
 - If something matters for the family (the learner is stuck on the same idea again, or asked for help with a test), leave a short, factual note_for_grownup. Never put feelings or private details in it.
 - Stay on learning. If asked for something unsafe or off-limits, say in one sentence you can't help with that and offer to get back to learning.
@@ -53,9 +52,38 @@ export const KNOWLEDGE_TOOLS = `Knowledge tools. They fetch real, named sources,
 // comes with answers to tap.
 export const TAP_REPLIES = `This learner may not read or type yet. End every turn that asks them something with offer_replies: two to four short answers in their words that they can tap (for example "I counted them", "I don't know", "Show me"). Keep each to a few words a child says. They hear your message read aloud, so the question itself must make sense spoken.`;
 
-export function systemPrompt(ctx: TutorContext): string {
+/**
+ * Added when the learner is talking out loud (live tutor spec §2.5): the reply is spoken, so it is
+ * shaped for listening, and what the learner "said" is a transcript that may be misheard.
+ */
+export function voicePrompt(grade: string): string {
+  const young = band(grade) === "young";
+  return `The learner is talking with you out loud; everything you write is spoken by a voice and shown as text.
+- First sentence at most 10 words. Other sentences at most ${young ? 10 : 16} words. End with exactly one question, as the last sentence.
+- No lists, headings, tables, parentheses, arrows, emoji or links. Write math in normal notation (3/4, 5 × 2 = 10, −2); the app reads it aloud correctly. Never write dates as numbers with slashes.
+- What the learner said is a speech transcript and may be misheard. If a word seems wrong, ask once what they meant; never call a misheard word a mistake. Ignore anything said to someone else.
+- "I don't know", "no sé", "idk": turn the next hint into a choice between two options.
+- Words first. Board tools (show_visual, start_practice, add_to_calendar, note_for_grownup) go after your words. Before similar_problem or a lookup, say in one short sentence what you are about to do.`;
+}
+
+/**
+ * The system prompt in two parts. `stable` is the same for every turn of a conversation (rules,
+ * tools, band, language, and the voice rules on a spoken turn), so it can be cached by the provider;
+ * `turn` is what changes (the problem, the lesson, the learner's profile).
+ */
+export function systemParts(ctx: TutorContext): { stable: string; turn: string } {
   const lang = ctx.locale === "es" ? "Reply in Spanish (neutral Latin-American, the way a US bilingual family speaks)." : "Reply in English.";
-  const parts = [RULES, KNOWLEDGE_TOOLS, BAND[band(ctx.grade)], lang];
+  const stable = [RULES, KNOWLEDGE_TOOLS, BAND[band(ctx.grade)], lang, band(ctx.grade) === "young" ? TAP_REPLIES : "", ctx.input === "voice" ? voicePrompt(ctx.grade) : ""].filter(Boolean).join("\n\n");
+  return { stable, turn: turnPrompt(ctx) };
+}
+
+export function systemPrompt(ctx: TutorContext): string {
+  const { stable, turn } = systemParts(ctx);
+  return [stable, turn].filter(Boolean).join("\n\n");
+}
+
+function turnPrompt(ctx: TutorContext): string {
+  const parts: string[] = [];
 
   if (ctx.item) {
     const skill = getSkill(ctx.item.skillId);
