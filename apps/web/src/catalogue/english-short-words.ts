@@ -45,11 +45,11 @@ const shortWords: CatalogueEntry = {
         {
           id: "s3",
           kind: "interactive",
-          title: "Like cat or like dog?",
-          prompt: "Read each word. Is the middle sound like cat or like dog?",
+          title: "Like cat or like top?",
+          prompt: "Read each word. Is the middle sound like cat or like top?",
           widget: {
             kind: "sorter",
-            categories: ["Middle sound like cat", "Middle sound like dog"],
+            categories: ["Middle sound like cat", "Middle sound like top"],
             items: [
               { id: "hat", text: "hat", answer: 0 },
               { id: "mop", text: "mop", answer: 1 },
