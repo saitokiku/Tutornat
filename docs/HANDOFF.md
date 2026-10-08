@@ -26,6 +26,20 @@ Start here. Then [STATUS.md](STATUS.md) (owner-blocked list at the top, then Que
 | **Live Tutor phase B** | phase A merged; wiring steps written | VoiceRoot in the root layout, every speaker through it, the tutor cursor + attention scheduler, `point_at` + data-spot ids on every screen, Talk/drawer/stage/K–2 Today states, e2e | `apps/web/src/lib/voice/WIRING.md`, live tutor spec P3–P5, `docs/spotlight.md` |
 | **Account authority (Codex T03)** | archived on `origin/codex/account-authority` | finish as the M5 accounts/consent step per [handoff/codex-review-2026-10-07.md](handoff/codex-review-2026-10-07.md) | after Live Tutor B |
 
+### Unmerged WIP saved on GitHub (branches `wip/*`; each is based on the commit noted, not yet checked)
+
+| Branch | Base | Contents |
+|---|---|---|
+| `wip/worktree-wf_9a1ed915-3b7-1` | f9f9290 | polish: practice (12 files: Runner, pads, practice home, SkillMap) — mid-change |
+| `wip/worktree-wf_9a1ed915-3b7-2` | f9f9290 | polish: Today (8 files: StatusStrip, TodayPlan, Picks, plan.ts) — mid-change |
+| `wip/worktree-wf_9a1ed915-3b7-4` | f9f9290 | polish: intake (the merged skill-grade commit + a tutor-demo edit) |
+| `wip/worktree-wf_87a0a346-55c-43` | d34f845 | content re-fix math-k2 (a render test) |
+| `wip/worktree-wf_87a0a346-55c-47` | d34f845 | content re-fix eng-reading-35 (4 new passage files + index/test) |
+| `wip/worktree-wf_87a0a346-55c-52` | d34f845 | content re-fix eng-reading-69 (paired passages) |
+
+Resume each by cherry-picking its commits after the base onto `main` (`git log <base>..origin/<branch>`),
+then the checks; finish what the commit messages say is mid-change.
+
 ## Next, in order
 
 1. Finish the 7 content strands' open items.
