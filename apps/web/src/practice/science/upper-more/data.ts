@@ -65,7 +65,7 @@ const RATES: RateCtx[] = [
   {
     intro: bi("{name} runs at a steady pace.", "{name} corre a un ritmo constante."), xName: bi("Time", "Tiempo"), yName: bi("Distance", "Distancia"), xu: SEC, yu: MET,
     q: bi("How many meters does {name} run each second?", "¿Cuántos metros corre {name} cada segundo?"), per: bi("m per second", "m por segundo"), dir: 1,
-    l1: [30, 80], start: [0, 0], xs: [2, 5, 10], grid: [10, 20], sx: [2, 5], rate: [3, 10], lift: false,
+    l1: [20, 60], start: [0, 0], xs: [2, 5, 10], grid: [10, 20], sx: [2, 5], rate: [2, 6], lift: false,
   },
   {
     intro: bi("{name} rides toward the finish of a bike race at a steady speed.", "{name} va en bicicleta hacia la meta de una carrera a una rapidez constante."), xName: bi("Time", "Tiempo"), yName: bi("Distance left", "Distancia que falta"), xu: HR, yu: KM,
@@ -172,7 +172,7 @@ export function rateItem(r: Rng, level: number, locale: Locale): ItemBody {
 /** A population that doubles every `every` units of time in an experiment; `start` counts are × `step`. */
 type Grower = { what: Bi; every: number; u: Unit; start: [number, number]; step: number };
 const GROWERS: Grower[] = [
-  { what: bi("bacteria in a lab dish", "bacterias en un plato de laboratorio"), every: 20, u: MIN, start: [5, 40], step: 10 },
+  { what: bi("bacteria in a lab dish", "bacterias en una placa de Petri"), every: 20, u: MIN, start: [5, 40], step: 10 },
   { what: bi("yeast cells in a flask of sugar water", "células de levadura en un matraz con agua azucarada"), every: 2, u: HR, start: [2, 20], step: 50 },
   { what: bi("duckweed plants on a pond", "plantas de lenteja de agua en un estanque"), every: 3, u: DAYS, start: [10, 60], step: 1 },
   { what: bi("algae cells in a tank", "células de algas en un tanque"), every: 1, u: DAYS, start: [5, 50], step: 100 },
@@ -201,8 +201,8 @@ export function populationItem(r: Rng, level: number, locale: Locale): ItemBody 
     const tableText = `${tr(locale, "Time", "Tiempo")} (${U}): ${cols.map(([t]) => t).join(", ")}\n${tr(locale, "Count", "Cantidad")}: ${cols.map(([, c]) => n0(c)).join(", ")}`;
     const spokenTable = tr(locale, `Time in ${g.u.w[1].en}: ${cols.map(([t]) => t).join(", ")}. Count: ${cols.map(([, c]) => n0(c)).join(", ")}.`, `Tiempo en ${g.u.w[1].es}: ${cols.map(([t]) => t).join(", ")}. Cantidad: ${cols.map(([, c]) => n0(c)).join(", ")}.`);
     const head = tr(locale, `A scientist counts ${g.what.en}. The number doubles every ${g.every === 1 ? "" : `${g.every} `}${g.u.w[g.every === 1 ? 0 : 1].en}.`, `Una científica cuenta ${g.what.es}. La cantidad se duplica cada ${g.every === 1 ? "" : `${g.every} `}${g.u.w[g.every === 1 ? 0 : 1].es}.`);
-    const ask = tr(locale, `If the pattern continues, how many will there be after ${T} ${U}?`, `Si el patrón continúa, ¿cuántas habrá a los ${T} ${U}?`);
-    const askSaid = tr(locale, `If the pattern continues, how many will there be after ${T} ${g.u.w[1].en}?`, `Si el patrón continúa, ¿cuántas habrá a los ${T} ${g.u.w[1].es}?`);
+    const ask = tr(locale, `If the pattern continues, how many will there be after ${T} ${U}?`, `Si el patrón continúa, ¿cuántas habrá después de ${T} ${U}?`);
+    const askSaid = tr(locale, `If the pattern continues, how many will there be after ${T} ${g.u.w[1].en}?`, `Si el patrón continúa, ¿cuántas habrá después de ${T} ${g.u.w[1].es}?`);
     const last = 4 * N;
     const chain = [last];
     for (let i = 0; i < j; i++) chain.push(chain[chain.length - 1] * 2);

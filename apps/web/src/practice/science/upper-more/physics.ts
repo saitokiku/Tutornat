@@ -44,11 +44,12 @@ const MOVERS: Mover[] = [
   { what: bi("a car", "un auto"), m10: [10000, 16000], step: 1000, v: [5, 25] },
 ];
 /** Things lifted or about to fall: mass in tenths of a kilogram and height in whole meters. */
-type Lift = { what: Bi; the: Bi; where: Bi; from?: Bi; m10: [number, number]; step: number; h: [number, number] };
+/** `total` marks a mass that includes riders ("…, with a total mass of 700 kg, is…"). Heights start at 2 m so m × g (hint 3) is never the answer. */
+type Lift = { what: Bi; the: Bi; where: Bi; from?: Bi; total?: true; m10: [number, number]; step: number; h: [number, number] };
 const LIFTS: Lift[] = [
-  { what: bi("a backpack", "una mochila"), the: bi("the backpack", "la mochila"), where: bi("on a shelf", "en un estante"), from: bi("from a shelf", "desde un estante"), m10: [20, 80], step: 10, h: [1, 2] },
+  { what: bi("a backpack", "una mochila"), the: bi("the backpack", "la mochila"), where: bi("on a high shelf", "en un estante alto"), from: bi("from a high shelf", "desde un estante alto"), m10: [20, 80], step: 10, h: [2, 3] },
   { what: bi("a hiker", "una excursionista"), the: bi("the hiker", "la excursionista"), where: bi("at the top of a hill", "en la cima de una colina"), m10: [500, 800], step: 50, h: [20, 90] },
-  { what: bi("a roller coaster car with riders", "un carro de montaña rusa con pasajeros"), the: bi("the car", "el carro"), where: bi("at the top of the first hill", "en la cima de la primera subida"), m10: [4000, 8000], step: 500, h: [20, 60] },
+  { what: bi("a roller coaster car full of riders", "un carro de montaña rusa lleno de pasajeros"), the: bi("the car", "el carro"), where: bi("at the top of the first hill", "en la cima de la primera subida"), total: true, m10: [4000, 8000], step: 500, h: [20, 60] },
   { what: bi("a rock", "una roca"), the: bi("the rock", "la roca"), where: bi("at the edge of a cliff", "al borde de un acantilado"), from: bi("from the edge of a cliff", "desde el borde de un acantilado"), m10: [50, 200], step: 10, h: [10, 40] },
   { what: bi("an apple", "una manzana"), the: bi("the apple", "la manzana"), where: bi("on a branch", "en una rama"), from: bi("from a branch", "desde una rama"), m10: [2, 3], step: 1, h: [2, 6] },
   { what: bi("a flowerpot", "una maceta"), the: bi("the flowerpot", "la maceta"), where: bi("on a windowsill", "en el borde de una ventana"), m10: [10, 40], step: 5, h: [3, 9] },
@@ -97,12 +98,17 @@ export function energyItem(r: Rng, level: number, locale: Locale): ItemBody {
   const g = tr(locale, "Use g = 9.8 N/kg.", "Usa g = 9.8 N/kg.");
   const gSaid = tr(locale, "Use g equals 9.8 newtons per kilogram.", "Usa g igual a 9.8 newtons por kilogramo.");
   const text = both((s) => {
-    const W = cap(o.what[locale]), where = o.where[locale], G = s ? gSaid : g, Ju = s ? "joules" : "J";
+    const G = s ? gSaid : g, Ju = s ? "joules" : "J";
+    // "A backpack with a mass of 5 kg", or "A roller coaster car full of riders, with a total mass of 700 kg,".
+    const W = o.total
+      ? tr(locale, `${cap(o.what.en)}, with a total mass of ${qt(m, KG, locale, s)},`, `${cap(o.what.es)}, con una masa total de ${qt(m, KG, locale, s)},`)
+      : tr(locale, `${cap(o.what.en)} with a mass of ${qt(m, KG, locale, s)}`, `${cap(o.what.es)} con una masa de ${qt(m, KG, locale, s)}`);
+    const where = o.where[locale];
     if (kind === "pe")
-      return tr(locale, `${W} with a mass of ${qt(m, KG, locale, s)} is ${where}, ${qt(H, M, locale, s)} above the ground. What is the gravitational potential energy, in ${Ju}? ${G}`, `${W} con una masa de ${qt(m, KG, locale, s)} está ${where}, a ${qt(H, M, locale, s)} sobre el suelo. ¿Cuál es su energía potencial gravitatoria, en ${Ju}? ${G}`);
+      return tr(locale, `${W} is ${where}, ${qt(H, M, locale, s)} above the ground. What is the gravitational potential energy, in ${Ju}? ${G}`, `${W} está ${where}, a ${qt(H, M, locale, s)} sobre el suelo. ¿Cuál es su energía potencial gravitatoria, en ${Ju}? ${G}`);
     if (kind === "fall")
-      return tr(locale, `${W} with a mass of ${qt(m, KG, locale, s)} falls ${o.from!.en}, ${qt(H, M, locale, s)} above the ground. Ignoring air resistance, how much kinetic energy does it have just before it lands, in ${Ju}? ${G}`, `${W} con una masa de ${qt(m, KG, locale, s)} cae ${o.from!.es}, a ${qt(H, M, locale, s)} sobre el suelo. Sin contar la resistencia del aire, ¿cuánta energía cinética tiene justo antes de llegar al suelo, en ${Ju}? ${G}`);
-    return tr(locale, `${W} with a mass of ${qt(m, KG, locale, s)} is ${where}. Its gravitational potential energy is ${qt(pe, J, locale, s)}. How high above the ground is ${o.the.en}, in ${s ? "meters" : "m"}? ${G}`, `${W} con una masa de ${qt(m, KG, locale, s)} está ${where}. Su energía potencial gravitatoria es de ${qt(pe, J, locale, s)}. ¿A qué altura sobre el suelo está ${o.the.es}, en ${s ? "metros" : "m"}? ${G}`);
+      return tr(locale, `${W} falls ${o.from!.en}, ${qt(H, M, locale, s)} above the ground. Ignoring air resistance, how much kinetic energy does it have just before it lands, in ${Ju}? ${G}`, `${W} cae ${o.from!.es}, a ${qt(H, M, locale, s)} sobre el suelo. Sin contar la resistencia del aire, ¿cuánta energía cinética tiene justo antes de llegar al suelo, en ${Ju}? ${G}`);
+    return tr(locale, `${W} is ${where}. Its gravitational potential energy is ${qt(pe, J, locale, s)}. How high above the ground is ${o.the.en}, in ${s ? "meters" : "m"}? ${G}`, `${W} está ${where}. Su energía potencial gravitatoria es de ${qt(pe, J, locale, s)}. ¿A qué altura sobre el suelo está ${o.the.es}, en ${s ? "metros" : "m"}? ${G}`);
   });
   const mgh = `9.8 × ${show(m)} × ${h}`;
   if (kind === "height")
@@ -153,14 +159,18 @@ export function energyItem(r: Rng, level: number, locale: Locale): ItemBody {
 
 // ── s.wave.speed ────────────────────────────────────────────────────────────────────────────────
 
-/** Level 1 waves: frequency in tenths of a hertz and wavelength in tenths of a meter, as ranges or fixed pairs. */
-type Wave = { what: Bi; f10: [number, number]; fs: number; l10: [number, number]; pairs?: [number, number][] };
+/**
+ * Level 1 waves: frequency in tenths of a hertz, and wavelength `l` in units of 10^-lk m (tenths, or
+ * hundredths for a ripple tank), as ranges or fixed pairs. Ocean pairs keep λ under the deep-water
+ * limit g ÷ (2π f²), about 1.56 ÷ f² m, so the speed is one real waves can have.
+ */
+type Wave = { what: Bi; f10: [number, number]; fs: number; l: [number, number]; lk: 1 | 2; pairs?: [number, number][] };
 const WAVES: Wave[] = [
-  { what: bi("A wave travels along a rope.", "Una onda viaja por una cuerda."), f10: [10, 50], fs: 10, l10: [5, 30] },
-  { what: bi("Ripples cross a wave tank.", "Unas ondas cruzan un tanque de olas."), f10: [10, 40], fs: 10, l10: [2, 8] },
-  { what: bi("A wave moves along a stretched spring toy.", "Una onda avanza por un resorte de juguete estirado."), f10: [10, 40], fs: 10, l10: [4, 15] },
-  { what: bi("Ocean waves roll toward a pier.", "Olas del mar avanzan hacia un muelle."), f10: [0, 0], fs: 1, l10: [0, 0], pairs: [[4, 100], [3, 160], [3, 200], [2, 300], [2, 400], [2, 500]] },
-  { what: bi("A wave runs along a guitar string.", "Una onda recorre una cuerda de guitarra."), f10: [1000, 2000], fs: 100, l10: [12, 14] },
+  { what: bi("A wave travels along a rope.", "Una onda viaja por una cuerda."), f10: [10, 50], fs: 10, l: [5, 30], lk: 1 },
+  { what: bi("Ripples cross a ripple tank.", "Unas ondas cruzan una cubeta de ondas."), f10: [50, 150], fs: 10, l: [2, 5], lk: 2 },
+  { what: bi("A wave moves along a stretched spring toy.", "Una onda avanza por un resorte de juguete estirado."), f10: [10, 40], fs: 10, l: [4, 15], lk: 1 },
+  { what: bi("Ocean waves roll toward a pier.", "Olas del mar avanzan hacia un muelle."), f10: [0, 0], fs: 1, l: [0, 0], lk: 1, pairs: [[4, 80], [3, 120], [3, 150], [2, 250], [2, 300], [2, 350]] },
+  { what: bi("A wave runs along a guitar string.", "Una onda recorre una cuerda de guitarra."), f10: [1000, 2000], fs: 100, l: [12, 14], lk: 1 },
 ];
 /** Level 2: a known speed, with frequencies chosen so the wavelength (in hundredths of a meter) comes out exact. */
 type Medium = { what: Bi; v: number; fs: number[] };
@@ -173,8 +183,8 @@ const MEDIA: Medium[] = [
 export function waveItem(r: Rng, level: number, locale: Locale): ItemBody {
   if (level === 1) {
     const w = r.pick(WAVES);
-    const [f10, l10] = w.pairs ? r.pick(w.pairs) : [r.int(w.f10[0] / w.fs, w.f10[1] / w.fs) * w.fs, r.int(w.l10[0], w.l10[1])];
-    const f = q1(f10), l = q1(l10), v: Q = { n: f10 * l10, k: 2 };
+    const [f10, ln] = w.pairs ? r.pick(w.pairs) : [r.int(w.f10[0] / w.fs, w.f10[1] / w.fs) * w.fs, r.int(w.l[0], w.l[1])];
+    const f = q1(f10), l: Q = { n: ln, k: w.lk }, v: Q = { n: f10 * ln, k: 1 + w.lk };
     const text = both((s) =>
       tr(
         locale,
@@ -188,9 +198,9 @@ export function waveItem(r: Rng, level: number, locale: Locale): ItemBody {
       keys: ["."],
       answer: { kind: "number", value: val(v) },
       wrong: misses(val(v), [
-        [r2(f10 / l10), "divided-instead-of-multiplied"],
-        [r2(l10 / f10), "divided-wrong-way"],
-        [(f10 + l10) / 10, "added-instead-of-multiplied"],
+        [r2(val(f) / val(l)), "divided-instead-of-multiplied"],
+        [r2(val(l) / val(f)), "divided-wrong-way"],
+        [(f10 * 10 ** (w.lk - 1) + ln) / 10 ** w.lk, "added-instead-of-multiplied"],
       ]),
       hints: [
         tr(locale, `Each second, ${show(f)} waves pass a point, and each one is ${show(l)} m long. How far does the wave move in a second?`, `Cada segundo pasan ${show(f)} ondas por un punto, y cada una mide ${show(l)} m. ¿Cuánto avanza la onda en un segundo?`),
@@ -366,14 +376,15 @@ export function momentumItem(r: Rng, level: number, locale: Locale): ItemBody {
   if (level === 1) {
     const b = r.pick(BODIES);
     const m10 = r.int(b.m10[0] / b.step, b.m10[1] / b.step) * b.step;
-    // Keep the momentum to tenths: a speed with tenths goes with a whole-kilogram mass.
+    // Keep the momentum to tenths: a speed with tenths goes with a whole-kilogram mass. Rounding the
+    // speed up (never down) keeps it above zero.
     let v10 = r.int(b.v10[0], b.v10[1]);
-    if (m10 % 10 && v10 % 10) v10 -= v10 % 10;
+    if (m10 % 10 && v10 % 10) v10 += 10 - (v10 % 10);
     const p: Q = { n: m10 * v10, k: 2 }, m = q1(m10), v = q1(v10);
     const findV = r.bool(0.35) && m10 % 10 === 0;
     const text = both((s) =>
       findV
-        ? tr(locale, `${cap(b.what.en)} has a mass of ${qt(m, KG, locale, s)} and a momentum of ${show(p)} ${kgms(s)}. How fast is ${b.the.en} moving, in ${s ? "meters per second" : "m/s"}?`, `${cap(b.what.es)} tiene una masa de ${qt(m, KG, locale, s)} y una cantidad de movimiento de ${show(p)} ${kgms(s)}. ¿Qué tan rápido se mueve ${b.the.es}, en ${s ? "metros por segundo" : "m/s"}?`)
+        ? tr(locale, `${cap(b.what.en)} has a mass of ${qt(m, KG, locale, s)} and a momentum of ${qt(p, KGMS, locale, s)}. How fast is ${b.the.en} moving, in ${s ? "meters per second" : "m/s"}?`, `${cap(b.what.es)} tiene una masa de ${qt(m, KG, locale, s)} y una cantidad de movimiento de ${qt(p, KGMS, locale, s)}. ¿Qué tan rápido se mueve ${b.the.es}, en ${s ? "metros por segundo" : "m/s"}?`)
         : tr(locale, `${cap(b.what.en)} with a mass of ${qt(m, KG, locale, s)} moves at ${qt(v, MPS, locale, s)}. What is the momentum, in ${kgms(s)}?`, `${cap(b.what.es)} con una masa de ${qt(m, KG, locale, s)} se mueve a ${qt(v, MPS, locale, s)}. ¿Cuál es su cantidad de movimiento, en ${kgms(s)}?`),
     );
     const key = findV ? val(v) : val(p);
@@ -463,7 +474,7 @@ export function momentumItem(r: Rng, level: number, locale: Locale): ItemBody {
     tr(
       locale,
       `${a} (${qt(MA, KG, locale, s)}) and ${b} (${qt(MB, KG, locale, s)}) stand still on ice skates, then push off each other. ${b} glides away at ${qt(VB, MPS, locale, s)}. How fast does ${a} glide the other way, in ${s ? "meters per second" : "m/s"}?`,
-      `${a} (${qt(MA, KG, locale, s)}) y ${b} (${qt(MB, KG, locale, s)}) están quietos sobre patines de hielo y se empujan. ${b} se desliza a ${qt(VB, MPS, locale, s)}. ¿Qué tan rápido se desliza ${a} en sentido contrario, en ${s ? "metros por segundo" : "m/s"}?`,
+      `${a} (${qt(MA, KG, locale, s)}) y ${b} (${qt(MB, KG, locale, s)}) están sin moverse sobre patines de hielo y se empujan. ${b} se desliza a ${qt(VB, MPS, locale, s)}. ¿Qué tan rápido se desliza ${a} en sentido contrario, en ${s ? "metros por segundo" : "m/s"}?`,
     ),
   );
   const pb: Q = { n: mb * vb10, k: 1 };

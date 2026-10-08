@@ -73,7 +73,10 @@ function problems(id: string, levels: number) {
     if (!ok && out.length < 20) out.push(msg);
   };
   const PLURAL_AFTER_1 =
-    /(?<![\d.,])1 (kilograms|meters|seconds|grams|joules|ohms|amps|volts|hours|days|years|minutes|kilogramos|metros|segundos|gramos|julios|ohmios|amperios|voltios|horas|días|años|minutos)\b/;
+    /(?<![\d.,])1 (kilogram meters|kilograms|meters|seconds|grams|joules|ohms|amps|volts|hours|days|years|minutes|atoms|kilogramos|metros|segundos|gramos|julios|ohmios|amperios|voltios|horas|días|años|minutos|átomos)\b/;
+  // Spanish agreement slips that generated templates can make: a masculine word with "horas", a
+  // feminine one with "días" or "años", and plural adjectives that assume a pair of boys.
+  const ES_AGREEMENT = /¿Cuántos (horas|semanas)\b|¿Cuántas (días|años|minutos|segundos)\b|\ba los \d+ (h|horas)\b|están quietos/;
   for (let level = 1; level <= levels; level++) {
     const en = make(id, level, "en"), es = make(id, level, "es");
     en.forEach((a, i) => {
@@ -85,6 +88,7 @@ function problems(id: string, levels: number) {
         const copy = [text(it.prompt), it.say, ...it.hints, ...it.steps, ...(it.choices ?? []).flatMap((c) => [c.label, c.say ?? ""])];
         for (const c of copy) {
           bad(!PLURAL_AFTER_1.test(c), `${where}: "1" with a plural in "${c}"`);
+          if (it === b) bad(!ES_AGREEMENT.test(c), `${where}: Spanish agreement in "${c}"`);
           bad(!/!/.test(c), `${where}: exclamation in "${c}"`);
           bad(!/\p{Extended_Pictographic}/u.test(c), `${where}: emoji in "${c}"`);
           bad(!/undefined|NaN/.test(c), `${where}: undefined in "${c}"`);
@@ -126,6 +130,16 @@ describe.each(SCIENCE_6_9_MORE.map((s) => [s.id, s.levels] as const))("%s", (id,
 });
 
 describe("question banks", () => {
+  it("are read aloud without notation: no arrows or subscripts in the question or the choices", () => {
+    for (const [id, levels] of Object.entries(SCIENCE_6_9_MORE_BANKS))
+      levels.forEach((_, i) => {
+        for (const locale of ["en", "es"] as const)
+          for (const it of make(id, i + 1, locale)) for (const s of [it.say, ...it.choices!.map((c) => c.say ?? c.label)]) expect(s, `${id}: ${s}`).not.toMatch(/[→₀-₉]/);
+      });
+    const one = makeItem("s.mixtures", 1, SEEDS.find((seed) => text(makeItem("s.mixtures", 1, seed, "en").prompt) === "Which of these is a compound?")!, "en");
+    expect(one.choices!.find((c) => c.label === "Water (H₂O)")!.say).toBe("Water (H 2 O)");
+  });
+
   const BINARY = new Set(["criterion|constraint", "criterio|restricción"].map((p) => p.split("|").sort().join("|")));
   for (const [id, levels] of Object.entries(SCIENCE_6_9_MORE_BANKS)) {
     it(`${id}: well-formed, tagged entries, at least 12 per level, every one reachable`, () => {
@@ -254,7 +268,7 @@ describe("s.moon.phase", () => {
   });
 
   it("items: the dates in the prompt, counted on the calendar, give the keyed phase in both languages", () => {
-    const re = /shows a (new|full) moon on (\w+) (\d+), (\d+)\. About what phase does it show for (\w+) (\d+), (\d+)\?/;
+    const re = /^There is a (new|full) moon on (\w+) (\d+), (\d+)\. About what phase is the Moon in on (\w+) (\d+), (\d+)\?$/;
     for (const level of [1, 2]) {
       const es = make("s.moon.phase", level, "es");
       const seen = new Set<string>();
@@ -313,6 +327,19 @@ describe("s.graph.rates", () => {
         expect(near(Math.abs(y1 - y0), num(it) * (x1 - x0)), JSON.stringify(v.points)).toBe(true);
       }
     }
+  });
+});
+
+describe("s.graph.rates realism", () => {
+  it("a runner keeps a steady pace a student can hold: at most 6 m/s", () => {
+    let seen = 0;
+    for (const level of [1, 2])
+      for (const it of make("s.graph.rates", level))
+        if (/runs at a steady pace/.test(text(it.prompt))) {
+          expect(num(it), text(it.prompt)).toBeLessThanOrEqual(6);
+          seen++;
+        }
+    expect(seen).toBeGreaterThan(0);
   });
 });
 
@@ -417,6 +444,12 @@ describe("s.energy.ke.pe", () => {
   });
 });
 
+describe("s.energy.ke.pe hints", () => {
+  it("hint 3 is a first step, never the answer itself", () => {
+    for (const level of [1, 2]) for (const it of make("s.energy.ke.pe", level)) expect(nums(it.hints[2]).at(-1), text(it.prompt)).not.toBe(num(it));
+  });
+});
+
 describe("s.wave.speed", () => {
   it("level 1: the speed divided by the frequency gives back the wavelength", () => {
     for (const it of make("s.wave.speed", 1)) {
@@ -424,6 +457,24 @@ describe("s.wave.speed", () => {
       const [f, l] = nums(p);
       expect(near(num(it) / f, l), `${p} → ${num(it)}`).toBe(true);
     }
+  });
+
+  it("level 1: ocean waves are no faster than deep water allows, and ripple-tank waves are a few centimeters long", () => {
+    const kinds = new Set<string>();
+    for (const it of make("s.wave.speed", 1)) {
+      const p = text(it.prompt);
+      const [f, l] = nums(p);
+      if (/Ocean waves/.test(p)) {
+        // Deep-water waves of frequency f are λ = g ÷ (2π f²) long; near a pier they are shorter still.
+        expect(l, p).toBeLessThanOrEqual(9.8 / (2 * Math.PI * f * f));
+        kinds.add("ocean");
+      }
+      if (/ripple tank/.test(p)) {
+        expect(l >= 0.01 && l <= 0.05, p).toBe(true);
+        kinds.add("ripple");
+      }
+    }
+    expect([...kinds].sort()).toEqual(["ocean", "ripple"]);
   });
 
   it("level 2: frequency times wavelength gives back the stated speed of the medium", () => {
@@ -478,6 +529,17 @@ describe("s.momentum", () => {
       if (/How fast/.test(p)) expect(near(num(it) * m, other), p).toBe(true);
       else expect(near(num(it) / m, other), p).toBe(true);
     }
+  });
+
+  it("level 1: every mass, speed and momentum is above zero, and a 1 is read with a singular unit", () => {
+    for (let seed = 0; seed < 4000; seed++)
+      for (const locale of ["en", "es"] as const) {
+        const it = makeItem("s.momentum", 1, seed, locale);
+        const p = text(it.prompt);
+        for (const x of nums(p)) expect(x, p).toBeGreaterThan(0);
+        expect(num(it), p).toBeGreaterThan(0);
+        expect(it.say, p).not.toMatch(/(?<![\d.,])1 (kilogram meters|kilogramos metro|meters per second|metros por segundo|kilograms|kilogramos)\b/);
+      }
   });
 
   it("level 2: total momentum is the same before and after", () => {
@@ -577,6 +639,57 @@ describe("s.balance.equations", () => {
       const coefs = smallest(formulas);
       const asked = /in front of (\S+)\?/.exec(p)![1];
       expect(num(it), p).toBe(coefs[formulas.flat().indexOf(asked)]);
+    }
+  });
+});
+
+describe("s.balance.equations hints", () => {
+  const per = (side: [number | null, string][], x: string) => side.reduce((s, [c, f]) => s + (c === null ? 0 : c * (tally(f)[x] ?? 0)), 0);
+
+  it("level 1: hint 3's atom counts, recounted from the equation, lead to the key", () => {
+    const re = /^The (left|right) side has (\d+) (\w+) atoms?(?:; (\d+) (?:is|are) already in .+ on the (?:left|right), so (\S+) must supply (\d+))?\.(?: Each (\S+) has (\d+)\.)?$/;
+    let shared = 0;
+    for (const it of make("s.balance.equations", 1)) {
+      const sides = parseEq(equationLine(it));
+      const hs = sides.findIndex((side) => side.some(([c]) => c === null));
+      const F = sides[hs].find(([c]) => c === null)![1];
+      const m = re.exec(it.hints[2]);
+      expect(m, it.hints[2]).not.toBeNull();
+      const [, otherName, N, X, S, F1, M, F2, n] = m!;
+      expect(otherName, it.hints[2]).toBe(hs ? "left" : "right");
+      expect(Number(N), it.hints[2]).toBe(per(sides[1 - hs], X));
+      const rest = per(sides[hs], X); // the blank's own term counts 0
+      expect(Number(S ?? 0), it.hints[2]).toBe(rest);
+      if (S) {
+        expect(F1).toBe(F);
+        expect(Number(M), it.hints[2]).toBe(Number(N) - rest);
+        shared++;
+      }
+      if (n) {
+        expect(F2).toBe(F);
+        expect(Number(n)).toBe(tally(F)[X]);
+      } else expect(F, it.hints[2]).toBe(X);
+      expect(num(it) * tally(F)[X], it.hints[2]).toBe(Number(N) - rest);
+    }
+    expect(shared, "some hints account for atoms already on the blank's side").toBeGreaterThan(0);
+  });
+
+  it("level 2: hint 3 only calls an element a starting point when it is in one substance on each side", () => {
+    const one = /^(\w+) appears in only one substance on each side, so start with it\.(?: Each (\S+) has (\d+) (\w+) atoms?\.)?$/;
+    const many = /^Start with (.+), which appears? in only one substance on each side\. Leave (\w+) for last, because it appears in more than one substance on a side\.$/;
+    for (const it of make("s.balance.equations", 2)) {
+      const sides = parseEq(equationLine(it));
+      const single = (x: string) => sides.every((side) => side.filter(([, f]) => tally(f)[x]).length === 1);
+      const h = it.hints[2];
+      const a = one.exec(h), b = many.exec(h);
+      expect(a ?? b, h).toBeTruthy();
+      if (a) {
+        expect(single(a[1]), h).toBe(true);
+        if (a[2]) expect(tally(a[2])[a[4]], h).toBe(Number(a[3]));
+      } else {
+        for (const x of b![1].split(/, | and /)) expect(single(x), h).toBe(true);
+        expect(single(b![2]), h).toBe(false);
+      }
     }
   });
 });

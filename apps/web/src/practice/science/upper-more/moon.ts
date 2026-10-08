@@ -10,6 +10,8 @@ import { bi, dec, withChoices, type Bi } from "./shared";
 // same in UTC and in every US time zone, Eastern through Hawaii, with an hour to spare. The item says
 // "about": a day count is used only when the mean-cycle estimate lands within half a day of one of the
 // eight phases, which keeps the real Moon in that phase (the test checks every case against an orbit model).
+// The prompt asks which phase the Moon is in, not what a calendar prints: a principal phase (new,
+// quarter, full) is an instant, and a calendar may print it on the day before or after.
 
 const DAY = 86_400_000;
 /** The mean synodic month in days: new moon to new moon. */
@@ -101,8 +103,8 @@ export function moonItem(r: Rng, level: number, locale: Locale): ItemBody {
   const ref = full ? bi("full moon", "luna llena") : bi("new moon", "luna nueva");
   const q = tr(
     locale,
-    `A moon calendar shows a ${ref.en} on ${D0}. About what phase does it show for ${D1}?`,
-    `Un calendario lunar marca ${ref.es} el ${D0}. ¿Aproximadamente qué fase marca para el ${D1}?`,
+    `There is a ${ref.en} on ${D0}. About what phase is the Moon in on ${D1}?`,
+    `Hay ${ref.es} el ${D0}. ¿Aproximadamente en qué fase está la Luna el ${D1}?`,
   );
 
   // The worked count in tenths of a day, with 29.5-day cycles taken away.

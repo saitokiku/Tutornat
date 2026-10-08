@@ -48,7 +48,7 @@ const THINGS: Thing[] = [
   t(["Light travels about", "in one second."], ["La luz recorre unos", "en un segundo."], KM, [300, 300], 1, 5, M, 3),
   t(["A lab culture holds about", "."], ["Un cultivo de laboratorio contiene unas", "."], u("bacteria", "bacteria", "bacterias", "bacterias"), [110, 990], 10, 7),
   t(["A large city uses about", "of water a day."], ["Una ciudad grande usa unos", "de agua al día."], L, [110, 990], 10, 8),
-  t(["A national forest has about", "."], ["Un bosque nacional tiene unos", "."], u("trees", "trees", "árboles", "árboles"), [110, 990], 10, 6),
+  t(["A national forest has about", "."], ["Un bosque nacional tiene unos", "."], u("trees", "trees", "árboles", "árboles"), [110, 990], 10, 8),
   t(["A pollen grain is about", "wide."], ["Un grano de polen mide unos", "de ancho."], M, [150, 900], 10, -5, UM, 6),
   t(["A bacterium is about", "long."], ["Una bacteria mide unos", "de largo."], M, [100, 500], 10, -6, MM, 3),
   t(["A virus is about", "wide."], ["Un virus mide unos", "de ancho."], M, [200, 900], 10, -8, NM, 9),
@@ -99,7 +99,7 @@ export function notationItem(r: Rng, level: number, locale: Locale): ItemBody {
         [e + (big ? 1 : -1), "off-by-one-power"],
       ]),
       hints: [
-        tr(locale, `Where does the decimal point go so that ${ms} has one digit before it?`, `¿Dónde va el punto decimal para que ${ms} tenga una cifra antes del punto?`),
+        tr(locale, `In ${plain}, where must the decimal point move so the number reads ${ms}?`, `En ${plain}, ¿a dónde debe moverse el punto decimal para que quede ${ms}?`),
         tr(
           locale,
           "Count how many places the decimal point moves to turn the number into the mantissa. A big number gives a positive n; a number smaller than 1 gives a negative n.",

@@ -12,11 +12,11 @@ import { bi, dec, misses, r2, type Bi } from "./shared";
 const SUB = "₀₁₂₃₄₅₆₇₈₉";
 /** "C6H12O6" → "C₆H₁₂O₆". */
 const pretty = (f: string) => f.replace(/\d/g, (d) => SUB[Number(d)]);
-/** Read aloud letter by letter: "H2O" → "H 2 O", "NaCl" → "N a C l", "Ca(OH)2" → "C a, O H in parentheses, 2". */
+/** Read aloud letter by letter, in capitals so a voice says letter names: "H2O" → "H 2 O", "NaCl" → "N A C L", "Ca(OH)2" → "C A, O H in parentheses, 2". */
 function sayFormula(f: string, locale: Locale) {
   return f
     .replace(/\(([^)]*)\)(\d+)/g, (_, g: string, k: string) => `, ${g} ${tr(locale, "in parentheses", "entre paréntesis")}, ${k}`)
-    .replace(/([A-Z][a-z]?)/g, (sym: string) => ` ${[...sym].join(" ")} `)
+    .replace(/([A-Z][a-z]?)/g, (sym: string) => ` ${[...sym.toUpperCase()].join(" ")} `)
     .replace(/(\d+)/g, " $1 ")
     .replace(/\s+/g, " ")
     .replace(/ ,/g, ",")
@@ -88,7 +88,7 @@ export function halfLifeItem(r: Rng, level: number, locale: Locale): ItemBody {
       };
     }
     // How long until only `left` remains?
-    const q = `${head} ${tr(locale, `How many ${U} until only ${dec(left * 100, 2)} ${g} is left?`, `¿Cuántos ${U} pasan hasta que solo quedan ${dec(left * 100, 2)} ${g}?`)}`;
+    const q = `${head} ${tr(locale, `How many ${U} until only ${dec(left * 100, 2)} ${g} is left?`, `¿Cuánto tiempo pasa, en ${U}, hasta que solo quedan ${dec(left * 100, 2)} ${g}?`)}`;
     const key = (s.t10 * n) / 10;
     return {
       prompt: [q],
@@ -246,17 +246,27 @@ export function balanceItem(r: Rng, level: number, locale: Locale): ItemBody {
   const [si, idx] = r.pick(big.length && r.bool(0.85) ? big : all);
   const [k, f] = (si ? e.right : e.left)[idx];
   const mine = si ? e.right : e.left, other = si ? e.left : e.right;
-  // The element to balance on: one that appears in no other substance on this side, when possible.
+  const elems = [...new Set([...e.left, ...e.right].flatMap(([, g]) => [...atoms(g).keys()]))];
+  /** Elements found in exactly one substance on each side: the usual place to start balancing. */
+  const single = (x: string) => [e.left, e.right].every((side) => side.filter(([, g]) => atoms(g).has(x)).length === 1);
+  // The element to balance on. Level 1: one in no other substance on this side, when possible, so the
+  // count on the other side is all this formula must match. Level 2: one in a single substance on each side.
   const syms = [...atoms(f).keys()];
-  const lonely = syms.filter((x) => mine.every(([, g], j) => j === idx || !atoms(g).has(x)));
+  const lonely = syms.filter((x) => (level === 1 ? mine.every(([, g], j) => j === idx || !atoms(g).has(x)) : single(x)));
   const el = (lonely.length ? lonely : syms).sort((a, b) => (atoms(f).get(b) ?? 0) - (atoms(f).get(a) ?? 0))[0];
   const sub = atoms(f).get(el)!;
   const count = (side: Side) => side.reduce((s, [c, g]) => s + c * (atoms(g).get(el) ?? 0), 0);
   const otherTotal = count(other), sameRest = count(mine) - k * sub;
   const sideName = (s: 0 | 1) => (s ? tr(locale, "right", "derecha") : tr(locale, "left", "izquierda"));
-  const elems = [...new Set([...e.left, ...e.right].flatMap(([, g]) => [...atoms(g).keys()]))];
+  const andList = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")}${tr(locale, " and ", " y ")}${xs.at(-1)}`);
+  /** The other substances on this side that also hold `el`, as written in the equation. */
+  const sharers = andList(mine.filter(([, g], j) => j !== idx && atoms(g).has(el)).map(([, g]) => pretty(g)));
+  const nAtoms = (n: number) => tr(locale, `${n} ${el} ${n === 1 ? "atom" : "atoms"}`, `${n} ${n === 1 ? "átomo" : "átomos"} de ${el}`);
+  const firsts = elems.filter(single);
   const check = elems.map((x) => `${x}: ${e.left.reduce((s, [c, g]) => s + c * (atoms(g).get(x) ?? 0), 0)} = ${e.right.reduce((s, [c, g]) => s + c * (atoms(g).get(x) ?? 0), 0)}`).join(", ");
   const F = pretty(f);
+  /** " Each O₂ has 2." (level 2: "2 O atoms"), left out for a lone element such as Al, which is its own atom. */
+  const each = f === el ? "" : ` ${tr(locale, `Each ${F} has ${level === 1 ? sub : nAtoms(sub)}.`, `Cada ${F} tiene ${level === 1 ? sub : nAtoms(sub)}.`)}`;
   const ones = (side: Side) => side.reduce((s, [, g]) => s + (atoms(g).get(el) ?? 0), 0);
   const ignored = (ones(other) - (ones(mine) - sub)) / sub;
   const wrong = misses(k, [
@@ -285,8 +295,22 @@ export function balanceItem(r: Rng, level: number, locale: Locale): ItemBody {
       tr(locale, `Count the ${el} atoms on each side. They must be equal.`, `Cuenta los átomos de ${el} en cada lado. Deben ser iguales.`),
       tr(locale, "Change only the coefficients in front of formulas, never the small numbers inside them. A coefficient multiplies every atom in its formula.", "Cambia solo los coeficientes delante de las fórmulas, nunca los números pequeños dentro de ellas. Un coeficiente multiplica cada átomo de su fórmula."),
       level === 1
-        ? tr(locale, `The ${sideName(si ? 0 : 1)} side has ${otherTotal} ${el} atoms. Each ${F} has ${sub}.`, `A la ${sideName(si ? 0 : 1)} hay ${otherTotal} átomos de ${el}. Cada ${F} tiene ${sub}.`)
-        : tr(locale, `Start with an element that appears in only one substance on each side, such as ${el}. Each ${F} has ${sub} ${el} ${sub === 1 ? "atom" : "atoms"}.`, `Empieza con un elemento que aparece en una sola sustancia de cada lado, como ${el}. Cada ${F} tiene ${sub} ${sub === 1 ? "átomo" : "átomos"} de ${el}.`),
+        ? sameRest
+          ? tr(
+              locale,
+              `The ${sideName(si ? 0 : 1)} side has ${nAtoms(otherTotal)}; ${sameRest} ${sameRest === 1 ? "is" : "are"} already in ${sharers} on the ${sideName(si)}, so ${F} must supply ${otherTotal - sameRest}.${each}`,
+              `A la ${sideName(si ? 0 : 1)} hay ${nAtoms(otherTotal)}; ${sameRest} ya ${sameRest === 1 ? "está" : "están"} en ${sharers} a la ${sideName(si)}, así que ${F} debe aportar ${otherTotal - sameRest}.${each}`,
+            )
+          : tr(locale, `The ${sideName(si ? 0 : 1)} side has ${nAtoms(otherTotal)}.${each}`, `A la ${sideName(si ? 0 : 1)} hay ${nAtoms(otherTotal)}.${each}`)
+        : single(el)
+          ? tr(locale, `${el} appears in only one substance on each side, so start with it.${each}`, `${el} aparece en una sola sustancia de cada lado, así que empieza por ahí.${each}`)
+          : firsts.length
+            ? tr(
+                locale,
+                `Start with ${andList(firsts)}, which ${firsts.length === 1 ? "appears" : "appear"} in only one substance on each side. Leave ${el} for last, because it appears in more than one substance on a side.`,
+                `Empieza con ${andList(firsts)}, que ${firsts.length === 1 ? "aparece" : "aparecen"} en una sola sustancia de cada lado. Deja ${el} para el final, porque aparece en más de una sustancia de un lado.`,
+              )
+            : tr(locale, `Every element here appears in more than one substance on a side. Balance the biggest formula first, then fix ${el} last.`, `Cada elemento aparece en más de una sustancia de un lado. Balancea primero la fórmula más grande y deja ${el} para el final.`),
     ],
     steps: [
       ...(level === 2 ? [flat(eqParts(e, null, false, locale))] : []),

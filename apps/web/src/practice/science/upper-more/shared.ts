@@ -24,15 +24,28 @@ export type Entry = { q: Bi; a: Bi; wrong: Miss[]; clue: Bi; explain: Bi };
 export type Bank = { nudge: Bi; strategy: Bi; seconds: number; items: Entry[] };
 export const e = (q: Bi, a: Bi, wrong: Miss[], clue: Bi, explain: Bi): Entry => ({ q, a, wrong, clue, explain });
 
+/** Bank copy as read aloud: arrows become "then" and subscripts plain digits ("A → B" → "A, then B", "O₂" → "O 2"). */
+export const spoken = (s: string, locale: Locale) =>
+  s
+    .replace(/\s*→\s*/g, tr(locale, ", then ", ", luego "))
+    .replace(/[₀-₉]+/g, (d) => ` ${[...d].map((c) => c.charCodeAt(0) - 0x2080).join("")} `)
+    .replace(/ +([).,?])/g, "$1")
+    .replace(/ {2,}/g, " ")
+    .trim();
+
 export function bankItem(r: Rng, bank: Bank, locale: Locale): ItemBody {
   const entry = r.pick(bank.items);
   const right: { c: Bi; why?: string } = { c: entry.a };
   const order = r.shuffle([right, ...entry.wrong]);
   const answer = entry.a[locale];
+  const choice = (label: string, why?: string) => {
+    const said = spoken(label, locale);
+    return { label, ...(said !== label ? { say: said } : {}), ...(why ? { why } : {}) };
+  };
   return {
     prompt: [entry.q[locale]],
-    say: entry.q[locale],
-    choices: order.map((o) => (o.why ? { label: o.c[locale], why: o.why } : { label: o.c[locale] })),
+    say: spoken(entry.q[locale], locale),
+    choices: order.map((o) => choice(o.c[locale], o.why)),
     input: "choices",
     answer: { kind: "choice", index: order.indexOf(right) },
     hints: [bank.nudge[locale], bank.strategy[locale], entry.clue[locale]],
