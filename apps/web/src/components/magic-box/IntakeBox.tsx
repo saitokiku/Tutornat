@@ -161,7 +161,7 @@ export function IntakeBox({ learner, initialText = "", variant = "compact" }: { 
     };
   }, [file]);
 
-  const ctx = { today, classes, locale };
+  const ctx = { today, classes, locale, grade: learner.grade };
   const rules = classifyIntake(text, ctx);
   // A photo or PDF with nothing telling it apart is most likely school work.
   const fileBias = !!file && !aiNow && (fileOnly || rules.reason.rule === "default");

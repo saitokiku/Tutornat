@@ -4,7 +4,9 @@ import { gradeIndex, SKILLS } from "@/practice/skills";
 // School words and learners' questions → skills on the map. A teacher writes "regrouping" or "long
 // division", a learner asks "what is a logical fallacy?"; the map says "Subtract two-digit numbers" or
 // "Spot the fallacy". This table bridges the two in English and Spanish. It only suggests: a grown-up
-// confirms before anything is linked, and a learner chooses whether to start practice.
+// confirms before anything is linked, and a learner chooses whether to start practice. A topic word a
+// whole family of skills shares ("equations", "integers") is listed on each of them, so the learner's
+// grade decides which ones a "math test on equations" covers.
 
 const WORDS: Record<string, string[]> = {
   "m.count.10": ["counting", "count", "count to 10", "contar", "contar hasta 10"],
@@ -60,25 +62,27 @@ const WORDS: Record<string, string[]> = {
   "m.expr.eval": ["evaluate expressions", "expressions", "expresiones"],
   "m.eq.onestep": ["one-step equations", "equations", "solve for x", "ecuaciones de un paso", "ecuaciones"],
   "m.area.poly": ["area of triangles", "parallelograms", "trapezoid", "área de triángulos"],
-  "m.int.addsub": ["adding integers", "subtracting integers", "sumar enteros"],
-  "m.int.multdiv": ["multiplying integers", "dividing integers"],
+  "m.int.addsub": ["adding integers", "subtracting integers", "integers", "sumar enteros", "enteros"],
+  "m.int.multdiv": ["multiplying integers", "dividing integers", "integers", "enteros"],
   "m.expr.simplify": ["like terms", "distributive property", "simplify expressions", "términos semejantes", "propiedad distributiva"],
-  "m.eq.twostep": ["two-step equations", "ecuaciones de dos pasos"],
+  "m.eq.twostep": ["two-step equations", "equations", "solve for x", "ecuaciones de dos pasos", "ecuaciones"],
   "m.proportion": ["proportions", "proporciones", "scale drawings"],
   "m.percent.change": ["percent change", "sales tax", "tax and tip", "discount", "markup", "descuento", "impuesto"],
-  "m.ineq.onestep": ["inequalities", "desigualdades"],
+  "m.ineq.onestep": ["one-step inequalities", "inequalities", "desigualdades"],
+  "m.ineq.graph": ["graphing inequalities", "inequalities on a number line", "inequalities", "desigualdades en la recta numérica", "desigualdades"],
+  "m.ineq.twostep": ["two-step inequalities", "inequalities", "desigualdades de dos pasos", "desigualdades"],
   "m.circle": ["circumference", "circles", "diameter", "radius", "circunferencia", "círculos", "diámetro"],
-  "m.exp.rules": ["exponent rules", "laws of exponents", "leyes de los exponentes"],
+  "m.exp.rules": ["exponent rules", "laws of exponents", "exponents", "powers", "leyes de los exponentes", "exponentes", "potencias"],
   "m.sqrt": ["square roots", "cube roots", "raíz cuadrada", "raíces cuadradas"],
   "m.sci.notation": ["scientific notation", "notación científica"],
-  "m.eq.multistep": ["multi-step equations", "variables on both sides"],
+  "m.eq.multistep": ["multi-step equations", "variables on both sides", "equations", "solve for x", "ecuaciones de varios pasos", "ecuaciones"],
   "m.slope": ["slope", "rate of change", "rise over run", "pendiente"],
   "m.linear.table": ["linear functions", "function tables", "funciones lineales"],
   "m.pythag": ["pythagorean theorem", "pythagoras", "hypotenuse", "teorema de pitágoras", "hipotenusa"],
   "m.systems": ["systems of equations", "sistemas de ecuaciones"],
-  "m.ineq.multistep": ["multi-step inequalities"],
+  "m.ineq.multistep": ["multi-step inequalities", "inequalities", "desigualdades"],
   "m.poly.addsub": ["polynomials", "polinomios"],
-  "m.poly.mult": ["multiplying binomials", "foil", "binomios"],
+  "m.poly.mult": ["multiplying binomials", "foil", "polynomials", "binomios", "polinomios"],
   "m.factor.tri": ["factoring", "factor trinomials", "factorizar"],
   "m.quad.solve": ["quadratic equations", "quadratics", "ecuaciones cuadráticas"],
   "m.func.eval": ["function notation", "f(x)", "evaluating functions"],
@@ -288,7 +292,10 @@ function entries(): Entry[] {
 
 /**
  * Best matching skills for a piece of school text or a learner's question, most likely first.
- * With `grade`, ties go to the skill closest to the learner's grade.
+ * With `grade`, equally good matches go to the learner's own grade first, then to the grades before it
+ * (what a test reviews), then to later ones; and a later-grade skill that only ties with one at or
+ * below the learner's grade is left out. "Equations" for a 7th grader is two-step, then one-step —
+ * not multi-step, which is 8th grade; for a 4th grader, who has none yet, it is the first one.
  */
 export function matchSkills(text: string, subject?: Subject, limit = 3, grade?: Grade): string[] {
   const words = joinCompounds(tokens(text));
@@ -304,8 +311,15 @@ export function matchSkills(text: string, subject?: Subject, limit = 3, grade?: 
     if (e.title.some((t) => words.length * 2 >= t.length && contains(t, words))) score += 2 + words.length;
     if (score >= 3) scored.push([e, score]);
   }
-  const near = (e: Entry) => (grade ? Math.abs(gradeIndex(e.grade) - gradeIndex(grade)) : 0);
+  const at = grade ? gradeIndex(grade) : null;
+  const ahead = (e: Entry) => at !== null && gradeIndex(e.grade) > at;
+  // A grade ahead counts double: a grade-6 skill is nearer a 7th grader than a grade-8 one.
+  const near = (e: Entry) => (at === null ? 0 : ahead(e) ? 2 * (gradeIndex(e.grade) - at) : at - gradeIndex(e.grade));
+  // Of equally good skills ahead of the learner, only the nearest grade stays, and only when none is
+  // at or below their grade.
+  const reachable = ([e, score]: [Entry, number]) => !ahead(e) || scored.every(([o, s]) => s !== score || (ahead(o) && gradeIndex(o.grade) >= gradeIndex(e.grade)));
   return scored
+    .filter(reachable)
     .sort((a, b) => b[1] - a[1] || near(a[0]) - near(b[0]))
     .slice(0, limit)
     .map(([e]) => e.id);

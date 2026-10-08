@@ -241,7 +241,7 @@ function Notes({ profile, classes }: { profile: Profile; classes: SchoolClass[] 
   const [skills, setSkills] = useState<string[]>([]);
   // Until the grown-up picks or removes a skill, the one the note's words point to stands in, shown as linked.
   const [picked, setPicked] = useState(false);
-  const suggestions = text.trim().length > 3 ? suggestSkills(read(), text, classId || undefined) : [];
+  const suggestions = text.trim().length > 3 ? suggestSkills(read(), text, { profileId: profile.id, classId: classId || undefined }) : [];
   const auto = !picked && suggestions.length > 0;
   const linked = auto ? suggestions.slice(0, 1) : skills;
   const save = (e: React.FormEvent) => {

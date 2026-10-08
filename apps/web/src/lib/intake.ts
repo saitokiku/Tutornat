@@ -40,7 +40,8 @@ export type IntakeGuess = {
   reason: IntakeReason;
 };
 
-export type IntakeContext = { today: string; locale?: Locale; classes?: Pick<SchoolClass, "id" | "name" | "subject">[] };
+/** `grade` is the learner's: "equations" covers different skills in grade 6 and in grade 8. */
+export type IntakeContext = { today: string; locale?: Locale; grade?: Grade; classes?: Pick<SchoolClass, "id" | "name" | "subject">[] };
 
 // --- words ----------------------------------------------------------------------------------------
 
@@ -410,9 +411,9 @@ function subjectIn(text: string, list: typeof SUBJECT_NAMES): Subject | undefine
     .sort((a, b) => a[1] - b[1])[0]?.[0];
 }
 
-/** Skills for the words: the school-word table first, then a skill whose title the words contain. */
-function skillsFor(text: string, topic: string, subject?: Subject): string[] {
-  const found = matchSkills(text, subject);
+/** Skills for the words, near the learner's grade: the school-word table first, then a skill whose title the words contain. */
+function skillsFor(text: string, topic: string, subject?: Subject, grade?: Grade): string[] {
+  const found = matchSkills(text, subject, 3, grade);
   if (found.length) return found;
   // Fallback for a skill named outright ("practice tell time"): two or more words of a title, or the whole title.
   const q = fold(topic);
@@ -496,7 +497,7 @@ export function classifyIntake(text: string, ctx: IntakeContext): IntakeGuess {
   // the learner's classes is in that subject, it is picked; the family sees it and can change it.
   const inClass = classNamed(rest, ctx.classes) ?? classNamed(about, ctx.classes);
   const said = inClass?.subject ?? subjectIn(rest, SUBJECT_NAMES) ?? subjectIn(about, SUBJECT_NAMES) ?? subjectIn(rest, TASK_FORMS);
-  const skillIds = skillsFor(about, title, said);
+  const skillIds = skillsFor(about, title, said, ctx.grade);
   const subject = said ?? getSkill(skillIds[0] ?? "")?.subject ?? subjectIn(about, SUBJECT_TOPICS);
   const cls = inClass ?? onlyClassIn(ctx.classes, subject);
   return { kind, title, date: found?.date, subject, skillIds, classId: cls?.id, classNamed: !!inClass || undefined, reason };
