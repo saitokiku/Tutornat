@@ -140,6 +140,21 @@ describe("topic → skill", () => {
       expect(matchSkills(q, "english", 3, g)[0], `${q} grade ${g}`).toBe(id);
   });
 
+  it("a topic word a family of skills shares covers the ones at the learner's grade, then the grades before", () => {
+    // Dogfood 2026-10-07 #1: a 7th grader's "math test on equations" linked nothing.
+    expect(matchSkills("math test on equations", "math", 3, "7")).toEqual(["m.eq.twostep", "m.eq.onestep"]);
+    expect(matchSkills("math test on equations", "math", 3, "8")).toEqual(["m.eq.multistep", "m.eq.twostep", "m.eq.onestep"]);
+    // A 4th grader has none yet: the first one, never the later ones beside it.
+    expect(matchSkills("equations", "math", 3, "4")).toEqual(["m.eq.onestep"]);
+    // Plural or singular, English or Spanish.
+    expect(matchSkills("equation quiz", "math", 3, "7")[0]).toBe("m.eq.twostep");
+    expect(matchSkills("examen de ecuaciones", "math", 3, "7")[0]).toBe("m.eq.twostep");
+    expect(matchSkills("integers test", "math", 3, "7")).toEqual(["m.int.addsub", "m.int.multdiv", "m.int.numberline"]);
+    expect(matchSkills("inequalities", "math", 3, "6")).toEqual(["m.ineq.graph"]);
+    // A skill named outright still wins over the family.
+    expect(matchSkills("one-step equations", "math", 3, "8")[0]).toBe("m.eq.onestep");
+  });
+
   it("a short question that names a skill finds it", () => {
     expect(matchSkills("fallacy")[0]).toBe("e.fallacies");
     expect(matchSkills("slope")[0]).toBe("m.slope");

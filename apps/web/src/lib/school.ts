@@ -1,4 +1,4 @@
-import { isDay } from "@/planner/dates";
+import { addDays, isDay } from "@/planner/dates";
 import { classify, parseIcs } from "@/planner/ics";
 import { matchSkills } from "@/planner/skillmatch";
 import type { EventKind, Feedback, SchoolClass, SchoolEvent, SchoolResult } from "@/planner/types";
@@ -17,7 +17,11 @@ export const eventsOf = (s: StoreState, profileId: string) =>
 export const feedbackOf = (s: StoreState, profileId: string) => s.feedback.filter((f) => f.profileId === profileId).sort((a, b) => b.at - a.at);
 export const resultsOf = (s: StoreState, profileId: string) => s.results.filter((r) => r.profileId === profileId).sort((a, b) => b.date.localeCompare(a.date));
 
-const clean = (s: string, max: number) => s.replace(/\s+/g, " ").trim().slice(0, max);
+/** The first `max` characters, never half an emoji (a cut surrogate pair shows as a broken character). */
+const cut = (s: string, max: number) => s.slice(0, max).replace(/[\uD800-\uDBFF]$/, "");
+const clean = (s: string, max: number) => cut(s.replace(/\s+/g, " ").trim(), max);
+/** A day that exists: "2026-02-30" has the shape, but Date would roll it into March. */
+const realDay = (d: string) => isDay(d) && addDays(d, 0) === d;
 
 export function addClass(profileId: string, input: { name: string; subject: Subject; teacher?: string; feedUrl?: string }): SchoolClass | null {
   const name = clean(input.name, 60);
@@ -54,7 +58,7 @@ export const getEvent = (s: StoreState, id: string, profileId: string) => s.even
 function cleanAttachment(a: SchoolEvent["attachment"]): SchoolEvent["attachment"] {
   if (!a) return undefined;
   const out: NonNullable<SchoolEvent["attachment"]> = {};
-  const text = typeof a.text === "string" ? a.text.trim().slice(0, 4000) : "";
+  const text = typeof a.text === "string" ? cut(a.text.trim(), 4000) : "";
   if (text) out.text = text;
   if (typeof a.blobId === "string" && /^[\w-]{1,64}$/.test(a.blobId)) {
     out.blobId = a.blobId;
@@ -66,14 +70,15 @@ function cleanAttachment(a: SchoolEvent["attachment"]): SchoolEvent["attachment"
 
 export function checkEvent(input: EventInput): "err.title" | "err.date" | null {
   if (!clean(input.title, 160)) return "err.title";
-  if (!isDay(input.date)) return "err.date";
+  if (!realDay(input.date)) return "err.date";
   return null;
 }
 
-/** Skills suggested for an item: from its words, within the class subject when there is one. */
-export function suggestSkills(s: StoreState, text: string, classId?: string) {
-  const subject = s.classes.find((c) => c.id === classId)?.subject;
-  return matchSkills(text, subject);
+/** Skills suggested for one learner's item: from its words, near their grade, within the class subject when there is one. */
+export function suggestSkills(s: StoreState, text: string, at: { profileId: string; classId?: string }) {
+  const subject = s.classes.find((c) => c.id === at.classId)?.subject;
+  const grade = s.profiles.find((p) => p.id === at.profileId)?.grade;
+  return matchSkills(text, subject, 3, grade);
 }
 
 export function addEvent(profileId: string, input: EventInput, source: SchoolEvent["source"] = "typed"): SchoolEvent | null {
@@ -88,7 +93,7 @@ export function addEvent(profileId: string, input: EventInput, source: SchoolEve
       date: input.date,
       time: input.time && /^\d{2}:\d{2}$/.test(input.time) ? input.time : undefined,
       classId: input.classId,
-      notes: input.notes ? input.notes.trim().slice(0, 1000) : undefined,
+      notes: input.notes ? cut(input.notes.trim(), 1000) : undefined,
       skillIds: input.skillIds ?? [],
       source,
       createdAt: Date.now(),
@@ -106,11 +111,11 @@ export function updateEvent(id: string, patch: Partial<EventInput & { done: bool
     const e = s.events.find((x) => x.id === id);
     if (!e) return;
     if (patch.title !== undefined) e.title = clean(patch.title, 160) || e.title;
-    if (patch.date !== undefined && isDay(patch.date)) e.date = patch.date;
+    if (patch.date !== undefined && realDay(patch.date)) e.date = patch.date;
     if (patch.time !== undefined) e.time = /^\d{2}:\d{2}$/.test(patch.time) ? patch.time : undefined;
     if (patch.kind) e.kind = patch.kind;
     if ("classId" in patch) e.classId = patch.classId || undefined;
-    if (patch.notes !== undefined) e.notes = patch.notes.trim().slice(0, 1000) || undefined;
+    if (patch.notes !== undefined) e.notes = cut(patch.notes.trim(), 1000) || undefined;
     if (patch.skillIds) e.skillIds = patch.skillIds;
     if (patch.done !== undefined) e.done = patch.done;
     if ("attachment" in patch) {
@@ -152,7 +157,7 @@ export function draftsFromIcs(s: StoreState, profileId: string, text: string, fr
         time: e.time,
         kind: classify(`${e.title} ${e.description ?? ""}`),
         classId: cls,
-        skillIds: suggestSkills(s, `${e.title} ${e.description ?? ""}`, cls),
+        skillIds: suggestSkills(s, `${e.title} ${e.description ?? ""}`, { profileId, classId: cls }),
         uid: e.uid,
         include: true,
       };
@@ -164,7 +169,7 @@ export function importDrafts(profileId: string, drafts: Draft[], source: SchoolE
   let added = 0, updated = 0;
   update((s) => {
     for (const d of drafts.filter((x) => x.include)) {
-      if (!isDay(d.date) || !clean(d.title, 160)) continue;
+      if (!realDay(d.date) || !clean(d.title, 160)) continue;
       const existing = d.uid ? s.events.find((e) => e.profileId === profileId && e.uid === d.uid) : undefined;
       if (existing) {
         Object.assign(existing, { title: clean(d.title, 160), date: d.date, time: d.time, kind: d.kind, classId: d.classId ?? existing.classId, skillIds: d.skillIds.length ? d.skillIds : existing.skillIds });
@@ -179,7 +184,7 @@ export function importDrafts(profileId: string, drafts: Draft[], source: SchoolE
 }
 
 export function addFeedback(profileId: string, input: { text: string; classId?: string; skillIds: string[] }, source: Feedback["source"] = "typed"): Feedback | null {
-  const text = input.text.trim().slice(0, 1000);
+  const text = cut(input.text.trim(), 1000);
   if (!text) return null;
   const f: Feedback = { id: newId(), profileId, at: Date.now(), classId: input.classId, text, skillIds: input.skillIds, source };
   update((s) => void s.feedback.push(f));
@@ -191,7 +196,7 @@ export function removeFeedback(id: string) {
 }
 
 export function addResult(profileId: string, input: Omit<SchoolResult, "id" | "profileId">): SchoolResult | null {
-  if (!clean(input.title, 120) || !isDay(input.date) || !(input.outOf > 0) || input.score < 0 || input.score > input.outOf * 2) return null;
+  if (!clean(input.title, 120) || !realDay(input.date) || !(input.outOf > 0) || input.score < 0 || input.score > input.outOf * 2) return null;
   const r: SchoolResult = { ...input, title: clean(input.title, 120), id: newId(), profileId };
   update((s) => void s.results.push(r));
   return r;

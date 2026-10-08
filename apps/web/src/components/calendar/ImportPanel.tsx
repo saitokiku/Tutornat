@@ -110,7 +110,7 @@ export function ImportPanel({
   const fromPaste = () => {
     const { found: dated, undated: rest } = readSchoolText(text, today);
     const cls = classId || undefined;
-    const list = dated.map((f, i) => ({ key: `p${i}`, title: f.title, date: f.date, kind: f.kind, classId: cls, skillIds: suggestSkills(read(), f.title, cls), include: true }));
+    const list = dated.map((f, i) => ({ key: `p${i}`, title: f.title, date: f.date, kind: f.kind, classId: cls, skillIds: suggestSkills(read(), f.title, { profileId: profile.id, classId: cls }), include: true }));
     show(matchDrafts(read(), profile.id, list), "paste", rest);
   };
   const fromIcs = (ics: string) => {
@@ -153,7 +153,7 @@ export function ImportPanel({
         date: e.date,
         kind: e.kind,
         classId: cls,
-        skillIds: suggestSkills(read(), e.title, cls).concat(out.skillIds).filter((x, j, a) => getSkill(x) && a.indexOf(x) === j).slice(0, 3),
+        skillIds: suggestSkills(read(), e.title, { profileId: profile.id, classId: cls }).concat(out.skillIds).filter((x, j, a) => getSkill(x) && a.indexOf(x) === j).slice(0, 3),
         include: true,
       }));
       show(matchDrafts(read(), profile.id, list), "ai", [], out.notes);

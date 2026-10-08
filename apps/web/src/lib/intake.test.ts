@@ -193,6 +193,12 @@ describe("classifyIntake: subjects and classes from whole words", () => {
     expect(en("Write a paragraph about plants for Monday")).toMatchObject({ subject: "english", classId: "r" });
   });
 
+  it("links the skills the learner's grade has for a topic word", () => {
+    // Dogfood 2026-10-07 #1: Ada, grade 7, "math test on equations next Tuesday" linked nothing.
+    expect(guess("math test on equations next Tuesday", { today: TODAY, grade: "7" })).toMatchObject({ kind: "test", subject: "math", skillIds: ["m.eq.twostep", "m.eq.onestep"] });
+    expect(guess("math test on equations next Tuesday", { today: TODAY, grade: "6" }).skillIds).toEqual(["m.eq.onestep"]);
+  });
+
   it("lets the AI reader's subject replace a class the rules only guessed, never one the family named", () => {
     const ai = { kind: "homework" as const, title: "Plant growth paragraph", subject: "science" as const, skillIds: [], notes: [] };
     expect(mergeGuess(en("Write a paragraph about plants for Monday"), ai, { today: TODAY, classes }).classId).toBe("s");
@@ -478,7 +484,17 @@ describe("school items from the box", () => {
     expect(await saveSchoolItem("p1", { kind: "homework", title: " ", date: "2026-10-09", skillIds: [], source: "typed" })).toBe("err.title");
     expect(await saveSchoolItem("p1", { kind: "homework", title: "Worksheet", date: "", skillIds: [], file: { blob: pdf(), name: "a.pdf" }, source: "typed" })).toBe("err.date");
     expect(await saveSchoolItem("p1", { kind: "homework", title: "Worksheet", date: "2026-10-09", skillIds: [], file: { blob: new Blob([]), name: "empty.pdf" }, source: "typed" })).toBe("err.file");
+    // A day that has the shape but doesn't exist (Date would roll it into March).
+    expect(await saveSchoolItem("p1", { kind: "homework", title: "Worksheet", date: "2026-02-30", skillIds: [], source: "typed" })).toBe("err.date");
     expect(read().events).toHaveLength(0);
+  });
+
+  it("never cuts an emoji in half when it trims what was typed", () => {
+    const e = addEvent("p1", { title: `${"a".repeat(159)}😀`, kind: "homework", date: "2026-10-09", notes: `${"b".repeat(999)}😀` })!;
+    expect(e.title).toBe("a".repeat(159));
+    expect(e.notes).toBe("b".repeat(999));
+    updateEvent(e.id, { date: "2026-02-30" });
+    expect(getEvent(read(), e.id, "p1")?.date).toBe("2026-10-09");
   });
 
   it("getEvent shows an item only to the learner it belongs to", () => {

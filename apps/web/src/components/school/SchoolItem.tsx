@@ -74,7 +74,7 @@ function Item({ event, profile, asLearner }: { event: SchoolEvent; profile: Prof
   const statuses = useStore((s) => statusesOf(s, profile.id, now));
   const classes = useStore((s) => classesOf(s, profile.id));
   const draft = useStore((s) => event.skillIds.filter((id) => getSkill(id) && !isReviewed(s, getSkill(id)!)));
-  const suggestions = useStore((s) => suggestSkills(s, `${event.title} ${event.notes ?? ""} ${event.attachment?.text ?? ""}`, event.classId));
+  const suggestions = useStore((s) => suggestSkills(s, `${event.title} ${event.notes ?? ""} ${event.attachment?.text ?? ""}`, { profileId: profile.id, classId: event.classId }));
   const unlocked = useStore((s) => Boolean(s.session.unlocked));
   const [editing, setEditing] = useState(false);
   const [changingSkills, setChangingSkills] = useState(false);

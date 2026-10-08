@@ -43,7 +43,7 @@ export function EventForm({ profileId, event, date, kind, classes, locale, onDon
   const deleteButton = useRef<HTMLButtonElement>(null);
   const backToDelete = useRef(false);
   const set = <K extends keyof EventInput>(k: K, v: EventInput[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const suggestions = form.title.trim().length > 2 ? suggestSkills(read(), `${form.title} ${form.notes ?? ""}`, form.classId || undefined) : [];
+  const suggestions = form.title.trim().length > 2 ? suggestSkills(read(), `${form.title} ${form.notes ?? ""}`, { profileId, classId: form.classId || undefined }) : [];
   const auto = !picked && WORK.includes(form.kind) && suggestions.length > 0;
   const skillIds = auto ? suggestions.slice(0, 1) : (form.skillIds ?? []);
 
