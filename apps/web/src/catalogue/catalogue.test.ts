@@ -9,6 +9,32 @@ describe("catalogue", () => {
     for (const c of CATALOGUE) expect(c.lessons, c.id).toHaveLength(4);
   });
 
+  // The quiz shows choices in the order they are written, so the key's position must not give it away.
+  // These courses were written lopsided and are rebalanced in their own strand's fix; drop an id once it lands.
+  const KEYS_REBALANCED_ELSEWHERE = new Set([
+    "math-add-number-line", "math-fractions", "math-fractions-es", "math-negative", "math-numbers-to-10", "math-numbers-to-10-es",
+    "math-hundreds-tens-ones", "math-hundreds-tens-ones-es", "math-multiplication", "math-multiplication-es", "math-multiply-bigger",
+    "math-decimals", "english-rhymes-syllables", "english-rhymes-syllables-es", "english-short-words", "english-parts-of-speech-es",
+    "english-figurative", "english-figurative-es", "english-fact-opinion", "english-context-clues", "english-fallacies",
+    "english-fallacies-es", "english-theme-pov", "english-thesis", "english-thesis-es", "science-cells", "science-cells-es",
+    "science-weather-climate", "science-atoms", "science-heredity", "science-heredity-es",
+  ]);
+  it("never puts more than half of a course's quiz keys at one position", () => {
+    for (const c of CATALOGUE) {
+      if (KEYS_REBALANCED_ELSEWHERE.has(c.id)) continue;
+      const keys = c.lessons.flatMap((l) => l.scenes.flatMap((s) => (s.kind === "quiz" ? s.questions.map((q) => q.answer) : [])));
+      const most = Math.max(...[0, 1, 2, 3].map((i) => keys.filter((k) => k === i).length));
+      expect(most * 2 <= keys.length, `${c.id}: ${most} of ${keys.length} keys at one position`).toBe(true);
+    }
+  });
+
+  it("finds a science course by a word it teaches", () => {
+    expect(matchEntry("how electricity works", "4", "en")?.id).toBe("science-energy");
+    expect(matchEntry("evaporation", "5", "en")?.id).toBe("science-water-cycle");
+    expect(matchEntry("evaporación", "5", "es")?.id).toBe("science-water-cycle-es");
+    expect(matchEntry("shadows", "1", "en")?.id).toBe("science-light-sound");
+  });
+
   it("every check is answerable and every widget target reachable", () => {
     for (const c of CATALOGUE)
       for (const l of c.lessons)
