@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Lesson } from "@/lib/types";
+import type { Lesson, Visual } from "@/lib/types";
 import atoms from "./science-atoms";
 import cells from "./science-cells";
 import cellsEs from "./science-cells-es";
@@ -27,7 +27,7 @@ const keys = (lessons: Lesson[]) =>
       if (s.kind === "slide")
         return {
           id: s.id,
-          visuals: s.blocks.flatMap((b) => (b.type !== "visual" ? [] : b.visual.kind === "line-graph" ? [{ ...b.visual, xLabel: "", yLabel: "" }] : [b.visual])),
+          visuals: s.blocks.flatMap((b): Visual[] => (b.type !== "visual" ? [] : b.visual.kind === "line-graph" ? [{ ...b.visual, xLabel: "", yLabel: "" }] : [b.visual])),
         };
       if (s.kind === "project") return { id: s.id, steps: s.steps.length };
       const w = s.widget;
