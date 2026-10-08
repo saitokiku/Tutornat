@@ -51,7 +51,7 @@ const ENV: Record<Role, string> = { talk: "KAIZEN_MODEL_TALK", build: "KAIZEN_MO
 export type TokenUsage = { input: number; output: number; cacheRead: number; cacheWrite: number; estimated?: boolean };
 
 /** Hears about every model call a request makes (lib/server/budget.ts `meter`). */
-export type Meter = { start(): void; usage(modelId: string, u: TokenUsage): void };
+export type Meter = { start(): unknown | Promise<unknown>; usage(modelId: string, u: TokenUsage): unknown | Promise<unknown> };
 
 /** The model for a job; with a meter, every call it makes is counted toward the spend caps. */
 export async function model(role: Role, meter?: Meter): Promise<LanguageModel | null> {
@@ -88,47 +88,47 @@ function fromProvider(u: Usage | undefined, sentChars: number, seenChars: number
 }
 
 /**
- * Wraps a model so each call is reported to the meter: the turn once the provider has taken the call
- * (a provider outage costs a learner nothing), the tokens when it ends.
+ * Wraps a model so each call is reported to the meter: the turn at authorized admission before network access
+ * (a failed call still occupies a turn), the tokens when it ends.
  */
 export function metered(m: Wrappable, meter: Meter) {
   return wrapLanguageModel({
     model: m,
     middleware: {
       wrapGenerate: async ({ doGenerate, params, model: inner }) => {
+        await meter.start();
         const r = await doGenerate();
-        meter.start();
-        meter.usage(inner.modelId, fromProvider(r.usage, JSON.stringify(params.prompt).length, 0));
+        await meter.usage(inner.modelId, fromProvider(r.usage, JSON.stringify(params.prompt).length, 0));
         return r;
       },
       wrapStream: async ({ doStream, params, model: inner }) => {
         const sent = JSON.stringify(params.prompt).length;
+        await meter.start();
         const r = await doStream();
-        meter.start();
         const reader = r.stream.getReader();
         let seen = 0;
         let reported = false;
-        const report = (u?: Usage) => {
+        const report = async (u?: Usage) => {
           if (reported) return;
           reported = true;
-          meter.usage(inner.modelId, fromProvider(u, sent, seen));
+          await meter.usage(inner.modelId, fromProvider(u, sent, seen));
         };
         // A learner can stop a reply mid-stream; the tokens sent so far still cost, so they are estimated.
         const stream = new ReadableStream<StreamPart>({
           async pull(c) {
             try {
               const { done, value } = await reader.read();
-              if (done) return (report(), c.close());
+              if (done) { await report(); c.close(); return; }
               if (value.type === "text-delta" || value.type === "reasoning-delta" || value.type === "tool-input-delta") seen += value.delta.length;
-              if (value.type === "finish") report(value.usage);
+              if (value.type === "finish") await report(value.usage);
               c.enqueue(value);
             } catch (err) {
-              report();
+              await report();
               c.error(err);
             }
           },
-          cancel(reason) {
-            report();
+          async cancel(reason) {
+            await report();
             return reader.cancel(reason);
           },
         });

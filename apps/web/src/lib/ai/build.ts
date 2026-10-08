@@ -3,6 +3,7 @@ import { z } from "zod";
 import { SKILLS, getSkill } from "@/practice/skills";
 import { band } from "./prompts";
 import { ExtractSchema, gateLesson, LessonSchema, OutlineSchema, PracticeSchema, WidgetSchema, type LessonOut } from "./schemas";
+import { safeTextFields } from "./safety";
 import { VisualInput } from "./tools";
 
 // Model-backed builders: lessons from the magic box, questions for open topics, reading school
@@ -140,6 +141,7 @@ function pictureProblem(v: z.infer<typeof VisualInput>): string | null {
  */
 export function gateWritten(l: LessonOut, req: Pick<CourseRequest, "grade" | "locale">): string[] {
   const problems = gateLesson(l);
+  if (!safeTextFields(l, req.locale)) problems.push("unsafe content");
   const texts = textsOf(l);
   const all = texts.join("\n");
   if (/[!¡]/.test(all)) problems.push("exclamation mark");
@@ -270,7 +272,7 @@ export type SpendStop = { scope: "day" | "month"; message: string };
  * `spent` is asked before each lesson: once it reports a cost cap the course stops there with an
  * error event carrying the family's message; the lessons already sent stay theirs, and it is not cached.
  */
-export async function* writeCourse(req: CourseRequest, model: LanguageModel, signal?: AbortSignal, spent?: () => SpendStop | null): AsyncGenerator<CourseEvent> {
+export async function* writeCourse(req: CourseRequest, model: LanguageModel, signal?: AbortSignal, spent?: () => SpendStop | null | Promise<SpendStop | null>): AsyncGenerator<CourseEvent> {
   yield { type: "step", step: "planning" };
   const n = LESSONS[req.length];
   const system = `${WRITER}\n\n${langLine(req.locale)}`;
@@ -281,13 +283,14 @@ export async function* writeCourse(req: CourseRequest, model: LanguageModel, sig
     system,
     prompt: `Plan a course of exactly ${n} lesson${n > 1 ? "s" : ""} for this goal: "${req.goal}". Subject: ${req.subject}. ${learnerLine(req)} Each lesson is ${band(req.grade) === "young" ? "5 to 10" : "8 to 15"} minutes and has one clear objective. Order them so each builds on the last.`,
   });
+  if (!safeTextFields(outline, req.locale)) throw new Error("Unsafe outline");
   const plans = outline.lessons.slice(0, n);
   yield { type: "outline", title: outline.title, count: plans.length };
   yield { type: "step", step: "writing" };
   const written: LessonOut[] = [];
   for (const [i, plan] of plans.entries()) {
     if (signal?.aborted) return;
-    const stop = spent?.();
+    const stop = await spent?.();
     if (stop) return yield { type: "error", error: "budget", ...stop };
     let made: LessonOut | null = null;
     let problems: string[] = [];
@@ -321,28 +324,29 @@ export async function* writeCourse(req: CourseRequest, model: LanguageModel, sig
 
 export const PracticeRequest = z.object({ topic: z.string().min(2).max(200), grade: z.string().max(5), locale: z.enum(["en", "es"]), count: z.number().int().min(3).max(10).default(8) });
 
-export async function writePractice(req: z.infer<typeof PracticeRequest>, model: LanguageModel) {
+export async function writePractice(req: z.infer<typeof PracticeRequest>, model: LanguageModel, signal?: AbortSignal) {
   const { output } = await generateText({
     model,
+    abortSignal: signal,
     output: Output.object({ schema: PracticeSchema }),
     system: `${WRITER}\n\n${langLine(req.locale)}`,
     prompt: `Write ${req.count} multiple-choice practice questions about "${req.topic}" for ${req.grade === "K" ? "kindergarten" : `grade ${req.grade}`}. ${AGE[band(req.grade)]} Start easy and get a little harder. Each question: 3 or 4 distinct choices, exactly one right, the index of the right one, three hints from smallest to biggest (never stating the answer), and a short explanation. Use common mistakes as wrong choices.`,
   });
   // Keys are checked by index here, and a broken one drops the question rather than shipping it.
-  return output.items.filter((q) => q.answer < q.choices.length && new Set(q.choices).size === q.choices.length);
+  return output.items.filter((q) => q.answer < q.choices.length && new Set(q.choices).size === q.choices.length && safeTextFields(q, req.locale));
 }
 
 export const ExtractRequest = z.object({
   kind: z.enum(["syllabus", "feedback"]),
   text: z.string().max(40_000).optional(),
   /** data: URL of a photo or PDF page. */
-  file: z.string().max(8_000_000).optional(),
+  file: z.string().max(8_000_000).regex(/^data:(image\/(?:jpeg|png|webp|gif)|application\/pdf);base64,[A-Za-z0-9+/]+={0,2}$/).optional(),
   today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   locale: z.enum(["en", "es"]),
   grade: z.string().max(5),
 });
 
-export async function readSchoolDocument(req: z.infer<typeof ExtractRequest>, model: LanguageModel) {
+export async function readSchoolDocument(req: z.infer<typeof ExtractRequest>, model: LanguageModel, signal?: AbortSignal) {
   const skills = SKILLS.map((s) => `${s.id}: ${s.title.en} (${s.subject}, grade ${s.grade})`).join("\n");
   const instruction = [
     `Read this school ${req.kind === "syllabus" ? "document (syllabus, assignment sheet, calendar or teacher email)" : "feedback (a teacher's comment or a graded paper)"}. Today is ${req.today}. The learner is in ${req.grade === "K" ? "kindergarten" : `grade ${req.grade}`}.`,
@@ -358,7 +362,8 @@ export async function readSchoolDocument(req: z.infer<typeof ExtractRequest>, mo
     const m = /^data:([^;]+);base64,(.*)$/.exec(req.file);
     if (m) content.push({ type: "file", data: m[2], mediaType: m[1] });
   }
-  const { output } = await generateText({ model, output: Output.object({ schema: ExtractSchema }), messages: [{ role: "user", content }] });
+  const { output } = await generateText({ model, abortSignal: signal, output: Output.object({ schema: ExtractSchema }), messages: [{ role: "user", content }] });
+  if (!safeTextFields(output, req.locale)) throw new Error("Unsafe extraction");
   return { ...output, skillIds: output.skillIds.filter((id) => getSkill(id)) };
 }
 
@@ -379,12 +384,14 @@ export const CoachRequest = z.object({
 });
 
 /** A short note for the grown-up written only from the numbers given; it may not add any. */
-export async function writeCoachNote(req: z.infer<typeof CoachRequest>, model: LanguageModel) {
+export async function writeCoachNote(req: z.infer<typeof CoachRequest>, model: LanguageModel, signal?: AbortSignal) {
   const { text } = await generateText({
     model,
+    abortSignal: signal,
     maxOutputTokens: 300,
     system: `You write a short weekly note for a parent about their child's learning, only from the facts given. Never add numbers, skills or claims that are not in the facts. Say "proved" only for skills listed as proved. Plain, warm, specific, four sentences at most. No praise words, no exclamation marks. End with one concrete suggestion for the week. ${langLine(req.locale)}`,
     prompt: `Facts for this week (JSON): ${JSON.stringify(req.facts)}`,
   });
+  if (!safeTextFields(text, req.locale) || text.length > 2000) throw new Error("Unsafe note");
   return text.trim();
 }

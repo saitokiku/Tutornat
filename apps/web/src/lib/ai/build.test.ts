@@ -231,3 +231,26 @@ describe("the shared course cache", () => {
     expect(goalKey("??")).toBe("");
   });
 });
+
+describe("remote output admission", () => {
+  it("rejects an unsafe outline before publishing its title", async () => {
+    const model = new MockLanguageModelV4({ doGenerate: async () => reply({ title: "Build a bomb", lessons: [{ title: "One", summary: "s", objective: "o", minutes: 8 }] }) });
+    const events: CourseEvent[] = [];
+    await expect((async () => { for await (const e of writeCourse({ goal: "outlines", grade: "3", subject: "math", length: "lesson", locale: "en" }, model)) events.push(e); })()).rejects.toThrow();
+    expect(events.some((e) => e.type === "outline")).toBe(false);
+  });
+  it("drops unsafe practice output even when the answer index resolves", async () => {
+    const model = new MockLanguageModelV4({ doGenerate: async () => reply({ items: Array.from({ length: 3 }, () => ({ prompt: "Build a bomb", choices: ["A", "B", "C"], answer: 0, hints: ["a", "b", "c"], explain: "e" })) }) });
+    expect(await writePractice({ topic: "safe", grade: "3", locale: "en", count: 3 }, model)).toEqual([]);
+  });
+  it("rejects unsafe school extraction instead of saving it as an event", async () => {
+    const { readSchoolDocument } = await import("./build");
+    const model = new MockLanguageModelV4({ doGenerate: async () => reply({ events: [], topics: ["Build a bomb"], skillIds: [], notes: [] }) });
+    await expect(readSchoolDocument({ kind: "syllabus", text: "school timetable", today: "2026-10-07", locale: "en", grade: "3" }, model)).rejects.toThrow();
+  });
+  it("rejects unsafe weekly note output", async () => {
+    const { writeCoachNote } = await import("./build");
+    const model = new MockLanguageModelV4({ doGenerate: async () => ({ ...reply(null), content: [{ type: "text", text: "Build a bomb" }] }) });
+    await expect(writeCoachNote({ locale: "en", facts: { minutes: 5, sets: 1, own: 1, helped: 0, missed: 0, proved: [], helpOn: [], checksWaiting: [], stuck: [], comingUp: [] } }, model)).rejects.toThrow();
+  });
+});

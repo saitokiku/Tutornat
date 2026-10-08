@@ -1,3 +1,5 @@
+import { remoteFailure, withLiveAuthority } from "@/lib/server/authority-work";
+import { learningGate } from "@/lib/server/authorize";
 import { aiMode, model } from "@/lib/ai/config";
 import { limited } from "@/lib/server/rate";
 import { tutorTurn, type TutorRequest } from "@/lib/ai/tutor";
@@ -9,6 +11,9 @@ export const maxDuration = 60;
 const MAX_BODY = 4_000_000;
 
 export async function POST(req: Request) {
+  if (aiMode() === "demo") return Response.json({ error: "demo" }, { status: 503 });
+  const denied = await learningGate(req, "tutor");
+  if (denied) return denied;
   const { meter, spendGate } = await import("@/lib/server/budget");
   const capped = await spendGate(req, "talk");
   if (capped) return capped;
@@ -18,5 +23,6 @@ export async function POST(req: Request) {
   if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY) return Response.json({ error: "photo_too_big" }, { status: 413 });
   const body = (await req.json().catch(() => null)) as TutorRequest | null;
   if (!body) return Response.json({ error: "bad_request" }, { status: 400 });
-  return tutorTurn(body, m);
+  try { return await withLiveAuthority(req, ({ signal, assert }) => tutorTurn(body, m, signal, assert)); }
+  catch (error) { return remoteFailure(error); }
 }

@@ -1,6 +1,7 @@
 import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { fromLocalDate, isDay, localDate } from "@/planner/dates";
+import { safeTextFields } from "./safety";
 import { getSkill, SKILLS } from "@/practice/skills";
 
 // The magic box's AI reader: what one typed request, photo or PDF is (homework, a test, practice…),
@@ -42,7 +43,7 @@ const realDay = (d: string) => isDay(d) && localDate(fromLocalDate(d)) === d;
 
 const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export async function readIntake(req: IntakeRequest, model: LanguageModel) {
+export async function readIntake(req: IntakeRequest, model: LanguageModel, signal?: AbortSignal) {
   const skills = SKILLS.map((k) => `${k.id}: ${k.title.en} (${k.subject}, grade ${k.grade})`).join("\n");
   const language = req.locale === "es" ? "Spanish" : "English";
   const instruction = [
@@ -60,7 +61,8 @@ export async function readIntake(req: IntakeRequest, model: LanguageModel) {
   if (req.text) content.push({ type: "text", text: `Typed:\n${req.text}` });
   const file = req.file ? FILE.exec(req.file) : null;
   if (file) content.push({ type: "file", data: file[2], mediaType: file[1] });
-  const { output } = await generateText({ model, output: Output.object({ schema: IntakeSchema }), messages: [{ role: "user", content }] });
+  const { output } = await generateText({ model, abortSignal: signal, output: Output.object({ schema: IntakeSchema }), messages: [{ role: "user", content }] });
+  if (!safeTextFields(output, req.locale)) throw new Error("Unsafe extraction");
   return {
     ...output,
     title: output.title.replace(/\s+/g, " ").trim(),

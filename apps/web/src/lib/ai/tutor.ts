@@ -7,11 +7,12 @@ import {
   toUIMessageStream,
   type LanguageModel,
   type UIMessage,
+  type UIMessageChunk,
 } from "ai";
 import { daysBetween, fromLocalDate, localDate } from "@/planner/dates";
 import { TutorContext } from "./context";
 import { band, systemPrompt, TAP_REPLIES } from "./prompts";
-import { screen } from "./safety";
+import { safeTextFields, screen } from "./safety";
 import { hintsGiven, tutorTools } from "./tools";
 
 // One tutor turn. The safety screen runs first and can answer without any model. Kept free of
@@ -101,7 +102,7 @@ const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday
 export const todayLine = (today: string) =>
   `Today is ${WEEKDAY[fromLocalDate(today).getDay()]}, ${today}. Work out any day the learner mentions ("Friday", "tomorrow", "next week") from today. A school date for add_to_calendar is today or later, as YYYY-MM-DD; if they didn't say which day, ask.`;
 
-export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promise<Response> {
+export async function tutorTurn(body: TutorRequest, model: LanguageModel, signal?: AbortSignal, admit?: () => Promise<void>): Promise<Response> {
   const parsed = TutorContext.safeParse(body.context);
   if (!parsed.success || !Array.isArray(body.messages)) return Response.json({ error: "bad_request" }, { status: 400 });
   const ctx = parsed.data;
@@ -120,13 +121,36 @@ export async function tutorTurn(body: TutorRequest, model: LanguageModel): Promi
   const system = [systemPrompt(ctx), todayLine(today), band(ctx.grade) === "young" ? TAP_REPLIES : "", photos.hasPhoto ? PHOTO_RULES : ""].filter(Boolean).join("\n\n");
   // Everything the learner typed, message by message: a worked example never has the numbers of one.
   const typed = messages.filter((m) => m.role === "user").map((m) => lastText(m).slice(0, LIMITS.chars)).filter(Boolean);
+  const tools = tutorTools(ctx, { hintsGiven: (ctx.item ? hintCount(body.hintsSeen) : 0) + hintsGiven(messages), typed, today });
   const result = streamText({
     model,
+    abortSignal: signal,
     system,
     messages: await convertToModelMessages(photos.messages),
-    tools: tutorTools(ctx, { hintsGiven: (ctx.item ? hintCount(body.hintsSeen) : 0) + hintsGiven(messages), typed, today }),
+    tools,
     stopWhen: isStepCount(5),
     maxOutputTokens: 700,
   });
-  return createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) });
+  // The legacy provider streams uncommitted text. Buffer this bounded turn before releasing text,
+  // tool cards or audio; T08 can use a provider with separately committed, screenable output turns.
+  const chunks: UIMessageChunk[] = [];
+  let text = "", bytes = 0;
+  const calls = new Set<string>();
+  for await (const chunk of toUIMessageStream({ stream: result.stream })) {
+    if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+    bytes += JSON.stringify(chunk).length;
+    if (bytes > 256_000) throw new Error("Tutor output too large");
+    if (chunk.type === "text-delta") text += chunk.delta;
+    if (chunk.type === "tool-input-start" || chunk.type === "tool-input-available") {
+      if (!(chunk.toolName in tools)) throw new Error("Unknown tutor tool");
+      calls.add(chunk.toolCallId);
+    }
+    if (chunk.type === "tool-output-available" && !calls.has(chunk.toolCallId)) throw new Error("Unbound tool result");
+    chunks.push(chunk);
+  }
+  const screened = screen(text, ctx.locale);
+  if (screened.kind !== "ok") return fixedReply(screened.reply, "offLimits");
+  if (!safeTextFields(chunks, ctx.locale)) throw new Error("Unsafe tool output");
+  await admit?.();
+  return createUIMessageStreamResponse({ stream: new ReadableStream<UIMessageChunk>({ start(c) { for (const chunk of chunks) c.enqueue(chunk); c.close(); } }) });
 }

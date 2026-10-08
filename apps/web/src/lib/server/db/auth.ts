@@ -5,7 +5,7 @@ import type { Locale } from "@/lib/types";
 import type { Db } from "./client";
 import { resetMail, type Sender } from "./email";
 import { NAME_MAX, normEmail, PASSWORD_MAX, validate, type FieldErrors } from "./fields";
-import { accounts, authThrottle, passwordResets, sessions } from "./schema";
+import { accounts, adultSelfAuthorities, authThrottle, capabilityGrants, passwordResets, profiles, sessions } from "./schema";
 import type { PublicAccount } from "./wire";
 
 // Accounts on the server: scrypt passwords, cookie sessions, a sign-in throttle shared by every
@@ -75,9 +75,22 @@ export async function readSession(db: Db, token: string | null, now = Date.now()
 }
 
 /** Records who is using this browser now (sync reports it), for the consent gate on AI and voice. */
-export async function setSessionLearner(db: Db, session: Session, learner: string | null) {
-  if (session.learnerId === learner) return;
-  await db.update(sessions).set({ learnerId: learner }).where(eq(sessions.id, session.id));
+export async function setSessionLearner(db: Db, session: Session, learner: string | null): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${session.accountId}, 0))`);
+    const [live] = await tx.select().from(sessions).where(and(eq(sessions.id, session.id), eq(sessions.accountId, session.accountId), gt(sessions.expiresAt, new Date())));
+    if (!live) return false;
+    if (learner && learner !== "parent") {
+      const [owned] = await tx.select({ id: profiles.id }).from(profiles).where(and(eq(profiles.accountId, session.accountId), eq(profiles.id, learner), eq(profiles.deleted, false)));
+      if (!owned) return false;
+    }
+    if (live.learnerId !== learner) {
+      await tx.update(capabilityGrants).set({ revokedAt: new Date() }).where(and(eq(capabilityGrants.sessionId, session.id), isNull(capabilityGrants.revokedAt)));
+      await tx.update(adultSelfAuthorities).set({ revokedAt: new Date() }).where(and(eq(adultSelfAuthorities.sessionId, session.id), isNull(adultSelfAuthorities.revokedAt)));
+      await tx.update(sessions).set({ learnerId: learner }).where(eq(sessions.id, session.id));
+    }
+    return true;
+  });
 }
 
 /** Sliding expiry: a session used in its second half gets a fresh 30 days. Returns the new expiry, or null. */

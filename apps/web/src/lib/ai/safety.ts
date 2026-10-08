@@ -50,3 +50,11 @@ export const suitable = (text: string) => screen(text, "en").kind === "ok";
 
 /** California SB 243: remind a known minor to take a break every three hours in a sitting. */
 export const BREAK_EVERY_MS = 3 * 3600_000;
+
+/** Plain text fields only; binary attachments remain untrusted data and never grant permissions. */
+export function safeTextFields(value: unknown, locale: Locale = "en"): boolean {
+  if (typeof value === "string") return value.startsWith("data:") || screen(value, locale).kind === "ok";
+  if (Array.isArray(value)) return value.every((v) => safeTextFields(v, locale));
+  if (value && typeof value === "object") return Object.values(value).every((v) => safeTextFields(v, locale));
+  return true;
+}

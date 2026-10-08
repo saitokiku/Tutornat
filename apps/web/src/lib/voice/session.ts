@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { onRemoteCancel } from "@/lib/remote-lifecycle";
 import type { Key } from "@/i18n/en";
 import { converse, type MicOffReason, type VoiceMetric } from "./converse";
 import { voice, voiceDisclosure, type Voice, type VoiceSetup } from "./select";
@@ -127,7 +128,13 @@ export function useVoiceSession({ locale, consent, under13, young, names, onTurn
       });
       talk.current = c;
       setV(made);
+      const stopRemote = onRemoteCancel(() => {
+        c.dispose(); made.out?.cancel(); made.in?.abort();
+        setSpeaking(false); setListening(false); setHeard(""); setWord(null);
+        handlers.current.onBargeIn?.();
+      });
       cleanup = () => {
+        stopRemote();
         c.dispose();
         subs.forEach((u) => u?.());
         made.out?.dispose();

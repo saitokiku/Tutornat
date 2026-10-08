@@ -2,11 +2,11 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { Grade } from "@/lib/types";
-import { confirmPassword, readSession, type AuthFail } from "./auth";
-import { getDb, serverMode, type Db } from "./client";
-import { json, readCookie, SESSION_COOKIE } from "./http";
-import { CONSENT_NOTICE_VERSION, consentAllows, DEV_METHOD, gradeAge, PARENT_LEARNER, PARENT_METHOD, type ConsentReceipt, type ConsentScope } from "./policy";
-import { consentReceipts, profiles } from "./schema";
+import { confirmPassword, type AuthFail } from "./auth";
+import { type Db } from "./client";
+import { json } from "./http";
+import { CONSENT_NOTICE_VERSION, DEV_METHOD, gradeAge, PARENT_METHOD, type ConsentReceipt, type ConsentScope } from "./policy";
+import { capabilityGrants, consentReceipts, profiles } from "./schema";
 import { receiptsOf, toReceipt } from "./sync";
 
 // Parent-first consent on the server: grown-ups record consent for a learner before the AI tutor or
@@ -130,6 +130,7 @@ export async function revokeConsent(db: Db, accountId: string, input: { id: stri
       .set({ revokedAt: sql`now()`, updatedAt: sql`now()`, seq: sql`nextval('sync_seq')` })
       .where(and(eq(consentReceipts.accountId, accountId), eq(consentReceipts.id, input.id), isNull(consentReceipts.revokedAt)))
       .returning({ id: consentReceipts.id });
+    if (rows.length) await tx.update(capabilityGrants).set({ revokedAt: new Date() }).where(and(eq(capabilityGrants.accountId, accountId), eq(capabilityGrants.receiptId, input.id), isNull(capabilityGrants.revokedAt)));
     return rows.length ? { ok: true as const } : { ok: false as const, error: "not_found" as const };
   });
 }
@@ -139,41 +140,12 @@ export const listReceipts = (db: Db, accountId: string) => receiptsOf(db, accoun
 /** Sent by the browser with AI and voice requests: the learner they are for (an id, never a name). */
 export const LEARNER_HEADER = "x-kaizen-learner";
 
-/**
- * For every learner-facing AI and voice route: refuses the request unless consent allows `scope` for
- * whoever is using the app. Browser-only deployments (no DATABASE_URL) are unchanged: it allows.
- *
- *   const refused = await consentGate(req, "ai");
- *   if (refused) return refused;
- *
- * It fails closed. The learner is the one this browser's session last reported (sync keeps it current)
- * and, when the request names one, that one too; both must be allowed. The grown-up ("parent") is
- * allowed. When nobody is identified (the picker, or a session that hasn't reported yet), the request
- * is refused while any child on the account lacks consent. No session at all is refused.
- */
+/** Compatibility entry point; every remote route uses the same cookie-derived principal. */
 export async function consentGate(req: Request, scope: ConsentScope, env: Env = process.env): Promise<Response | null> {
-  if (!serverMode()) return null;
-  const db = await getDb();
-  const session = await readSession(db, readCookie(req, SESSION_COOKIE));
-  if (!session) return json({ error: "consent", scope, reason: "signed_out" }, { status: 401 });
-  const named = req.headers.get(LEARNER_HEADER)?.trim().slice(0, 100) || null;
-  const who = [...new Set([session.learnerId, named].filter((x): x is string => Boolean(x)))];
-
-  const family = new Map<string, Grade>();
-  for (const p of await db.select({ id: profiles.id, data: profiles.data }).from(profiles).where(and(eq(profiles.accountId, session.accountId), eq(profiles.deleted, false)))) {
-    const grade = (p.data as { grade?: Grade }).grade;
-    if (grade) family.set(p.id, grade);
+  const { authorizeLearningRequest, LearningAuthorizationError } = await import("../authorize");
+  try { await authorizeLearningRequest(req, scope === "voice" ? "recognition" : "tutor", env); return null; }
+  catch (error) {
+    if (!(error instanceof LearningAuthorizationError)) throw error;
+    return json({ error: "consent", scope, reason: error.reason }, { status: error.status });
   }
-  const receipts = await receiptsOf(db, session.accountId);
-  const production = env.NODE_ENV === "production";
-  const allowed = (id: string) => {
-    const grade = family.get(id);
-    return grade !== undefined && consentAllows({ grade, receipts: receipts.filter((r) => r.profileId === id), scope, production });
-  };
-  const refused = (reason: string) => json({ error: "consent", scope, reason }, { status: 403 });
-
-  const learners = who.filter((x) => x !== PARENT_LEARNER);
-  for (const id of learners) if (!allowed(id)) return refused(family.has(id) ? "consent" : "learner");
-  if (who.length === 0 && [...family.keys()].some((id) => !allowed(id))) return refused("unknown_learner");
-  return null;
 }

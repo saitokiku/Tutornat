@@ -7,32 +7,15 @@ import { aiMode, type Meter, type TokenUsage } from "@/lib/ai/config";
 import { screen } from "@/lib/ai/safety";
 import type { Locale } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
+import { LearningAuthorizationError, principalOf } from "./authorize";
+import { createBudgetLedger } from "./budget-ledger";
+import { getDb } from "./db/client";
 import { clientAddress } from "./rate";
 
-// Spend caps for every route that calls a model, checked on the server before the model runs.
-//
-//   per learner, per day      KAIZEN_AI_DAILY_TURNS         (default 50)    KAIZEN_AI_DAILY_USD         (default 1.00)
-//   per account, per month    KAIZEN_AI_MONTHLY_TURNS       (default 3000)  KAIZEN_AI_MONTHLY_USD       (default 30.00)
-//   per address, per day      KAIZEN_AI_ADDRESS_DAILY_TURNS (default 300)   KAIZEN_AI_ADDRESS_DAILY_USD (default 6.00)
-//
-// A turn is one request that reached a model (a tutor reply may make several calls; it is one turn).
-// A request holds its turn from the moment it passes the gate until its first model call is counted
-// (at most two minutes), so requests sent at the same moment can't all slip under a cap. Cost is
-// estimated from the provider's own token counts at list price: a reply that starts under a cost cap
-// may end a little over it, and a course stops between lessons once one is reached.
-//
-// Who is spending comes from opaque hashes the browser sends (x-kaizen-learner, x-kaizen-account; see
-// lib/ai/client.ts aiFetch), never a name. The learner and account caps apply only to those ids. A
-// request without them is held to its address's ceiling alone, so a classroom, a library or a phone
-// carrier's shared address is not cut off at one learner's allowance. The ids are self-asserted until
-// accounts land, so the address ceiling also stops one address from adding up past it with made-up
-// ids; it runs on the server's own day so a claimed date can't stretch it (for US families it lifts
-// in the evening, sooner than the "tomorrow" its message promises). The provider's own monthly limit
-// on the key stays the hard ceiling. A cap of 0 turns the AI off for the site (lib/ai/config.ts).
-// The demo tutor and everything without a model never touch this.
-//
-// ponytail: in-memory per server instance, like rate.ts. Moves to the database (one spend row per
-// key and period) when the backend lands, which also makes the caps hold across instances.
+// Provider budgets live in Postgres under cookie-derived server IDs. UTC periods cannot be reset by
+// a browser date. A reservation lasts two minutes; admission counts a turn before the provider call,
+// including a failed call, while token costs settle from provider usage (estimated on early stop).
+// No database means demo only. Failed or unauthorized requests cannot reserve remote work.
 
 export type Job = "talk" | "course" | "practice" | "extract" | "coach";
 export type Scope = "day" | "month";
@@ -71,152 +54,42 @@ export function costUsd(modelId: string, u: TokenUsage): number {
   return (u.input * i + u.output * o + u.cacheRead * r + u.cacheWrite * w) / 1e6;
 }
 
-const OPAQUE = /^[a-f0-9]{32,64}$/;
+/** Metering identity is resolved by the account cookie; header hashes are references only. */
+export function spender(req: Request) {
+  const p = principalOf(req);
+  return { learner: p?.learnerId ?? p?.accountId ?? null, account: p?.accountId ?? null, address: `ip-${createHash("sha256").update(clientAddress(req)).digest("hex").slice(0, 32)}` };
+}
+const principal = (req: Request) => {
+  const p = principalOf(req);
+  if (!p || !p.learnerId || (p.authority !== "adult-self" && p.authority !== "authorized-guardian")) throw new LearningAuthorizationError(403, "capability");
+  return p;
+};
+async function ledger() { return createBudgetLedger(await getDb(), caps()); }
+const reservations = new WeakMap<Request, string>();
 
-/**
- * Who is spending: the opaque learner and account ids the browser sends (a grown-up's request without
- * a learner spends on the account's own day), null where none came; and the hashed address.
- */
-export function spender(req: Request): { learner: string | null; account: string | null; address: string } {
-  const opaque = (name: string) => {
-    const v = req.headers.get(name)?.trim().toLowerCase();
-    return v && OPAQUE.test(v) ? v : null;
-  };
-  const account = opaque("x-kaizen-account");
+export async function spentBy(req: Request, now = Date.now()) {
+  return (await ledger()).spent(principal(req), spender(req).address, now);
+}
+export async function overCap(req: Request, now = Date.now()) {
+  return (await ledger()).overCap(principal(req), spender(req).address, now);
+}
+export async function overSpend(req: Request, now = Date.now()) {
+  return (await ledger()).overSpend(principal(req), spender(req).address, now);
+}
+
+/** Every model call rechecks live authority before network access, even later calls in a course. */
+export function meter(req: Request, now?: number): Meter {
   return {
-    learner: opaque("x-kaizen-learner") ?? account,
-    account,
-    address: `ip-${createHash("sha256").update(clientAddress(req)).digest("hex").slice(0, 32)}`,
-  };
-}
-
-const utcDay = (now: number) => new Date(now).toISOString().slice(0, 10);
-
-/** The learner's own date when the browser sends one within a day of the server's, so "tomorrow" means their tomorrow. */
-function dayOf(req: Request, now: number) {
-  const local = req.headers.get("x-kaizen-day");
-  if (local && /^\d{4}-\d{2}-\d{2}$/.test(local) && Math.abs(Date.parse(local) - Date.parse(utcDay(now))) <= 86_400_000) return local;
-  return utcDay(now);
-}
-
-const monthOf = (now: number) => new Date(now).toISOString().slice(0, 7);
-
-type Spend = { turns: number; usd: number; tokens: number };
-type Keys = { day: string | null; month: string | null; address: string };
-const spending = new Map<string, Spend>();
-const ZERO: Spend = { turns: 0, usd: 0, tokens: 0 };
-
-/** The periods a request counts toward: its learner's day and account's month (only with real ids), its address's day. */
-function keysOf(req: Request, now: number): Keys {
-  const who = spender(req);
-  return {
-    day: who.learner && `day:${who.learner}:${dayOf(req, now)}`,
-    month: who.account && `month:${who.account}:${monthOf(now)}`,
-    address: `addr:${who.address}:${utcDay(now)}`,
-  };
-}
-const all = (k: Keys) => [k.day, k.month, k.address].filter((x): x is string => !!x);
-
-// Requests that passed the gate and have not made their first model call yet.
-const HOLD_MS = 120_000;
-const holds = new Map<string, number[]>();
-const held = new WeakMap<Request, { keys: string[]; at: number }>();
-
-function holding(key: string | null, now: number) {
-  if (!key) return 0;
-  const live = (holds.get(key) ?? []).filter((t) => now - t < HOLD_MS);
-  if (live.length) holds.set(key, live);
-  else holds.delete(key);
-  return live.length;
-}
-
-function hold(req: Request, now: number) {
-  const keys = all(keysOf(req, now));
-  for (const k of keys) holds.set(k, [...(holds.get(k) ?? []), now]);
-  held.set(req, { keys, at: now });
-  if (holds.size > pruneAt) for (const k of holds.keys()) holding(k, now);
-}
-
-function release(req: Request) {
-  const h = held.get(req);
-  if (!h) return;
-  held.delete(req);
-  for (const k of h.keys) {
-    const list = holds.get(k) ?? [];
-    const i = list.indexOf(h.at);
-    if (i >= 0) list.splice(i, 1);
-    if (!list.length) holds.delete(k);
-  }
-}
-
-let pruneAt = 20_000;
-
-/**
- * Drops days before yesterday and months before this one. Only older periods go: a request that
- * started before midnight and ends after it must not wipe the new day's spending.
- */
-function prune(now: number) {
-  const month = monthOf(now);
-  const yesterday = utcDay(now - 86_400_000);
-  for (const k of spending.keys()) {
-    const period = k.slice(k.lastIndexOf(":") + 1);
-    if (k.startsWith("month:") ? period < month : period < yesterday) spending.delete(k);
-  }
-  pruneAt = Math.max(20_000, spending.size * 2);
-}
-
-function add(key: string, d: Partial<Spend>, now: number) {
-  const s = spending.get(key) ?? ZERO;
-  spending.set(key, { turns: s.turns + (d.turns ?? 0), usd: s.usd + (d.usd ?? 0), tokens: s.tokens + (d.tokens ?? 0) });
-  if (spending.size > pruneAt) prune(now);
-}
-
-const spentOn = (key: string | null) => (key && spending.get(key)) || ZERO;
-
-/** What this learner spent today, their account this month, and their address today (zero where no id came). */
-export function spentBy(req: Request, now = Date.now()): { day: Spend; month: Spend; address: Spend } {
-  const k = keysOf(req, now);
-  return { day: spentOn(k.day), month: spentOn(k.month), address: spentOn(k.address) };
-}
-
-/**
- * The cap this request is over, if any, counting requests still waiting for their first model call.
- * The month is checked first: it lasts longer and says so. The address ceiling lifts with the day,
- * so it reads as the day's cap.
- */
-export function overCap(req: Request, now = Date.now()): Scope | null {
-  const c = caps();
-  const k = keysOf(req, now);
-  const over = (key: string | null, turns: number, usd: number) => !!key && (spentOn(key).turns + holding(key, now) >= turns || spentOn(key).usd >= usd);
-  if (over(k.month, c.monthTurns, c.monthUsd)) return "month";
-  if (over(k.day, c.dayTurns, c.dayUsd)) return "day";
-  if (over(k.address, c.addressTurns, c.addressUsd)) return "day";
-  return null;
-}
-
-/** The cost cap reached since a long job (a course) began, if any: it stops between steps on it. */
-export function overSpend(req: Request, now = Date.now()): Scope | null {
-  const c = caps();
-  const k = keysOf(req, now);
-  if (spentOn(k.month).usd >= c.monthUsd) return "month";
-  if (spentOn(k.day).usd >= c.dayUsd || spentOn(k.address).usd >= c.addressUsd) return "day";
-  return null;
-}
-
-/** Counts a request's model calls: one turn when the first call starts (ending its hold), every call's tokens when it ends. */
-export function meter(req: Request, now = Date.now()): Meter {
-  const keys = all(keysOf(req, now));
-  let started = false;
-  return {
-    start() {
-      if (started) return;
-      started = true;
-      release(req);
-      for (const key of keys) add(key, { turns: 1 }, now);
+    async start() {
+      const p = principal(req);
+      const id = reservations.get(req);
+      if (!id || req.signal.aborted) throw new LearningAuthorizationError(403, "reservation");
+      await (await ledger()).start(id, p, now ?? Date.now());
     },
-    usage(modelId, u) {
-      const d = { usd: costUsd(modelId, u), tokens: u.input + u.output + u.cacheRead + u.cacheWrite };
-      for (const key of keys) add(key, d, now);
+    async usage(modelId, u) {
+      const id = reservations.get(req);
+      if (!id) throw new LearningAuthorizationError(403, "reservation");
+      await (await ledger()).usage(id, costUsd(modelId, u), u.input + u.output + u.cacheRead + u.cacheWrite);
     },
   };
 }
@@ -297,8 +170,13 @@ export async function spendGate(req: Request, job: Job, locale?: Locale, now = D
   const body: Body = job === "talk" || !locale ? await req.clone().json().catch(() => null) : null;
   const lang = locale ?? localeOf(body);
   if (job === "talk" && screen(learnerSaid(body), lang).kind !== "ok") return null;
-  const scope = overCap(req, now);
-  if (!scope) return (hold(req, now), null);
+  const reservation = await (await ledger()).reserve(principal(req), spender(req).address, now);
+  if (reservation.ok) { reservations.set(req, reservation.id); return null; }
+  return budgetReply(job, reservation.scope, lang, body, now);
+}
+
+/** Same response shapes for budget refusals, independently testable without calling a provider. */
+export function budgetReply(job: Job, scope: Scope, lang: Locale, body: Body = null, now = Date.now()): Response {
   const message = capMessage(job, scope, lang, now);
   if (job === "talk") return tutorReply(message, scope, practiceSkill(body));
   if (job === "course")

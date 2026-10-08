@@ -15,6 +15,27 @@
       "when": 1791403943864,
       "tag": "0001_sessions_learner",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791417556767,
+      "tag": "0002_giant_jubilee",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791418034058,
+      "tag": "0003_first_blazing_skull",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791418341572,
+      "tag": "0004_dazzling_micromacro",
+      "breakpoints": true
     }
   ]
 }

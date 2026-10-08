@@ -1,3 +1,4 @@
+import { watchCapability } from "@/lib/remote-lifecycle";
 import { VoiceError } from "./types";
 
 // Asking our server for a vendor token (/api/voice/tts-token, /api/voice/stt-token). The server wants
@@ -27,11 +28,13 @@ export async function requestToken<T>(f: typeof fetch, url: string, body: TokenB
     }
     if (res.status === 403) {
       const why = (await res.json().catch(() => null)) as { error?: unknown } | null;
-      throw new VoiceError(why?.error === "consent" ? "consent" : "unavailable", `refused: ${String(why?.error ?? res.status)}`);
+      throw new VoiceError((why?.error === "consent" || why?.error === "authority") ? "consent" : "unavailable", `refused: ${String(why?.error ?? res.status)}`);
     }
     if (!res.ok) throw new VoiceError("unavailable", `token ${res.status}`);
     const t = (await res.json().catch(() => null)) as T | null;
     if (!t) throw new VoiceError("unavailable", "token reply");
+    const grant = (t as { capability?: { id?: unknown } }).capability;
+    if (typeof grant?.id === "string") watchCapability(f, grant.id);
     return t;
   }
 }

@@ -2,6 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import { onRemoteCancel } from "@/lib/remote-lifecycle";
 import { useEffect, useRef, useState } from "react";
 import { IconArrowRight, IconSpeaker, IconStop, IconX } from "@/components/icons";
 import { speakText } from "@/components/stage/hear";
@@ -121,6 +122,7 @@ function AiChat({ setup, board, topics }: { setup: ChatSetup; board: boolean; to
   );
   const [initial] = useState<UIMessage[]>(() => [{ id: "open", role: "assistant", parts: [{ type: "text", text: opening(setup, t, titles(topics, setup)) }] }]);
   const { messages, sendMessage, setMessages, status, error, stop } = useChat({ transport, messages: initial });
+  useEffect(() => onRemoteCancel(() => { void stop(); }), [stop]);
   const failure = error?.message ?? "";
   const photoRefused = /photo_too_big|bad_photo/.test(failure);
   // A photo the server refused is taken off the message, so the next turn doesn't send it (and fail) again.

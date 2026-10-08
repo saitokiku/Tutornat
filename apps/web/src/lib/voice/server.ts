@@ -1,20 +1,19 @@
 import "server-only";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { assertPrincipalLive, learningGate, LearningAuthorizationError, principalOf } from "@/lib/server/authorize";
+import { createBudgetLedger } from "@/lib/server/budget-ledger";
+import { issueCapability } from "@/lib/server/capabilities";
+import { getDb } from "@/lib/server/db/client";
 import { limited } from "@/lib/server/rate";
 import type { Locale } from "@/lib/types";
 
 // The server half of voice: says which vendors are set up and mints short-lived tokens so the
 // browser can talk to them directly. Keys never leave this file's process.
 //
-// Every vendor token costs money, so a token request has to pass, in order:
-//  1. the vendor is configured;
-//  2. it comes from a page on this site (Origin header present and ours; Sec-Fetch-Site same-origin);
-//  3. a per-address budget (one learner needs a few a minute);
-//  4. a voice pass: a signed, HttpOnly cookie that /api/voice/status hands out (2 hours, renewed by
-//     each token), so the routes answer only browsers that loaded our voice code;
-//  5. a learner whose voice is allowed (voiceAllowed — today the page's word; M5: the stored consent);
-//  6. a daily ceiling per server instance, so a runaway client can't spend without end.
-// Until accounts exist (M5) a determined script can still get a pass; 3 and 6 bound what it costs.
+// Vendor access requires a cookie-derived learning principal before budgets or minting. The voice
+// pass is only a browser-flow check, never identity or consent. Shared Postgres reservations cap
+// token issuance across instances. App grants are revoked on consent/learner changes. A credential
+// already issued to a browser has its own provider lease; closing our client is not vendor revocation.
 //
 //   ELEVENLABS_API_KEY         → read-aloud by ElevenLabs (single-use WebSocket tokens, 15 min)
 //   ELEVENLABS_VOICE_ID        → the voice (default: a stock ElevenLabs voice); ELEVENLABS_VOICE_ID_ES for Spanish
@@ -25,7 +24,7 @@ import type { Locale } from "@/lib/types";
 //   KAIZEN_VOICE=vendor        → on Vercel, required as well, so keys left in the project by earlier
 //                                attempts stay inert until someone means to use them (as with KAIZEN_AI)
 //   KAIZEN_VOICE_SECRET        → signs the voice pass (default: derived from the vendor keys)
-//   KAIZEN_VOICE_DAILY_TOKENS  → tokens per kind per server instance per day (default 2000)
+//   KAIZEN_VOICE_DAILY_TOKENS  → tokens per kind across server instances per UTC day (default 2000)
 
 const ELEVENLABS_TOKEN_URL = "https://api.elevenlabs.io/v1/single-use-token/tts_websocket";
 const DEEPGRAM_GRANT_URL = "https://api.deepgram.com/v1/auth/grant";
@@ -82,28 +81,15 @@ function passCookie(req: Request): string {
   return `${PASS_COOKIE}=${makePass()}; Path=/api/voice; Max-Age=${PASS_TTL_S}; HttpOnly; SameSite=Strict${https ? "; Secure" : ""}`;
 }
 
-// ---- Daily ceiling (per server instance)
-
-let day = { date: "", count: { tts: 0, stt: 0 } };
-
-function overDailyCeiling(kind: "tts" | "stt"): boolean {
-  const date = new Date().toISOString().slice(0, 10);
-  if (day.date !== date) day = { date, count: { tts: 0, stt: 0 } };
-  const ceiling = Number(process.env.KAIZEN_VOICE_DAILY_TOKENS) || DEFAULT_DAILY_TOKENS;
-  if (day.count[kind] >= ceiling) {
-    if (day.count[kind] === ceiling) console.warn(`voice: daily ${kind} token ceiling (${ceiling}) reached on this instance`);
-    day.count[kind] = ceiling + 1;
-    return true;
-  }
-  day.count[kind]++;
-  return false;
-}
-
 // ---- Routes
 
 /** Which vendors are set up. Also hands out the voice pass the token routes ask for, when there is anything to use it on. */
-export function voiceStatusResponse(req: Request): Response {
+export async function voiceStatusResponse(req: Request): Promise<Response> {
   const status = { tts: ttsConfigured(), stt: sttConfigured() };
+  if (status.tts || status.stt) {
+    const denied = await learningGate(req, status.stt ? "recognition" : "speech");
+    if (denied) return denied;
+  }
   return json(status, 200, status.tts || status.stt ? { "set-cookie": passCookie(req) } : {});
 }
 
@@ -144,19 +130,28 @@ export async function voiceAllowed(_req: Request, kind: Kind, body: TokenRequest
 /** The checks every token request passes, in order; a Response when one fails. */
 async function gate(req: Request, kind: Kind, configured: boolean, perMinute: number): Promise<TokenRequest | Response> {
   if (!configured) return json({ error: "not_configured" }, 503);
+  const denied = await learningGate(req, kind === "stt" ? "recognition" : "speech");
+  if (denied) return denied;
   if (!sameSite(req)) return json({ error: "origin" }, 403);
   if (limited(req, `voice-${kind}`, perMinute)) return json({ error: "rate" }, 429);
   if (!passValid(readCookie(req, PASS_COOKIE))) return json({ error: "session" }, 401);
   const body = await readRequest(req);
   if (!body) return json({ error: "bad_request" }, 400);
   if (!(await voiceAllowed(req, kind, body))) return json({ error: "consent" }, 403);
-  if (overDailyCeiling(kind)) return json({ error: "daily" }, 429);
+  const daily = Number(process.env.KAIZEN_VOICE_DAILY_TOKENS) || DEFAULT_DAILY_TOKENS;
+  const ledger = createBudgetLedger(await getDb(), { dayTurns: daily, dayUsd: Infinity, monthTurns: Infinity, monthUsd: Infinity, addressTurns: daily, addressUsd: Infinity }, `voice:${kind}`);
+  const p = principalOf(req)!;
+  const hold = await ledger.reserve(p, "site", Date.now());
+  if (!hold.ok) return json({ error: "daily" }, 429);
+  await ledger.start(hold.id, p);
+
   return body;
 }
 
 export async function ttsTokenResponse(req: Request, f: typeof fetch = fetch): Promise<Response> {
   const body = await gate(req, "tts", ttsConfigured(), TTS_PER_MINUTE);
   if (body instanceof Response) return body;
+  const capability = await issueCapability(await getDb(), principalOf(req)!, { processor: "elevenlabs", credentialTtlSeconds: 900, connectionMaxSeconds: null });
   let res: Response;
   try {
     res = await f(ELEVENLABS_TOKEN_URL, {
@@ -173,10 +168,13 @@ export async function ttsTokenResponse(req: Request, f: typeof fetch = fetch): P
     console.warn(`voice: ElevenLabs token request failed (${res.status})`);
     return json({ error: "vendor" }, 502);
   }
+  const denied = await releaseGate(req);
+  if (denied) return denied;
   const modelId = process.env.ELEVENLABS_MODEL || "eleven_flash_v2_5";
   const voiceId = (body.locale === "es" && process.env.ELEVENLABS_VOICE_ID_ES) || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE;
   return json(
     {
+      capability,
       token: data.token,
       voiceId,
       modelId,
@@ -193,6 +191,7 @@ export async function ttsTokenResponse(req: Request, f: typeof fetch = fetch): P
 export async function sttTokenResponse(req: Request, f: typeof fetch = fetch): Promise<Response> {
   const body = await gate(req, "stt", sttConfigured(), STT_PER_MINUTE);
   if (body instanceof Response) return body;
+  const capability = await issueCapability(await getDb(), principalOf(req)!, { processor: "deepgram", credentialTtlSeconds: 30, connectionMaxSeconds: null });
   let res: Response;
   try {
     res = await f(DEEPGRAM_GRANT_URL, {
@@ -210,8 +209,11 @@ export async function sttTokenResponse(req: Request, f: typeof fetch = fetch): P
     console.warn(`voice: Deepgram token request failed (${res.status})`);
     return json({ error: "vendor" }, 502);
   }
+  const denied = await releaseGate(req);
+  if (denied) return denied;
   return json(
     {
+      capability,
       token: data.access_token,
       expiresIn: typeof data.expires_in === "number" ? data.expires_in : 30,
       model: process.env.DEEPGRAM_MODEL || "nova-3",
@@ -220,4 +222,9 @@ export async function sttTokenResponse(req: Request, f: typeof fetch = fetch): P
     200,
     { "set-cookie": passCookie(req) },
   );
+}
+
+async function releaseGate(req: Request) {
+  try { await assertPrincipalLive(await getDb(), principalOf(req)!); return null; }
+  catch (e) { if (e instanceof LearningAuthorizationError) return e.response(); throw e; }
 }

@@ -1,3 +1,4 @@
+import { learningGate } from "@/lib/server/authorize";
 import { connection } from "next/server";
 import { aiMode } from "@/lib/ai/config";
 import { overCap } from "@/lib/server/budget";
@@ -8,5 +9,6 @@ import { overCap } from "@/lib/server/budget";
 export async function GET(req: Request) {
   await connection();
   const mode = aiMode();
-  return Response.json({ mode, budget: mode === "demo" ? null : overCap(req) }, { headers: { "cache-control": "no-store" } });
+  if (mode !== "demo") { const denied = await learningGate(req, "tutor"); if (denied) return denied; }
+  return Response.json({ mode, budget: mode === "demo" ? null : await overCap(req) }, { headers: { "cache-control": "no-store" } });
 }

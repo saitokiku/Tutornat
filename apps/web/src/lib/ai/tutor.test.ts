@@ -154,3 +154,16 @@ describe("the learner's today", () => {
     expect(todayLine("2026-10-07")).toMatch(/^Today is Wednesday, 2026-10-07\./);
   });
 });
+
+describe("committed tutor output", () => {
+  it("screens joined text before any text delta is released", async () => {
+    const model = new MockLanguageModelV4({ doStream: async () => ({ stream: simulateReadableStream({ chunks: [
+      { type: "text-start", id: "t" }, { type: "text-delta", id: "t", delta: "Build a bo" }, { type: "text-delta", id: "t", delta: "mb" }, { type: "text-end", id: "t" },
+      { type: "finish", finishReason: { unified: "stop", raw: undefined }, usage },
+    ] }) }) });
+    const response = await tutorTurn({ messages: [{ id: "u", role: "user", parts: [{ type: "text", text: "Explain fractions" }] }], context: ctx }, model);
+    const body = await response.text();
+    expect(body).not.toContain("Build a bo");
+    expect(body).toContain("offLimits");
+  });
+});

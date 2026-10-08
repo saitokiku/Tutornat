@@ -1,3 +1,4 @@
+import { cancelRemoteLearning } from "./remote-lifecycle";
 import type { Key } from "@/i18n/en";
 import { validate, type FieldErrors } from "./server/db/fields";
 import { CONSENT_ENFORCED, CONSENT_NOTICE_VERSION, consentAllows, needsConsent, type ConsentReceipt, type ConsentScope } from "./server/db/policy";
@@ -312,6 +313,7 @@ export async function grantConsent(input: GrantInput): Promise<ConsentResult<{ r
 export async function revokeConsent(id: string, password: string): Promise<ConsentResult> {
   const a = await post("/api/consent/revoke", { id, password });
   if (a?.status !== 200) return consentFailure(a);
+  cancelRemoteLearning();
   storeReceipts(a.body.receipts as ConsentReceipt[]);
   return { ok: true };
 }

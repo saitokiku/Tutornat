@@ -21,8 +21,8 @@ async function opaque(kind: "account" | "learner", id: string) {
  * Headers for every AI request: one-way hashes of the account and learner ids (never a name), so the
  * server can hold each learner to a daily cap and each family to a monthly one, and the learner's own
  * date, so "back tomorrow" means their tomorrow. `profileId` defaults to the learner signed in now.
- * Where the browser can't hash (not a secure context) only the date goes; the server then holds the
- * request to its address's ceiling alone.
+ * Where hashing is unavailable, the server can use the cookie and its stored selection.
+ * These headers grant no authority: the server resolves them only among that account's owned rows.
  */
 export async function aiHeaders(profileId?: string): Promise<Record<string, string>> {
   const { accountId, profileId: active } = read().session;

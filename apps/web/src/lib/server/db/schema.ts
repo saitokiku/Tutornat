@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, index, integer, jsonb, pgSequence, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, doublePrecision, index, integer, jsonb, pgSequence, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { Goal } from "@/lib/types";
 import type { ConsentScope } from "./policy";
 
@@ -192,6 +192,55 @@ export const consentReceipts = pgTable(
   },
   (t) => [index("consent_receipts_profile_idx").on(t.accountId, t.profileId), index("consent_receipts_seq_idx").on(t.accountId, t.seq)],
 );
+
+/** Password-confirmed adult self ownership, bound to a server session; never writable through sync. */
+export const adultSelfAuthorities = pgTable(
+  "adult_self_authorities",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+    sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
+    profileId: text("profile_id").notNull(),
+    noticeVersion: text("notice_version").notNull(),
+    processors: jsonb("processors").$type<string[]>().notNull(),
+    confirmedAt: at("confirmed_at").notNull(),
+    expiresAt: at("expires_at").notNull(),
+    revokedAt: at("revoked_at"),
+  },
+  (t) => [index("adult_self_authorities_session_idx").on(t.accountId, t.sessionId)],
+);
+
+/** Shared provider usage; keys contain server IDs and server UTC periods, never browser claims. */
+export const budgetPeriods = pgTable("budget_periods", {
+  key: text("key").primaryKey(),
+  turns: integer("turns").notNull().default(0),
+  usd: doublePrecision("usd").notNull().default(0),
+  tokens: bigint("tokens", { mode: "number" }).notNull().default(0),
+});
+
+export const budgetHolds = pgTable("budget_holds", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull(),
+  keys: jsonb("keys").$type<string[]>().notNull(),
+  expiresAt: at("expires_at").notNull(),
+  startedAt: at("started_at"),
+}, (t) => [index("budget_holds_expiry_idx").on(t.expiresAt)]);
+
+/** App capabilities can be revoked; vendor credentials may have independent, unrevocable leases. */
+export const capabilityGrants = pgTable("capability_grants", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
+  profileId: text("profile_id").notNull(),
+  principal: jsonb("principal").$type<import("../authorize").LearningPrincipal>().notNull(),
+  receiptId: text("receipt_id"),
+  authorityId: text("authority_id"),
+  processor: text("processor").notNull(),
+  credentialTtlSeconds: integer("credential_ttl_seconds").notNull(),
+  expiresAt: at("expires_at").notNull(),
+  revokedAt: at("revoked_at"),
+}, (t) => [index("capability_grants_receipt_idx").on(t.accountId, t.receiptId), index("capability_grants_session_idx").on(t.sessionId)]);
 
 /** Synced list name → table. Attempts have their own shape and handling. */
 export const RECORD_TABLES = {
