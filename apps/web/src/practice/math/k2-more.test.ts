@@ -843,6 +843,8 @@ describe("m.story.100", () => {
         expect(LEVEL_KINDS[level - 1]).toContain(s.kind);
         expect(text(en)).toMatch(CUE[s.kind]);
         expect(key >= 1 && key <= 100 && Math.max(...x) <= 100).toBe(true);
+        // Take some away, then some come back: never more come back than went away.
+        if (s.kind === "take-add") expect(x[2], text(en)).toBeLessThanOrEqual(x[1]);
         kinds.add(s.kind);
       }
       expect([...kinds].sort()).toEqual([...LEVEL_KINDS[level - 1]].sort());
