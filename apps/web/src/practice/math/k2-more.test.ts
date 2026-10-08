@@ -183,6 +183,10 @@ describe("K–2 math: every item", () => {
               for (const sen of sentences(line)) expect(wordCount(sen), `${at} too long: "${sen}"`).toBeLessThanOrEqual(max);
             const last = it.steps[it.steps.length - 1];
             for (const h of it.hints) expect(h.includes(last), `${at} hint gives the final step: ${h}`).toBe(false);
+            // A hint's arithmetic never hands over the answer, unless the prompt already shows that number.
+            const keyText = answerText(it.answer, it.choices);
+            if (!ints(strings).includes(Number(keyText)))
+              for (const h of it.hints) for (const [l, r] of equations(h)) expect([...ints(l), ...ints(r)].map(String), `${at} hint "${h}" shows the answer`).not.toContain(keyText);
             for (const line of [...it.hints, ...it.steps]) {
               for (const [l, r] of equations(line)) expect(sumLine(l), `${at} false equation "${line}"`).toBe(sumLine(r));
               for (const m of line.matchAll(COMPARISON)) {
@@ -399,13 +403,21 @@ describe("m.decompose.10", () => {
       if (v.kind !== "dots") throw new Error("expected dots");
       expect(v.groups[1]).toBe(key);
       expect(shown(l)).toBeLessThanOrEqual(10);
+      for (const h of en.hints) {
+        expect(h, "1 are").not.toMatch(/\b1 are\b/);
+        expect(h, "the second group is the answer").not.toMatch(/second group/);
+      }
     }
+    for (const it of items("m.decompose.10", 1, "es")) for (const h of it.hints) expect(h, "1 están").not.toMatch(/\b1 están\b/);
     for (const locale of LOCALES)
       for (const it of items("m.decompose.10", 2, locale)) {
         const n = ints(text(it))[0];
         expect(sumLine(keyLabel(it))).toBe(n);
         for (const w of wrongLabels(it)) expect(sumLine(w), `${w} also makes ${n}`).not.toBe(n);
         expect(n).toBeLessThanOrEqual(10);
+        // "1 + 10" and "10 + 1" are one choice to a child who knows order does not matter.
+        const pairs = it.choices!.map((c) => terms(c.label).sort((a, b) => a - b).join("+"));
+        expect(new Set(pairs).size, `swapped pair in ${it.choices!.map((c) => c.label)}`).toBe(pairs.length);
       }
   });
 });
@@ -858,6 +870,10 @@ describe("m.story.100", () => {
         expect(LEVEL_KINDS[level - 1]).toContain(s.kind);
         expect(text(en)).toMatch(CUE[s.kind]);
         expect(key >= 1 && key <= 100 && Math.max(...x) <= 100).toBe(true);
+        // A hint's arithmetic shows the answer only if the story already shows that number.
+        for (const h of en.hints)
+          for (const [l, r] of equations(h))
+            if ([...ints(l), ...ints(r)].includes(key)) expect(x, `hint "${h}" shows the answer ${key}`).toContain(key);
         // Take some away, then some come back: never more come back than went away.
         if (s.kind === "take-add") expect(x[2], text(en)).toBeLessThanOrEqual(x[1]);
         kinds.add(s.kind);
