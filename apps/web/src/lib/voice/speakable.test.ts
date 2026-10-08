@@ -42,7 +42,7 @@ describe("speakable text", () => {
     expect(say("## Fractions")).toBe("Fractions");
     expect(say("Read [the Moon](https://en.wikipedia.org/wiki/Moon) page.")).toBe("Read the Moon page.");
     expect(say("More at https://example.org today.")).toBe("More at today.");
-    expect(say("Nice 🌙 moon ✨.")).toBe("Nice moon .");
+    expect(say("Nice 🌙 moon ✨.")).toBe("Nice moon."); // the full stop left alone joins the word before
     expect(say("This is *really* big.")).toBe("This is really big.");
     expect(say("$\\frac{1}{2}$ of it")).toBe("one half of it");
   });

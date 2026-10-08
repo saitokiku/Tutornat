@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { makeItem, SKILLS } from "@/practice/skills";
+import { splitSentences } from "./chunk";
 import { UNSPOKEN } from "./numbers";
 import { speakable } from "./speakable";
 
@@ -57,8 +59,13 @@ const EN: [string, string][] = [
   ["3:00", "three o'clock"],
   ["3:15", "three fifteen"],
   ["3:45", "three forty-five"],
-  ["Lunch is at 12:30 p.m.", "Lunch is at twelve thirty p.m."],
-  ["3:00 pm", "three pm"],
+  // a.m. / p.m. as letters: Flash reads a bare "am" as the verb
+  ["Lunch is at 12:30 p.m.", "Lunch is at twelve thirty P M."],
+  ["3:00 pm", "three P M"],
+  ["At 7:00 am.", "At seven A M."],
+  ["10:00 AM", "ten A M"],
+  ["School ends at 3 pm, then home.", "School ends at three P M, then home."],
+  ["I am 7 years old.", "I am seven years old."],
   ["A ratio of 3:4", "A ratio of three to four"],
   // money
   ["$0.75", "seventy-five cents"],
@@ -83,6 +90,35 @@ const EN: [string, string][] = [
   ["12 ÷ 3 = 4", "twelve divided by three equals four"],
   ["3 < 5", "three is less than five"],
   ["x ≠ 4", "x is not equal to four"],
+  // a standalone sign is always said, next to a word or a blank too (vetted hints, practice/math/g3to5.ts)
+  ["Find the missing number in 4 × ? = 28.", "Find the missing number in four times what number equals twenty-eight."],
+  ["6 × ? = 24", "six times what number equals twenty-four"],
+  ["Area = length × width.", "Area equals length times width."],
+  ["? − 3 = 4", "what number minus three equals four"],
+  ["__ + 3 = 7", "what number plus three equals seven"],
+  ["8 - ? = 5", "eight minus what number equals five"],
+  ["□ + 2 = 9", "what number plus two equals nine"],
+  ["Good work - now try this.", "Good work now try this."],
+  // a yes/no question already has its verb
+  ["Is 3/4 > 1/2?", "Is three fourths greater than one half?"],
+  ["Is 7 > 5?", "Is seven greater than five?"],
+  ["Is 0.5 = 1/2?", "Is zero point five equal to one half?"],
+  ["Is it < or >?", "Is it less than or greater than?"],
+  ["Is 3+4=7?", "Is three plus four equal to seven?"],
+  ["The answer is > 5.", "The answer is greater than five."],
+  // a dash between numbers: minus, unless it is a range
+  ["What is 10-4?", "What is ten minus four?"],
+  ["Take 5-10 minutes.", "Take five to ten minutes."],
+  // number plurals and years, the way people say them
+  ["Count on by 4s from there.", "Count on by fours from there."],
+  ["Count by 2s", "Count by twos"],
+  ["Skip-count by 6s.", "Skip-count by sixes."],
+  ["the 10s place", "the tens place"],
+  ["Count by 20s.", "Count by twenties."],
+  ["the 1990s", "the nineteen nineties"],
+  ["the year 1999", "the year nineteen ninety-nine"],
+  ["in 1905", "in nineteen oh five"],
+  ["Due 2026-10-07.", "Due October seventh."],
   ["x^2 + 1", "x squared plus one"],
   ["5³", "five cubed"],
   ["2^n", "two to the power of n"],
@@ -161,6 +197,20 @@ const ES: [string, string][] = [
   ["3 3/4", "tres y tres cuartos"],
   ["¿Es 3/4 o 2/4?", "¿Es tres cuartos o dos cuartos?"],
   ["El examen es el 3/4.", "El examen es el tres de abril."],
+  // a half, and "un / una", agree with the noun after them
+  ["Eso da 2 1/2 tazas de harina.", "Eso da dos y media tazas de harina."],
+  ["Tarda 1/2 hora.", "Tarda media hora."],
+  ["Agrega 1/2 taza.", "Agrega media taza."],
+  ["3 1/2 horas", "tres y media horas"],
+  ["1/2 kilo", "medio kilo"],
+  ["2 1/2 kilos", "dos y medio kilos"],
+  ["Agrega 3/4 taza.", "Agrega tres cuartos de taza."],
+  ["Queda 5/16 de la pizza.", "Queda cinco dieciseisavos de la pizza."],
+  ["1 parte", "una parte"],
+  ["21 partes", "veintiuna partes"],
+  ["1 vez", "una vez"],
+  ["1 clase", "una clase"],
+  ["1 coche", "un coche"],
   // times
   ["3:15", "tres y cuarto"],
   ["3:00", "tres en punto"],
@@ -172,6 +222,12 @@ const ES: [string, string][] = [
   ["$2.50", "dos dólares con cincuenta centavos"],
   ["$0.75", "setenta y cinco centavos"],
   ["$1", "un dólar"],
+  // Spanish money groups thousands with "." and writes cents after ","
+  ["La bicicleta cuesta $1.250.", "La bicicleta cuesta mil doscientos cincuenta dólares."],
+  ["Cuesta $12.000.", "Cuesta doce mil dólares."],
+  ["$1.250,50", "mil doscientos cincuenta dólares con cincuenta centavos"],
+  ["$2,50", "dos dólares con cincuenta centavos"],
+  ["$1.000.000", "un millón de dólares"],
   ["50%", "cincuenta por ciento"],
   // ordinals
   ["1.º", "primero"],
@@ -195,6 +251,18 @@ const ES: [string, string][] = [
   ["y = 2x", "ye es igual a dos equis"],
   ["3 y 4", "tres y cuatro"],
   ["x ≠ 4", "equis es distinto de cuatro"],
+  ["Encuentra el número que falta: 4 × ? = 28.", "Encuentra el número que falta: cuatro por qué número es igual a veintiocho."],
+  ["6 × ? = 24", "seis por qué número es igual a veinticuatro"],
+  ["? − 3 = 4", "qué número menos tres es igual a cuatro"],
+  ["Área = largo × ancho.", "Área es igual a largo por ancho."],
+  ["¿Es 7 > 5?", "¿Es siete mayor que cinco?"],
+  ["¿Es 3/4 = 6/8?", "¿Es tres cuartos igual a seis octavos?"],
+  ["¿Cuánto es 10-4?", "¿Cuánto es diez menos cuatro?"],
+  ["Cuenta de 2 en 2.", "Cuenta de dos en dos."],
+  // a. m. / p. m.: the part of the day
+  ["Son las 7:00 p. m.", "Son las siete de la tarde."],
+  ["A las 8:30 a.m.", "A las ocho y media de la mañana."],
+  ["Cenamos a las 9:00 p.m.", "Cenamos a las nueve de la noche."],
   // units
   ["1 cm", "un centímetro"],
   ["5 cm", "cinco centímetros"],
@@ -229,6 +297,27 @@ describe("what the voice says (golden table)", () => {
   it("never leaves a digit or a number symbol for the voice", () => {
     for (const [written] of EN) expect(speakable(written, "en").text, written).not.toMatch(UNSPOKEN);
     for (const [written] of ES) expect(speakable(written, "es").text, written).not.toMatch(UNSPOKEN);
+  });
+
+  it("every problem read aloud and every vetted hint reaches the voice as words (the tutor says them; Runner gives each a Hear button)", () => {
+    const bad: string[] = [];
+    for (const skill of SKILLS)
+      for (let level = 1; level <= skill.levels; level++)
+        for (const seed of [1, 2, 3])
+          for (const locale of ["en", "es"] as const) {
+            const item = makeItem(skill.id, level, seed, locale);
+            for (const text of [item.say, ...item.hints])
+              for (const s of splitSentences(text)) {
+                const said = speakable(s, locale).text;
+                if (UNSPOKEN.test(said)) bad.push(`${skill.id} ${locale}: ${s} → ${said}`);
+              }
+          }
+    expect(bad).toEqual([]);
+  });
+
+  it("a blank in a sentence is read as one", () => {
+    expect(speakable("The principal thanked ___ for cleaning the park.", "en").text).toBe("The principal thanked blank for cleaning the park.");
+    expect(speakable("Completa: Yo ___ a la escuela.", "es").text).toBe("Completa: Yo espacio en blanco a la escuela.");
   });
 
   it("every spoken word still points at the written word it came from", () => {

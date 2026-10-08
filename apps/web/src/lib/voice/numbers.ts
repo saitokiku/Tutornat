@@ -118,15 +118,19 @@ function denominator(d: number, plural: boolean, locale: Locale): string {
 /**
  * A fraction in words: "one fourth", "five sixteenths", "five over twenty-three"; Spanish "un cuarto",
  * "cinco dieciseisavos", "cinco sobre veintitrés". `mixed`: after a whole number ("two and a half",
- * "dos y medio"). Null for a zero denominator.
+ * "dos y medio"). `form`: the Spanish noun after it (formBefore): a half agrees with it ("media
+ * hora", "medio kilo", "dos y media tazas") and another fraction takes "de" ("tres cuartos de taza").
+ * Null for a zero denominator.
  */
-export function fractionWords(n: number, d: number, locale: Locale, { mixed = false } = {}): string | null {
+export function fractionWords(n: number, d: number, locale: Locale, { mixed = false, form = "alone" as NumForm } = {}): string | null {
   if (!Number.isInteger(n) || !Number.isInteger(d) || d <= 0 || n < 0) return null;
   if (d === 1 || !namedDenominator(d)) return `${cardinal(n, locale, "m")} ${locale === "es" ? "sobre" : "over"} ${cardinal(d, locale)}`;
   const plural = n !== 1;
   if (locale === "es") {
-    if (mixed && n === 1 && d === 2) return "medio";
-    return `${n === 1 ? "un" : cardinal(n, "es", "m")} ${denominator(d, plural, "es")}`;
+    const half = form === "f" ? "media" : "medio";
+    if (n === 1 && d === 2 && (mixed || form !== "alone")) return half;
+    const said = `${n === 1 ? "un" : cardinal(n, "es", "m")} ${denominator(d, plural, "es")}`;
+    return form !== "alone" && !mixed ? `${said} de` : said;
   }
   if (mixed && n === 1 && d === 2) return "a half";
   return `${cardinal(n, "en")} ${denominator(d, plural, "en")}`;
@@ -185,13 +189,16 @@ const NOT_NOUNS = new Set(
 );
 const MASC_A = new Set("día días mapa mapas problema problemas planeta planetas programa programas idioma idiomas tema temas sistema sistemas sofá sofás clima poema poemas".split(" "));
 const FEM_O = new Set("mano manos foto fotos radio moto motos".split(" "));
-
+// Feminine nouns that don't end in -a, -ión or -dad ("una parte", "una vez", "veintiuna clases").
+const FEM_OTHER = new Set(
+  "parte partes vez veces base bases clase clases noche noches tarde tardes llave llaves flor flores imagen imágenes leche nube nubes gente calle calles frase frases fuente fuentes torre torres serie series red redes pared paredes luz luces voz voces raíz raíces nariz narices sal mujer mujeres madre madres carne nieve piel suerte hambre sed miel cruz cruces paz".split(" "),
+);
 /** The form of a Spanish number before `next` (the word after it): "f" before a feminine noun, "m" before another noun, "alone" otherwise. */
 export function formBefore(next: string | undefined, locale: Locale): NumForm {
   if (locale !== "es" || !next) return "alone";
   const w = next.toLowerCase().replace(/[^\p{L}]+$/u, "");
   if (!/^\p{L}{2,}$/u.test(w) || NOT_NOUNS.has(w)) return "alone";
-  if (FEM_O.has(w)) return "f";
+  if (FEM_O.has(w) || FEM_OTHER.has(w)) return "f";
   if (MASC_A.has(w)) return "m";
   return /(a|as|ión|iones|dad|dades)$/.test(w) ? "f" : "m";
 }
@@ -273,7 +280,8 @@ export function timeWords(h: number, min: number, locale: Locale, bare = false):
 /** "$2.50" → "two dollars and fifty cents"; "$0.75" → "seventy-five cents". */
 export function moneyWords(dollars: number, cents: number, locale: Locale): string {
   const es = locale === "es";
-  const d = dollars ? `${cardinal(dollars, locale, "m")} ${dollars === 1 ? (es ? "dólar" : "dollar") : es ? "dólares" : "dollars"}` : "";
+  const de = es && dollars >= 1e6 && dollars % 1e6 === 0 ? "de " : ""; // "un millón de dólares"
+  const d = dollars ? `${cardinal(dollars, locale, "m")} ${de}${dollars === 1 ? (es ? "dólar" : "dollar") : es ? "dólares" : "dollars"}` : "";
   const c = cents ? `${cardinal(cents, locale, "m")} ${cents === 1 ? (es ? "centavo" : "cent") : es ? "centavos" : "cents"}` : "";
   if (d && c) return `${d} ${es ? "con" : "and"} ${c}`;
   return d || c || `${cardinal(0, locale)} ${es ? "dólares" : "dollars"}`;
@@ -302,9 +310,32 @@ const ES_LETTER: Record<string, string> = { x: "equis", y: "ye", z: "zeta", n: "
 export const letterWord = (l: string, locale: Locale) => (locale === "es" ? (ES_LETTER[l.toLowerCase()] ?? l) : l);
 
 const W = {
-  en: { neg: "negative", pct: "percent", deg: ["degree", "degrees"], F: "Fahrenheit", C: "Celsius", root: "the square root of", cube: "the cube root of", sq: "squared", cu: "cubed", pow: "to the power of", to: "to", and: "and", pi: "pi", pm: "plus or minus" },
-  es: { neg: "menos", pct: "por ciento", deg: ["grado", "grados"], F: "Fahrenheit", C: "Celsius", root: "la raíz cuadrada de", cube: "la raíz cúbica de", sq: "al cuadrado", cu: "al cubo", pow: "elevado a", to: "a", and: "y", pi: "pi", pm: "más o menos" },
+  en: { neg: "negative", minus: "minus", pct: "percent", deg: ["degree", "degrees"], F: "Fahrenheit", C: "Celsius", root: "the square root of", cube: "the cube root of", sq: "squared", cu: "cubed", pow: "to the power of", to: "to", and: "and", pi: "pi", pm: "plus or minus" },
+  es: { neg: "menos", minus: "menos", pct: "por ciento", deg: ["grado", "grados"], F: "Fahrenheit", C: "Celsius", root: "la raíz cuadrada de", cube: "la raíz cúbica de", sq: "al cuadrado", cu: "al cubo", pow: "elevado a", to: "a", and: "y", pi: "pi", pm: "más o menos" },
 } as const;
+
+const plainWord = (w: string | undefined) => (w ?? "").toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+
+// "pages 3-5", "de 3-5 años": a hyphen between numbers is a range after these; after "is" or
+// "cuánto es" it is minus ("What is 10-4?"). Otherwise a word after it makes it a range ("5-10
+// minutes"), and nothing after it makes it minus.
+const RANGE_BEFORE = new Set(
+  "page pages pp p ages age grade grades chapter chapters lesson lessons step steps item items question questions problem problems exercise exercises unit units level levels week weeks day days year years numbers from between página páginas pág págs edad edades grado grados capítulo capítulos lección lecciones paso pasos pregunta preguntas problema problemas ejercicio ejercicios nivel niveles semana semanas día días año años de del entre desde".split(" "),
+);
+const MATH_BEFORE = new Set("is what's whats equals compute calculate solve es cuánto cuanto calcula resuelve igual".split(" "));
+
+// "in 1999", "the summer of 1969": a four-digit number 1100–1999 here is a year, said in pairs (English).
+const YEAR_BEFORE = new Set(`year in since by from until till before after around circa of ${"january february march april may june july august september october november december"}`.split(" "));
+
+/** A year in pairs: 1999 "nineteen ninety-nine", 1905 "nineteen oh five", 1900 "nineteen hundred". */
+export function yearWords(n: number): string {
+  const hi = enCardinal(Math.floor(n / 100));
+  const lo = n % 100;
+  return lo === 0 ? `${hi} hundred` : lo < 10 ? `${hi} oh ${EN_ONES[lo]}` : `${hi} ${enCardinal(lo)}`;
+}
+
+/** An English number word made plural: "twos", "sixes", "twenties", "nineteen nineties". */
+const pluralWords = (words: string) => words.replace(/[a-z]+$/, (w) => (w.endsWith("x") ? `${w}es` : w.endsWith("y") ? `${w.slice(0, -1)}ies` : `${w}s`));
 
 /**
  * Every number in one written word (after its math signs became words: "3 times 4") said in words,
@@ -316,19 +347,23 @@ export function sayNumbers(word: string, locale: Locale, ctx: NumberContext = {}
   if (!/[\d%$√∛π±¢^²³°]/.test(s)) return s;
   const lit = NUM[locale];
   const say = (x: string, form: NumForm = "alone") => numberWords(x, locale, form) ?? digitWords(x, locale);
+  const prev = plainWord(ctx.prev);
+
+  // A calendar date written 2026-10-07: the month and day ("October seventh", "siete de octubre").
+  s = s.replace(/(?<![\d-])(\d{4})-(\d{2})-(\d{2})(?![\d-])/g, (m, _y: string, mo: string, d: string) => (locale === "es" ? dateWords(Number(d), Number(mo), "es") : dateWords(Number(mo), Number(d), "en")) ?? m);
 
   // Phone numbers and hotlines: digit by digit, groups apart.
   if (ctx.phone || /^\(?\d{3}\)?[-.]\d{3}-\d{4}\b|^1-\d{3}-\d{3}-\d{4}\b/.test(s))
     s = s.replace(/\d+(?:-\d+)+|\d{3,}/g, (m) => m.split("-").map((g) => digitWords(g, locale)).join(", "));
 
-  // Money: $2.50, $1,250, 75¢
-  s = s.replace(new RegExp(String.raw`\$\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?!\d)`, "g"), (_, d: string, c?: string) =>
-    moneyWords(Number(d.replace(/,/g, "")), c ? Number(c.padEnd(2, "0")) : 0, locale),
-  );
+  // Money: $2.50, $1,250, 75¢; Spanish also groups thousands with "." and writes cents after ","
+  // ("$1.250", "$12.000", "$1.250,50").
+  const money = locale === "es" ? String.raw`\$\s?(\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,](\d{1,2}))?(?!\d)` : String.raw`\$\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?!\d)`;
+  s = s.replace(new RegExp(money, "g"), (_, d: string, c?: string) => moneyWords(Number(d.replace(/[.,]/g, "")), c ? Number(c.padEnd(2, "0")) : 0, locale));
   s = s.replace(/(\d+)¢/g, (_, c: string) => moneyWords(0, Number(c), locale));
 
   // Clock times and ratios: 3:30, 3:4
-  const bare = /^(a\.?m\.?|p\.?m\.?)$/i.test(ctx.next ?? "");
+  const bare = /^[ap]\.?m\.?$/i.test(ctx.next ?? "") || (locale === "es" && /^[ap]\.$/i.test(ctx.next ?? ""));
   s = s.replace(/(?<![\d.,:])(\d{1,2}):(\d{2})(?![\d:])/g, (m, h: string, min: string) => timeWords(Number(h), Number(min), locale, bare) ?? m);
   s = s.replace(/(?<![\d.,:])(\d+):(\d+)(?![\d:])/g, (_, a: string, b: string) => `${cardinal(Number(a), locale)} ${w.to} ${cardinal(Number(b), locale)}`);
 
@@ -378,8 +413,18 @@ export function sayNumbers(word: string, locale: Locale, ctx: NumberContext = {}
       const date = dateWords(n, d, locale);
       if (date) return date;
     }
-    const f = fractionWords(n, d, locale, { mixed: !!ctx.mixed && !sign });
+    // Spanish: a fraction before a noun agrees with it ("media hora", "tres cuartos de taza").
+    const form = locale === "es" && !sign && /\/\d+[^\p{L}\p{N}]*$/u.test(s) ? formBefore(ctx.next, locale) : "alone";
+    const f = fractionWords(n, d, locale, { mixed: !!ctx.mixed && !sign, form });
     return f ? `${sign ? `${w.neg} ` : ""}${f}` : m;
+  });
+
+  // Plurals of numbers and decades: "by 4s" → "by fours", "the 10s place", "the 1990s" → "the
+  // nineteen nineties". Spanish writes "de 4 en 4", so a stray "s" just goes.
+  s = s.replace(/(?<![\d.,])(\d+)['’]?s(?![\p{L}\d])/gu, (_, d: string) => {
+    if (locale === "es") return cardinal(Number(d), "es");
+    const n = Number(d);
+    return pluralWords(n >= 1100 && n <= 1999 && n % 10 === 0 ? yearWords(n) : cardinal(n, "en"));
   });
 
   // A number next to a letter that stands for one: 3x → three x, 2n → dos ene
@@ -388,10 +433,12 @@ export function sayNumbers(word: string, locale: Locale, ctx: NumberContext = {}
   // Negative numbers: a sign before a digit at the start, or after a space or "("
   s = s.replace(new RegExp(String.raw`(^|[\s(])[−-](?=(?:${lit}))`, "g"), `$1${w.neg} `);
 
-  // Ranges: 3–5, 3-5 (a hyphen that is not minus: math signs are already words)
-  s = s.replace(new RegExp(String.raw`(${lit})[–-](?=${lit})`, "g"), `$1 ${w.to} `);
+  // A dash between two numbers: a range (3–5, "pages 3-5", "5-10 minutes") or minus ("What is 10-4?").
+  const range = (dash: string) => dash === "–" || RANGE_BEFORE.has(prev) || (!MATH_BEFORE.has(prev) && /^\p{L}/u.test(ctx.next ?? ""));
+  s = s.replace(new RegExp(String.raw`(${lit})([–-])(?=${lit})`, "g"), (_, x: string, dash: string) => `${x} ${range(dash) ? w.to : w.minus} `);
 
   // What's left: plain numbers. Only the last one in the word takes the noun's gender ("1 manzana").
+  // "in 1999" is a year, said in pairs in English ("nineteen ninety-nine").
   const matches = [...s.matchAll(new RegExp(lit, "g"))];
   if (matches.length) {
     let out = "";
@@ -399,7 +446,13 @@ export function sayNumbers(word: string, locale: Locale, ctx: NumberContext = {}
     matches.forEach((m, k) => {
       const last = k === matches.length - 1 && m.index + m[0].length === s.replace(/[^\p{L}\p{N}]+$/u, "").length;
       const form = last ? (ctx.wholeOfMixed ? "alone" : formBefore(ctx.next, locale)) : "alone";
-      out += s.slice(at, m.index) + say(m[0], form);
+      const n = Number(m[0]);
+      const year = locale === "en" && /^\d{4}$/.test(m[0]) && n >= 1100 && n <= 1999 && YEAR_BEFORE.has(prev) && matches.length === 1;
+      const before = s.slice(at, m.index);
+      // Never glue a number onto a word: "dólar" + ".250" must not read "dólarpunto".
+      const pad = /\p{L}$/u.test(out + before) ? " " : "";
+      const after = /^\p{L}/u.test(s.slice(m.index + m[0].length)) ? " " : "";
+      out += before + pad + (year ? yearWords(n) : say(m[0], form)) + after;
       at = m.index + m[0].length;
     });
     s = out + s.slice(at);
@@ -413,8 +466,11 @@ export function sayNumbers(word: string, locale: Locale, ctx: NumberContext = {}
     .trim();
 }
 
-/** Characters that must never reach a voice: digits and the symbols numbers come with. */
-export const UNSPOKEN = /[0-9%$√→|]/;
+/**
+ * What must never reach a voice: digits, the symbols numbers come with, and a blank left standing
+ * alone ("4 × ? = 28" read as "four ? equals": a lone "?" also gets question intonation).
+ */
+export const UNSPOKEN = /[0-9%$√→|_□☐▢]|(?:^|\s)\?(?=\s|$)/;
 
 /** In development, says so when text bound for a voice still has a digit or symbol in it. */
 export function assertSpoken(text: string, where: string) {

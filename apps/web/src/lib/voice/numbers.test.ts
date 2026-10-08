@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertSpoken, cardinal, dateWords, digitWords, formBefore, fractionWords, moneyWords, numberWords, ordinal, readLiteral, timeWords, unitWords } from "./numbers";
+import { assertSpoken, cardinal, dateWords, digitWords, formBefore, fractionWords, moneyWords, numberWords, ordinal, readLiteral, timeWords, unitWords, yearWords } from "./numbers";
 
 // The speller's parts on their own. What whole sentences sound like is in speakable.golden.test.ts.
 
@@ -66,6 +66,24 @@ describe("ordinals, fractions, dates", () => {
     expect(fractionWords(1, 0, "es")).toBeNull();
   });
 
+  it("a Spanish half agrees with the noun after it, and other fractions take 'de'", () => {
+    expect(fractionWords(1, 2, "es", { form: "f" })).toBe("media");
+    expect(fractionWords(1, 2, "es", { form: "m" })).toBe("medio");
+    expect(fractionWords(1, 2, "es")).toBe("un medio");
+    expect(fractionWords(1, 2, "es", { mixed: true, form: "f" })).toBe("media");
+    expect(fractionWords(3, 4, "es", { form: "f" })).toBe("tres cuartos de");
+    expect(fractionWords(3, 4, "es", { mixed: true, form: "f" })).toBe("tres cuartos");
+    for (const noun of ["parte", "vez", "base", "clase", "noche", "tarde", "llave", "flor", "imagen", "unidad"]) expect(formBefore(noun, "es"), noun).toBe("f");
+    for (const noun of ["coche", "parque", "nombre", "kilo"]) expect(formBefore(noun, "es"), noun).toBe("m");
+  });
+
+  it("years in pairs (English)", () => {
+    expect(yearWords(1999)).toBe("nineteen ninety-nine");
+    expect(yearWords(1905)).toBe("nineteen oh five");
+    expect(yearWords(1900)).toBe("nineteen hundred");
+    expect(yearWords(1100)).toBe("eleven hundred");
+  });
+
   it("dates by each language's order", () => {
     expect(dateWords(10, 12, "en")).toBe("October twelfth");
     expect(dateWords(3, 4, "es")).toBe("tres de abril");
@@ -120,9 +138,11 @@ describe("times, money, units, digits", () => {
     try {
       assertSpoken("three fourths", "test");
       assertSpoken("3 fourths", "test");
+      assertSpoken("Which one?", "test");
+      assertSpoken("four ? equals twenty-eight", "test"); // a blank nobody said
     } finally {
       console.warn = warn;
     }
-    expect(seen).toHaveLength(1);
+    expect(seen).toHaveLength(2);
   });
 });

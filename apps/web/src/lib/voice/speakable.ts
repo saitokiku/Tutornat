@@ -17,9 +17,19 @@ export type Speakable = {
 export { fractionWords };
 
 const WORDS = {
-  en: { times: "times", div: "divided by", plus: "plus", minus: "minus", eq: "equals", lt: "is less than", gt: "is greater than", le: "is less than or equal to", ge: "is greater than or equal to", ne: "is not equal to", approx: "is about", pm: "plus or minus" },
-  es: { times: "por", div: "entre", plus: "más", minus: "menos", eq: "es igual a", lt: "es menor que", gt: "es mayor que", le: "es menor o igual que", ge: "es mayor o igual que", ne: "es distinto de", approx: "es aproximadamente", pm: "más o menos" },
+  en: { times: "times", div: "divided by", plus: "plus", minus: "minus", eq: "equals", lt: "is less than", gt: "is greater than", le: "is less than or equal to", ge: "is greater than or equal to", ne: "is not equal to", approx: "is about", pm: "plus or minus", blank: "what number", gap: "blank" },
+  es: { times: "por", div: "entre", plus: "más", minus: "menos", eq: "es igual a", lt: "es menor que", gt: "es mayor que", le: "es menor o igual que", ge: "es mayor o igual que", ne: "es distinto de", approx: "es aproximadamente", pm: "más o menos", blank: "qué número", gap: "espacio en blanco" },
 } as const;
+
+/** A comparison after a verb that's already there ("Is 7 > 5?", "The answer is > 5"): the relation alone. */
+const RELATION = {
+  en: { eq: "equal to", lt: "less than", gt: "greater than", le: "less than or equal to", ge: "greater than or equal to", ne: "not equal to", approx: "about" },
+  es: { eq: "igual a", lt: "menor que", gt: "mayor que", le: "menor o igual que", ge: "mayor o igual que", ne: "distinto de", approx: "aproximadamente" },
+} as const;
+type Relation = keyof (typeof RELATION)["en"];
+/** Sentences that ask yes or no with the verb first: "Is 3/4 > 1/2?", "¿Es 7 > 5?". */
+const ASKS = /^(is|are|was|were|isnt|arent|es|son|era|eran|sera)$/;
+const VERB = /^(is|are|was|es|son|era)$/;
 
 const ABBREVIATIONS: Record<Locale, Record<string, string>> = {
   en: { "e.g.": "for example", "i.e.": "that is", "etc.": "and so on", "vs.": "versus", "approx.": "about" },
@@ -30,7 +40,15 @@ const NUMERIC_END = /[\p{N})²³]$/u;
 const NUMERIC_START = /^[(\p{N}√−-]/u;
 const VAR = /^[a-zA-Z]$/;
 const SIGN = /^[=+×÷·*<>≤≥≠±−–-]$/;
-const OPS: Record<string, keyof (typeof WORDS)["en"]> = { "<": "lt", ">": "gt", "≤": "le", "≥": "ge", "≠": "ne" };
+const OPS: Record<string, Relation> = { "<": "lt", ">": "gt", "≤": "le", "≥": "ge", "≠": "ne", "=": "eq", "≈": "approx" };
+/** A blank standing for the missing number: "4 × ? = 28", "__ + 3 = 7", "□ − 3 = 4". */
+const BLANK = /^(?:\?|_+|[□☐▢])$/;
+const isSign = (t: string | undefined) => !!t && SIGN.test(t.replace(/[.,;:!?)]+$/, ""));
+/** A number, a letter standing for one, or a blank: what a sign sits between. */
+const operandEnd = (t: string) => NUMERIC_END.test(t) || VAR.test(trimMarks(t)) || BLANK.test(t);
+const operandStart = (t: string) => NUMERIC_START.test(t) || VAR.test(trimMarks(t)) || BLANK.test(t);
+/** Any word at all ("length − width"). */
+const anyOperand = (t: string | undefined) => !!t && (/[\p{L}\p{N}]/u.test(t) || BLANK.test(t));
 
 /** Replaces until nothing changes, so "2×3×4" converts both signs. */
 function all(s: string, re: RegExp, to: string | ((...m: string[]) => string)): string {
@@ -78,12 +96,37 @@ function unitAfter(tok: string, prev: string | undefined, next: string | undefin
   return /^(mm|cm|m|km|mg|g|kg|mL|ml|L|ft|yd|mi|lbs?|oz)(²|³)?$/.test(u);
 }
 
-type Ctx = { prev?: string; next?: string; prev2?: string; next2?: string; first: boolean; locale: Locale; calendar: boolean; phone: boolean };
+type Ctx = { prev?: string; next?: string; prev2?: string; next2?: string; first: boolean; locale: Locale; calendar: boolean; phone: boolean; asks: boolean };
 
-function sayToken(tok: string, { prev, next, prev2, next2, first, locale, calendar, phone }: Ctx): string {
+/** A clock time or an hour just before ("7:00 am", "7 pm"), or null. */
+const hourOf = (t: string | undefined) => {
+  const m = /^(\d{1,2})(?::\d{2})?$/.exec((t ?? "").replace(TRAIL, ""));
+  return m ? Number(m[1]) : null;
+};
+
+/** "a.m." / "p.m." after a time: letters in English ("seven A M"), the part of the day in Spanish ("siete de la tarde"). */
+function dayPart(pm: boolean, hour: number, locale: Locale): string {
+  if (locale === "en") return pm ? "P M" : "A M";
+  if (!pm) return hour === 12 ? "de la noche" : "de la mañana";
+  return hour === 12 ? "del mediodía" : hour <= 7 ? "de la tarde" : "de la noche";
+}
+
+function sayToken(tok: string, { prev, next, prev2, next2, first, locale, calendar, phone, asks }: Ctx): string {
   const W = WORDS[locale];
   let s = tok;
   if (/^[(<[]?(https?:\/\/|www\.)/i.test(s)) return "";
+  // A blank in an equation is the number asked for: "4 × ? = 28" → "four times what number equals …".
+  if (BLANK.test(s) && (isSign(prev) || isSign(next))) return W.blank;
+  // A blank in a sentence is read as one: "The principal thanked ___ for …".
+  const gap = /^(?:_{2,}|[□☐▢])([.,;:!?)"”]*)$/.exec(s);
+  if (gap) return `${W.gap}${gap[1]}`;
+  // a.m. / p.m. after a time (Flash reads "am" as the verb): "7:00 am", "10 PM", Spanish "7:00 p. m.".
+  const ampm = /^([ap])\.?(m\.?)?([,;:!?)]*)$/i.exec(s);
+  if (ampm && (ampm[2] || (locale === "es" && /^m\./i.test(next ?? ""))) && hourOf(prev) != null) {
+    const end = ampm[3] || (!next && /\.$/.test(s.replace(/[,;:!?)]+$/, "")) ? "." : "");
+    return dayPart(ampm[1].toLowerCase() === "p", hourOf(prev)!, locale) + end;
+  }
+  if (locale === "es" && /^m\.[,;:!?)]*$/i.test(s) && /^[ap]\.$/i.test(prev ?? "") && hourOf(prev2) != null) return s.slice(2) || (next ? "" : ".");
   // LaTeX a model may still write
   s = s
     .replace(/\$(?!\d)/g, "") // math delimiters, not money
@@ -120,16 +163,19 @@ function sayToken(tok: string, { prev, next, prev2, next2, first, locale, calend
     const unit = unitWords(s.replace(TRAIL, ""), locale, /^[−-]?1$/.test(prev ?? ""));
     if (unit) return unit.words + (TRAIL.exec(s)?.[0] ?? "");
   }
-  // A sign standing alone between two numbers (or a number and a letter like x).
-  const between = !!prev && !!next && (NUMERIC_END.test(prev) || VAR.test(trimMarks(prev))) && (NUMERIC_START.test(next) || VAR.test(trimMarks(next)));
-  if (/^[×·*]$/.test(s) || (/^[xX]$/.test(s) && between && NUMERIC_END.test(prev!) && /^[(\p{N}]/u.test(next!))) return between ? W.times : "";
+  // A sign standing alone between two numbers (or a number and a letter like x, or a blank).
+  const between = !!prev && !!next && operandEnd(prev) && operandStart(next);
+  if (s === "×") return W.times; // a times sign is never anything else ("Area = length × width")
+  if (/^[·*]$/.test(s) || (/^[xX]$/.test(s) && between && NUMERIC_END.test(prev!) && /^[(\p{N}]/u.test(next!))) return between ? W.times : "";
   if (/^[÷/]$/.test(s)) return between ? W.div : s === "/" ? "" : W.div;
-  if (/^[−-]$/.test(s)) return between ? W.minus : "";
+  if (s === "−") return anyOperand(prev) && anyOperand(next) ? W.minus : ""; // the minus sign, between any two things
+  if (s === "-") return between ? W.minus : ""; // a hyphen between words is a dash
   if (/^[—–]$/.test(s)) return between && s === "–" ? W.minus : "";
   if (s === "+") return W.plus;
-  if (s === "=") return W.eq;
-  if (OPS[s]) return W[OPS[s]];
-  if (s === "≈") return W.approx;
+  // "x = 4" says its verb; "Is 7 > 5?" and "the answer is > 5" already have one.
+  const relation = (r: Relation) => (asks || VERB.test(fold(core(prev ?? ""))) ? RELATION[locale][r] : W[r]);
+  const cmp = /^([=<>≤≥≠≈])([.,;:!?)]*)$/.exec(s); // a sign next to punctuation counts too ("Is it < or >?")
+  if (cmp) return relation(OPS[cmp[1]]) + cmp[2];
   if (s === "±") return W.pm;
   // Signs inside one written word: 3×4=12, 7−2, 3x4
   const before = s;
@@ -139,8 +185,9 @@ function sayToken(tok: string, { prev, next, prev2, next2, first, locale, calend
   s = all(s, /([\p{N})])÷([(\p{N}])/gu, `$1 ${W.div} $2`);
   s = all(s, /([\p{N})a-z²³])\+([(\p{N}a-z√])/gu, `$1 ${W.plus} $2`);
   s = all(s, hasEq ? /([\p{N})a-z²³])[−-]([(\p{N}a-z√])/gu : /([\p{N})²³])−([(\p{N}√])/gu, `$1 ${W.minus} $2`);
-  s = all(s, /([^\s=<>≠])=([^\s=])/gu, `$1 ${W.eq} $2`);
-  s = all(s, /([\p{N})a-z])([<>≤≥≠])([(\p{N}a-z])/gu, (_m, a, op, b) => `${a} ${W[OPS[op]]} ${b}`);
+  const inWord = (r: Relation) => (asks ? RELATION[locale][r] : W[r]); // "Is 3+4=7?" — the expression has its own left side
+  s = all(s, /([^\s=<>≠])=([^\s=])/gu, `$1 ${inWord("eq")} $2`);
+  s = all(s, /([\p{N})a-z])([<>≤≥≠])([(\p{N}a-z])/gu, (_m, a, op, b) => `${a} ${inWord(OPS[op])} ${b}`);
   // A letter standing for a number, said the language's way ("x" is "equis" in Spanish).
   const math = s !== before || SIGN.test(prev ?? "") || SIGN.test(next ?? "");
   if (locale === "es")
@@ -208,7 +255,8 @@ export function speakable(sentence: string, locale: Locale, names: string[] = []
   const toks = sentence.split(/\s+/).filter(Boolean);
   const isName = nameMatcher(names);
   const folded = fold(sentence);
-  const ctx = (i: number): Ctx => ({ prev: toks[i - 1], next: toks[i + 1], prev2: toks[i - 2], next2: toks[i + 2], first: i === 0, locale, calendar: CALENDAR.test(folded), phone: PHONE.test(folded) });
+  const asks = ASKS.test(fold(core(toks[0] ?? "")).replace(/['’]/g, ""));
+  const ctx = (i: number): Ctx => ({ prev: toks[i - 1], next: toks[i + 1], prev2: toks[i - 2], next2: toks[i + 2], first: i === 0, locale, calendar: CALENDAR.test(folded), phone: PHONE.test(folded), asks });
   const out: string[] = [];
   const words: number[] = [];
   const dropName = (tok: string) => {
@@ -235,6 +283,11 @@ export function speakable(sentence: string, locale: Locale, names: string[] = []
       }
     }
     said ??= sayToken(tok, ctx(i));
+    // Punctuation on its own ("Really ?", the end of "p. m.") belongs to the word before; never a word of its own.
+    if (said && !/[\p{L}\p{N}]/u.test(said)) {
+      if (out.length) out[out.length - 1] += said.trim();
+      return;
+    }
     for (const w of said.split(/\s+/).filter(Boolean)) {
       out.push(w);
       words.push(i);
