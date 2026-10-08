@@ -116,6 +116,8 @@ function speak(s: string, locale: Locale) {
     .replace(/(\d+(?:\.\d+)?)%/g, (_, n: string) => `${n} ${tr(locale, "percent", "por ciento")}`)
     .replace(/Use π ≈ 3\.14/g, "Use 3.14 for pi")
     .replace(/Usa π ≈ 3\.14/g, "Usa 3.14 para pi")
+    // A number of degrees: "1 degree", "−1 degree", "2.5 degrees".
+    .replace(/(\d+(?:\.\d+)?) ?°([CF]?)/g, (_, n: string, u: string) => `${n} ${n === "1" ? tr(locale, "degree", "grado") : tr(locale, "degrees", "grados")}${u === "C" ? " Celsius" : u === "F" ? " Fahrenheit" : ""}`)
     .replace(/ ?°F/g, tr(locale, " degrees Fahrenheit", " grados Fahrenheit"))
     .replace(/ ?°C/g, tr(locale, " degrees Celsius", " grados Celsius"))
     .replace(/ ?°/g, tr(locale, " degrees", " grados"))
@@ -184,7 +186,15 @@ function decAddSub(r: Rng, locale: Locale): ItemBody {
   const aP = padD(A, pa, P), bP = padD(B, pb, P);
   const answer: Answer = { kind: "number", value: res };
   const places = (k: number) => tr(locale, k === 1 ? "1 decimal place" : `${k} decimal places`, k === 1 ? "1 cifra decimal" : `${k} cifras decimales`);
-  const x = Ai % 10, y = Bi % 10, col = tr(locale, cap(PLACE[P][0]), cap(PLACE[P][1]));
+  // The third hint works the column that matters: the first one (from the right) that regroups, or, when
+  // none does, the column of the shorter number's last digit, which shows how the two numbers line up.
+  // (The rightmost column is often a written-in zero, which teaches neither.) The leftmost column never
+  // regroups: its sum is written in full.
+  const digit = (u: number, i: number) => Math.floor(u / TEN[i]) % 10;
+  const cols = Math.max(String(Ai).length, String(Bi).length);
+  let ci = Array.from({ length: cols - 1 }, (_, i) => i).find((i) => (add ? digit(Ai, i) + digit(Bi, i) >= 10 : digit(Ai, i) < digit(Bi, i)));
+  ci ??= P - Math.min(pa, pb);
+  const x = digit(Ai, ci), y = digit(Bi, ci), col = tr(locale, cap(PLACE[P - ci][0]), cap(PLACE[P - ci][1]));
   return {
     prompt: [`${showD(a)} ${op} ${showD(b)} = `, { blank: true }],
     say: `${a} ${add ? tr(locale, "plus", "más") : tr(locale, "minus", "menos")} ${b}`,
@@ -209,7 +219,13 @@ function decAddSub(r: Rng, locale: Locale): ItemBody {
         ? `${col}: ${x} + ${y} = ${x + y}${x + y >= 10 ? tr(locale, ", so write the ones digit and regroup 1.", "; escribe las unidades y reagrupa 1.") : "."}`
         : x >= y
           ? `${col}: ${x} − ${y} = ${x - y}.`
-          : tr(locale, `${col}: ${x} is less than ${y}, so regroup 1 from the next place: ${x + 10} − ${y} = ${x + 10 - y}.`, `${col}: ${x} es menor que ${y}, así que reagrupa 1 del lugar siguiente: ${x + 10} − ${y} = ${x + 10 - y}.`),
+          : digit(Ai, ci + 1) > 0
+            ? tr(locale, `${col}: ${x} is less than ${y}, so regroup 1 from the next place: ${x + 10} − ${y} = ${x + 10 - y}.`, `${col}: ${x} es menor que ${y}, así que reagrupa 1 del lugar siguiente: ${x + 10} − ${y} = ${x + 10 - y}.`)
+            : tr(
+                locale,
+                `${col}: ${x} is less than ${y}, and the next place to the left is 0, so regroup across the zeros from the first place to the left that is not 0: ${x + 10} − ${y} = ${x + 10 - y}.`,
+                `${col}: ${x} es menor que ${y} y el lugar siguiente a la izquierda es 0, así que reagrupa a través de los ceros desde el primer lugar a la izquierda que no sea 0: ${x + 10} − ${y} = ${x + 10 - y}.`,
+              ),
     ],
     steps: [`${aP} ${op} ${bP} = ${padD(R, P, P)}`, ...(padD(R, P, P) !== showD(res) ? [`${padD(R, P, P)} = ${showD(res)}`] : [])],
     seconds: 25,
@@ -295,6 +311,12 @@ function randQ(r: Rng, max: number): Q {
 const asNum = (q: Q, asFrac: boolean): RNum => ({ q, asFrac: asFrac && q[1] !== 1 });
 const interleave = (parts: MathPart[][], sep: string): MathPart[] => parts.flatMap((p, i) => (i ? [sep, ...p] : p));
 
+/**
+ * Read a rational number at a marked point. The line labels every whole number and has a small tick
+ * every 1/S, so the reading takes counting from 0. (Placing a point on the touch pad would not test
+ * this: the pad shows the value of the placed point, so the learner could move it until the readout
+ * matches.)
+ */
 function ratPlace(r: Rng, locale: Locale): ItemBody {
   const kind = r.int(0, 2);
   const neg = r.bool(0.7);
@@ -321,23 +343,34 @@ function ratPlace(r: Rng, locale: Locale): ItemBody {
   const typedQ = (q: Q) => (decimal ? String(qVal(q)) : qTyped(q));
   const lo = Math.floor(value);
   const tick = kind === 0 ? "0.5" : kind === 1 ? "0.25" : sayFrac(1, S, locale);
+  const tickShown = kind === 0 ? "0.5" : kind === 1 ? "0.25" : `1/${S}`;
+  const size = decimal ? showD(Math.abs(value)) : qShow(qAbs(v), false);
+  const form = decimal ? tr(locale, "Write it as a decimal.", "Escríbelo como decimal.") : tr(locale, "Write it as a fraction or a mixed number.", "Escríbelo como fracción o como número mixto.");
+  const side = (left: boolean) => (left ? tr(locale, "left", "izquierda") : tr(locale, "right", "derecha"));
   return {
-    prompt: [tr(locale, "Tap ", "Toca "), ...(decimal ? [shown] : qParts(v)), tr(locale, " on the number line.", " en la recta numérica.")],
-    say: tr(locale, `Tap ${decimal ? sayN(value, locale) : sayQ(v, locale)} on the number line.`, `Toca ${decimal ? sayN(value, locale) : sayQ(v, locale)} en la recta numérica.`),
-    input: "number-line",
-    pad: decimal ? { kind: "number-line", min, max, step: 1 / S } : { kind: "number-line", min, max, step: 1 / S, denominator: S },
+    prompt: [tr(locale, "What number is at the dot? ", "¿Qué número está en el punto? "), form],
+    say: tr(locale, `What number is at the dot on the number line? ${form}`, `¿Qué número está en el punto de la recta numérica? ${form}`),
+    visual: { kind: "number-line", min, max, marks: Array.from({ length: max - min + 1 }, (_, i) => min + i), denominator: S, marker: value },
+    alt: tr(
+      locale,
+      `A number line from ${show(min)} to ${show(max)} with every whole number labeled. Each whole is split into ${S} equal parts by small ticks. A dot sits on one of the small ticks.`,
+      `Una recta numérica de ${show(min)} a ${show(max)} con todos los números enteros escritos. Cada entero está dividido en ${S} partes iguales con marcas pequeñas. Hay un punto en una de las marcas pequeñas.`,
+    ),
+    input: decimal ? "keypad" : "fraction",
+    keys: decimal ? ["-", "."] : ["-"],
     answer,
     wrong: wrongFor(answer, [w(typedQ(qNeg(v)), "wrong-side-of-zero"), Math.abs(qVal(mirror)) <= max && w(typedQ(mirror), "counted-from-the-wrong-whole-number")]),
     hints: [
-      tr(locale, `Is ${shown} to the left or to the right of 0?`, `¿${shown} está a la izquierda o a la derecha del 0?`),
-      tr(locale, `Each tick on this number line is ${tick}. Count the ticks from 0.`, `Cada marca de esta recta numérica vale ${tick}. Cuenta las marcas desde el 0.`),
-      tr(locale, `${shown} is between ${show(lo)} and ${show(lo + 1)}.`, `${shown} está entre ${show(lo)} y ${show(lo + 1)}.`),
+      tr(locale, "Is the dot to the left or to the right of 0?", "¿El punto está a la izquierda o a la derecha del 0?"),
+      tr(locale, `Each small tick on this number line is ${tick}. Count the ticks from 0 to the dot.`, `Cada marca pequeña de esta recta numérica vale ${tick}. Cuenta las marcas desde el 0 hasta el punto.`),
+      tr(locale, `The dot is between ${show(lo)} and ${show(lo + 1)}.`, `El punto está entre ${show(lo)} y ${show(lo + 1)}.`),
     ],
     steps: [
-      tr(locale, `${shown} is ${ticks} ${ticks === 1 ? "tick" : "ticks"} to the ${neg ? "left" : "right"} of 0.`, `${shown} está a ${ticks} ${ticks === 1 ? "marca" : "marcas"} a la ${neg ? "izquierda" : "derecha"} del 0.`),
-      tr(locale, `Tap ${shown}, between ${show(lo)} and ${show(lo + 1)}.`, `Toca ${shown}, entre ${show(lo)} y ${show(lo + 1)}.`),
+      tr(locale, `The dot is ${ticks} ${ticks === 1 ? "tick" : "ticks"} to the ${side(neg)} of 0.`, `El punto está a ${ticks} ${ticks === 1 ? "marca" : "marcas"} a la ${side(neg)} del 0.`),
+      `${ticks} × ${tickShown} = ${size}`,
+      tr(locale, `The dot is at ${shown}.`, `El punto está en ${shown}.`),
     ],
-    seconds: 15,
+    seconds: 20,
   };
 }
 
@@ -396,9 +429,15 @@ function ratCompare(r: Rng, locale: Locale): ItemBody {
       : sameForm([a, b], locale);
   return {
     prompt: [...rParts(a), " ", { blank: true }, " ", ...rParts(b)],
-    say: tr(locale, `Compare ${rSay(a, locale)} and ${rSay(b, locale)}.`, `Compara ${rSay(a, locale)} y ${rSay(b, locale)}.`),
+    // "with" / "con", not "and" / "y": "compare negative 1 and negative 1 and one fifth" sounds like three numbers.
+    say: tr(locale, `Compare ${rSay(a, locale)} with ${rSay(b, locale)}.`, `Compara ${rSay(a, locale)} con ${rSay(b, locale)}.`),
     ...withChoices(r, options.find((c) => c.label === sym)!, options.filter((c) => c.label !== sym)),
-    hints: [tr(locale, "Which number is farther to the right on a number line?", "¿Qué número está más a la derecha en la recta numérica?"), strategy, `${cap(fact)}.`],
+    hints: [
+      tr(locale, "Which number is farther to the right on a number line?", "¿Qué número está más a la derecha en la recta numérica?"),
+      strategy,
+      // For equal numbers the conversion itself is the answer, so the hint only asks for it.
+      kase === "equal" ? tr(locale, `Write ${rShow(a.asFrac ? a : b)} as a decimal.`, `Escribe ${rShow(a.asFrac ? a : b)} como decimal.`) : `${cap(fact)}.`,
+    ],
     steps: [`${cap(fact)}.`, `${rShow(a)} ${sym} ${rShow(b)}`],
     seconds: 20,
   };
@@ -518,7 +557,7 @@ function coordRead(r: Rng, locale: Locale): ItemBody {
   const units = (k: number) => tr(locale, k === 1 ? "1 unit" : `${k} units`, k === 1 ? "1 unidad" : `${k} unidades`);
   return {
     prompt: [tr(locale, "Write the coordinates of the point as (x, y).", "Escribe las coordenadas del punto como (x, y).")],
-    say: tr(locale, "Write the coordinates of the point on the grid. Give the x-coordinate first, then the y-coordinate.", "Escribe las coordenadas del punto en la cuadrícula. Primero la coordenada x y luego la coordenada y."),
+    say: tr(locale, "Write the coordinates of the point on the grid. Give the x-coordinate first, then the y-coordinate.", "Escribe las coordenadas del punto en la cuadrícula. Primero la coordenada x y luego la coordenada ye."),
     visual: { kind: "coord", points: [[x, y]] },
     alt: tr(locale, "A coordinate grid from −6 to 6 on both axes, with one point plotted.", "Un plano de coordenadas de −6 a 6 en los dos ejes, con un punto marcado."),
     input: "text",
@@ -624,10 +663,11 @@ function coordReflect(r: Rng, locale: Locale): ItemBody {
   const [ix, iy] = mode === "x" ? [x, -y] : mode === "y" ? [-x, y] : [-x, -y];
   const answer: Answer = { kind: "pair", x: ix, y: iy };
   const ask = tr(locale, " Write them as (x, y).", " Escríbelas como (x, y).");
-  const text = (P: string) =>
+  // `Y` is the letter y as written, or "ye" in the Spanish read-aloud, where a lone "y" is heard as "and".
+  const text = (P: string, Y = "y") =>
     mode === "both"
-      ? tr(locale, `The point ${P} is reflected across the x-axis, and then that image is reflected across the y-axis. What are the coordinates of the final image?`, `El punto ${P} se refleja sobre el eje x y luego esa imagen se refleja sobre el eje y. ¿Cuáles son las coordenadas de la imagen final?`)
-      : tr(locale, `The point ${P} is reflected across the ${mode}-axis. What are the coordinates of its image?`, `El punto ${P} se refleja sobre el eje ${mode}. ¿Cuáles son las coordenadas de su imagen?`);
+      ? tr(locale, `The point ${P} is reflected across the x-axis, and then that image is reflected across the y-axis. What are the coordinates of the final image?`, `El punto ${P} se refleja sobre el eje x y luego esa imagen se refleja sobre el eje ${Y}. ¿Cuáles son las coordenadas de la imagen final?`)
+      : tr(locale, `The point ${P} is reflected across the ${mode}-axis. What are the coordinates of its image?`, `El punto ${P} se refleja sobre el eje ${mode === "y" ? Y : "x"}. ¿Cuáles son las coordenadas de su imagen?`);
   const hints =
     mode === "x"
       ? [
@@ -648,7 +688,7 @@ function coordReflect(r: Rng, locale: Locale): ItemBody {
           ];
   return {
     prompt: [text(pt(x, y)) + ask],
-    say: text(sayPt(x, y, locale)) + ask,
+    say: text(sayPt(x, y, locale), "ye") + tr(locale, ask, " Escribe primero la x y luego la ye."),
     visual: { kind: "coord", points: [[x, y]] },
     alt: tr(locale, `A coordinate grid with the point ${pt(x, y)} plotted.`, `Un plano de coordenadas con el punto ${pt(x, y)} marcado.`),
     input: "text",
@@ -679,10 +719,12 @@ function coordPlane(r: Rng, level: number, locale: Locale): ItemBody {
 
 // ---------- m.expr.write ----------
 
-type Op1 = "add" | "mul" | "subVC" | "subCV" | "divVC" | "divCV";
+type Op1 = "add" | "mul" | "pow" | "subVC" | "subCV" | "divVC" | "divCV";
+const SUPER = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 const OP1_LABEL: Record<Op1, (v: string, c: number) => string> = {
   add: (v, c) => `${v} + ${c}`,
   mul: (v, c) => `${c}${v}`,
+  pow: (v, c) => `${v}${[...String(c)].map((dg) => SUPER[Number(dg)]).join("")}`,
   subVC: (v, c) => `${v} − ${c}`,
   subCV: (v, c) => `${c} − ${v}`,
   divVC: (v, c) => `${v} ÷ ${c}`,
@@ -692,6 +734,7 @@ function op1Say(op: Op1, v: string, c: number, locale: Locale) {
   return {
     add: tr(locale, `${v} plus ${c}`, `${v} más ${c}`),
     mul: tr(locale, `${c} times ${v}`, `${c} por ${v}`),
+    pow: tr(locale, `${v} to the power of ${c}`, `${v} elevado a la ${c}`),
     subVC: tr(locale, `${v} minus ${c}`, `${v} menos ${c}`),
     subCV: tr(locale, `${c} minus ${v}`, `${c} menos ${v}`),
     divVC: tr(locale, `${v} divided by ${c}`, `${v} dividido entre ${c}`),
@@ -702,29 +745,32 @@ function op1Step(op: Op1, v: string, c: number, locale: Locale) {
   return {
     add: tr(locale, `Start with ${v} and add ${c}.`, `Empieza con ${v} y suma ${c}.`),
     mul: tr(locale, `Multiply ${v} by ${c}.`, `Multiplica ${v} por ${c}.`),
+    pow: tr(locale, `Multiply ${v} by itself ${c} times.`, `Multiplica ${v} por sí mismo ${c} veces.`),
     subVC: tr(locale, `Start with ${v}, then take away ${c}.`, `Empieza con ${v} y luego quita ${c}.`),
     subCV: tr(locale, `Start with ${c}, then take away ${v}.`, `Empieza con ${c} y luego quita ${v}.`),
     divVC: tr(locale, `${v} is the number being divided.`, `${v} es el número que se divide.`),
     divCV: tr(locale, `${c} is the number being divided.`, `${c} es el número que se divide.`),
   }[op];
 }
-const OP_WORD: Record<Op1, [string, string]> = { add: ["add", "sumar"], mul: ["multiply", "multiplicar"], subVC: ["subtract", "restar"], subCV: ["subtract", "restar"], divVC: ["divide", "dividir"], divCV: ["divide", "dividir"] };
+const OP_WORD: Record<Op1, [string, string]> = { add: ["add", "sumar"], mul: ["multiply", "multiplicar"], pow: ["raise to a power", "elevar a una potencia"], subVC: ["subtract", "restar"], subCV: ["subtract", "restar"], divVC: ["divide", "dividir"], divCV: ["divide", "dividir"] };
 
 type Phrase1 = { en: (v: string, c: number) => string; es: (v: string, c: number) => string; key: [string, string]; op: Op1; wrong: [Op1, string][] };
 const ADD_WRONG: [Op1, string][] = [["mul", "multiplied-instead-of-adding"], ["subVC", "subtracted-instead-of-adding"], ["divVC", "divided-instead-of-adding"]];
 const SUB_WRONG: [Op1, string][] = [["subCV", "reversed-the-subtraction-order"], ["add", "added-instead-of-subtracting"], ["divVC", "divided-instead-of-subtracting"]];
-const MUL_WRONG: [Op1, string][] = [["add", "added-instead-of-multiplying"], ["divVC", "divided-instead-of-multiplying"], ["subVC", "subtracted-instead-of-multiplying"]];
+// k³ for "3 times k" is the exponent read as a factor (the slip in 2³ = 6), and it keeps "means multiply" from settling the choice.
+const MUL_WRONG: [Op1, string][] = [["add", "added-instead-of-multiplying"], ["pow", "wrote-a-power-not-a-product"], ["divVC", "divided-instead-of-multiplying"]];
 const DIV_WRONG: [Op1, string][] = [["divCV", "reversed-the-division-order"], ["mul", "multiplied-instead-of-dividing"], ["subVC", "subtracted-instead-of-dividing"]];
 const PHRASES_1: Phrase1[] = [
-  { en: (v, c) => `${c} more than ${v}`, es: (v, c) => `${c} más que ${v}`, key: ["more than", "más que"], op: "add", wrong: ADD_WRONG },
+  // Spanish says "3 unidades más que k": "3 más que k" reads as a comparison, not as adding.
+  { en: (v, c) => `${c} more than ${v}`, es: (v, c) => `${c} unidades más que ${v}`, key: ["more than", "unidades más que"], op: "add", wrong: ADD_WRONG },
   { en: (v, c) => `${v} increased by ${c}`, es: (v, c) => `${v} aumentado en ${c}`, key: ["increased by", "aumentado en"], op: "add", wrong: ADD_WRONG },
   { en: (v, c) => `the sum of ${v} and ${c}`, es: (v, c) => `la suma de ${v} y ${c}`, key: ["the sum", "la suma"], op: "add", wrong: ADD_WRONG },
-  { en: (v, c) => `${c} less than ${v}`, es: (v, c) => `${c} menos que ${v}`, key: ["less than", "menos que"], op: "subVC", wrong: SUB_WRONG },
+  { en: (v, c) => `${c} less than ${v}`, es: (v, c) => `${c} unidades menos que ${v}`, key: ["less than", "unidades menos que"], op: "subVC", wrong: SUB_WRONG },
   { en: (v, c) => `${v} decreased by ${c}`, es: (v, c) => `${v} disminuido en ${c}`, key: ["decreased by", "disminuido en"], op: "subVC", wrong: SUB_WRONG },
   { en: (v, c) => `${c} subtracted from ${v}`, es: (v, c) => `${c} restado de ${v}`, key: ["subtracted from", "restado de"], op: "subVC", wrong: SUB_WRONG },
   { en: (v, c) => `the difference of ${v} and ${c}`, es: (v, c) => `la diferencia de ${v} y ${c}`, key: ["the difference", "la diferencia"], op: "subVC", wrong: SUB_WRONG },
   {
-    en: (v, c) => `${v} less than ${c}`, es: (v, c) => `${v} menos que ${c}`, key: ["less than", "menos que"], op: "subCV",
+    en: (v, c) => `${v} less than ${c}`, es: (v, c) => `${v} unidades menos que ${c}`, key: ["less than", "unidades menos que"], op: "subCV",
     wrong: [["subVC", "reversed-the-subtraction-order"], ["add", "added-instead-of-subtracting"], ["divCV", "divided-instead-of-subtracting"]],
   },
   { en: (v, c) => `the product of ${c} and ${v}`, es: (v, c) => `el producto de ${c} y ${v}`, key: ["the product", "el producto"], op: "mul", wrong: MUL_WRONG },
@@ -743,11 +789,11 @@ const prodFirst = (v: string, a: number, _b: number, locale: Locale) => tr(local
 const PHRASES_2: Phrase2[] = [
   { en: (v, a, b) => `${a} times the sum of ${v} and ${b}`, es: (v, a, b) => `${a} por la suma de ${v} y ${b}`, ans: (v, a, b) => `${a}(${v} + ${b})`, first: sumFirst, wrong: [[(v, a, b) => `${a}${v} + ${b}`, "left-out-the-parentheses"]] },
   {
-    en: (v, a, b) => `${b} more than the product of ${a} and ${v}`, es: (v, a, b) => `${b} más que el producto de ${a} y ${v}`, ans: (v, a, b) => `${a}${v} + ${b}`, first: prodFirst,
+    en: (v, a, b) => `${b} more than the product of ${a} and ${v}`, es: (v, a, b) => `${b} unidades más que el producto de ${a} y ${v}`, ans: (v, a, b) => `${a}${v} + ${b}`, first: prodFirst,
     wrong: [[(v, a, b) => `${a}(${v} + ${b})`, "grouped-the-wrong-part"], [(v, a, b) => `${b}${v} + ${a}`, "mixed-up-the-numbers"]],
   },
   {
-    en: (v, a, b) => `${b} less than the product of ${a} and ${v}`, es: (v, a, b) => `${b} menos que el producto de ${a} y ${v}`, ans: (v, a, b) => `${a}${v} − ${b}`, first: prodFirst,
+    en: (v, a, b) => `${b} less than the product of ${a} and ${v}`, es: (v, a, b) => `${b} unidades menos que el producto de ${a} y ${v}`, ans: (v, a, b) => `${a}${v} − ${b}`, first: prodFirst,
     wrong: [[(v, a, b) => `${b} − ${a}${v}`, "reversed-the-subtraction-order"], [(v, a, b) => `${a}(${v} − ${b})`, "grouped-the-wrong-part"]],
   },
   {
@@ -836,11 +882,14 @@ const STORIES_3: Story3[] = [
 
 function exprWrite(r: Rng, level: number, locale: Locale): ItemBody {
   if (level === 1) {
-    const v = r.pick(VARS), c = r.int(2, 12);
     const ph = r.pick(PHRASES_1);
+    // A small factor for products, so the power distractor (k³ for "3 times k") stays a believable slip.
+    const v = r.pick(VARS), c = ph.op === "mul" ? r.int(2, 5) : r.int(2, 12);
     const phrase = tr(locale, ph.en(v, c), ph.es(v, c));
     const choice = (op: Op1, why?: string): Choice => ({ label: OP1_LABEL[op](v, c), say: op1Say(op, v, c, locale), ...(why ? { why } : {}) });
     const order = ph.op.startsWith("sub") || ph.op.startsWith("div");
+    // Only one choice adds, so naming the operation would settle a sum: its third hint tries a number instead.
+    const at10 = tr(locale, ph.en("10", c), ph.es("10", c));
     return {
       prompt: [tr(locale, "Which expression means ", "¿Qué expresión significa "), `“${phrase}”?`],
       say: tr(locale, `Which expression means: ${phrase}?`, `¿Qué expresión significa: ${phrase}?`),
@@ -849,8 +898,12 @@ function exprWrite(r: Rng, level: number, locale: Locale): ItemBody {
         tr(locale, `What operation do the words “${ph.key[0]}” tell you to do?`, `¿Qué operación indican las palabras “${ph.key[1]}”?`),
         order
           ? tr(locale, "Find the operation, then the order. Subtraction and division change if you switch the numbers.", "Busca la operación y luego el orden. La resta y la división cambian si intercambias los números.")
-          : tr(locale, "Find the operation. Adding and multiplying give the same result in either order.", "Busca la operación. Sumar y multiplicar dan el mismo resultado en cualquier orden."),
-        tr(locale, `“${ph.key[0]}” means ${OP_WORD[ph.op][0]}.`, `“${ph.key[1]}” significa ${OP_WORD[ph.op][1]}.`),
+          : ph.op === "add"
+            ? tr(locale, `Find the operation. To check a choice, put a number in for ${v} and see whether it matches the words.`, `Busca la operación. Para comprobar una opción, pon un número en lugar de ${v} y mira si coincide con las palabras.`)
+            : tr(locale, "Find the operation. Multiplying gives the same result in either order.", "Busca la operación. Multiplicar da el mismo resultado en cualquier orden."),
+        ph.op === "add"
+          ? tr(locale, `Try ${v} = 10: “${phrase}” becomes “${at10}”.`, `Prueba con ${v} = 10: “${phrase}” se convierte en “${at10}”.`)
+          : tr(locale, `“${ph.key[0]}” means ${OP_WORD[ph.op][0]}.`, `“${ph.key[1]}” significa ${OP_WORD[ph.op][1]}.`),
       ],
       steps: [op1Step(ph.op, v, c, locale), OP1_LABEL[ph.op](v, c)],
       seconds: 20,
@@ -972,7 +1025,7 @@ function exprEquiv(r: Rng, level: number, locale: Locale): ItemBody {
     const f = small[r.int(0, small.length - 1)];
     const option = (k: number, cp: number, cq: number, why?: string): Choice => ({ label: fact(k, cp, cq), say: sayFact(k, cp, cq), ...(why ? { why } : {}) });
     const wrong = [option(f, (g / f) * p, (g / f) * q, "used-a-common-factor-not-the-greatest"), option(g, p, Qn, "divided-only-one-term")];
-    if (p > 1 && q > 1) wrong.push(option(g, P - g, Qn - g, "subtracted-the-factor-instead-of-dividing"));
+    if (p > 1 && q > 1) wrong.push(option(g, P - g, Qn - g, "subtracted-the-gcf-instead-of-dividing"));
     else wrong.push(option(g, P, q, "divided-only-one-term"));
     return {
       prompt: [tr(locale, "Which expression is equal to ", "¿Qué expresión es igual a "), shownExpr, tr(locale, " and has the greatest common factor outside the parentheses?", " y tiene el máximo común divisor fuera del paréntesis?")],
@@ -1081,8 +1134,8 @@ const INEQ_STORIES: IneqStory[] = [
   },
   {
     op: ">", v: "t", range: [-10, -1], key: ["above", "por encima de"],
-    en: (c) => `In a trivia game, a player stays in the game while the score is above ${c} points. Let t be the score.`,
-    es: (c) => `En un juego de preguntas, un jugador sigue en el juego mientras su puntaje esté por encima de ${c} puntos. Sea t el puntaje.`,
+    en: (c) => `In a trivia game, a player stays in the game while the score is above ${c} ${c === "−1" ? "point" : "points"}. Let t be the score.`,
+    es: (c) => `En un juego de preguntas, un jugador sigue en el juego mientras su puntaje esté por encima de ${c} ${c === "−1" ? "punto" : "puntos"}. Sea t el puntaje.`,
   },
   {
     op: "≥", v: "m", range: [30, 60], key: ["or more", "o más"],
@@ -1115,13 +1168,14 @@ const PAD_STORIES: PadStory[] = [
   },
   {
     op: "≥", range: [-6, -1],
-    en: (c) => `In a quiz game, a team stays in the round while its score is at least ${c} points. What is the lowest whole-number score that keeps the team in the round?`,
-    es: (c) => `En un juego de preguntas, un equipo sigue en la ronda mientras su puntaje sea de al menos ${c} puntos. ¿Cuál es el puntaje entero más bajo con el que el equipo sigue en la ronda?`,
+    en: (c) => `In a quiz game, a team stays in the round while its score is at least ${c} ${c === "−1" ? "point" : "points"}. What is the lowest whole-number score that keeps the team in the round?`,
+    es: (c) => `En un juego de preguntas, un equipo sigue en la ronda mientras su puntaje sea de al menos ${c} ${c === "−1" ? "punto" : "puntos"}. ¿Cuál es el puntaje entero más bajo con el que el equipo sigue en la ronda?`,
   },
   {
-    op: ">", range: [-6, 3],
-    en: (c) => `A seed packet says the young plants need nights warmer than ${c}°C. What is the coldest whole-degree temperature that is safe for them?`,
-    es: (c) => `Un sobre de semillas dice que las plantas pequeñas necesitan noches con más de ${c} °C. ¿Cuál es la temperatura más baja, en grados enteros, que es segura para ellas?`,
+    // A winter sleeping bag is rated down to a temperature below 0 °C, so a boundary under freezing is real.
+    op: ">", range: [-9, -1],
+    en: (c) => `A winter sleeping bag keeps a camper warm on nights warmer than ${c}°C. What is the coldest whole-degree night temperature at which it keeps the camper warm?`,
+    es: (c) => `Una bolsa de dormir de invierno mantiene abrigado a un campista en noches con más de ${c} °C. ¿Cuál es la temperatura más baja, en grados enteros, a la que lo mantiene abrigado?`,
   },
   {
     op: "≤", range: [-8, -2],
@@ -1234,8 +1288,9 @@ function ineqGraph(r: Rng, level: number, locale: Locale): ItemBody {
   const q = tr(locale, st.en(show(c)), st.es(show(c)));
   const ineq = `x ${st.op} ${show(c)}`;
   return {
-    prompt: [`${q} ${tr(locale, "Tap it on the number line.", "Tócala en la recta numérica.")}`],
-    say: `${speak(q, locale)} ${tr(locale, "Tap it on the number line.", "Tócala en la recta numérica.")}`,
+    // "ese número", not "Tócala": the thing asked for is a score, a temperature or an elevation, of either gender.
+    prompt: [`${q} ${tr(locale, "Tap it on the number line.", "Toca ese número en la recta numérica.")}`],
+    say: `${speak(q, locale)} ${tr(locale, "Tap it on the number line.", "Toca ese número en la recta numérica.")}`,
     input: "number-line",
     pad,
     answer,
@@ -1441,7 +1496,7 @@ const MEAN_STORIES: MeanStory[] = [
   {
     range: [60, 100],
     en: (n, m, known, who) => `${who}'s mean score on ${n} quizzes is ${m}. ${n - 1} of the scores are ${known}. What is the missing score?`,
-    es: (n, m, known, who) => `La media de ${who} en ${n} pruebas es ${m}. ${n - 1} de las calificaciones son ${known}. ¿Cuál es la calificación que falta?`,
+    es: (n, m, known, who) => `El promedio de ${who} en ${n} pruebas es ${m}. ${n - 1} de las calificaciones son ${known}. ¿Cuál es la calificación que falta?`,
   },
   {
     range: [15, 60],
@@ -1449,9 +1504,9 @@ const MEAN_STORIES: MeanStory[] = [
     es: (n, m, known, who) => `${who} leyó en promedio ${m} minutos al día durante ${n} días. En ${n - 1} de esos días leyó ${known} minutos. ¿Cuántos minutos leyó el otro día?`,
   },
   {
-    range: [6, 30],
-    en: (n, m, known) => `A basketball team scored a mean of ${m} points per quarter over ${n} quarters. In ${n - 1} of the quarters it scored ${known} points. How many points did it score in the other quarter?`,
-    es: (n, m, known) => `Un equipo de básquetbol anotó una media de ${m} puntos por cuarto en ${n} cuartos. En ${n - 1} de los cuartos anotó ${known} puntos. ¿Cuántos puntos anotó en el otro cuarto?`,
+    range: [30, 70],
+    en: (n, m, known) => `A basketball team scored a mean of ${m} points per game over ${n} games. In ${n - 1} of the games it scored ${known} points. How many points did it score in the other game?`,
+    es: (n, m, known) => `Un equipo de básquetbol anotó un promedio de ${m} puntos por partido en ${n} partidos. En ${n - 1} de los partidos anotó ${known} puntos. ¿Cuántos puntos anotó en el otro partido?`,
   },
 ];
 
@@ -1508,8 +1563,16 @@ function statsCenter(r: Rng, level: number, locale: Locale): ItemBody {
     } while (data[n - 1] < lo || data[n - 1] > hi || new Set(data).size < 3);
   } else {
     const n = measure === "even-median" ? r.pick([6, 8]) : r.pick([5, 7]);
+    // A median item keeps its middle value out of the middle of the unsorted list, so "did not order the
+    // data" is always a distinct slip; an even count has two different middle values to average.
+    const middle = (xs: number[]) => [...xs].sort((a, b) => a - b).slice((n - 1) >> 1, (n >> 1) + 1);
     do data = Array.from({ length: n }, () => r.int(lo, hi));
-    while (new Set(data).size < n - 1 || (measure === "range" && Math.min(...data) === 0));
+    while (
+      new Set(data).size < n - 1 ||
+      (measure === "range" && Math.min(...data) === 0) ||
+      (measure === "median" && data[(n - 1) / 2] === middle(data)[0]) ||
+      (measure === "even-median" && middle(data)[0] === middle(data)[1])
+    );
   }
   const n = data.length, sorted = [...data].sort((a, b) => a - b);
   const label = tr(locale, st.en(n, who), st.es(n, who));
@@ -1621,23 +1684,32 @@ function statsCenter(r: Rng, level: number, locale: Locale): ItemBody {
 
 // ---------- m.volume.frac ----------
 
-/** Objects and the units that suit their size (indexes into UNITS: 0 cm, 2 in, 3 ft). */
-const BOXES: { en: string; es: string; units: number[] }[] = [
-  { en: "A gift box", es: "Una caja de regalo", units: [0, 2] },
-  { en: "A jewelry box", es: "Un joyero", units: [0, 2] },
-  { en: "A block of clay", es: "Un bloque de arcilla", units: [0, 2] },
-  { en: "A small fish tank", es: "Una pecera pequeña", units: [2] },
-  { en: "A shipping crate", es: "Un cajón de envío", units: [3] },
-  { en: "A storage chest", es: "Un baúl", units: [3] },
+/**
+ * Objects, the unit that suits each (an index into UNITS: 0 cm, 2 in, 3 ft) and the believable length of
+ * an edge in that unit, from `lo` to `hi` whole units. Long-edged boxes (hi above 9) take one fractional
+ * edge only, so their products stay workable by hand; `cubes` marks the boxes small enough to pack with
+ * cubes of edge 1/2, 1/3 or 1/4 of a unit.
+ */
+type Box = { en: string; es: string; unit: number; lo: number; hi: number; cubes: boolean };
+const BOXES: Box[] = [
+  { en: "A gift box", es: "Una caja de regalo", unit: 2, lo: 3, hi: 9, cubes: false },
+  { en: "A gift box", es: "Una caja de regalo", unit: 0, lo: 8, hi: 15, cubes: false },
+  { en: "A jewelry box", es: "Un joyero", unit: 2, lo: 2, hi: 6, cubes: true },
+  { en: "A brick", es: "Un ladrillo", unit: 2, lo: 2, hi: 8, cubes: false },
+  { en: "A block of clay", es: "Un bloque de arcilla", unit: 0, lo: 3, hi: 9, cubes: false },
+  { en: "A block of clay", es: "Un bloque de arcilla", unit: 2, lo: 1, hi: 4, cubes: true },
+  { en: "A small fish tank", es: "Una pecera pequeña", unit: 2, lo: 8, hi: 12, cubes: false },
+  { en: "A shipping crate", es: "Un cajón de envío", unit: 3, lo: 2, hi: 5, cubes: true },
+  { en: "A storage chest", es: "Un baúl", unit: 3, lo: 2, hi: 4, cubes: true },
 ];
 
-/** An edge length as a mixed number (whole ≥ 1) with denominator 2, 3 or 4, or a whole number. */
-function edge(r: Rng, fractional: boolean, big: boolean): Q {
-  if (!fractional) return [r.int(2, big ? 6 : 9), 1];
+/** An edge from `lo` to `hi` units: a whole number (at least 2), or a mixed number with denominator 2, 3 or 4 below `hi`. */
+function edge(r: Rng, fractional: boolean, lo: number, hi: number): Q {
+  if (!fractional) return [r.int(Math.max(2, lo), hi), 1];
   const d = r.pick([2, 3, 4]);
   let n = r.int(1, d - 1);
   while (gcd(n, d) !== 1) n = r.int(1, d - 1);
-  return qr(r.int(1, big ? 4 : 6) * d + n, d);
+  return qr(r.int(lo, hi - 1) * d + n, d);
 }
 /** An edge read aloud with its unit: "2 and one half inches", "2 pies y medio", "1 pulgada y 3 cuartos". */
 function sayEdge(e: Q, u: Unit, locale: Locale) {
@@ -1650,16 +1722,17 @@ function sayEdge(e: Q, u: Unit, locale: Locale) {
 }
 
 function volumeFrac(r: Rng, level: number, locale: Locale): ItemBody {
-  const box = r.pick(BOXES);
-  const u = UNITS[r.pick(box.units)];
-  const [boxEn, boxEs, big] = [box.en, box.es, u.en === "ft"];
-  const ab = tr(locale, u.en, u.es);
   const cubes = level === 2 && r.bool(0.4);
+  const box = r.pick(cubes ? BOXES.filter((b) => b.cubes) : level === 1 ? BOXES : BOXES.filter((b) => b.hi <= 9));
+  const u = UNITS[box.unit];
+  const [boxEn, boxEs] = [box.en, box.es];
+  const ab = tr(locale, u.en, u.es);
   if (cubes) {
     // Pack the box with small cubes of edge 1/k and count them: the count × (1/k)³ is the volume.
-    const k = r.pick([2, 3, 4]);
-    const m = [r.int(k + 1, (big ? 3 : 4) * k), r.int(k, 3 * k), r.int(k + 1, (big ? 3 : 4) * k)];
-    while (m.every((x) => x % k === 0)) m[0] += 1;
+    // Edges run from the box's least length up to 4 units, so the count stays a few thousand at most.
+    const k = r.pick([2, 3, 4]), top = Math.min(box.hi, 4);
+    const m = [r.int(box.lo * k + 1, top * k), r.int(box.lo * k, (top - 1) * k), r.int(box.lo * k + 1, top * k)];
+    while (m.every((x) => x % k === 0)) m[0] -= 1;
     const edges = m.map((x) => qr(x, k));
     const count = m[0] * m[1] * m[2];
     const V = qr(count, k ** 3);
@@ -1701,11 +1774,15 @@ function volumeFrac(r: Rng, level: number, locale: Locale): ItemBody {
       seconds: 60,
     };
   }
-  // Level 1: one fractional edge. Level 2: two or three.
+  // Level 1: one fractional edge. Level 2: two or three. A whole-number volume is drawn again: the prompt
+  // asks for a fraction or a mixed number, and the fraction pad cannot send a whole number.
   const fracCount = level === 1 ? 1 : r.int(2, 3);
-  const which = r.shuffle([0, 1, 2]).slice(0, fracCount);
-  const edges = [0, 1, 2].map((i) => edge(r, which.includes(i), big));
-  const V = qMul(qMul(edges[0], edges[1]), edges[2]);
+  let edges: Q[], V: Q;
+  do {
+    const which = r.shuffle([0, 1, 2]).slice(0, fracCount);
+    edges = [0, 1, 2].map((i) => edge(r, which.includes(i), box.lo, box.hi));
+    V = qMul(qMul(edges[0], edges[1]), edges[2]);
+  } while (V[1] === 1);
   const answer: Answer = { kind: "fraction", n: V[0], d: V[1] };
   const wholes = edges.map((e) => Math.floor(e[0] / e[1]));
   const sum = qAdd(qAdd(edges[0], edges[1]), edges[2]);
@@ -1741,7 +1818,7 @@ function volumeFrac(r: Rng, level: number, locale: Locale): ItemBody {
       `= ${edges.map(imp).join(" × ")} = ${N}/${D}`,
       `= ${qShow(V)} ${ab}³`,
     ],
-    seconds: level === 1 ? 50 : 70,
+    seconds: level === 1 && box.hi <= 9 ? 50 : 70,
   };
 }
 
@@ -1852,9 +1929,11 @@ function surfaceArea(r: Rng, level: number, locale: Locale): ItemBody {
   const answer: Answer = { kind: "number", value: SA };
   const q = (sp: boolean) => {
     const len = (n: number) => (sp ? `${n} ${tr(locale, u.word[0], u.word[1])}` : `${n} ${ab}`);
+    // Spoken, a length before "sides" is a compound adjective: "the 8-meter and 15-meter sides".
+    const sideLen = (n: number) => (sp ? `${n}-${u.one[0]}` : `${n} ${ab}`);
     return tr(
       locale,
-      `The net of a triangular prism has 2 right triangles and 3 rectangles. Each triangle has sides of ${a}, ${b} and ${len(c)}, with the right angle between the ${len(a)} and ${len(b)} sides. The prism is ${len(L)} long. What is its surface area, in ${sq}?`,
+      `The net of a triangular prism has 2 right triangles and 3 rectangles. Each triangle has sides of ${a}, ${b} and ${len(c)}, with the right angle between the ${sideLen(a)} and ${sideLen(b)} sides. The prism is ${len(L)} long. What is its surface area, in ${sq}?`,
       `La red de un prisma triangular tiene 2 triángulos rectángulos y 3 rectángulos. Cada triángulo tiene lados de ${a}, ${b} y ${len(c)}, con el ángulo recto entre los lados de ${len(a)} y ${len(b)}. El prisma mide ${len(L)} de largo. ¿Cuál es su área de superficie, en ${sq}?`,
     );
   };
@@ -1961,7 +2040,8 @@ function ratAddSubFrac(r: Rng, locale: Locale, mixed: boolean): ItemBody {
     a = pick(r.bool(0.65));
     b = pick(r.bool(0.5));
     res = sub ? qSub(a, b) : qAdd(a, b);
-  } while ((a[0] > 0 && b[0] > 0 && !sub) || (a[0] > 0 && b[0] > 0 && sub && qLess(b, a)) || res[0] === 0 || (a[1] === b[1] && r.bool(0.7)));
+    // A whole-number result cannot be entered on the fraction pad, which always sends n/d or w n/d.
+  } while ((a[0] > 0 && b[0] > 0 && !sub) || (a[0] > 0 && b[0] > 0 && sub && qLess(b, a)) || res[1] === 1 || (a[1] === b[1] && r.bool(0.7)));
   const answer: Answer = { kind: "fraction", n: res[0], d: res[1], simplest: true };
   const op = sub ? "−" : "+";
   const L = (a[1] * b[1]) / gcd(a[1], b[1]);
@@ -1993,9 +2073,14 @@ function ratAddSubFrac(r: Rng, locale: Locale, mixed: boolean): ItemBody {
         ? tr(locale, `Both fractions have the denominator ${a[1]}. What do you do with the numerators?`, `Las dos fracciones tienen denominador ${a[1]}. ¿Qué haces con los numeradores?`)
         : tr(locale, `The denominators are ${a[1]} and ${b[1]}. What is their least common multiple?`, `Los denominadores son ${a[1]} y ${b[1]}. ¿Cuál es su mínimo común múltiplo?`),
       sub
-        ? tr(locale, `Rewrite both with the denominator ${L}. Subtracting is adding the opposite, so watch the signs.`, `Reescribe las dos con denominador ${L}. Restar es sumar el opuesto, así que cuida los signos.`)
-        : tr(locale, `Rewrite both with the denominator ${L}, then add the numerators, keeping their signs.`, `Reescribe las dos con denominador ${L} y luego suma los numeradores con sus signos.`),
-      `${rewrite}.`,
+        ? lines.length
+          ? tr(locale, `Rewrite both with the denominator ${L}. Subtracting is adding the opposite, so watch the signs.`, `Reescribe las dos con denominador ${L}. Restar es sumar el opuesto, así que cuida los signos.`)
+          : tr(locale, `Keep the denominator ${L} and subtract the numerators. Subtracting is adding the opposite, so watch the signs.`, `Conserva el denominador ${L} y resta los numeradores. Restar es sumar el opuesto, así que cuida los signos.`)
+        : lines.length
+          ? tr(locale, `Rewrite both with the denominator ${L}, then add the numerators, keeping their signs.`, `Reescribe las dos con denominador ${L} y luego suma los numeradores con sus signos.`)
+          : tr(locale, `Keep the denominator ${L} and add the numerators, keeping their signs.`, `Conserva el denominador ${L} y suma los numeradores con sus signos.`),
+      // With nothing to rewrite, the first step is putting the numerators together over the denominator.
+      lines.length ? `${rewrite}.` : `${qShow(a)} ${op} ${qOperandText(b, true)} = (${show(an)} ${op} ${signed(bn)})/${L}`,
     ],
     steps: [rewrite, `(${show(an)} ${op} ${signed(bn)})/${L} = ${show(total)}/${L}`, ...(gcd(total, L) !== 1 || Math.abs(total) > L ? [`= ${qShow(res)}`] : [])],
     seconds: mixed ? 60 : 45,
@@ -2034,14 +2119,17 @@ const DEC_STORIES: DecStory[] = [
 function ratAddSubStory(r: Rng, locale: Locale): ItemBody {
   const st = r.pick(DEC_STORIES), who = r.pick(NAMES);
   const [negStart, lo, hi] = st.start;
-  const S = (negStart ? -1 : 1) * (r.bool() ? decUnits(r, lo / 10, hi / 10, 1) * 10 : decUnits(r, lo, hi, 2));
+  // Values in hundredths. Elevations may use two places (to the centimeter); temperatures are read to tenths of a degree.
+  const tenths = st.unit[0].startsWith("°");
+  const amount = (from: number, to: number) => (tenths || r.bool() ? decUnits(r, Math.ceil(from / 10), Math.floor(to / 10), 1) * 10 : decUnits(r, from, to, 2));
+  const S = (negStart ? -1 : 1) * amount(lo, hi);
   let D: number, R: number;
   if (st.diff) {
     // high − low, with the low below 0.
-    D = -(r.bool() ? decUnits(r, 10, 120, 1) * 10 : decUnits(r, 100, 1200, 2));
+    D = -amount(100, 1200);
     R = S - D;
   } else {
-    do D = r.bool() ? decUnits(r, 20, 160, 1) * 10 : decUnits(r, 200, 1600, 2);
+    do D = amount(200, 1600);
     while ((st.sign === -1 && S - D >= 0) || (st.below && S + D >= 0) || S + st.sign * D === 0);
     R = S + st.sign * D;
   }
@@ -2138,7 +2226,8 @@ function ratMultDivFrac(r: Rng, locale: Locale): ItemBody {
     a = pick(sa);
     b = pick(sb);
     res = div ? qDiv(a, b) : qMul(a, b);
-  } while (Math.abs(res[0]) > 60 || res[1] > 60 || (Math.abs(res[0]) === 1 && res[1] === 1));
+    // A whole-number result cannot be entered on the fraction pad, which always sends n/d or w n/d.
+  } while (Math.abs(res[0]) > 60 || res[1] > 60 || res[1] === 1);
   const answer: Answer = { kind: "fraction", n: res[0], d: res[1], simplest: true };
   const recip = qr(b[1], b[0]);
   const op = div ? "÷" : "×";
@@ -2254,44 +2343,45 @@ const PROP_CTX: PropCtx[] = [
   { x: ["hours biked", "horas en bicicleta"], y: ["miles", "millas"], per: ["miles per hour", "millas por hora"], ks: [750, 800, 900, 1050, 1200, 1250], whole: [5, 6, 7, 8, 9] },
   { x: ["cups of flour", "tazas de harina"], y: ["muffins", "panecillos"], per: ["muffins per cup", "panecillos por taza"], ks: [600, 800, 900, 1000, 1200], whole: [6, 8, 9, 10, 12] },
   { x: ["pounds of apples", "libras de manzanas"], y: ["cost in dollars", "costo en dólares"], per: ["dollars per pound", "dólares por libra"], ks: [125, 150, 175, 225, 250], whole: [2, 3] },
-  { x: ["seconds", "segundos"], y: ["meters swum", "metros nadados"], per: ["meters per second", "metros por segundo"], ks: [125, 150, 175, 200, 250], whole: [2, 3] },
+  { x: ["minutes", "minutos"], y: ["meters swum", "metros nadados"], per: ["meters per minute", "metros por minuto"], ks: [2000, 2250, 2500, 2750, 3000], whole: [20, 25, 30] },
   { x: ["packs", "paquetes"], y: ["stickers", "calcomanías"], per: ["stickers per pack", "calcomanías por paquete"], ks: [400, 600, 800, 1000, 1200], whole: [4, 5, 6, 8] },
   { x: ["minutes", "minutos"], y: ["pages read", "páginas leídas"], per: ["pages per minute", "páginas por minuto"], ks: [50, 150, 200, 250], whole: [2, 3] },
   { x: ["weeks", "semanas"], y: ["centimeters a plant grows", "centímetros que crece una planta"], per: ["centimeters per week", "centímetros por semana"], ks: [150, 250, 300, 350], whole: [2, 3, 4] },
   { x: ["songs", "canciones"], y: ["minutes of music", "minutos de música"], per: ["minutes per song", "minutos por canción"], ks: [250, 300, 350, 400], whole: [3, 4, 5] },
 ];
 
-type EqStory = { money: boolean; ks: number[]; en: (T: string, n: number, who: string) => string; es: (T: string, n: number, who: string) => string };
+/** `y` is the letter as written: "y" on screen, "ye" read aloud in Spanish, where a lone "y" is heard as "and". */
+type EqStory = { money: boolean; ks: number[]; en: (T: string, n: number, who: string) => string; es: (T: string, n: number, who: string, y: string) => string };
 const EQ_STORIES: EqStory[] = [
   {
     money: true, ks: [125, 150, 175, 225, 250, 350],
     en: (T, n, who) => `${who} pays ${T} for ${n} notebooks. Which equation gives the cost y, in dollars, of x notebooks?`,
-    es: (T, n, who) => `${who} paga ${T} por ${n} cuadernos. ¿Qué ecuación da el costo y, en dólares, de x cuadernos?`,
+    es: (T, n, who, y) => `${who} paga ${T} por ${n} cuadernos. ¿Qué ecuación da el costo ${y}, en dólares, de x cuadernos?`,
   },
   {
     money: false, ks: [50, 75, 150, 250],
     en: (T, n) => `A recipe uses ${T} cups of sugar for ${n} batches of cookies. Which equation gives the cups of sugar y for x batches?`,
-    es: (T, n) => `Una receta usa ${T} tazas de azúcar para ${n} tandas de galletas. ¿Qué ecuación da las tazas de azúcar y para x tandas?`,
+    es: (T, n, _who, y) => `Una receta usa ${T} tazas de azúcar para ${n} tandas de galletas. ¿Qué ecuación da las tazas de azúcar ${y} para x tandas?`,
   },
   {
     money: false, ks: [850, 1050, 1150, 1250],
     en: (T, n) => `A cyclist rides ${T} miles in ${n} hours at a steady speed. Which equation gives the distance y, in miles, after x hours?`,
-    es: (T, n) => `Una ciclista recorre ${T} millas en ${n} horas a velocidad constante. ¿Qué ecuación da la distancia y, en millas, después de x horas?`,
+    es: (T, n, _who, y) => `Una ciclista recorre ${T} millas en ${n} horas a velocidad constante. ¿Qué ecuación da la distancia ${y}, en millas, después de x horas?`,
   },
   {
     money: false, ks: [1200, 1500, 1800, 2400],
     en: (T, n) => `A printer prints ${T} pages in ${n} minutes. Which equation gives the number of pages y printed in x minutes?`,
-    es: (T, n) => `Una impresora imprime ${T} páginas en ${n} minutos. ¿Qué ecuación da el número de páginas y impresas en x minutos?`,
+    es: (T, n, _who, y) => `Una impresora imprime ${T} páginas en ${n} minutos. ¿Qué ecuación da el número de páginas ${y} impresas en x minutos?`,
   },
   {
     money: true, ks: [450, 550, 650, 750, 850],
     en: (T, n) => `${n} tickets to a planetarium show cost ${T}. Which equation gives the cost y, in dollars, of x tickets?`,
-    es: (T, n) => `${n} boletos para una función del planetario cuestan ${T}. ¿Qué ecuación da el costo y, en dólares, de x boletos?`,
+    es: (T, n, _who, y) => `${n} boletos para una función del planetario cuestan ${T}. ¿Qué ecuación da el costo ${y}, en dólares, de x boletos?`,
   },
   {
     money: false, ks: [150, 250, 350],
     en: (T, n) => `A dog eats ${T} cups of food in ${n} days. Which equation gives the cups of food y the dog eats in x days?`,
-    es: (T, n) => `Un perro come ${T} tazas de comida en ${n} días. ¿Qué ecuación da las tazas de comida y que come en x días?`,
+    es: (T, n, _who, y) => `Un perro come ${T} tazas de comida en ${n} días. ¿Qué ecuación da las tazas de comida ${y} que come en x días?`,
   },
 ];
 
@@ -2301,16 +2391,16 @@ function propConstant(r: Rng, level: number, locale: Locale): ItemBody {
     const kU = r.pick(st.ks), n = r.int(2, 8);
     const k = dv(kU, 2), T = dv(kU * n, 2);
     const Tshown = st.money ? money(kU * n) : showD(T);
-    const q = tr(locale, st.en(Tshown, n, who), st.es(Tshown, n, who));
-    const eq = tr(locale, "equals", "es igual a"), plus = tr(locale, "plus", "más");
+    const q = tr(locale, st.en(Tshown, n, who), st.es(Tshown, n, who, "y"));
+    const eq = tr(locale, "equals", "es igual a"), plus = tr(locale, "plus", "más"), y = tr(locale, "y", "ye");
     const option = (label: string, said: string, why?: string): Choice => ({ label, say: said, ...(why ? { why } : {}) });
     return {
       prompt: [q],
-      say: speak(q, locale),
-      ...withChoices(r, option(`y = ${k}x`, `y ${eq} ${k} x`), [
-        option(`x = ${k}y`, `x ${eq} ${k} y`, "inverted-the-ratio"),
-        option(`y = ${T}x`, `y ${eq} ${T} x`, "used-the-total-not-the-unit-rate"),
-        option(`y = x + ${k}`, `y ${eq} x ${plus} ${k}`, "added-instead-of-multiplying"),
+      say: speak(tr(locale, q, st.es(Tshown, n, who, "ye")), locale),
+      ...withChoices(r, option(`y = ${k}x`, `${y} ${eq} ${k} x`), [
+        option(`x = ${k}y`, `x ${eq} ${k} ${y}`, "inverted-the-ratio"),
+        option(`y = ${T}x`, `${y} ${eq} ${T} x`, "used-the-total-not-the-unit-rate"),
+        option(`y = x + ${k}`, `${y} ${eq} x ${plus} ${k}`, "added-instead-of-multiplying"),
       ]),
       hints: [
         tr(locale, "What is the unit rate, the amount for 1?", "¿Cuál es la tasa unitaria, la cantidad que corresponde a 1?"),
@@ -2353,11 +2443,14 @@ function propConstant(r: Rng, level: number, locale: Locale): ItemBody {
   const xs = r.shuffle([2, 3, 4, 5, 6, 8, 10]).slice(0, 3).sort((a, b) => a - b);
   const ys = xs.map((x) => dv(kU * x, 2));
   const k = dv(kU, 2);
+  // Spanish read-aloud says the letter "ye": a lone "y" is heard as "and".
   const q = (said: boolean) =>
     tr(
       locale,
       `This proportional relationship pairs ${xL} (x) with ${yL} (y). x: ${xs.join(", ")}. y: ${ys.join(", ")}. What is the constant of proportionality, k, in ${said ? "y equals k times x" : "y = kx"}?`,
-      `Esta relación proporcional relaciona ${xL} (x) con ${yL} (y). x: ${xs.join(", ")}. y: ${ys.join(", ")}. ¿Cuál es la constante de proporcionalidad, k, en ${said ? "y es igual a k por x" : "y = kx"}?`,
+      said
+        ? `En esta relación proporcional, x representa ${xL} y la letra ye representa ${yL}. Valores de x: ${xs.join(", ")}. Valores de ye: ${ys.join(", ")}. ¿Cuál es la constante de proporcionalidad, k, en ye es igual a k por x?`
+        : `En esta relación proporcional, x representa ${xL} e y representa ${yL}. x: ${xs.join(", ")}. y: ${ys.join(", ")}. ¿Cuál es la constante de proporcionalidad, k, en y = kx?`,
     );
   const answer: Answer = { kind: "number", value: k };
   const inv = qDec(qr(100, kU));
@@ -2699,7 +2792,12 @@ function anglesPairs(r: Rng, level: number, locale: Locale): ItemBody {
         ? [
             tr(locale, "Vertical angles sit across from each other where two lines cross. How do they compare?", "Los ángulos opuestos por el vértice están uno frente al otro donde se cruzan dos rectas. ¿Cómo son entre sí?"),
             tr(locale, "Vertical angles always have the same measure.", "Los ángulos opuestos por el vértice siempre miden lo mismo."),
-            tr(locale, `The angle across from the ${deg(a)} angle is its vertical angle.`, `El ángulo que está frente al de ${deg(a)} es su opuesto por el vértice.`),
+            // The step that matters is ruling out the linear pair: the angle across does not share a side.
+            tr(
+              locale,
+              `The angle across from the ${deg(a)} angle does not share a side with it, so the two are not a linear pair and do not add up to 180°.`,
+              `El ángulo que está frente al de ${deg(a)} no comparte ningún lado con él, así que los dos no forman un par lineal y no suman 180°.`,
+            ),
           ]
         : [
             tr(locale, "The two angles together make a straight line. What does a straight angle measure?", "Los dos ángulos juntos forman una línea recta. ¿Cuánto mide un ángulo llano?"),
@@ -2749,7 +2847,8 @@ function anglesPairs(r: Rng, level: number, locale: Locale): ItemBody {
     x = r.int(3, 25);
     b = r.int(-20, 40);
     d = a * x + b - c * x;
-  } while (a === c || b === 0 || d === 0 || a * x + b <= 0 || a * x + b >= 180 || Math.abs(d) > 60);
+    // The angle never equals x, so "gave the angle instead of x" is always a distinct slip.
+  } while (a === c || b === 0 || d === 0 || a * x + b <= 0 || a * x + b >= 180 || Math.abs(d) > 60 || a * x + b === x);
   const q = tr(
     locale,
     `Two lines intersect. Two vertical angles measure (${xTerm(a, b)})° and (${xTerm(c, d)})°. What is the value of x?`,
@@ -2789,7 +2888,7 @@ const BUDGET_STORIES: BudgetStory[] = [
     es: (B, F, R, who) => `${who} tiene $${B} para gastar en una feria de artesanías. Compra un cuaderno de dibujo de $${F} y quiere tubos de pintura de $${R} cada uno. ¿Cuál es el mayor número de tubos de pintura que puede comprar?`,
   },
   {
-    op: "≥", money: true, rate: [3, 9], start: [40, 80],
+    op: "≥", money: true, rate: [3, 9], start: [200, 350],
     en: (B, F, R) => `A sports camp counselor earns $${F} per week plus $${R} for each new camper who signs up. What is the least number of sign-ups needed to earn at least $${B} in a week?`,
     es: (B, F, R) => `Un consejero de un campamento deportivo gana $${F} por semana más $${R} por cada campista nuevo que se inscribe. ¿Cuál es el menor número de inscripciones que necesita para ganar al menos $${B} en una semana?`,
   },
@@ -2859,7 +2958,7 @@ function ineqTwoStep(r: Rng, level: number, locale: Locale): ItemBody {
   const lhs = neg ? (form === "front" ? `${q < 0 ? "−" : ""}${Math.abs(q)} − ${p}x` : `−${p}x ${q < 0 ? "−" : "+"} ${Math.abs(q)}`) : `${p}x ${q < 0 ? "−" : "+"} ${Math.abs(q)}`;
   const sol: Op = neg ? FLIP[op] : op;
   const choice = (o: Op, kk: number, why?: string): Choice => ({ label: `x ${o} ${show(kk)}`, say: `x ${sayOp(o, locale)} ${sayN(kk, locale)}`, ...(why ? { why } : {}) });
-  const undo = q > 0 ? tr(locale, `Subtract ${q} from both sides`, `Resta ${q} en ambos lados`) : tr(locale, `Add ${-q} to both sides`, `Suma ${-q} en ambos lados`);
+  const undo = q > 0 ? tr(locale, `Subtract ${q} from both sides`, `Resta ${q} de ambos lados`) : tr(locale, `Add ${-q} to both sides`, `Suma ${-q} a ambos lados`);
   const mid = `${neg ? "−" : ""}${p}x ${op} ${show(rhs - q)}`;
   const saidLhs = neg
     ? form === "front"
@@ -3128,13 +3227,13 @@ function areaComposite(r: Rng, level: number, locale: Locale): ItemBody {
     const L = r.int(10, 30), W = r.int(8, 20), a = r.int(2, Math.min(8, L - 2)), b = r.int(2, Math.min(6, W - 2));
     const ans = L * W - a * b;
     s = {
-      q: (sp) => tr(locale, `A rectangular lawn is ${U(L, sp)} by ${U(W, sp)}. A rectangular flower bed ${U(a, sp)} by ${U(b, sp)} sits inside it. What is the area of the grass, in ${sq}?`, `Un césped rectangular mide ${U(L, sp)} por ${U(W, sp)}. Dentro hay un rectángulo con flores de ${U(a, sp)} por ${U(b, sp)}. ¿Cuál es el área del pasto, en ${sq}?`),
+      q: (sp) => tr(locale, `A rectangular lawn is ${U(L, sp)} by ${U(W, sp)}. A rectangular flower bed ${U(a, sp)} by ${U(b, sp)} sits inside it. What is the area of the grass, in ${sq}?`, `Un jardín rectangular de pasto mide ${U(L, sp)} por ${U(W, sp)}. Dentro hay un macizo de flores rectangular de ${U(a, sp)} por ${U(b, sp)}. ¿Cuál es el área del pasto, en ${sq}?`),
       ans: ans * 100,
       wrong: [w(L * W + a * b, "added-the-cut-out"), w(L * W, "forgot-to-subtract-the-inside")],
       hints: [
-        tr(locale, "The grass is the whole lawn except the flower bed.", "El pasto es todo el césped menos el rectángulo con flores."),
-        tr(locale, "Find the area of the lawn, then subtract the area of the flower bed.", "Halla el área del césped y luego resta el área del rectángulo con flores."),
-        tr(locale, `Lawn: ${L} × ${W} = ${L * W}.`, `Césped: ${L} × ${W} = ${L * W}.`),
+        tr(locale, "The grass is the whole lawn except the flower bed.", "El pasto es todo el jardín menos el macizo de flores."),
+        tr(locale, "Find the area of the lawn, then subtract the area of the flower bed.", "Halla el área del jardín y luego resta el área del macizo de flores."),
+        tr(locale, `Lawn: ${L} × ${W} = ${L * W}.`, `Jardín: ${L} × ${W} = ${L * W}.`),
       ],
       steps: [`${L} × ${W} = ${L * W}`, `${a} × ${b} = ${a * b}`, `${L * W} − ${a * b} = ${ans} ${ab}²`],
     };

@@ -46,6 +46,9 @@ function values(parts: MathPart[]): number[] {
   return out;
 }
 const words = (item: Item) => item.prompt.filter((p): p is string => typeof p === "string").join(" ");
+/** A choice label as the parser reads it: superscript digits become a power ("k³" → "k^3"). */
+const SUPERSCRIPT = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const unsup = (label: string) => label.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `^${[...m].map((ch) => SUPERSCRIPT.indexOf(ch)).join("")}`);
 
 function at(src: string, env: Record<string, number> = {}): number {
   const node = parse(src);
@@ -99,11 +102,11 @@ type Verify = (item: Item, level: number, where: string, locale: "en" | "es") =>
 
 /** "5 more than n" → "n + 5" and so on, in both languages. */
 const PHRASE_1: [RegExp, (v: string, c: string) => string][] = [
-  [/^(\d+) (?:more than|más que) ([a-z])$/, (c, v) => `${v} + ${c}`],
+  [/^(\d+) (?:more than|unidades más que) ([a-z])$/, (c, v) => `${v} + ${c}`],
   [/^([a-z]) (?:increased by|aumentado en) (\d+)$/, (v, c) => `${v} + ${c}`],
   [/^(?:the sum of|la suma de) ([a-z]) (?:and|y) (\d+)$/, (v, c) => `${v} + ${c}`],
-  [/^(\d+) (?:less than|menos que) ([a-z])$/, (c, v) => `${v} - ${c}`],
-  [/^([a-z]) (?:less than|menos que) (\d+)$/, (v, c) => `${c} - ${v}`],
+  [/^(\d+) (?:less than|unidades menos que) ([a-z])$/, (c, v) => `${v} - ${c}`],
+  [/^([a-z]) (?:less than|unidades menos que) (\d+)$/, (v, c) => `${c} - ${v}`],
   [/^([a-z]) (?:decreased by|disminuido en) (\d+)$/, (v, c) => `${v} - ${c}`],
   [/^(\d+) (?:subtracted from|restado de) ([a-z])$/, (c, v) => `${v} - ${c}`],
   [/^(?:the difference of|la diferencia de) ([a-z]) (?:and|y) (\d+)$/, (v, c) => `${v} - ${c}`],
@@ -116,8 +119,8 @@ const PHRASE_1: [RegExp, (v: string, c: string) => string][] = [
 const PHRASE_2: [RegExp, (m: RegExpExecArray) => string][] = [
   [/^(\d+) (?:times the sum of|por la suma de) ([a-z]) (?:and|y) (\d+)$/, (m) => `${m[1]}*(${m[2]} + ${m[3]})`],
   [/^(\d+) (?:times the difference of|por la diferencia de) ([a-z]) (?:and|y) (\d+)$/, (m) => `${m[1]}*(${m[2]} - ${m[3]})`],
-  [/^(\d+) (?:more than the product of|más que el producto de) (\d+) (?:and|y) ([a-z])$/, (m) => `${m[2]}*${m[3]} + ${m[1]}`],
-  [/^(\d+) (?:less than the product of|menos que el producto de) (\d+) (?:and|y) ([a-z])$/, (m) => `${m[2]}*${m[3]} - ${m[1]}`],
+  [/^(\d+) (?:more than the product of|unidades más que el producto de) (\d+) (?:and|y) ([a-z])$/, (m) => `${m[2]}*${m[3]} + ${m[1]}`],
+  [/^(\d+) (?:less than the product of|unidades menos que el producto de) (\d+) (?:and|y) ([a-z])$/, (m) => `${m[2]}*${m[3]} - ${m[1]}`],
   [/^(?:the quotient of|el cociente de) ([a-z]) (?:and|entre) (\d+), (?:plus|más) (\d+)$/, (m) => `${m[1]}/${m[2]} + ${m[3]}`],
   [/^(?:the sum of|la suma de) ([a-z]) (?:and|y) (\d+), (?:divided by|dividida entre) (\d+)$/, (m) => `(${m[1]} + ${m[2]})/${m[3]}`],
   [/^(?:the product of|el producto de) (\d+) (?:and|y) ([a-z]), (?:decreased by|disminuido en) (\d+)$/, (m) => `${m[1]}*${m[2]} - ${m[3]}`],
@@ -183,14 +186,23 @@ const VERIFY: Record<string, Verify> = {
 
   "m.rational.order": (item, level, where) => {
     if (level === 1) {
-      const pad = item.pad;
-      if (pad?.kind !== "number-line") throw new Error(`${where} needs a number-line pad`);
-      expect(item.input, where).toBe("number-line");
-      const target = values(item.prompt)[0];
+      // Read the point: the key is where the picture puts the dot, on a small tick between labelled wholes.
+      const v = item.visual;
+      if (v?.kind !== "number-line" || v.marker === undefined || !v.denominator) throw new Error(`${where} needs a number line with a dot and ticks`);
       const x = keyValue(item);
-      expect(near(x, target), `${where} ${toExpr(item.prompt)}`).toBe(true);
+      expect(near(x, v.marker), `${where} key ${x}, dot at ${v.marker}`).toBe(true);
       expect(Number.isInteger(x), `${where} lands on a whole number`).toBe(false);
-      if (item.answer.kind === "fraction") expect(pad.denominator, where).toBe(item.answer.d);
+      expect(v.marker > v.min && v.marker < v.max, `${where} dot off the line`).toBe(true);
+      expect(near(v.marker * v.denominator, Math.round(v.marker * v.denominator)), `${where} dot between ticks`).toBe(true);
+      // Every whole number is labelled, and nothing else is, so no label reads the dot for the learner.
+      expect(v.marks, where).toEqual(Array.from({ length: v.max - v.min + 1 }, (_, i) => v.min + i));
+      // No number in the question: the dot is the only place the value appears.
+      expect(nums(words(item)), `${where} the prompt gives the value`).toEqual([]);
+      expect(nums(item.say), where).toEqual([]);
+      const decimal = /decimal/.test(words(item));
+      expect(item.answer.kind, where).toBe(decimal ? "number" : "fraction");
+      expect(item.input, where).toBe(decimal ? "keypad" : "fraction");
+      if (item.answer.kind === "fraction") expect(item.answer.d, where).toBe(v.denominator);
       return;
     }
     if (level === 2) {
@@ -254,8 +266,8 @@ const VERIFY: Record<string, Verify> = {
       const m = PHRASE_1.map(([re, f]) => [re.exec(quoted!), f] as const).find(([x]) => x);
       if (!m) throw new Error(`${where}: unknown phrase ${quoted}`);
       const want = m[1](m[0]![1], m[0]![2]);
-      expect(same(chosen(item), want), `${where} "${quoted}" → ${chosen(item)}, expected ${want}`).toBe(true);
-      for (const c of item.choices!) if (c.label !== chosen(item)) expect(same(c.label, want), `${where} ${c.label} also right`).toBe(false);
+      expect(same(unsup(chosen(item)), want), `${where} "${quoted}" → ${chosen(item)}, expected ${want}`).toBe(true);
+      for (const c of item.choices!) if (c.label !== chosen(item)) expect(same(unsup(c.label), want), `${where} ${c.label} also right`).toBe(false);
       return;
     }
     if (level === 2) {
@@ -646,7 +658,7 @@ const VERIFY: Record<string, Verify> = {
     const pi = 3.14;
     let want: number;
     if (/painting|pintura/.test(t)) want = (n[0] + 2 * n[2]) * (n[1] + 2 * n[2]) - n[0] * n[1];
-    else if (/lawn|césped/.test(t)) want = n[0] * n[1] - n[2] * n[3];
+    else if (/lawn|macizo de flores/.test(t)) want = n[0] * n[1] - n[2] * n[3];
     else if (/patio/.test(t)) want = n[0] * n[1] + (n[1] * n[n.length - 1]) / 2;
     else if (/window|ventana/.test(t)) want = n[0] * n[1] + (pi * (n[0] / 2) ** 2) / 2;
     else if (/field|campo/.test(t)) want = n[0] * n[1] + pi * (n[1] / 2) ** 2;
@@ -718,6 +730,7 @@ describe("grades 6–7 math strand, part two", () => {
                 if (i === (item.answer as { index: number }).index) expect(c.why, `${where} the right choice has a tag`).toBeUndefined();
                 else {
                   expect(c.why, `${where} ${c.label} has no tag`).toMatch(TAG);
+                  expect(c.why!.length, `${where} tag ${c.why} is over 40 characters`).toBeLessThanOrEqual(40);
                   uses.set(c.why!, (uses.get(c.why!) ?? 0) + 1);
                 }
               });
@@ -818,6 +831,137 @@ describe("grades 6–7 math strand, part two", () => {
             expect(item.seconds, where).toBeLessThanOrEqual(90);
           }
         }
+    });
+  });
+});
+
+// ---------- rare cases, over many more seeds ----------
+
+/** Rare items (a whole-number fraction key, a median with equal middle values) slip through 220 seeds. */
+const WIDE = Array.from({ length: 3000 }, (_, i) => i * 7727 + 3);
+
+describe("grades 6–7 math strand, part two, over 3000 seeds", () => {
+  describe.each(MATH_6_7_MORE.map((s) => [s.id, s] as const))("%s", (id, skill) => {
+    it("every fraction-pad key can be entered on the pad, and every typed item names a likely wrong value", () => {
+      for (let level = 1; level <= skill.levels; level++)
+        for (const seed of WIDE) {
+          const item = makeItem(id, level, seed, "en");
+          const where = `${id} L${level} seed ${seed}`;
+          if (item.input !== "choices") expect(item.wrong?.length ?? 0, `${where} no likely wrong values`).toBeGreaterThanOrEqual(1);
+          if (item.input === "fraction") {
+            // The fraction pad always sends "n/d" or "w n/d": a whole-number key could never be marked right.
+            if (item.answer.kind !== "fraction") throw new Error(`${where} fraction input without a fraction key`);
+            const { n, d } = item.answer;
+            expect(d / gcd(Math.abs(n), d), `${where} the key ${n}/${d} is a whole number`).not.toBe(1);
+            expect(check(item.answer, `${n}/${d}`).correct, where).toBe(true);
+            if (Math.abs(n) > d) expect(check(item.answer, `${n < 0 ? "-" : ""}${Math.floor(Math.abs(n) / d)} ${Math.abs(n) % d}/${d}`).correct, `${where} mixed`).toBe(true);
+          }
+          if (id === "m.stats.center" && /median/.test(words(item))) {
+            const data = /: ([\d, ]+)\./.exec(words(item))![1].split(", ").map(Number);
+            const s = sorted(data), k = data.length;
+            // An even count has two different middle values; an odd count does not keep its median in the middle unsorted.
+            if (k % 2 === 0) expect(s[k / 2 - 1], `${where} equal middle values`).not.toBe(s[k / 2]);
+            else expect(data[(k - 1) / 2], `${where} the median is already in the middle`).not.toBe(s[(k - 1) / 2]);
+          }
+        }
+    });
+  });
+});
+
+// ---------- the wording and realism fixes ----------
+
+const PLACES: Record<string, number> = { ones: 0, tenths: 1, hundredths: 2, thousandths: 3, unidades: 0, décimos: 1, centésimos: 2, milésimos: 3 };
+const OP_CHOICES: [RegExp, RegExp][] = [
+  [/means add|significa sumar/, /\+/],
+  [/means subtract|significa restar/, /−/],
+  [/means multiply|significa multiplicar/, /^\d+[a-z]$|[⁰¹²³⁴⁵⁶⁷⁸⁹]/],
+  [/means divide|significa dividir/, /÷/],
+];
+
+describe("grades 6–7 math strand, part two: wording and believable numbers", () => {
+  const each = (id: string, level: number, f: (item: Item, where: string, locale: "en" | "es") => void) => {
+    for (const seed of SEEDS) for (const locale of LOCALES) f(makeItem(id, level, seed, locale), `${id} L${level} seed ${seed} ${locale}`, locale);
+  };
+
+  it("m.dec.ops: the third hint works a column that regroups, or shows how the numbers line up, never a written-in zero alone", () => {
+    each("m.dec.ops", 1, (item, where) => {
+      const t = toExpr(item.prompt).replace(/ = \?$/, "");
+      const [sa, op, sb] = t.split(" ");
+      const places = (x: string) => (x.split(".")[1] ?? "").length;
+      const P = Math.max(places(sa), places(sb));
+      // place: 0 ones, 1 tenths…; a number with fewer decimal places has a written-in zero there.
+      const digitAt = (x: string, place: number) => {
+        if (place > places(x)) return { d: 0, padded: true };
+        const units = Math.round(Number(x) * 10 ** places(x));
+        return { d: Math.floor(units / 10 ** (places(x) - place)) % 10, padded: false };
+      };
+      const m = /^(\p{L}+): (\d)(?: [+−] | is less than | es menor que )(\d)/u.exec(item.hints[2]);
+      if (!m) throw new Error(`${where} hint 3 is not a column: ${item.hints[2]}`);
+      const place = PLACES[m[1].toLowerCase()];
+      expect(place, `${where} ${m[1]}`).toBeLessThanOrEqual(P);
+      const [x, y] = [digitAt(sa, place), digitAt(sb, place)];
+      expect([x.d, y.d], `${where} ${item.hints[2]} vs ${t}`).toEqual([Number(m[2]), Number(m[3])]);
+      const regroups = (u: number, v: number) => (op === "+" ? u + v >= 10 : u < v);
+      if (x.padded || y.padded) expect(regroups(x.d, y.d), `${where} a written-in zero column that does not regroup: ${item.hints[2]}`).toBe(true);
+      // Every column to its right goes through without regrouping, so this is the first one to think about.
+      for (let q = place + 1; q <= P; q++) expect(regroups(digitAt(sa, q).d, digitAt(sb, q).d), `${where} an earlier column regroups`).toBe(false);
+    });
+  });
+
+  it("m.rational.order: the read-aloud compares two numbers, and an equal pair's third hint stops at the conversion", () => {
+    each("m.rational.order", 2, (item, where) => {
+      expect(item.say, where).toMatch(/^(?:Compare .+ with .+\.|Compara .+ con .+\.)$/);
+      if (chosen(item) === "=") expect(item.hints[2], `${where} hint 3 shows they are equal`).not.toMatch(/=/);
+    });
+  });
+
+  it("m.expr.write: when the third hint names an operation, more than one choice uses it", () => {
+    each("m.expr.write", 1, (item, where) => {
+      for (const [word, uses] of OP_CHOICES)
+        if (word.test(item.hints[2])) expect(item.choices!.filter((c) => uses.test(c.label)).length, `${where} ${item.hints[2]}`).toBeGreaterThanOrEqual(2);
+      // The Spanish keeps the "less than" trap without reading as a comparison ("3 menos que k").
+      expect(words(item), where).not.toMatch(/“\d+ (?:más|menos) que [a-z]”|“[a-z] menos que \d+”/);
+    });
+    each("m.expr.write", 2, (item, where) => expect(words(item), where).not.toMatch(/\d (?:más|menos) que el producto/));
+  });
+
+  it("read-aloud and prompts agree in number and gender, and Spanish speech names the letter y", () => {
+    for (const s of MATH_6_7_MORE)
+      for (let level = 1; level <= s.levels; level++)
+        each(s.id, level, (item, where, locale) => {
+          // One degree, one point: singular (an angle written "3x + 1" is still "3 x plus 1 degrees").
+          for (const t of [item.say, words(item), ...(item.choices ?? []).map((c) => c.say ?? "")])
+            expect(t, where).not.toMatch(/(?<![\d.])(?<!x (?:plus|minus|más|menos) )1 (?:degrees|grados|points|puntos)\b|Tócala/);
+          if (locale === "es") {
+            // Text-to-speech reads a lone "y" as "and": the variable is spoken "ye".
+            expect(item.say, `${where} ${item.say}`).not.toMatch(/(?:eje|coordenada|costo|distancia|páginas|azúcar|comida) y\b|\by (?:es igual a|=)/);
+            for (const c of item.choices ?? []) expect(c.say ?? "", where).not.toMatch(/^y |\by$/);
+          }
+          if (s.id === "m.surface.area") expect(item.say, where).not.toMatch(/\d+ (?:meters|inches|feet|centimeters) and \d+ \w+ sides/);
+        });
+  });
+
+  it("the stories use believable sizes, speeds, temperatures and pay", () => {
+    each("m.volume.frac", 1, (item, where) => {
+      const edges = values(item.prompt).slice(0, 3);
+      if (/fish tank|pecera/.test(words(item))) for (const e of edges) expect(e, `${where} a tiny fish tank`).toBeGreaterThanOrEqual(8);
+      if (/ cm /.test(words(item))) for (const e of edges) expect(e, `${where} a box under 3 cm`).toBeGreaterThanOrEqual(3);
+    });
+    for (const level of [1, 2]) each("m.volume.frac", level, (item, where) => expect(values(item.prompt).slice(0, 3).every((e) => e >= 1), where).toBe(true));
+    each("m.rational.addsub", 3, (item, where) => {
+      if (/°/.test(words(item))) for (const v of nums(words(item).replace(/6 a\. ?m\./, ""))) expect(near(Math.round(v * 10), v * 10), `${where} temperature in hundredths`).toBe(true);
+    });
+    for (const level of [1, 2, 3])
+      each("m.prop.constant", level, (item, where) => {
+        if (/meters swum|metros nadados/.test(words(item))) expect(words(item), `${where} swim speed per second`).not.toMatch(/second|segundo/);
+      });
+    each("m.stats.center", 3, (item, where) => expect(words(item), where).not.toMatch(/quarter|cuarto/));
+    each("m.ineq.twostep", 3, (item, where) => {
+      if (/counselor|consejero/.test(words(item))) expect(nums(words(item))[0], `${where} weekly pay`).toBeGreaterThanOrEqual(200);
+    });
+    each("m.ineq.graph", 3, (item, where) => {
+      expect(words(item), where).not.toMatch(/seed|semillas/);
+      if (/sleeping bag|bolsa de dormir/.test(words(item))) expect(nums(words(item))[0], `${where} a rating above freezing`).toBeLessThan(0);
     });
   });
 });
