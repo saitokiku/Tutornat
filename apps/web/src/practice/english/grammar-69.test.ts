@@ -392,6 +392,17 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
       const original = words(shown.replace(/^(Original|Texto original): /, ""));
       expect(right, right).toContain(locale === "en" ? " … " : "[…]");
       expect(isSubsequence(words(right), original), `${right} drops only words`).toBe(true);
+      // The words the key drops never say who claims it: cutting "scientists believe" turns a belief
+      // into a fact.
+      const kept = words(right);
+      const dropped = original.filter((w) => {
+        const i = kept.indexOf(w);
+        if (i < 0) return true;
+        kept.splice(i, 1);
+        return false;
+      });
+      const ATTRIBUTION = /^(said|says|say|believe|believes|according|warned|warn|claim|claims|reported|think|dijo|dice|dicen|creen|cree|según|advirtieron|afirma|opinan)$/;
+      expect(dropped.filter((w) => ATTRIBUTION.test(w)), `${right} cuts an attribution`).toEqual([]);
       for (const w of tagged(e, "missing-ellipsis")) {
         expect(w, w).not.toContain("…");
         expect(isSubsequence(words(w), original), w).toBe(true);
@@ -439,6 +450,24 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
       for (const l of [right, ...wrong.map(([w]) => w)]) expect(hasPhrase(shown, l), `${shown} / ${l}`).toBe(true);
     });
     each("e.counterclaims", 1, ([shown, , , , , target]) => expect(shown, target).toContain(target!));
+    // A sentence's place in the passage must not give its role away, and a rebuttal follows the
+    // counterclaim it answers.
+    for (const locale of LOCALES) {
+      const [, , counter, rebuttal] = levels("e.counterclaims")[0].order![locale];
+      const passages = new Map<string, Map<string, number>>();
+      for (const [shown, right, , , , target] of bank("e.counterclaims", 1, locale)) {
+        if (!passages.has(shown)) passages.set(shown, new Map());
+        passages.get(shown)!.set(right, shown.indexOf(target!));
+      }
+      const places = new Map<string, Set<number>>();
+      for (const [shown, roles] of passages) {
+        const rank = [...roles.values()].sort((a, b) => a - b);
+        for (const [role, at] of roles) places.set(role, (places.get(role) ?? new Set()).add(rank.indexOf(at)));
+        expect(rank.indexOf(roles.get(rebuttal)!), `${locale} ${shown}`).toBe(rank.indexOf(roles.get(counter)!) + 1);
+      }
+      expect(passages.size, `${locale} passages`).toBeGreaterThanOrEqual(8);
+      for (const [role, at] of places) expect(at.size, `${locale} ${role} always in the same place`).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it("MLA in-text citations: the key matches MLA's pattern and the page in the source; format mistakes do not", () => {

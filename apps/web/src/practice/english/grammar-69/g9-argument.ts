@@ -9,31 +9,132 @@ import { cats, skill, type Bi, type Entry, type Cat } from "./shared";
 
 type Role = "claim" | "evidence" | "counterclaim" | "rebuttal";
 const ROLES: readonly Role[] = ["claim", "evidence", "counterclaim", "rebuttal"];
-/** Four-sentence arguments, in order: claim, evidence, counterclaim, rebuttal. */
-const ARGUMENTS_4: Bi<[string, string, string, string]>[] = [
+/**
+ * Four-sentence arguments: each role's sentence, and the order the passage puts them in. The order varies
+ * (the claim can come first, second or last), so a sentence's position never gives its role away; the
+ * rebuttal always comes right after the counterclaim it answers.
+ */
+type Argument = { order: readonly Role[]; en: Record<Role, string>; es: Record<Role, string> };
+const ARGUMENTS: Argument[] = [
   {
-    en: ["Our school should start at 8:30 instead of 7:30.", "A national survey found that most high school students do not get the sleep doctors recommend.", "Some parents worry that a later start would make after-school activities end too late.", "However, many schools that changed their start times kept their sports by moving practices a little later."],
-    es: ["Nuestra escuela debería empezar a las 8:30 en lugar de a las 7:30.", "Una encuesta nacional encontró que la mayoría de los estudiantes de preparatoria no duermen las horas que recomiendan los médicos.", "Algunos padres temen que entrar más tarde haga que las actividades después de clases terminen muy tarde.", "Sin embargo, muchas escuelas que cambiaron su horario mantuvieron sus deportes moviendo los entrenamientos un poco más tarde."],
+    order: ["evidence", "claim", "counterclaim", "rebuttal"],
+    en: {
+      claim: "Our school should start at 8:30 instead of 7:30.",
+      evidence: "A national survey found that most high school students do not get the sleep doctors recommend.",
+      counterclaim: "Some parents worry that a later start would make after-school activities end too late.",
+      rebuttal: "However, many schools that changed their start times kept their sports by moving practices a little later.",
+    },
+    es: {
+      claim: "Nuestra escuela debería empezar a las 8:30 en lugar de a las 7:30.",
+      evidence: "Una encuesta nacional encontró que la mayoría de los estudiantes de preparatoria no duermen las horas que recomiendan los médicos.",
+      counterclaim: "Algunos padres temen que entrar más tarde haga que las actividades después de clases terminen muy tarde.",
+      rebuttal: "Sin embargo, muchas escuelas que cambiaron su horario mantuvieron sus deportes moviendo los entrenamientos un poco más tarde.",
+    },
   },
   {
-    en: ["Our town should build a skate park.", "Last year, the police received more than forty complaints about skateboarders in store parking lots.", "Some residents say a skate park would cost too much.", "But a fund from the state would pay for most of the building costs."],
-    es: ["Nuestro pueblo debería construir un parque para patinetas.", "El año pasado, la policía recibió más de cuarenta quejas por patinadores en los estacionamientos de las tiendas.", "Algunos vecinos dicen que un parque así costaría demasiado.", "Pero un fondo del estado pagaría casi todo el costo de la construcción."],
+    order: ["counterclaim", "rebuttal", "evidence", "claim"],
+    en: {
+      claim: "Our town should build a skate park.",
+      evidence: "Last year, the police received more than forty complaints about skateboarders in store parking lots.",
+      counterclaim: "Some residents say a skate park would cost too much.",
+      rebuttal: "But a fund from the state would pay for most of the building costs.",
+    },
+    es: {
+      claim: "Nuestro pueblo debería construir un parque para patinetas.",
+      evidence: "El año pasado, la policía recibió más de cuarenta quejas por patinadores en los estacionamientos de las tiendas.",
+      counterclaim: "Algunos vecinos dicen que un parque para patinetas costaría demasiado.",
+      rebuttal: "Pero un fondo del estado pagaría casi todo el costo de la construcción.",
+    },
   },
   {
-    en: ["Students should be allowed to use phones at lunch.", "In a survey at our school, eight out of ten students said they use lunch to text their families about rides home.", "Some teachers argue that phones keep students from talking to each other.", "Yet the same survey showed that most students use their phones for only a few minutes of lunch."],
-    es: ["Los estudiantes deberían poder usar el celular en el almuerzo.", "En una encuesta de nuestra escuela, ocho de cada diez estudiantes dijeron que usan el almuerzo para avisar a su familia cómo regresarán a casa.", "Algunos maestros opinan que los celulares impiden que los estudiantes platiquen entre sí.", "No obstante, la misma encuesta mostró que la mayoría usa el celular solo unos minutos durante el almuerzo."],
+    order: ["claim", "evidence", "counterclaim", "rebuttal"],
+    en: {
+      claim: "Students should be allowed to use phones at lunch.",
+      evidence: "In a survey at our school, eight out of ten students said they use lunch to text their families about rides home.",
+      counterclaim: "Some teachers argue that phones keep students from talking to each other.",
+      rebuttal: "Yet the same survey showed that most students use their phones for only a few minutes of lunch.",
+    },
+    es: {
+      claim: "Los estudiantes deberían poder usar el celular en el almuerzo.",
+      evidence: "En una encuesta de nuestra escuela, ocho de cada diez estudiantes dijeron que usan el almuerzo para avisar a su familia cómo regresarán a casa.",
+      counterclaim: "Algunos maestros opinan que los celulares impiden que los estudiantes platiquen entre sí.",
+      rebuttal: "No obstante, la misma encuesta mostró que la mayoría usa el celular solo unos minutos durante el almuerzo.",
+    },
   },
   {
-    en: ["Every middle school should have a garden.", "At Lincoln Middle School, students who worked in the garden ate twice as many vegetables at lunch.", "Critics say gardens take too much time away from classes.", "In fact, teachers can use the garden to teach science and math lessons."],
-    es: ["Toda escuela secundaria debería tener un huerto.", "En la Secundaria Lincoln, los estudiantes que trabajaron en el huerto comieron el doble de verduras en el almuerzo.", "Hay quienes dicen que el huerto le quita demasiado tiempo a las clases.", "En realidad, los maestros pueden usar el huerto para dar lecciones de ciencias y matemáticas."],
+    order: ["claim", "counterclaim", "rebuttal", "evidence"],
+    en: {
+      claim: "Every middle school should have a garden.",
+      evidence: "At Lincoln Middle School, students who worked in the garden ate twice as many vegetables at lunch.",
+      counterclaim: "Critics say gardens take too much time away from classes.",
+      rebuttal: "In fact, teachers can use the garden to teach science and math lessons.",
+    },
+    es: {
+      claim: "Toda escuela secundaria debería tener un huerto.",
+      evidence: "En la Secundaria Lincoln, los estudiantes que trabajaron en el huerto comieron el doble de verduras en el almuerzo.",
+      counterclaim: "Hay quienes dicen que el huerto le quita demasiado tiempo a las clases.",
+      rebuttal: "En realidad, los maestros pueden usar el huerto para dar lecciones de ciencias y matemáticas.",
+    },
   },
   {
-    en: ["Our school should offer a free coding club after school.", "Last year, more than sixty students signed a petition asking for one.", "Some people say there are no teachers available to run it.", "However, two parents who work as programmers have offered to lead it for free."],
-    es: ["Nuestra escuela debería ofrecer un club gratuito de programación después de clases.", "El año pasado, más de sesenta estudiantes firmaron una petición para pedirlo.", "Algunas personas dicen que no hay maestros disponibles para dirigirlo.", "Sin embargo, dos madres que trabajan como programadoras se ofrecieron a dirigirlo gratis."],
+    order: ["claim", "counterclaim", "rebuttal", "evidence"],
+    en: {
+      claim: "Our school should offer a free coding club after school.",
+      evidence: "Last year, more than sixty students signed a petition asking for one.",
+      counterclaim: "Some people say there are no teachers available to run it.",
+      rebuttal: "However, two parents who work as programmers have offered to lead it for free.",
+    },
+    es: {
+      claim: "Nuestra escuela debería ofrecer un club gratuito de programación después de clases.",
+      evidence: "El año pasado, más de sesenta estudiantes firmaron una petición para pedirlo.",
+      counterclaim: "Algunas personas dicen que no hay maestros disponibles para dirigirlo.",
+      rebuttal: "Sin embargo, dos madres que trabajan como programadoras se ofrecieron a dirigirlo gratis.",
+    },
   },
   {
-    en: ["Our town should plant more trees along Main Street.", "A county study found that shaded sidewalks on Main Street were more than twenty degrees cooler on summer afternoons.", "Some store owners worry that trees would block their signs.", "Yet the trees could go between the stores, where they would not cover any signs."],
-    es: ["Nuestro pueblo debería plantar más árboles en la calle principal.", "Un estudio del condado encontró que las aceras con sombra de la calle principal estaban más de diez grados más frescas en las tardes de verano.", "Algunos comerciantes temen que los árboles tapen sus letreros.", "No obstante, los árboles podrían ir entre las tiendas, donde no taparían ningún letrero."],
+    order: ["evidence", "claim", "counterclaim", "rebuttal"],
+    en: {
+      claim: "Our town should plant more trees along Main Street.",
+      evidence: "A county study found that shaded sidewalks on Main Street were more than twenty degrees cooler on summer afternoons.",
+      counterclaim: "Some store owners worry that trees would block their signs.",
+      rebuttal: "Yet the trees could go between the stores, where they would not cover any signs.",
+    },
+    es: {
+      claim: "Nuestro pueblo debería plantar más árboles en la calle principal.",
+      evidence: "Un estudio del condado encontró que las aceras con sombra de la calle principal estaban más de diez grados más frescas en las tardes de verano.",
+      counterclaim: "Algunos comerciantes temen que los árboles tapen sus letreros.",
+      rebuttal: "No obstante, los árboles podrían ir entre las tiendas, donde no taparían ningún letrero.",
+    },
+  },
+  {
+    order: ["counterclaim", "rebuttal", "claim", "evidence"],
+    en: {
+      claim: "Our library should lend out board games.",
+      evidence: "When the library held a game night last month, more than eighty families came.",
+      counterclaim: "Some people worry that library board games would soon be missing pieces.",
+      rebuttal: "But libraries that already lend games keep each one in a sealed box and count the pieces when it comes back.",
+    },
+    es: {
+      claim: "Nuestra biblioteca debería prestar juegos de mesa.",
+      evidence: "Cuando la biblioteca organizó una noche de juegos el mes pasado, llegaron más de ochenta familias.",
+      counterclaim: "Algunas personas temen que a los juegos de mesa de la biblioteca pronto les falten piezas.",
+      rebuttal: "Pero las bibliotecas que ya prestan juegos guardan cada uno en una caja cerrada y cuentan las piezas cuando lo devuelven.",
+    },
+  },
+  {
+    order: ["evidence", "counterclaim", "rebuttal", "claim"],
+    en: {
+      claim: "Our school should add stations where students can refill water bottles.",
+      evidence: "Last year, our cafeteria sold more than five thousand plastic bottles of water.",
+      counterclaim: "Some people say refill stations would cost too much.",
+      rebuttal: "However, a parent group has already raised enough money for two of them.",
+    },
+    es: {
+      claim: "Nuestra escuela debería instalar estaciones donde los estudiantes puedan rellenar sus botellas de agua.",
+      evidence: "El año pasado, la cafetería de nuestra escuela vendió más de cinco mil botellas de agua de plástico.",
+      counterclaim: "Algunas personas dicen que las estaciones para rellenar botellas costarían demasiado.",
+      rebuttal: "Sin embargo, un grupo de padres ya reunió dinero suficiente para dos.",
+    },
   },
 ];
 
@@ -72,10 +173,10 @@ const ARGUMENT_ROLES = cats<Role>(
     es: { claim: "Afirmación", evidence: "Evidencia", counterclaim: "Contraargumento", rebuttal: "Refutación" },
   },
   { en: ROLES, es: ROLES },
-  ARGUMENTS_4.flatMap((arg) =>
-    ROLES.map((role, i) => ({
-      en: [arg.en.join(" "), role, ROLE_CLUES.en[role], ROLE_WHY.en[role], arg.en[i]] as Cat<Role>,
-      es: [arg.es.join(" "), role, ROLE_CLUES.es[role], ROLE_WHY.es[role], arg.es[i]] as Cat<Role>,
+  ARGUMENTS.flatMap(({ order, en, es }) =>
+    ROLES.map((role) => ({
+      en: [order.map((r) => en[r]).join(" "), role, ROLE_CLUES.en[role], ROLE_WHY.en[role], en[role]] as Cat<Role>,
+      es: [order.map((r) => es[r]).join(" "), role, ROLE_CLUES.es[role], ROLE_WHY.es[role], es[role]] as Cat<Role>,
     })),
   ),
 );

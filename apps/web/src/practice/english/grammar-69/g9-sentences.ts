@@ -158,7 +158,7 @@ const PARALLEL = skill(
 const SEMICOLONS: Bi<Entry>[] = [
   {
     en: ["", "The bus was late; we missed the first bell.", [["The bus was late, we missed the first bell.", "comma-splice"], ["The bus was late; because we missed the first bell.", "semicolon-before-fragment"], ["The bus was; late we missed the first bell.", "semicolon-wrong-place"]], "Are both parts complete sentences?", "Two closely related complete sentences can be joined with a semicolon; a comma alone cannot join them."],
-    es: ["", "El autobús llegó tarde; perdimos el primer timbre.", [["El autobús llegó tarde; porque perdimos el primer timbre.", "semicolon-before-fragment"], ["El autobús; llegó tarde, perdimos el primer timbre.", "semicolon-wrong-place"]], "¿Las dos partes son oraciones completas?", "El punto y coma separa dos oraciones completas y relacionadas."],
+    es: ["", "El autobús llegó tarde; entramos a clase después del timbre.", [["El autobús llegó tarde; porque entramos a clase después del timbre.", "semicolon-before-fragment"], ["El autobús; llegó tarde, entramos a clase después del timbre.", "semicolon-wrong-place"]], "¿Las dos partes son oraciones completas?", "El punto y coma separa dos oraciones completas y relacionadas."],
   },
   {
     en: ["", "It rained all day; however, the game went on.", [["It rained all day, however, the game went on.", "comma-splice"], ["It rained all day; however the game went on.", "missing-comma-after-transition"]], "“However” joins two complete sentences here.", "Put a semicolon before “however” and a comma after it."],
@@ -217,7 +217,7 @@ const SEMICOLONS: Bi<Entry>[] = [
 const COLONS: Bi<Entry>[] = [
   {
     en: ["", "Bring three things to the field trip: a lunch, a water bottle, and a jacket.", [["Bring three things to the field trip; a lunch, a water bottle, and a jacket.", "semicolon-for-colon"], ["Bring: three things to the field trip, a lunch, a water bottle, and a jacket.", "colon-after-incomplete-clause"]], "Is there a complete sentence before the list?", "A complete sentence introduces the list, so a colon comes before it."],
-    es: ["", "Querida abuela: Te escribo desde el campamento.", [["Querida abuela, te escribo desde el campamento.", "comma-after-greeting"], ["Querida abuela: te escribo desde el campamento.", "lowercase-after-greeting"]], "En español, ¿qué signo va después del saludo de una carta?", "Después del saludo de una carta van dos puntos, y el texto empieza con mayúscula, normalmente en la línea siguiente."],
+    es: ["El saludo y la primera línea de una carta:", "Querida abuela: Te escribo desde el campamento.", [["Querida abuela, te escribo desde el campamento.", "comma-after-greeting"], ["Querida abuela: te escribo desde el campamento.", "lowercase-after-greeting"]], "En español, ¿qué signo va después del saludo de una carta?", "Después del saludo de una carta van dos puntos, y el texto empieza con mayúscula, normalmente en la línea siguiente."],
   },
   {
     en: ["", "My favorite colors are blue, green, and orange.", [["My favorite colors are: blue, green, and orange.", "colon-after-incomplete-clause"], ["My favorite: colors are blue, green, and orange.", "colon-wrong-place"]], "Is “My favorite colors are” a complete sentence by itself?", "No colon goes between a verb and the words that complete it."],
@@ -237,7 +237,7 @@ const COLONS: Bi<Entry>[] = [
   },
   {
     en: ["", "The recipe calls for two spices: cinnamon and nutmeg.", [["The recipe calls for: two spices, cinnamon and nutmeg.", "colon-after-incomplete-clause"], ["The recipe: calls for two spices, cinnamon and nutmeg.", "colon-wrong-place"]], "Is there a complete sentence before the list?", "A complete sentence introduces the list, so a colon comes before it."],
-    es: ["", "Estimado señor Díaz: Le escribo para pedirle información.", [["Estimado señor Díaz, le escribo para pedirle información.", "comma-after-greeting"], ["Estimado: señor Díaz, le escribo para pedirle información.", "colon-wrong-place"]], "En español, ¿qué signo va después del saludo de una carta?", "Después del saludo de una carta van dos puntos, y el texto empieza con mayúscula."],
+    es: ["El saludo y la primera línea de una carta:", "Estimado señor Díaz: Le escribo para pedirle información.", [["Estimado señor Díaz, le escribo para pedirle información.", "comma-after-greeting"], ["Estimado: señor Díaz, le escribo para pedirle información.", "colon-wrong-place"]], "En español, ¿qué signo va después del saludo de una carta?", "Después del saludo de una carta van dos puntos, y el texto empieza con mayúscula."],
   },
   {
     en: ["", "The store sells three kinds of apples: Fuji, Gala, and Granny Smith.", [["The store sells three kinds of apples; Fuji, Gala, and Granny Smith.", "semicolon-for-colon"], ["The store sells: three kinds of apples, Fuji, Gala, and Granny Smith.", "colon-after-incomplete-clause"]], "Is there a complete sentence before the list?", "A complete sentence introduces the list, so a colon comes before it."],
@@ -265,7 +265,7 @@ const COLONS: Bi<Entry>[] = [
   },
   {
     en: ["", "The kit includes a map, a compass, and a whistle.", [["The kit includes: a map, a compass, and a whistle.", "colon-after-incomplete-clause"], ["The kit includes a map: a compass, and a whistle.", "colon-wrong-place"]], "Is “The kit includes” a complete sentence by itself?", "No colon goes between a verb and the words that complete it."],
-    es: ["", "Querido Tomás: Gracias por tu carta.", [["Querido Tomás, gracias por tu carta.", "comma-after-greeting"], ["Querido Tomás: gracias por tu carta.", "lowercase-after-greeting"]], "En español, ¿qué signo va después del saludo de una carta, y cómo empieza el texto?", "Después del saludo van dos puntos, y el texto empieza con mayúscula."],
+    es: ["El saludo y la primera línea de una carta:", "Querido Tomás: Gracias por tu carta.", [["Querido Tomás, gracias por tu carta.", "comma-after-greeting"], ["Querido Tomás: gracias por tu carta.", "lowercase-after-greeting"]], "En español, ¿qué signo va después del saludo de una carta, y cómo empieza el texto?", "Después del saludo van dos puntos, y el texto empieza con mayúscula."],
   },
   {
     en: ["", "Mia had a clear goal: to finish the marathon.", [["Mia had a clear goal; to finish the marathon.", "semicolon-for-colon"], ["Mia had: a clear goal, to finish the marathon.", "colon-after-incomplete-clause"]], "The end of the sentence explains what the goal was.", "A colon after a complete sentence introduces the explanation."],
@@ -274,7 +274,7 @@ const COLONS: Bi<Entry>[] = [
 ];
 
 const SEMICOLON_COLON = skill(
-  { id: "e.semicolon.colon", grade: "9", title: { en: "Semicolons and colons", es: "Punto y coma y dos puntos" }, standard: "L.9-10.2a", prereqs: ["e.combining.sentences"] },
+  { id: "e.semicolon.colon", grade: "9", title: { en: "Semicolons and colons", es: "Punto y coma y dos puntos" }, standard: "L.9-10.2", prereqs: ["e.combining.sentences"] },
   [
     {
       bank: SEMICOLONS,
