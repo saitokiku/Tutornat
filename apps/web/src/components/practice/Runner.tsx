@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { IconArrowRight, IconCheck, IconChat, IconLightbulb, IconX } from "@/components/icons";
 import { useTitle } from "@/components/LangSync";
 import { SkillResources } from "@/components/resources/ResourceList";
@@ -100,6 +100,8 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   const [feedback, setFeedback] = useState<Feedback>(null);
   const shownAt = useRef(0);
   const pad = useRef<HTMLDivElement>(null);
+  /** What began the last press on Hint or Show me how ("mouse", "touch", "pen"), from its pointerdown. */
+  const pressedWith = useRef("");
   const [current, setCurrent] = useState(index);
   if (current !== index) {
     const back = index !== undefined ? kept.get(index) : undefined;
@@ -175,11 +177,17 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
    * Help hands Enter back to the answer: focus returns to the pad's answer target, so an answer typed
    * before or after a hint is checked, never taken as a second hint. A tap leaves focus alone: a touch
    * screen has no Enter to take, and a phone's keyboard would rise over the hint just asked for.
+   * Which it was comes from the press, not the click: some browsers (older Safari) send the click as a
+   * plain MouseEvent with no pointer type. A click with no count (detail 0) came from the keyboard; a
+   * counted click with no mouse pointerdown before it is taken as a tap.
    */
   const toAnswer = (e: MouseEvent) => {
-    if ((e.nativeEvent as PointerEvent).pointerType === "touch") return;
+    const by = e.detail === 0 ? "keyboard" : pressedWith.current;
+    pressedWith.current = "";
+    if (by !== "keyboard" && by !== "mouse") return;
     pad.current?.querySelector<HTMLElement>("[data-answer-target]")?.focus({ preventScroll: true });
   };
+  const pressed = (e: PointerEvent) => void (pressedWith.current = e.pointerType);
   const takeHint = (e: MouseEvent) => {
     setHints(hints + 1);
     helpAct("hint", String(hints + 1));
@@ -399,12 +407,12 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
                   </Button>
                 )}
                 {!silent && hints < item.hints.length && (
-                  <Button variant="secondary" onClick={takeHint} className={secondarySize}>
+                  <Button variant="secondary" onPointerDown={pressed} onClick={takeHint} className={secondarySize}>
                     <IconLightbulb size={16} /> {hints === 0 ? t("practice.hint") : t("practice.anotherHint")}
                   </Button>
                 )}
                 {!silent && !steps && (tries >= 2 || hints >= item.hints.length) && (
-                  <Button variant="secondary" onClick={showSteps} className={secondarySize}>
+                  <Button variant="secondary" onPointerDown={pressed} onClick={showSteps} className={secondarySize}>
                     {t("practice.showHow")}
                   </Button>
                 )}

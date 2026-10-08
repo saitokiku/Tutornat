@@ -150,6 +150,29 @@ describe("Runner", () => {
     expect(screen.getByText("Right, with help.")).toBeInTheDocument();
   });
 
+  // A tap on Hint leaves focus alone, so a phone's keyboard never rises over the hint. Some browsers
+  // send that tap's click as a plain MouseEvent with no pointer type: the press decides, not the click.
+  it("a tap on Hint never focuses a typed answer, even when its click carries no pointer type", async () => {
+    const p = await learner("4");
+    const seed = seedWhere("m.frac.mixed", 1, (it) => it.input === "text" && it.hints.length >= 3);
+    const set = setOf(p, "pick", [{ skillId: "m.frac.mixed", seed, role: "main", level: 1 }]);
+    await show(set, p);
+    const field = screen.getByRole("textbox");
+    const hint = screen.getByRole("button", { name: /^Hint/ });
+    fireEvent.pointerDown(hint, { pointerType: "touch" });
+    fireEvent.click(hint, { detail: 1 });
+    expect(read().acts.filter((a) => a.kind === "hint")).toHaveLength(1);
+    expect(field).not.toHaveFocus();
+    // The keyboard (a click with no count) and the mouse hand Enter back to the answer.
+    screen.getByRole("button", { name: /Another hint/ }).focus();
+    await userEvent.keyboard("{Enter}");
+    expect(read().acts.filter((a) => a.kind === "hint")).toHaveLength(2);
+    expect(field).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: /Another hint/ }));
+    expect(read().acts.filter((a) => a.kind === "hint")).toHaveLength(3);
+    expect(field).toHaveFocus();
+  });
+
   it("a hinted fraction can be entered by touch and checked once", async () => {
     const p = await learner("3");
     const set = setOf(p, "pick", [{ skillId: "m.frac.unit", seed: 11, role: "main", level: 1 }]);

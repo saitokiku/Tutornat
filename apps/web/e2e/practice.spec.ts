@@ -60,6 +60,25 @@ for (const order of ["hint_then_typed", "typed_then_hint"] as const) {
   });
 }
 
+// A real tap on Hint (a touch pointer, then the click) leaves a typed answer unfocused, so the phone's
+// keyboard does not rise over the hint just asked for. A hardware key on the next hint hands it back.
+test("a tap on Hint leaves the typed answer alone", async ({ page, hasTouch }) => {
+  test.skip(!hasTouch, "taps need a touch screen: the phone project");
+  await family(page, "pr-tap-hint", [["Ada", "4"]]);
+  await page.getByRole("button", { name: /Ada/ }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await seedSet(page, { id: "e2e-mixed", skillId: "m.frac.mixed", seed: 1, level: 1 });
+  await page.goto("/practice/e2e-mixed");
+  const answer = page.locator("input[data-answer-target]");
+  await expect(answer).toBeVisible();
+  await page.getByRole("button", { name: /^Hint/ }).tap();
+  const another = page.getByRole("button", { name: /^Another hint/ });
+  await expect(another).toBeVisible();
+  await expect(answer).not.toBeFocused();
+  await another.press("Enter");
+  await expect(answer).toBeFocused();
+});
+
 for (const input of ["keyboard", "touch"] as const) {
   test(`hint_then_${input}_fraction_submits_once`, async ({ page }) => {
     await family(page, `pr-frac-${input}`, [["Ada", "3"]]);
