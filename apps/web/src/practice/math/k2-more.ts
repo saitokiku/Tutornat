@@ -1,7 +1,7 @@
 import type { Locale, Visual } from "@/lib/types";
 import type { Rng } from "../rng";
 import { tr } from "../text";
-import type { Choice, ItemBody, MathPart, Skill } from "../types";
+import type { Answer, Choice, ItemBody, MathPart, Skill } from "../types";
 
 // K–2 math to 1.0 depth: counting to 100, numbers to 20 and 1000, shapes, story problems, fact
 // drills, measuring, time, money, data and equal shares. Pre-readers get pictures, read-aloud lines
@@ -450,7 +450,7 @@ function shareWords(k: number, d: 2 | 3 | 4, locale: Locale, quarter = false) {
 /** The plural share name: "fourths" (or "quarters"), "cuartos". */
 const sharePl = (d: 2 | 3 | 4, locale: Locale, quarter = false) => tr(locale, quarter ? "quarters" : SHARE[d].pl[0], SHARE[d].pl[1]);
 
-/** Long, flat wholes the fraction bar stands for. `f`: feminine in Spanish. */
+/** Wholes the fraction bar stands for: long or flat things that are cut into equal strips. `f`: feminine in Spanish. */
 type Whole = { en: string; es: string; pl: Pair; f: boolean; pic?: string };
 export const WHOLES: readonly Whole[] = [
   { en: "bar", es: "barra", pl: ["bars", "barras"], f: true },
@@ -458,7 +458,7 @@ export const WHOLES: readonly Whole[] = [
   { en: "ribbon", es: "cinta", pl: ["ribbons", "cintas"], f: true, pic: "🎀" },
   { en: "loaf of bread", es: "pan", pl: ["loaves of bread", "panes"], f: false, pic: "🥖" },
   { en: "waffle", es: "wafle", pl: ["waffles", "wafles"], f: false, pic: "🧇" },
-  { en: "sandwich", es: "sándwich", pl: ["sandwiches", "sándwiches"], f: false, pic: "🥪" },
+  { en: "cucumber", es: "pepino", pl: ["cucumbers", "pepinos"], f: false, pic: "🥒" },
   { en: "log", es: "tronco", pl: ["logs", "troncos"], f: false, pic: "🪵" },
   { en: "sheet of paper", es: "hoja de papel", pl: ["sheets of paper", "hojas de papel"], f: true, pic: "📄" },
 ];
@@ -466,6 +466,8 @@ export const WHOLES: readonly Whole[] = [
 const theWhole = (w: Whole, locale: Locale) => tr(locale, `the ${w.en}`, `${w.f ? "la" : "el"} ${w.es}`);
 /** "the whole waffle" / "todo el wafle". */
 const allOf = (w: Whole, locale: Locale) => tr(locale, `the whole ${w.en}`, `${w.f ? "toda la" : "todo el"} ${w.es}`);
+/** The whole's picture and its description, when it has one (the plain bar has none). */
+const wholePic = (w: Whole, locale: Locale) => (w.pic ? { picture: w.pic, alt: tr(locale, `A ${w.en}`, `${w.f ? "Una" : "Un"} ${w.es}`) } : {});
 /** Alt text for a shaded bar standing for a whole: what is drawn, never the share's name. */
 function barAlt(w: Whole, d: number | null, shaded: number, locale: Locale) {
   const cut = d === null ? tr(locale, "cut into equal parts", "dividida en partes iguales") : tr(locale, `cut into ${d} equal parts`, `dividida en ${d} partes iguales`);
@@ -477,6 +479,28 @@ function barAlt(w: Whole, d: number | null, shaded: number, locale: Locale) {
         ? tr(locale, " 1 part is shaded.", " 1 parte está coloreada.")
         : tr(locale, ` ${shaded} parts are shaded.`, ` ${shaded} partes están coloreadas.`);
   return bar + sh;
+}
+/**
+ * Building a share on the fraction bar is checked exactly: the pad answers "shaded/parts", and only
+ * the cut the words ask for is right. By value, an uncut bar ("1/1") would pass "shade all 4 fourths"
+ * and "2/4" would pass "shade one half", so partitioning, the point of the skill, would go unchecked.
+ */
+const barAnswer = (shaded: number, parts: number): Answer => ({ kind: "text", accept: [`${shaded}/${parts}`] });
+/** The likely wrong bars for "cut into d parts, shade k": no cut, another cut, too few or too many shaded. */
+function barMisses(k: number, d: 2 | 3 | 4, cuts: readonly (2 | 3 | 4)[]) {
+  const pl = (x: 2 | 3 | 4) => SHARE[x].pl[0];
+  const other = cuts.filter((x) => x !== d);
+  const tags: (Tag | null)[] = [["1/1", "did-not-cut"]];
+  if (k === d) {
+    for (const x of other) tags.push([`${x}/${x}`, `made-${pl(x)}-not-${pl(d)}`]);
+    tags.push([`1/${d}`, "shaded-one-share-not-whole"], d > 2 ? [`${d - 1}/${d}`, "missed-a-share"] : null);
+  } else {
+    // The same amount on another cut ("2/4" for one half) is still the wrong cut.
+    for (const x of other) if ((k * x) % d === 0) tags.push([`${(k * x) / d}/${x}`, `made-${pl(x)}-not-${pl(d)}`]);
+    for (const x of other) if (k <= x) tags.push([`${k}/${x}`, `made-${pl(x)}-not-${pl(d)}`]);
+    tags.push([`${d}/${d}`, "shaded-the-whole"], k > 1 ? [`1/${d}`, "shaded-only-one-share"] : null);
+  }
+  return misses(`${k}/${d}`, tags);
 }
 
 type Ctx = { pic: string; what: Pair; f: boolean; split: Pair; use: Pair };
@@ -1410,23 +1434,28 @@ export const MATH_K_2_MORE: Skill[] = [
     content: "computed",
     levels: 3,
     generate(r, level, locale) {
+      const w = r.pick(WHOLES);
+      const W = cap(theWhole(w, locale));
       if (level === 3) {
         const kind = r.pick(["name", "compare", "count"] as const);
         const HALF: Choice = { label: tr(locale, "One half", "Una mitad"), say: tr(locale, "One half", "Una mitad") };
         const FOURTH: Choice = { label: tr(locale, "One fourth", "Un cuarto"), say: tr(locale, "One fourth", "Un cuarto") };
         if (kind === "name") {
           const d = r.pick([2, 4] as const), whole = r.bool(0.2);
-          const WHOLE: Choice = { label: tr(locale, "The whole bar", "Toda la barra"), say: tr(locale, "The whole bar", "Toda la barra") };
+          const all = cap(allOf(w, locale));
+          const WHOLE: Choice = { label: all, say: all };
           const key = whole ? WHOLE : d === 2 ? HALF : FOURTH;
           const wrong = whole
             ? [{ ...HALF, why: "named-one-share-for-whole" }, { ...FOURTH, why: "named-one-share-for-whole" }]
             : [{ ...(d === 2 ? FOURTH : HALF), why: "mixed-up-halves-and-fourths" }, { ...WHOLE, why: "named-the-whole" }];
           const shaded = whole ? d : 1;
+          const ask = tr(locale, `What part of the ${w.en} is shaded?`, `¿Qué parte ${w.f ? "de la" : "del"} ${w.es} está coloreada?`);
           return {
-            prompt: [tr(locale, "What part of the bar is shaded?", "¿Qué parte de la barra está coloreada?")],
-            say: tr(locale, "What part of the bar is shaded?", "¿Qué parte de la barra está coloreada?"),
+            prompt: [ask],
+            say: ask,
             visual: { kind: "fraction", parts: d, shaded },
-            alt: tr(locale, `A bar cut into ${d} equal parts. ${shaded} ${shaded === 1 ? "part is" : "parts are"} shaded.`, `Una barra dividida en ${d} partes iguales. ${shaded} ${shaded === 1 ? "parte está coloreada" : "partes están coloreadas"}.`),
+            ...(w.pic ? { picture: w.pic } : {}),
+            alt: barAlt(w, d, shaded, locale),
             ...choose(r, key, wrong),
             hints: [
               tr(locale, "Count the equal parts.", "Cuenta las partes iguales."),
@@ -1434,26 +1463,29 @@ export const MATH_K_2_MORE: Skill[] = [
               tr(locale, `The bar has ${d} equal parts.`, `La barra tiene ${d} partes iguales.`),
             ],
             steps: whole
-              ? [tr(locale, `All ${d} parts are shaded.`, `Las ${d} partes están coloreadas.`), tr(locale, "The whole bar is shaded.", "Toda la barra está coloreada.")]
-              : [tr(locale, `1 of ${d} equal parts is shaded.`, `1 de ${d} partes iguales está coloreada.`), tr(locale, `That is ${t2("en", SHARE[d].one)}.`, `Eso es ${t2("es", SHARE[d].one)}.`)],
+              ? [tr(locale, `All ${d} parts are shaded.`, `Las ${d} partes están coloreadas.`), tr(locale, `That is ${allOf(w, "en")}.`, `Eso es ${allOf(w, "es")}.`)]
+              : [tr(locale, `1 of ${d} equal parts is shaded.`, `1 de ${d} partes iguales está coloreada.`), tr(locale, `That is ${SHARE[d].one[0]}.`, `Eso es ${SHARE[d].one[1]}.`)],
             seconds: 10,
           };
         }
         if (kind === "compare") {
           const bigger = r.bool();
           const SAME: Choice = { label: tr(locale, "They are the same", "Son iguales"), say: tr(locale, "They are the same", "Son iguales") };
+          const [one, other] = w.f ? ["Una", "La otra"] : ["Uno", "El otro"];
           const text = tr(
             locale,
-            `Two bars are the same size. One is cut into halves. One is cut into fourths. Which share is ${bigger ? "bigger" : "smaller"}?`,
-            `Dos barras son del mismo tamaño. Una se divide en mitades. La otra se divide en cuartos. ¿Qué parte es más ${bigger ? "grande" : "pequeña"}?`,
+            `Two ${w.pl[0]} are the same size. One is cut into halves. One is cut into fourths. Which share is ${bigger ? "bigger" : "smaller"}?`,
+            `Dos ${w.pl[1]} son del mismo tamaño. ${one} se divide en mitades. ${other} se divide en cuartos. ¿Qué parte es más ${bigger ? "grande" : "pequeña"}?`,
           );
           return {
             prompt: [text],
             say: text,
+            ...wholePic(w, locale),
             ...choose(r, bigger ? HALF : FOURTH, [{ ...(bigger ? FOURTH : HALF), why: bigger ? "more-parts-means-bigger" : "fewer-parts-means-smaller" }, { ...SAME, why: "thinks-all-shares-are-equal" }]),
             hints: [
-              tr(locale, "Picture the two bars side by side.", "Imagina las dos barras una al lado de la otra."),
-              tr(locale, "More equal parts means smaller parts.", "Más partes iguales quiere decir partes más pequeñas."),
+              tr(locale, `Picture the two ${w.pl[0]} side by side.`, `Imagina ${w.f ? "las" : "los"} dos ${w.pl[1]}, ${w.f ? "una al lado de la otra" : "uno al lado del otro"}.`),
+              // The strategy without the rule that gives the answer away ("more parts means smaller parts").
+              tr(locale, `Picture each ${w.en} cut up. Which pieces look ${bigger ? "bigger" : "smaller"}?`, `Imagina cada ${w.es} ${w.f ? "cortada" : "cortado"}. ¿Qué pedazos se ven más ${bigger ? "grandes" : "pequeños"}?`),
               tr(locale, "A half is 1 of 2 parts. A fourth is 1 of 4.", "Una mitad es 1 de 2 partes. Un cuarto es 1 de 4."),
             ],
             steps: [
@@ -1464,70 +1496,70 @@ export const MATH_K_2_MORE: Skill[] = [
           };
         }
         const d = r.pick([2, 4] as const);
-        const text = d === 2 ? tr(locale, "How many halves make the whole bar?", "¿Cuántas mitades forman la barra entera?") : tr(locale, "How many fourths make the whole bar?", "¿Cuántos cuartos forman la barra entera?");
+        const text = d === 2 ? tr(locale, `How many halves make the whole ${w.en}?`, `¿Cuántas mitades forman ${allOf(w, "es")}?`) : tr(locale, `How many fourths make the whole ${w.en}?`, `¿Cuántos cuartos forman ${allOf(w, "es")}?`);
         return {
           prompt: [text],
           say: text,
           visual: { kind: "fraction", parts: d, shaded: 0 },
-          alt: tr(locale, "A bar cut into equal parts", "Una barra dividida en partes iguales"),
+          ...(w.pic ? { picture: w.pic } : {}),
+          alt: barAlt(w, null, 0, locale),
           ...numberChoices(r, d, [[1, "named-one-share"], [d === 2 ? 4 : 2, "mixed-up-halves-and-fourths"]], 4),
           hints: [
             tr(locale, "Count the equal parts.", "Cuenta las partes iguales."),
             tr(locale, "The whole is all the equal parts together.", "El entero son todas las partes iguales juntas."),
             tr(locale, "Touch each part as you count.", "Toca cada parte mientras cuentas."),
           ],
-          steps: [d === 2 ? tr(locale, "2 halves make the whole bar.", "2 mitades forman la barra entera.") : tr(locale, "4 fourths make the whole bar.", "4 cuartos forman la barra entera.")],
+          steps: [d === 2 ? tr(locale, `2 halves make ${allOf(w, "en")}.`, `2 mitades forman ${allOf(w, "es")}.`) : tr(locale, `4 fourths make ${allOf(w, "en")}.`, `4 cuartos forman ${allOf(w, "es")}.`)],
           seconds: 10,
         };
       }
       const d = r.pick([2, 4] as const);
       const quarter = d === 4 && r.bool(0.3);
       const whole = r.bool(0.25);
-      const oneEn = d === 2 ? "one half" : quarter ? "one quarter" : "one fourth";
-      const oneEs = d === 2 ? "una mitad" : "un cuarto";
-      const plEn = d === 2 ? "halves" : quarter ? "quarters" : "fourths";
-      const plEs = d === 2 ? "mitades" : "cuartos";
-      const shadeEn = whole ? (d === 2 ? "both halves" : `all 4 ${plEn}`) : oneEn;
-      const shadeEs = whole ? (d === 2 ? "las 2 mitades" : "los 4 cuartos") : oneEs;
+      const k = whole ? d : 1;
+      const share = shareWords(k, d, locale, quarter);
+      const one = shareWords(1, d, locale, quarter);
       const text =
         level === 1
-          ? whole
-            ? tr(locale, `The bar has ${d} equal parts. Shade the whole bar.`, `La barra tiene ${d} partes iguales. Colorea toda la barra.`)
-            : tr(locale, `The bar has ${d} equal parts. Shade ${oneEn}.`, `La barra tiene ${d} partes iguales. Colorea ${oneEs}.`)
-          : tr(locale, `Cut the bar into ${plEn}. Shade ${shadeEn}.`, `Divide la barra en ${plEs}. Colorea ${shadeEs}.`);
-      const wrong: (Tag | null)[] = whole
-        ? [[`1/${d}`, "shaded-one-share-not-whole"], d === 4 ? ["3/4", "missed-a-share"] : null]
-        : level === 1
-          ? d === 4
-            ? [["2/4", "shaded-too-many"], ["4/4", "shaded-the-whole"], ["3/4", "shaded-all-but-one"]]
-            : [["2/2", "shaded-the-whole"]]
-          : d === 4
-              ? [["1/2", "made-halves-not-fourths"], ["1/3", "made-thirds"], ["4/4", "shaded-the-whole"]]
-              : [["1/4", "made-fourths-not-halves"], ["1/3", "made-thirds"], ["2/2", "shaded-the-whole"]];
+          ? tr(locale, `The ${w.en} has ${d} equal parts. Shade ${whole ? allOf(w, "en") : share}.`, `${W} tiene ${d} partes iguales. Colorea ${whole ? allOf(w, "es") : share}.`)
+          : tr(locale, `Cut the ${w.en} into ${sharePl(d, "en", quarter)}. Shade ${share}.`, `Divide ${theWhole(w, "es")} en ${sharePl(d, "es")}. Colorea ${share}.`);
+      // With the parts fixed (level 1) the pad can only answer in d parts; cutting the bar yourself
+      // (level 2) can go wrong in more ways, each named.
+      const wrong =
+        level === 2
+          ? barMisses(k, d, [2, 3, 4])
+          : misses(
+              `${k}/${d}`,
+              whole
+                ? [[`1/${d}`, "shaded-one-share-not-whole"], d === 4 ? ["3/4", "missed-a-share"] : null]
+                : d === 4
+                  ? [["2/4", "shaded-too-many"], ["4/4", "shaded-the-whole"], ["3/4", "shaded-all-but-one"]]
+                  : [["2/2", "shaded-the-whole"]],
+            );
       return {
         prompt: [text],
         say: text,
+        ...wholePic(w, locale),
         input: "fraction-bar",
         pad: level === 1 ? { kind: "fraction-bar", parts: d, maxParts: 4 } : { kind: "fraction-bar", maxParts: 4 },
-        answer: { kind: "fraction", n: whole ? d : 1, d },
-        wrong: misses(whole ? `${d}/${d}` : `1/${d}`, wrong),
+        answer: barAnswer(k, d),
+        wrong,
         hints:
           level === 1
             ? [
                 tr(locale, "Equal parts are the same size.", "Las partes iguales son del mismo tamaño."),
-                tr(locale, `${d} equal parts make the whole bar.`, `${d} partes iguales forman la barra entera.`),
-                whole
-                  ? tr(locale, "Shade the parts one at a time.", "Colorea las partes una por una.")
-                  : tr(locale, `${cap(oneEn)} is 1 of the ${d} equal parts.`, `${cap(oneEs)} es 1 de las ${d} partes iguales.`),
+                tr(locale, `${d} equal parts make the whole ${w.en}.`, `${d} partes iguales forman ${allOf(w, "es")}.`),
+                whole ? tr(locale, "Shade the parts one at a time.", "Colorea las partes una por una.") : tr(locale, `${cap(one)} is 1 of the ${d} equal parts.`, `${cap(one)} es 1 de las ${d} partes iguales.`),
               ]
             : [
-                tr(locale, `${cap(plEn)} means ${d} equal parts.`, `${cap(plEs)} quiere decir ${d} partes iguales.`),
+                tr(locale, `${cap(sharePl(d, "en", quarter))} means ${d} equal parts.`, `${cap(sharePl(d, "es"))} quiere decir ${d} partes iguales.`),
                 tr(locale, `First make ${d} equal parts. Then shade.`, `Primero haz ${d} partes iguales. Luego colorea.`),
                 tr(locale, `Choose ${d} parts for the bar.`, `Elige ${d} partes para la barra.`),
               ],
-        steps: whole
-          ? [tr(locale, `The bar has ${d} equal parts.`, `La barra tiene ${d} partes iguales.`), tr(locale, `Shade all ${d}: the whole bar.`, `Colorea las ${d}: toda la barra.`)]
-          : [tr(locale, `The bar has ${d} equal parts.`, `La barra tiene ${d} partes iguales.`), tr(locale, `Shade 1 part: ${oneEn}.`, `Colorea 1 parte: ${oneEs}.`)],
+        steps: [
+          level === 1 ? tr(locale, `${W} has ${d} equal parts.`, `${W} tiene ${d} partes iguales.`) : tr(locale, `Cut the bar into ${d} equal parts.`, `Divide la barra en ${d} partes iguales.`),
+          whole ? tr(locale, `Shade all ${d}: ${allOf(w, "en")}.`, `Colorea las ${d}: ${allOf(w, "es")}.`) : tr(locale, `Shade 1 part: ${one}.`, `Colorea 1 parte: ${one}.`),
+        ],
         seconds: level === 1 ? 10 : 15,
       };
     },
@@ -2526,31 +2558,39 @@ export const MATH_K_2_MORE: Skill[] = [
     generate(r, level, locale) {
       const D = [2, 3, 4] as const;
       const one = (d: 2 | 3 | 4, why?: string): Choice => ({ label: cap(t2(locale, SHARE[d].one)), say: cap(t2(locale, SHARE[d].one)), ...(why ? { why } : {}) });
+      const w = r.pick(WHOLES);
       if (level === 1) {
         const d = r.pick([2, 3, 3, 4] as const);
         const sh = SHARE[d];
-        // Some items shade the whole bar: two halves, three thirds, four fourths.
+        // Some items shade the whole (two halves, three thirds, four fourths); some shade more than one
+        // share (2 thirds, 3 fourths), which 2.G.A.3's "describe the shares" allows.
         const whole = r.bool(0.3);
-        const allEn = d === 2 ? "both halves" : `all ${d} ${sh.pl[0]}`;
-        const allEs = `${sh.f ? "las" : "los"} ${d} ${sh.pl[1]}`;
-        const text = tr(locale, `Cut the bar into ${sh.pl[0]}. Shade ${whole ? allEn : sh.one[0]}.`, `Divide la barra en ${sh.pl[1]}. Colorea ${whole ? allEs : sh.one[1]}.`);
+        const k = whole ? d : d > 2 && r.bool(0.35) ? r.int(2, d - 1) : 1;
+        const text = tr(locale, `Cut the ${w.en} into ${sh.pl[0]}. Shade ${shareWords(k, d, "en")}.`, `Divide ${theWhole(w, "es")} en ${sh.pl[1]}. Colorea ${shareWords(k, d, "es")}.`);
         return {
           prompt: [text],
           say: text,
+          ...wholePic(w, locale),
           input: "fraction-bar",
           pad: { kind: "fraction-bar", maxParts: 4 },
-          answer: { kind: "fraction", n: whole ? d : 1, d },
-          wrong: whole
-            ? misses(`${d}/${d}`, [[`1/${d}`, "shaded-one-share-not-whole"], [`${d - 1}/${d}`, "missed-a-share"]])
-            : misses(`1/${d}`, [...D.filter((x) => x !== d).map((x): Tag => [`1/${x}`, `made-${SHARE[x].pl[0]}-not-${sh.pl[0]}`]), [`${d}/${d}`, "shaded-the-whole"]]),
+          answer: barAnswer(k, d),
+          wrong: barMisses(k, d, D),
           hints: [
             tr(locale, `${cap(sh.pl[0])} means ${d} equal parts.`, `${cap(sh.pl[1])} quiere decir ${d} partes iguales.`),
-            whole ? tr(locale, `Make ${d} equal parts, then shade every part.`, `Haz ${d} partes iguales y colorea todas.`) : tr(locale, `Make ${d} equal parts, then shade one.`, `Haz ${d} partes iguales y colorea una.`),
+            k === d
+              ? tr(locale, `Make ${d} equal parts, then shade every part.`, `Haz ${d} partes iguales y colorea todas.`)
+              : k === 1
+                ? tr(locale, `Make ${d} equal parts, then shade one.`, `Haz ${d} partes iguales y colorea una.`)
+                : tr(locale, `Make ${d} equal parts, then shade ${k}.`, `Haz ${d} partes iguales y colorea ${k}.`),
             tr(locale, `Choose ${d} parts for the bar.`, `Elige ${d} partes para la barra.`),
           ],
           steps: [
-            tr(locale, `The bar has ${d} equal parts.`, `La barra tiene ${d} partes iguales.`),
-            whole ? tr(locale, `${d} ${sh.pl[0]} make the whole bar.`, `${d} ${sh.pl[1]} forman la barra entera.`) : tr(locale, `1 part is ${sh.one[0]}.`, `1 parte es ${sh.one[1]}.`),
+            tr(locale, `Cut the bar into ${d} equal parts.`, `Divide la barra en ${d} partes iguales.`),
+            k === d
+              ? tr(locale, `${d} ${sh.pl[0]} make ${allOf(w, "en")}.`, `${d} ${sh.pl[1]} forman ${allOf(w, "es")}.`)
+              : k === 1
+                ? tr(locale, `Shade 1 part: ${sh.one[0]}.`, `Colorea 1 parte: ${sh.one[1]}.`)
+                : tr(locale, `Shade ${k} parts: ${k} ${sh.pl[0]}.`, `Colorea ${k} partes: ${k} ${sh.pl[1]}.`),
           ],
           seconds: 15,
         };
@@ -2558,17 +2598,14 @@ export const MATH_K_2_MORE: Skill[] = [
       if (level === 2) {
         const d = r.pick(D);
         const sh = SHARE[d];
-        const pic = {
-          visual: { kind: "fraction" as const, parts: d, shaded: 1 },
-          alt: tr(locale, `A bar cut into ${d} equal parts. 1 part is shaded.`, `Una barra dividida en ${d} partes iguales. 1 parte está coloreada.`),
-        };
+        const pic = { visual: { kind: "fraction" as const, parts: d, shaded: 1 }, ...(w.pic ? { picture: w.pic } : {}), alt: barAlt(w, d, 1, locale) };
         if (r.bool()) {
           const lab = (k: number, why?: string): Choice => {
             const label = `${k} ${k === 1 ? t2(locale, sh.sg) : t2(locale, sh.pl)}`;
             return { label, say: label, ...(why ? { why } : {}) };
           };
           const shadedSay = tr(locale, `${cap(sh.one[0])} is shaded.`, `${cap(sh.one[1])} está ${sh.f ? "coloreada" : "coloreado"}.`);
-          const ask = tr(locale, `How many ${sh.pl[0]} make the whole bar?`, `¿${sh.f ? "Cuántas" : "Cuántos"} ${sh.pl[1]} forman la barra entera?`);
+          const ask = tr(locale, `How many ${sh.pl[0]} make the whole ${w.en}?`, `¿${sh.f ? "Cuántas" : "Cuántos"} ${sh.pl[1]} forman ${allOf(w, "es")}?`);
           return {
             prompt: [`${shadedSay} ${ask}`],
             say: `${shadedSay} ${ask}`,
@@ -2579,13 +2616,14 @@ export const MATH_K_2_MORE: Skill[] = [
               tr(locale, `The whole is all the ${sh.pl[0]} together.`, `El entero son ${sh.f ? "todas las" : "todos los"} ${sh.pl[1]} ${sh.f ? "juntas" : "juntos"}.`),
               tr(locale, "Touch each part as you count.", "Toca cada parte mientras cuentas."),
             ],
-            steps: [tr(locale, `The bar has ${d} equal parts.`, `La barra tiene ${d} partes iguales.`), tr(locale, `${d} ${sh.pl[0]} make the whole bar.`, `${d} ${sh.pl[1]} forman la barra entera.`)],
+            steps: [tr(locale, `The bar has ${d} equal parts.`, `La barra tiene ${d} partes iguales.`), tr(locale, `${d} ${sh.pl[0]} make ${allOf(w, "en")}.`, `${d} ${sh.pl[1]} forman ${allOf(w, "es")}.`)],
             seconds: 10,
           };
         }
+        const ask = tr(locale, `What part of the ${w.en} is shaded?`, `¿Qué parte ${w.f ? "de la" : "del"} ${w.es} está coloreada?`);
         return {
-          prompt: [tr(locale, "What part of the bar is shaded?", "¿Qué parte de la barra está coloreada?")],
-          say: tr(locale, "What part of the bar is shaded?", "¿Qué parte de la barra está coloreada?"),
+          prompt: [ask],
+          say: ask,
           ...pic,
           ...choose(r, one(d), D.filter((x) => x !== d).map((x) => one(x, x === d - 1 ? "named-by-the-unshaded-parts" : "mixed-up-share-names"))),
           hints: [
@@ -2614,7 +2652,8 @@ export const MATH_K_2_MORE: Skill[] = [
           ...choose(r, one(bigger ? d1 : d2), [one(bigger ? d2 : d1, bigger ? "more-parts-means-bigger" : "fewer-parts-means-smaller"), { label: same, say: same, why: "thinks-all-shares-are-equal" }]),
           hints: [
             tr(locale, "Picture the two bars side by side.", "Imagina las dos barras una al lado de la otra."),
-            tr(locale, "More equal parts means smaller parts.", "Más partes iguales quiere decir partes más pequeñas."),
+            // The strategy without the rule that gives the answer away ("more parts means smaller parts").
+            tr(locale, `Picture each bar cut up. Which pieces look ${bigger ? "bigger" : "smaller"}?`, `Imagina cada barra cortada. ¿Qué pedazos se ven más ${bigger ? "grandes" : "pequeños"}?`),
             tr(locale, `${cap(s1.one[0])} is 1 of ${d1} parts. ${cap(s2.one[0])} is 1 of ${d2}.`, `${cap(s1.one[1])} es 1 de ${d1} partes. ${cap(s2.one[1])} es 1 de ${d2}.`),
           ],
           steps: [

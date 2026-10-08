@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Locale } from "@/lib/types";
-import { answerText, check } from "../answer";
+import { barText } from "@/components/practice/pad-math";
+import { answerText, check, misconceptionOf } from "../answer";
 import { evaluate, parse } from "../expr";
 import { makeItem } from "../skills";
-import type { Answer, Item } from "../types";
+import type { Answer, Item, Pad } from "../types";
 import { EVENTS, MATH_K_2_MORE, NAMES, ROW_STORIES, SHAPES, STORY_10, STORY_100, STORY_THREE, type Pair, type ShapeEntry, type Story } from "./k2-more";
 
 // K–2 to 1.0 depth. Every key is re-derived here by a different route than the generator used:
@@ -55,10 +56,6 @@ const PADDED = new Set<string>(["number-line", "fraction-bar", "clock"]);
 function num(a: Answer) {
   if (a.kind !== "number") throw new Error(`expected a number answer, got ${a.kind}`);
   return a.value;
-}
-function frac(a: Answer) {
-  if (a.kind !== "fraction") throw new Error(`expected a fraction answer, got ${a.kind}`);
-  return a;
 }
 function keyLabel(it: Item) {
   if (it.answer.kind !== "choice") throw new Error(`expected a choice answer, got ${it.answer.kind}`);
@@ -224,11 +221,12 @@ describe("K–2 math: every item", () => {
               for (const w of it.wrong ?? []) expect(Number(w.value) >= it.pad.min && Number(w.value) <= it.pad.max, `${at} wrong ${w.value} off the line`).toBe(true);
             }
             if (it.pad?.kind === "fraction-bar") {
-              const f = frac(it.answer);
-              const parts = it.pad.parts;
-              const reachable = (k: number) => (f.n * k) % f.d === 0;
-              if (parts) expect(reachable(parts), at).toBe(true);
-              else expect([2, 3, 4].slice(0, it.pad.maxParts - 1).some(reachable), at).toBe(true);
+              // Bars are checked exactly: the answer is the pad's own "shaded/parts" response, one the pad can make.
+              if (it.answer.kind !== "text") throw new Error(`${at} a bar needs an exact answer`);
+              expect(it.answer.accept.length, at).toBe(1);
+              const [n, d] = it.answer.accept[0].split("/").map(Number);
+              expect(Number.isInteger(n) && n >= 1 && n <= d && d <= it.pad.maxParts, `${at} ${it.answer.accept[0]}`).toBe(true);
+              if (it.pad.parts) expect(d, at).toBe(it.pad.parts);
             }
           }
         }
@@ -692,33 +690,94 @@ describe("m.data.picture", () => {
   });
 });
 
-describe("m.shares.halves", () => {
-  const VALUE: Record<string, [number, number]> = { "one half": [1, 2], "one fourth": [1, 4], "one quarter": [1, 4], "both halves": [2, 2], "all 4 fourths": [4, 4], "all 4 quarters": [4, 4], "the whole bar": [1, 1] };
-  const PARTS: Record<string, number> = { halves: 2, fourths: 4, quarters: 4 };
-  it("the shaded amount is the share the words name, by cross-multiplying", () => {
-    for (const level of [1, 2])
-      for (const it of items("m.shares.halves", level)) {
-        const t = text(it);
-        const [n, d] = VALUE[/Shade (.+)\.$/.exec(t)![1]];
-        const a = frac(it.answer);
-        expect(a.n * d).toBe(n * a.d);
-        if (it.pad?.kind !== "fraction-bar") throw new Error("expected a fraction bar");
-        if (level === 1) expect([it.pad.parts, a.d]).toEqual([ints(t)[0], ints(t)[0]]);
-        else expect([it.pad.parts, a.d]).toEqual([undefined, PARTS[/into (\w+)\./.exec(t)![1]]]);
+// Equal shares built on the fraction bar, read back from the words with this file's own tables.
+const SHARE_EN: Record<string, number> = { half: 2, halves: 2, third: 3, thirds: 3, fourth: 4, fourths: 4, quarter: 4, quarters: 4 };
+const SHARE_ES: Record<string, number> = { mitad: 2, mitades: 2, tercio: 3, tercios: 3, cuarto: 4, cuartos: 4 };
+/** [shaded, parts] the words ask for: "The waffle has 4 equal parts. Shade one fourth." or "Cut the log into thirds. Shade 2 thirds." */
+function barAsked(t: string, locale: Locale): [number, number] {
+  const table = locale === "es" ? SHARE_ES : SHARE_EN;
+  const fixed = locale === "es" ? /^(.+) tiene (\d) partes iguales\. Colorea (.+)\.$/.exec(t) : /^The (.+) has (\d) equal parts\. Shade (.+)\.$/.exec(t);
+  const cut = locale === "es" ? /^Divide (.+) en (\w+)\. Colorea (.+)\.$/.exec(t) : /^Cut the (.+) into (\w+)\. Shade (.+)\.$/.exec(t);
+  const m = fixed ?? cut;
+  if (!m) throw new Error(`not a bar prompt: ${t}`);
+  const parts = fixed ? Number(m[2]) : table[m[2]];
+  const what = m[3];
+  let k: RegExpExecArray | null;
+  if ((k = /^(?:one|una|un) (\w+)$/.exec(what))) return expect(table[k[1]]).toBe(parts), [1, parts];
+  if (/^both halves$/.test(what)) return expect(parts).toBe(2), [2, 2];
+  if ((k = /^(?:all |(?:las|los) )?(\d) (\w+)$/.exec(what))) return expect(table[k[2]]).toBe(parts), [Number(k[1]), parts];
+  if (/^(?:the whole |toda la |todo el )/.test(what)) return [parts, parts];
+  throw new Error(`unknown share: ${what}`);
+}
+/** Every state the bar pad can reach: [shaded, parts]. */
+function barStates(pad: Extract<Pad, { kind: "fraction-bar" }>) {
+  const out: [number, number][] = [];
+  for (const parts of pad.parts ? [pad.parts] : Array.from({ length: pad.maxParts }, (_, i) => i + 1)) for (let s = 0; s <= parts; s++) out.push([s, parts]);
+  return out;
+}
+
+describe("equal shares on the fraction bar", () => {
+  const BARS = [["m.shares.halves", 1], ["m.shares.halves", 2], ["m.shares.thirds", 1]] as const;
+  it("exactly one bar the pad can make is right, and it is the cut and shading the words ask for, in both languages", () => {
+    for (const [id, level] of BARS)
+      for (const [en, es] of both(id, level)) {
+        if (en.pad?.kind !== "fraction-bar") throw new Error(`${id} L${level} needs the bar pad`);
+        const [k, d] = barAsked(text(en), "en");
+        expect(barAsked(text(es), "es"), `${id} L${level} Spanish asks the same`).toEqual([k, d]);
+        const right = barStates(en.pad).filter(([s, p]) => check(en.answer, barText(s, p)).correct);
+        expect(right, `${id} L${level} "${text(en)}"`).toEqual([[k, d]]);
+        if (level === 1 && id === "m.shares.halves") expect(en.pad.parts).toBe(d);
+        else expect(en.pad.parts).toBeUndefined();
       }
   });
+
+  it("an uncut bar, or the same amount on another cut, is wrong and named", () => {
+    for (const [id, level] of BARS)
+      for (const it of items(id, level)) {
+        if (it.pad?.kind !== "fraction-bar") throw new Error("pad");
+        const [k, d] = barAsked(text(it), "en");
+        const states = barStates(it.pad).map(([s, p]) => barText(s, p));
+        if (!it.pad.parts) {
+          expect(check(it.answer, "1/1").correct).toBe(false);
+          expect(misconceptionOf(it, "1/1")).toBe("did-not-cut");
+          // Same amount, other cut: 2/4 for one half, 2/2 or 4/4 for all 3 thirds.
+          for (const [s, p] of barStates(it.pad)) if (p > 1 && p !== d && s * d === k * p) expect(misconceptionOf(it, barText(s, p)), `${barText(s, p)} for ${k}/${d}`).toMatch(/^made-\w+-not-\w+$/);
+        }
+        for (const w of it.wrong ?? []) {
+          expect(states, `${w.value} cannot be made on the pad`).toContain(w.value);
+          expect(misconceptionOf(it, w.value)).toBe(w.why);
+        }
+        expect(it.wrong?.length ?? 0).toBeGreaterThanOrEqual(1);
+      }
+  });
+
+  it("the whole the bar stands for varies, so a level is not a handful of items", () => {
+    for (const id of ["m.shares.halves", "m.shares.thirds"])
+      for (const level of levelsOf(id))
+        for (const locale of LOCALES) {
+          const seen = new Set(items(id, level, locale).map((it) => JSON.stringify([it.prompt, it.visual, it.picture])));
+          expect(seen.size, `${id} L${level} ${locale}`).toBeGreaterThanOrEqual(12);
+        }
+  });
+});
+
+describe("m.shares.halves", () => {
+  const PARTS: Record<string, number> = { halves: 2, fourths: 4 };
   it("level 3: names the shaded share, compares a half with a fourth, counts the shares in a whole", () => {
     for (const it of items("m.shares.halves", 3)) {
       const t = text(it);
-      if (/What part/.test(t)) {
+      let m: RegExpExecArray | null;
+      if ((m = /^What part of the (.+) is shaded\?$/.exec(t))) {
         const v = it.visual!;
         if (v.kind !== "fraction") throw new Error("expected a bar");
-        expect(keyLabel(it)).toBe(v.shaded === v.parts ? "The whole bar" : v.parts === 2 ? "One half" : "One fourth");
+        expect(keyLabel(it)).toBe(v.shaded === v.parts ? `The whole ${m[1]}` : v.parts === 2 ? "One half" : "One fourth");
       } else if (/Which share/.test(t)) {
         const half = 1 / 2, fourth = 1 / 4;
         expect(keyLabel(it)).toBe(/bigger/.test(t) === half > fourth ? "One half" : "One fourth");
+        // The hints never state the rule that answers the question.
+        for (const h of it.hints) expect(h).not.toMatch(/means smaller|means bigger/);
       } else {
-        const d = PARTS[/How many (\w+) make/.exec(t)![1]];
+        const d = PARTS[/^How many (\w+) make the whole/.exec(t)![1]];
         const v = it.visual!;
         if (v.kind !== "fraction") throw new Error("expected a bar");
         expect([Number(keyLabel(it)), v.parts]).toEqual([d, d]);
@@ -1031,25 +1090,24 @@ describe("m.shares.thirds", () => {
   const D: Record<string, number> = { halves: 2, thirds: 3, fourths: 4, half: 2, third: 3, fourth: 4 };
   const NAME: Record<number, string> = { 2: "half", 3: "third", 4: "fourth" };
   it("the share named in words matches the parts; more parts make smaller shares", () => {
+    const shaded = new Set<string>();
     for (const it of items("m.shares.thirds", 1)) {
-      const t = text(it);
-      const d = D[/^Cut the bar into (\w+)\./.exec(t)![1]];
-      const a = frac(it.answer);
-      const one = /Shade one (\w+)\.$/.exec(t);
-      if (one) expect([D[one[1]], a.n * d]).toEqual([d, a.d]);
-      else {
-        expect(t).toMatch(d === 2 ? /Shade both halves\.$/ : new RegExp(`Shade all ${d} \\w+\\.$`));
-        expect(a.n).toBe(a.d);
-      }
+      const [k, d] = barAsked(text(it), "en");
+      expect(answerText(it.answer)).toBe(`${k}/${d}`);
+      shaded.add(k === 1 ? "one" : k === d ? "all" : "some");
     }
+    expect([...shaded].sort()).toEqual(["all", "one", "some"]);
     for (const it of items("m.shares.thirds", 2)) {
       const v = it.visual!;
       if (v.kind !== "fraction") throw new Error("expected a bar");
       expect(v.shaded).toBe(1);
       const t = text(it);
-      const plural = /How many (\w+)/.exec(t)?.[1];
+      const plural = /How many (\w+) make the whole/.exec(t)?.[1];
       if (plural) expect([D[plural], keyLabel(it)]).toEqual([v.parts, `${v.parts} ${plural}`]);
-      else expect(keyLabel(it)).toBe(`One ${NAME[v.parts]}`);
+      else {
+        expect(t).toMatch(/^What part of the .+ is shaded\?$/);
+        expect(keyLabel(it)).toBe(`One ${NAME[v.parts]}`);
+      }
     }
     for (const it of items("m.shares.thirds", 3)) {
       const t = text(it);
@@ -1058,6 +1116,7 @@ describe("m.shares.thirds", () => {
         const [p, q] = cut;
         const bigger = 1 / p > 1 / q ? p : q, smaller = bigger === p ? q : p;
         expect(keyLabel(it)).toBe(`One ${NAME[/bigger/.test(t) ? bigger : smaller]}`);
+        for (const h of it.hints) expect(h).not.toMatch(/means smaller|means bigger/);
       } else expect(keyLabel(it)).toBe(`One ${NAME[ints(t)[0]]}`);
     }
   });
