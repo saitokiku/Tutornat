@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { MathText } from "@/components/practice/MathText";
+import { PassageView } from "@/components/practice/PassageView";
 import { VisualView } from "@/components/stage/visuals";
 import { SUBJECT_TINT } from "@/components/ui";
 import { useT } from "@/i18n";
@@ -37,6 +38,11 @@ function Side({ item, others, locale, subject }: { item: Item; others: Extras; l
       <h4 id={`${id}-${locale}`} className="text-xs font-semibold text-muted">
         {t(locale === "en" ? "trust.review.english" : "trust.review.spanish")}
       </h4>
+      {item.passage && (
+        <div lang={locale}>
+          <PassageView texts={item.passage} compact level={5} />
+        </div>
+      )}
       <p lang={locale} className="text-body font-medium text-ink">
         <MathText parts={item.prompt} />
       </p>

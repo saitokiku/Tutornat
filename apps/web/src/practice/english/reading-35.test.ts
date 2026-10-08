@@ -11,6 +11,8 @@ import { ENGLISH_READING_3_5, TAGS } from "./reading-35";
 // a first-person story really uses I/yo outside its dialogue and a third-person one never does; the
 // passages really fall in their length bands. Then many seeds per level in both languages: each item
 // is matched back to its passage and question by its text, and the key must be that question's answer.
+// The passage is the item's `passage`, set apart from the question so headings and boxes look like
+// what they are; the prompt is only the question.
 
 const LOCALES = ["en", "es"] as const;
 type L = (typeof LOCALES)[number];
@@ -74,6 +76,7 @@ describe("grades 3–5 reading: strand shape", () => {
   it("has 45 original passages of all three kinds in both bands", () => {
     expect(PASSAGES.length).toBe(45);
     expect(new Set(PASSAGES.map((p) => p.id)).size).toBe(45);
+    for (const l of LOCALES) expect(new Set(PASSAGES.map((p) => p.title[idx(l)])).size, `${l} titles`).toBe(45);
     for (const kind of ["fiction", "info", "poem"] as const)
       for (const band of [1, 2]) expect(PASSAGES.filter((p) => p.kind === kind && p.band === band).length, `${kind} band ${band}`).toBeGreaterThanOrEqual(4);
   });
@@ -262,13 +265,36 @@ describe("grades 3–5 reading: questions", () => {
 
 /** Finds the bank entry an item came from by its text alone (no question: the narrator item). */
 function entryOf(item: Item, l: L): { p: Passage; b?: Passage; q?: Question } {
-  const prompt = promptText(item);
-  const pair = PAIRS.find((x) => prompt.startsWith(l === "es" ? `Texto 1: ${BY_ID.get(x.a)!.title[1]}` : `Text 1: ${BY_ID.get(x.a)!.title[0]}`) && x.qs.some((q) => q.q[idx(l)] === item.say));
-  if (pair) return { p: BY_ID.get(pair.a)!, b: BY_ID.get(pair.b)!, q: pair.qs.find((q) => q.q[idx(l)] === item.say)! };
-  const p = PASSAGES.find((x) => prompt.startsWith(`${x.title[idx(l)]}\n\n${blocks(x, l)[0]}`))!;
-  expect(p, `no passage for ${prompt.slice(0, 60)}`).toBeDefined();
-  for (const b of blocks(p, l)) expect(prompt).toContain(b);
+  expect(promptText(item), "the prompt is only the question").toBe(item.say);
+  const texts = item.passage ?? [];
+  const byTitle = (title: string) => PASSAGES.find((x) => x.title[idx(l)] === title)!;
+  const [p, b] = texts.map((t) => byTitle(t.title));
+  expect(p, `no passage titled ${texts[0]?.title}`).toBeDefined();
+  texts.forEach((t, i) => checkBlocks(i ? b : p, l, t));
+  if (texts.length === 2) {
+    expect(texts.map((t) => t.label)).toEqual(l === "es" ? ["Texto 1", "Texto 2"] : ["Text 1", "Text 2"]);
+    const pair = PAIRS.find((x) => x.a === p.id && x.b === b?.id)!;
+    expect(pair, `${p.id} + ${b?.id} is not a pair`).toBeDefined();
+    return { p, b, q: pair.qs.find((q) => q.q[idx(l)] === item.say)! };
+  }
+  expect([texts.length, texts[0].label], p.id).toEqual([1, undefined]);
   return { p, q: p.qs.find((x) => x.q[idx(l)] === item.say) };
+}
+
+/**
+ * The text on screen is the whole passage in order. In an article, short unpunctuated blocks are headings,
+ * and a box is set apart: a block that opens with a short label ("Fast fact:", "Did you know?") and does
+ * not sit under a heading, or a glossary or timeline whose every line is "term: meaning".
+ */
+function checkBlocks(p: Passage, l: L, text: { title: string; blocks: { text: string; kind?: string }[] }) {
+  expect(text.blocks.map((x) => x.text), p.id).toEqual(blocks(p, l));
+  text.blocks.forEach((x, i) => {
+    const prev = blocks(p, l)[i - 1];
+    const labeled = /^¿?[\p{L}' ]{2,25}[:?…]+\s/u.test(x.text) && wordCount(x.text.split(/[:?…]/)[0]) <= 4 && prev !== undefined && !heading(prev);
+    const list = x.text.split("\n").every((line) => line.includes(": ") && line.indexOf(": ") <= 40);
+    const kind = p.kind !== "info" ? undefined : heading(x.text) ? "heading" : labeled || list ? "box" : undefined;
+    expect(x.kind, `${p.id} ${l} block ${i}: ${x.text.slice(0, 40)}`).toBe(kind);
+  });
 }
 
 /** The answer the item's bank entry says is right. */
@@ -295,7 +321,7 @@ describe.each(TABLE.map((t) => [t[0], t[4]] as const))("%s items", (id) => {
           const index = item.answer.index;
           keys.push(index);
           const labels = item.choices!.map((c) => c.label);
-          seen.get(l)!.add(`${promptText(item)}|${[...labels].sort().join("|")}`);
+          seen.get(l)!.add(`${JSON.stringify(item.passage)}|${promptText(item)}|${[...labels].sort().join("|")}`);
           expect(item.input, where).toBe("choices");
           expect(labels.length >= 2 && labels.length <= 4, where).toBe(true);
           expect(new Set(labels.map(lc)).size, `${where} ${labels}`).toBe(labels.length);

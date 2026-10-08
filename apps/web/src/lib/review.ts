@@ -169,7 +169,7 @@ export type LevelPreview = {
 };
 
 /** What makes two items the same question: words, picture, how it is answered and the key. */
-const question = (item: Item) => JSON.stringify([item.prompt, item.say, item.picture, item.alt, item.visual, item.input, item.pad, answerText(item.answer, item.choices)]);
+const question = (item: Item) => JSON.stringify([item.passage, item.prompt, item.say, item.picture, item.alt, item.visual, item.input, item.pad, answerText(item.answer, item.choices)]);
 
 /** What makes two versions of a question the same: also the choices as a set, likely wrong answers, hints and steps. */
 const version = (item: Item) =>

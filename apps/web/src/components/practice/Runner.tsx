@@ -28,6 +28,7 @@ import type { Input, Item } from "@/practice/types";
 import { AnswerInput } from "./AnswerPad";
 import { isMarkable, MarkCounters } from "./MarkCounters";
 import { MathText } from "./MathText";
+import { PassageView } from "./PassageView";
 import { nextOffer, offerTitle, planFinished, startOffer } from "./next";
 import { responseOf } from "./pad-math";
 import { SaveNotice } from "./SaveNotice";
@@ -177,12 +178,18 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
   // problem's id, so recording an answer (which rewrites the store) does not repeat any of this.
   const itemId = item?.id;
   const itemSay = item?.say;
+  const reading = !!item?.passage;
   useEffect(() => {
     if (!itemId) return;
     shownAt.current = Date.now();
     if (young && itemSay) speakText(itemSay, learner.locale);
-    requestAnimationFrame(() => document.getElementById("problem")?.focus());
-  }, [itemId, itemSay, young, learner.locale]);
+    requestAnimationFrame(() => {
+      const problem = document.getElementById("problem");
+      // A reading passage sits above its question: focus the question but keep the passage's start in view.
+      problem?.focus({ preventScroll: reading });
+      if (reading) problem?.closest("section")?.scrollIntoView?.({ block: "start" });
+    });
+  }, [itemId, itemSay, young, learner.locale, reading]);
 
   // Finishing: mark the set done once every problem has an answer. Nothing else starts.
   useEffect(() => {
@@ -381,6 +388,11 @@ export function Runner({ set, learner, exitHref }: { set: PracticeSet; learner: 
             </p>
           )}
           <section aria-labelledby="problem" className="rounded-lg border border-border bg-panel p-5 shadow-soft sm:p-8">
+            {item.passage && (
+              <div className="mb-6 border-b border-border pb-6">
+                <PassageView texts={item.passage} />
+              </div>
+            )}
             {item.visual && !counting && (
               <div className="mb-6 flex justify-center">
                 <VisualView visual={item.visual} alt={item.alt ?? ""} tint={subjectTint} />

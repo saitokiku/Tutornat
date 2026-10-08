@@ -14,6 +14,7 @@ export function sameProblem(a: Item, b: Item): boolean {
   return (
     a.say === b.say &&
     JSON.stringify(a.prompt) === JSON.stringify(b.prompt) &&
+    JSON.stringify(a.passage ?? null) === JSON.stringify(b.passage ?? null) &&
     JSON.stringify(a.visual ?? null) === JSON.stringify(b.visual ?? null) &&
     a.picture === b.picture &&
     answerOf(a) === answerOf(b)

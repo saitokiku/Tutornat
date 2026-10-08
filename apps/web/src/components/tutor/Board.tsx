@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { IconCheck, IconChevronDown, IconChevronUp, IconPlus, IconSpeaker, IconStop } from "@/components/icons";
 import { MathText } from "@/components/practice/MathText";
+import { PassageView } from "@/components/practice/PassageView";
 import { speakText } from "@/components/stage/hear";
 import { VisualView } from "@/components/stage/visuals";
 import { Badge, btn, Button, SUBJECT_TINT } from "@/components/ui";
@@ -351,6 +352,11 @@ export function Worked({ item }: { item: Item }) {
   const tint = SUBJECT_TINT[getSkill(item.skillId)?.subject ?? "math"];
   return (
     <div>
+      {item.passage && (
+        <div className="mb-3">
+          <PassageView texts={item.passage} compact level={4} />
+        </div>
+      )}
       {item.visual && (
         <div className="mb-2 flex justify-center">
           <VisualView visual={item.visual} alt={item.alt ?? ""} tint={tint} />

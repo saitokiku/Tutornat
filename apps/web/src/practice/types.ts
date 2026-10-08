@@ -37,10 +37,17 @@ export type Pad =
  */
 export type Choice = { label: string; say?: string; picture?: string; why?: string };
 
+/** A block of a reading text: a paragraph or stanza (line breaks kept), a heading, or a box set apart (a fact box, glossary, timeline). */
+export type PassageBlock = { text: string; kind?: "heading" | "box" };
+/** A text to read before the question. `label` names it when two texts are read together ("Text 1"). */
+export type ReadingText = { title: string; label?: string; blocks: PassageBlock[] };
+
 export type ItemBody = {
   prompt: MathPart[];
   /** What a read-aloud says. Never contains notation like "3/4" or "x^2". */
   say: string;
+  /** Reading items: the text (or two texts) to read, shown above the question; the prompt is then only the question. */
+  passage?: ReadingText[];
   visual?: Visual;
   /** One large picture (an emoji) for pre-readers, e.g. the word being sounded out. Described by `alt`. */
   picture?: string;

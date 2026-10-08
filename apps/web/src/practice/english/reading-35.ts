@@ -1,11 +1,13 @@
 import type { Locale } from "@/lib/types";
 import type { Rng } from "../rng";
 import { tr } from "../text";
-import type { Choice, ItemBody, Skill } from "../types";
+import type { Choice, ItemBody, PassageBlock, ReadingText, Skill } from "../types";
 import { PAIRS, PASSAGES, type Passage, type Question, type SkillKey, type Two } from "./passages-35";
 
 // Grades 3–5 reading comprehension. Every item is one original passage (or a pair on one topic) from
-// passages-35.ts and one question about it, so the learner reads a whole text before answering. A
+// passages-35 and one question about it, so the learner reads a whole text before answering. The
+// passage goes in the item's `passage`, set as reading matter above the question; the prompt is only
+// the question. A
 // skill's level is the text band: level 1 reads like the grade 2–3 band, level 2 like the grade 4–5
 // band. The entry is picked before anything else, so a seed lands on the same passage, question and
 // choice order in both languages. Hand-written, so content is "draft" until a teacher reviews it.
@@ -19,9 +21,6 @@ const lang = (locale: Locale, t: Two) => (locale === "es" ? t[1] : t[0]);
 const q = (s: string) => (s.startsWith("“") ? s : `“${s.replace(/“/g, "‘").replace(/”/g, "’")}”`);
 /** Quotes a choice in the middle of a sentence, without its final period. */
 const qs = (s: string) => q(s.replace(/[.]$/, ""));
-
-/** Joins the parts of a prompt; the renderer keeps the line breaks, so they show as paragraphs. */
-const para = (...lines: string[]) => lines.join("\n\n");
 
 /** What each misconception tag means; the worked solution uses it to explain the most tempting wrong choice. */
 export const TAGS: Record<string, Two> = {
@@ -133,10 +132,21 @@ const NARRATOR: Record<"first" | "third", [label: Two, why: Two]> = {
 };
 const TAKING_TURNS: Two = ["Two characters who take turns telling it", "Dos personajes que se turnan para contarla"];
 
+/** A passage as the learner sees it. In an article: headings, and boxes set apart from the body (a labeled box, or a glossary or timeline of "term: meaning" lines). */
+function reading(p: Passage, locale: Locale, label?: string): ReadingText {
+  const bs = locale === "es" ? p.es : p.en;
+  const blocks = bs.map((text, i): PassageBlock => {
+    if (p.kind !== "info") return { text };
+    if (isHeading(text)) return { text, kind: "heading" };
+    const box = (boxLabel(text) && i > 0 && !isHeading(bs[i - 1])) || text.split("\n").every((line) => /^[^:\n]{1,40}: \S/.test(line));
+    return box ? { text, kind: "box" } : { text };
+  });
+  return { title: lang(locale, p.title), ...(label ? { label } : {}), blocks };
+}
+
 const words = (s: string) => s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
-const show = (p: Passage, locale: Locale) => [lang(locale, p.title), ...(locale === "es" ? p.es : p.en)];
 /** Reading time at about 130 words a minute, plus time to answer. */
-const pace = (texts: string[]) => Math.round(20 + (words(texts.join(" ")) * 60) / 130);
+const pace = (texts: ReadingText[]) => Math.round(20 + (words(texts.flatMap((t) => [t.title, ...t.blocks.map((b) => b.text)]).join(" ")) * 60) / 130);
 
 function build(r: Rng, e: Entry, locale: Locale): ItemBody {
   if ("narrator" in e) {
@@ -149,10 +159,11 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
       { label: lang(locale, TAKING_TURNS), why: "dialogue-as-narrator" },
     ]);
     const index = choices.indexOf(key);
-    const text = show(e.p, locale);
+    const passage = [reading(e.p, locale)];
     return {
-      prompt: [para(...text, ask)],
+      prompt: [ask],
       say: ask,
+      passage,
       choices,
       input: "choices",
       answer: { kind: "choice", index },
@@ -166,15 +177,13 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
         lang(locale, NARRATOR[pov][1]),
         tr(locale, `Answer: ${key.label}`, `Respuesta: ${key.label}`),
       ],
-      seconds: pace(text),
+      seconds: pace(passage),
     };
   }
 
   const { p, b, q: question } = e;
   const ask = lang(locale, question.q);
-  const text = b
-    ? [tr(locale, `Text 1: ${lang(locale, p.title)}`, `Texto 1: ${lang(locale, p.title)}`), ...show(p, locale).slice(1), tr(locale, `Text 2: ${lang(locale, b.title)}`, `Texto 2: ${lang(locale, b.title)}`), ...show(b, locale).slice(1)]
-    : show(p, locale);
+  const passage = b ? [reading(p, locale, tr(locale, "Text 1", "Texto 1")), reading(b, locale, tr(locale, "Text 2", "Texto 2"))] : [reading(p, locale)];
   const options: Choice[] = [
     { label: lang(locale, question.right) },
     ...question.wrong.map(([en, es, why, esWhy]) => ({ label: locale === "es" ? es : en, why: locale === "es" ? (esWhy ?? why) : why })),
@@ -199,8 +208,9 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
     ? [tr(locale, `Text 1 says: ${q(ev)}`, `El texto 1 dice: ${q(ev)}`), tr(locale, `Text 2 says: ${q(ev2)}`, `El texto 2 dice: ${q(ev2)}`)]
     : [tr(locale, `The text says: ${q(ev)}`, `El texto dice: ${q(ev)}`)];
   return {
-    prompt: [para(...text, ask)],
+    prompt: [ask],
     say: ask,
+    passage,
     choices,
     input: "choices",
     answer: { kind: "choice", index: choices.indexOf(options[0]) },
@@ -212,7 +222,7 @@ function build(r: Rng, e: Entry, locale: Locale): ItemBody {
         : tr(locale, `Reread: ${q(ev)}`, `Vuelve a leer: ${q(ev)}`),
     ],
     steps: [...evidence, `${qs(locale === "es" ? tempting[1] : tempting[0])} ${lang(locale, TAGS[why])}`, tr(locale, `Answer: ${right}`, `Respuesta: ${right}`)],
-    seconds: pace(text),
+    seconds: pace(passage),
   };
 }
 
