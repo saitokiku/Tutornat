@@ -100,6 +100,41 @@ describe("SCIENCE_K_5_MORE skill list", () => {
     });
   });
 
+  it("lists every expectation a skill's levels teach, main one first, in the skill's own grade", () => {
+    const STANDARDS: Record<string, string[]> = {
+      "s.sun.warms": ["K-PS3-1", "K-PS3-2"],
+      "s.living.change": ["K-ESS2-2", "K-ESS3-3"],
+      "s.parents.young": ["1-LS1-2", "1-LS3-1"],
+      "s.plants.grow": ["2-LS2-1", "2-LS2-2"],
+      "s.landforms.water": ["2-ESS2-2", "2-ESS2-3"],
+      "s.wind.water.land": ["2-ESS2-1", "2-ESS1-1"],
+      "s.climate.data": ["3-ESS2-1", "3-ESS2-2"],
+      "s.traits.inherited": ["3-LS3-1", "3-LS3-2"],
+      "s.adapt.survive": ["3-LS4-3", "3-LS4-2"],
+      "s.magnets.static": ["3-PS2-3", "3-PS2-4"],
+      "s.motion.patterns": ["3-PS2-2", "3-PS2-1"],
+      "s.eyes.senses": ["4-PS4-2", "4-LS1-2"],
+      "s.speed.collisions": ["4-PS3-1", "4-PS3-3"],
+      "s.quakes.volcanoes": ["4-ESS3-2", "4-ESS2-2"],
+      "s.matter.mass": ["5-PS1-2", "5-PS1-1", "5-PS1-3"],
+      "s.plant.matter": ["5-LS1-1", "5-LS2-1", "5-ESS2-1"],
+      "s.sun.gravity": ["5-PS2-1", "5-ESS1-1", "5-ESS1-2"],
+    };
+    for (const s of SCIENCE_K_5_MORE) {
+      expect(s.standards, s.id).toEqual(STANDARDS[s.id]);
+      if (s.standards) expect(s.standards[0], s.id).toBe(s.standard);
+      for (const code of s.standards ?? [s.standard!]) {
+        expect(code, s.id).toMatch(/^(K|[1-5])-(PS|LS|ESS)\d-\d$/);
+        expect(code.split("-")[0], `${s.id} ${code}`).toBe(s.grade);
+      }
+    }
+    // Expectations that levels teach but no skill named before; each is now tagged somewhere.
+    const tagged = new Set([...SCIENCE_K_5, ...SCIENCE_K_5_MORE].flatMap((s) => s.standards ?? (s.standard ? [s.standard] : [])));
+    for (const code of ["2-LS2-2", "K-ESS3-3", "K-PS3-2", "2-ESS1-1", "2-ESS2-3", "3-ESS2-2", "3-PS2-4", "3-LS3-2", "3-LS4-2", "4-PS3-3", "4-LS1-2", "4-ESS2-2", "5-PS1-3", "5-ESS1-1"]) {
+      expect(tagged.has(code), code).toBe(true);
+    }
+  });
+
   it("never reuses an id from the first K–5 strand", () => {
     const first = new Set(SCIENCE_K_5.map((s) => s.id));
     for (const s of SCIENCE_K_5_MORE) expect(first.has(s.id), s.id).toBe(false);

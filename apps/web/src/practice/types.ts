@@ -91,6 +91,8 @@ export type Skill = {
    * Wherever a skill's standard is shown, these are shown too (`standardsOf`); one level's code is `standardAt`.
    */
   levelStandards?: Record<number, string>;
+  /** Every code the skill's levels teach, when there is more than one: `standard` first, then the rest. `standardsOf` includes them. */
+  standards?: string[];
   prereqs: string[];
   /** Difficulty steps inside the skill, 1-based. */
   levels: number;

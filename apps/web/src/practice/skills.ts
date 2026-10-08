@@ -18,11 +18,11 @@ const BY_ID = new Map(SKILLS.map((s) => [s.id, s]));
 
 export const getSkill = (id: string) => BY_ID.get(id);
 
-type Coded = Pick<Skill, "standard" | "levelStandards">;
+type Coded = Pick<Skill, "standard" | "levelStandards" | "standards">;
 /** Every code a skill practises: its `standard`, then any level's own code in level order, without repeats. */
 export function standardsOf(skill: Coded): string[] {
   const byLevel = Object.entries(skill.levelStandards ?? {}).sort(([a], [b]) => Number(a) - Number(b));
-  return [...new Set([skill.standard, ...byLevel.map(([, code]) => code)].filter((c): c is string => !!c))];
+  return [...new Set([skill.standard, ...byLevel.map(([, code]) => code), ...(skill.standards ?? [])].filter((c): c is string => !!c))];
 }
 /** The code one level practises. */
 export const standardAt = (skill: Coded, level: number) => skill.levelStandards?.[level] ?? skill.standard;
