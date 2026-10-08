@@ -31,9 +31,10 @@ export function weatherChart(r: Rng, level: number, locale: Locale): ItemBody {
     `A class drew a dot for each day. The first group is ${ka.en} days. The second group is ${kb.en} days.`,
     `Una clase dibujó un punto por cada día. El primer grupo son los ${days(ka, locale)}. El segundo grupo son los ${days(kb, locale)}.`,
   );
-  const visual = { visual: { kind: "dots" as const, groups: [a, b] }, markable: true };
-  // The description names the groups but not their sizes: counting is the task. Each dot is a
-  // button, so a child using a screen reader counts by moving from dot to dot.
+  // The description names the groups but not their sizes: counting is the task. Each group is named
+  // for screen readers ("Sunny days") and numbers its own dots from 1, so a child using one hears when
+  // the next group starts and counts a group by moving from dot to dot through it.
+  const visual = { visual: { kind: "dots" as const, groups: [a, b], labels: [cap(days(ka, locale)), cap(days(kb, locale))] }, markable: true };
   const alt = tr(
     locale,
     `Two groups of dots to count. The first group is for ${ka.en} days. The second group is for ${kb.en} days.`,

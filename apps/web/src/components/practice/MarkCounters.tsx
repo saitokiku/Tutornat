@@ -179,6 +179,40 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
         : t("pr.mark.dot", { n });
   const r = cell * (visual.kind === "ten-frame" ? 0.32 : 0.36);
   const count = marked.size;
+  // Named dot groups each get their own group, so moving into the next one is announced, and their
+  // dots are numbered from 1 within the group.
+  const named = visual.kind === "dots" && visual.labels ? visual.labels : undefined;
+  const nth = (k: number) => (named ? targets.slice(0, k + 1).filter((i) => counters[i].group === counters[targets[k]].group).length : k + 1);
+  const button = (i: number, k: number) => {
+    const c = counters[i];
+    const on = marked.has(i);
+    return (
+      <button
+        key={i}
+        ref={(el) => void (refs.current[k] = el)}
+        type="button"
+        tabIndex={k === focus ? 0 : -1}
+        aria-pressed={on}
+        aria-label={labelOf(c, nth(k))}
+        onClick={() => (setFocus(k), toggle(i))}
+        onKeyDown={(e) => onKey(e, k)}
+        className="absolute grid place-items-center rounded-full focus-visible:outline-offset-0"
+        style={{ left: c.x, top: c.y, width: cell, height: cell }}
+      >
+        {on && (
+          // A pencil-like mark in the rose of selection: a ring around the counter and a tick on it
+          // (white on a counter, rose in an empty box); the counter stays visible.
+          <span
+            aria-hidden="true"
+            className={`grid place-items-center rounded-full border-[3px] border-accent ${c.filled ? "text-paper" : "text-accent"}`}
+            style={{ width: r * 2 + 10, height: r * 2 + 10 }}
+          >
+            <IconCheck size={Math.round(r * 1.1)} strokeWidth={3} />
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div ref={box} className="w-full">
@@ -207,36 +241,13 @@ export function MarkCounters({ visual, alt, tint = "var(--color-math)", young }:
           })}
         </svg>
         <div role="group" aria-label={t("pr.mark.group")} className="absolute inset-0">
-          {targets.map((i, k) => {
-            const c = counters[i];
-            const on = marked.has(i);
-            return (
-              <button
-                key={i}
-                ref={(el) => void (refs.current[k] = el)}
-                type="button"
-                tabIndex={k === focus ? 0 : -1}
-                aria-pressed={on}
-                aria-label={labelOf(c, k + 1)}
-                onClick={() => (setFocus(k), toggle(i))}
-                onKeyDown={(e) => onKey(e, k)}
-                className="absolute grid place-items-center rounded-full focus-visible:outline-offset-0"
-                style={{ left: c.x, top: c.y, width: cell, height: cell }}
-              >
-                {on && (
-                  // A pencil-like mark in the rose of selection: a ring around the counter and a tick on it
-                  // (white on a counter, rose in an empty box); the counter stays visible.
-                  <span
-                    aria-hidden="true"
-                    className={`grid place-items-center rounded-full border-[3px] border-accent ${c.filled ? "text-paper" : "text-accent"}`}
-                    style={{ width: r * 2 + 10, height: r * 2 + 10 }}
-                  >
-                    <IconCheck size={Math.round(r * 1.1)} strokeWidth={3} />
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          {named
+            ? named.map((label, g) => (
+                <div key={g} role="group" aria-label={label}>
+                  {targets.map((i, k) => (counters[i].group === g ? button(i, k) : null))}
+                </div>
+              ))
+            : targets.map(button)}
         </div>
       </div>
       <div className={`mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 ${young ? "min-h-14" : "min-h-11"}`}>

@@ -57,6 +57,7 @@ const COMPUTED = SCIENCE_K_5_MORE.filter((s) => s.content === "computed");
 const pick = (p: Pair, locale: Locale) => (locale === "es" ? p[1] : p[0]);
 const promptText = (item: Item) => item.prompt.map((p) => (typeof p === "string" ? p : "blank" in p ? "▢" : "")).join("");
 const KEBAB = /^[a-z]+(-[a-z]+)+$/;
+const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 /** Every learner-facing string of an entry, as [en, es] pairs. */
 const pairsOf = (e: Entry, strat: Pair): Pair[] => [
@@ -325,8 +326,8 @@ describe.each(COMPUTED.map((s) => [s.id, s] as const))("computed %s", (id, skill
       expect(es.answer, `${where} key moved between languages`).toEqual(en.answer);
       expect(es.input, where).toBe(en.input);
       expect(es.pad, where).toEqual(en.pad);
-      // The drawing is the same in both languages; only axis labels are translated.
-      const shape = (item: Item) => (item.visual?.kind === "line-graph" ? item.visual.points : item.visual);
+      // The drawing is the same in both languages; only axis and group labels are translated.
+      const shape = (item: Item) => (item.visual?.kind === "line-graph" ? item.visual.points : item.visual?.kind === "dots" ? { ...item.visual, labels: undefined } : item.visual);
       expect(shape(es), where).toEqual(shape(en));
       if (en.input === "number-line") {
         expect(en.pad?.kind, where).toBe("number-line");
@@ -382,10 +383,14 @@ describe("s.weather.chart", () => {
     const pattern = /The first group is (\w+) days\. The second group is (\w+) days\./;
     eachItem("s.weather.chart", (en, es, level, where) => {
       const [a, b] = dotsOf(en);
-      // Counting is the task, so the picture's description never gives the counts.
+      // Counting is the task, so the picture's description never gives the counts. Instead each group
+      // is named for screen readers, in the prompt's order, and numbers its own dots.
       for (const item of [en, es]) expect(item.alt, `${where} alt gives the counts`).not.toMatch(/\d/);
       const [, first, second] = pattern.exec(promptText(en))!;
       expect(first, where).not.toBe(second);
+      expect(en.visual?.kind === "dots" && en.visual.labels, where).toEqual([`${cap(first)} days`, `${cap(second)} days`]);
+      const [, firstEs, secondEs] = /El primer grupo son los (días [^.]+)\. El segundo grupo son los (días [^.]+)\./.exec(promptText(es))!;
+      expect(es.visual?.kind === "dots" && es.visual.labels, where).toEqual([cap(firstEs), cap(secondEs)]);
       if (level === 1) {
         expect(Math.abs(a - b), where).toBeGreaterThanOrEqual(2);
         expect(keyLabel(en).toLowerCase(), where).toBe(`${a > b ? first : second} days`);

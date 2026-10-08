@@ -80,6 +80,8 @@ export type Visual =
   /**
    * Groups of counters in tidy rows of five; `crossed` counters in the last group are taken away.
    * `labels`: a name or picture under each group, so a question names a group, never "left" or "right".
+   * Screen readers hear each group's name ("Sunny days"), and tap-to-mark dots are numbered within their
+   * own group, so counting one group never reads out the total.
    */
   | { kind: "dots"; groups: number[]; crossed?: number; labels?: string[] }
   | { kind: "ten-frame"; filled: number; frames?: 1 | 2 }

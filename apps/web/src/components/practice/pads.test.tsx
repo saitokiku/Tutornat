@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -332,6 +332,18 @@ describe("MarkCounters", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear marks" }));
     expect(screen.getByText("Tap each one as you count.")).toBeInTheDocument();
     expect(screen.queryAllByRole("button", { pressed: true })).toHaveLength(0);
+  });
+
+  it("named groups are announced and number their own dots, so the last label is not the total", async () => {
+    render(<MarkCounters visual={{ kind: "dots", groups: [3, 2], labels: ["Sunny days", "Rainy days"] }} alt="Two groups of dots to count" />);
+    const sunny = screen.getByRole("group", { name: "Sunny days" });
+    const rainy = screen.getByRole("group", { name: "Rainy days" });
+    expect(within(sunny).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Dot 1", "Dot 2", "Dot 3"]);
+    expect(within(rainy).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Dot 1", "Dot 2"]);
+    // Arrows still run through every dot, from one group into the next.
+    await userEvent.tab();
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+    expect(within(rainy).getByRole("button", { name: "Dot 1" })).toHaveFocus();
   });
 
   it("taken-away dots are drawn but not counted; ten-frame boxes say whether they hold a counter", async () => {
