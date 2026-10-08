@@ -37,18 +37,18 @@ export const L1_POEMS_INFO: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "plot-not-theme", "contradicts-text"],
+        ["contradicts-text", "too-narrow", "wrong-character"],
         [
           "Which statement best expresses a theme of the poem?",
           "A person can change on the outside and still stay the same underneath.",
-          ["Rivers", "The river is loud in March, warm in June, thin in October, and frozen over in January.", "Growing up means losing the person you used to be."],
+          ["Growing up means losing the person you used to be.", "Nature changes with each season of the year.", "Older people often feel left behind when children grow up."],
           ["he will hear me underneath, still going"],
           "The river looks different every season but keeps flowing under the ice. The speaker says the same is true of them, which is the poem's message.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del poema?",
           "Una persona puede cambiar por fuera y seguir siendo la misma por dentro.",
-          ["Los ríos", "El río es ruidoso en marzo, tibio en junio, delgado en octubre y se congela en enero.", "Crecer significa perder a la persona que eras antes."],
+          ["Crecer significa perder a la persona que eras antes.", "La naturaleza cambia con cada estación del año.", "Los mayores a menudo se sienten olvidados cuando los niños crecen."],
           ["me oirá allá abajo, todavía en camino"],
           "El río se ve distinto en cada estación, pero sigue corriendo bajo el hielo. La voz poética dice que a ella le pasa lo mismo, y ese es el mensaje del poema.",
         ],
@@ -59,14 +59,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "How does the last stanza connect the speaker to the river?",
           "Like the frozen river, the speaker has changed on the surface but keeps going underneath.",
-          ["The speaker has stopped changing, the way the river stops moving once it freezes in winter.", "The speaker has grown taller this year.", "The speaker wants to follow the river all the way to the sea."],
+          ["The speaker has stopped changing, the way the river stops moving when it freezes.", "The speaker has grown taller this year.", "The speaker wants to follow the river all the way to the sea."],
           ["still traveling the way it always travels", "he will hear me underneath, still going"],
           "The river is still traveling under the ice, and the speaker is still “going” underneath a quieter surface. The last stanza ties the two together.",
         ],
         [
           "¿Cómo conecta la última estrofa a la voz poética con el río?",
           "Como el río congelado, la voz poética cambió por fuera, pero sigue en camino por dentro.",
-          ["La voz poética dejó de cambiar, igual que el río deja de moverse cuando se congela en invierno.", "La voz poética creció este año.", "La voz poética quiere seguir el río hasta llegar al mar."],
+          ["La voz poética dejó de cambiar, igual que el río deja de moverse cuando se congela.", "La voz poética creció este año.", "La voz poética quiere seguir el río hasta llegar al mar."],
           ["todavía viajando como siempre viaja", "me oirá allá abajo, todavía en camino"],
           "El río sigue viajando bajo el hielo, y la voz poética sigue “en camino” por debajo de su silencio. La última estrofa une a los dos.",
         ],
@@ -83,15 +83,15 @@ export const L1_POEMS_INFO: Passage[] = [
         ],
         [
           "En la estrofa 4, ¿qué quiere decir el poeta con “un barquito rojo a la vez”?",
-          "Las hojas que flotan parecen barquitos que el río lleva corriente abajo.",
-          ["Unos niños navegan barquitos rojos por el río en el otoño.", "En octubre el río está tan delgado que no pueden pasar barcos de verdad.", "Las hojas se hunden una por una hasta el fondo del río."],
+          "Las hojas que flotan parecen barquitos llevados por el río.",
+          ["Unos niños echan a navegar barquitos rojos por el río en el otoño.", "En octubre el río está tan delgado que no pueden pasar barcos de verdad.", "Las hojas se hunden una por una hasta el fondo del río."],
           ["Se lleva las hojas del arce,"],
           "Las hojas rojas del arce flotan en el agua como barquitos. La frase es una metáfora, no habla de barcos de verdad.",
         ],
       ),
       q(
         "words.tone",
-        ["opposite-tone", "too-narrow", "ignores-connotation"],
+        ["opposite-tone", "not-in-text", "ignores-connotation"],
         [
           "Which word best describes the speaker's attitude toward the river?",
           "Admiring",
@@ -162,18 +162,18 @@ export const L1_POEMS_INFO: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "plot-not-theme", "contradicts-text"],
+        ["plot-not-theme", "contradicts-text", "too-narrow"],
         [
           "Which statement best expresses a theme of the poem?",
-          "Love can be shown through everyday acts of care, not only through words.",
-          ["Cooking", "The grandmother makes tortillas, sews jeans, braids hair, and stays up with the speaker during a fever.", "People who love each other always say so out loud."],
+          "Love shows in everyday care, not only in words.",
+          ["The grandmother makes tortillas, sews jeans, braids hair, and stays up with the speaker during a fever.", "People who truly love each other always say so out loud.", "Years of hard work leave marks on a person's hands that never fade."],
           ["But I have learned to read her hands"],
           "The grandmother rarely says “I love you,” but every stanza shows her caring through work. The speaker learns to read that love in her hands.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del poema?",
-          "El cariño se puede mostrar con actos de cuidado de todos los días, no solo con palabras.",
-          ["La cocina", "La abuela hace tortillas, cose pantalones, trenza el pelo y se queda despierta cuando la voz poética tiene fiebre.", "Las personas que se quieren siempre lo dicen en voz alta."],
+          "El amor se muestra en el cuidado diario, no solo en palabras.",
+          ["La abuela hace tortillas, cose pantalones, trenza el pelo y se queda despierta cuando la voz poética tiene fiebre.", "Las personas que de verdad se quieren siempre lo dicen en voz alta.", "Los años de trabajo duro dejan en las manos marcas que nunca se borran."],
           ["Pero he aprendido a leer sus manos"],
           "La abuela casi nunca dice “te quiero”, pero cada estrofa muestra su cariño a través del trabajo. La voz poética aprende a leer ese amor en sus manos.",
         ],
@@ -183,14 +183,14 @@ export const L1_POEMS_INFO: Passage[] = [
         ["contradicts-text", "not-in-text", "off-point-evidence"],
         [
           "How does stanza 5 help develop the poem's theme?",
-          "It shows that she rarely says loving words, so her actions must carry her love.",
+          "She rarely says loving words, so her actions carry her love.",
           ["It shows that the grandmother is too strict and busy to care much about the speaker.", "It shows that the grandmother can barely speak because she is sick.", "It describes the Sunday mornings when the grandmother makes tortillas for the whole family."],
           ["The words seem too small for her mouth"],
           "Stanza 5 says the grandmother almost never says “I love you.” That is why the rest of the poem looks for her love in what her hands do.",
         ],
         [
           "¿Cómo ayuda la estrofa 5 a desarrollar el mensaje del poema?",
-          "Muestra que casi no dice palabras de cariño, así que sus acciones tienen que expresar su amor.",
+          "Casi no dice palabras de cariño; sus actos expresan su amor.",
           ["Muestra que la abuela es demasiado estricta y está muy ocupada para que le importe la voz poética.", "Muestra que la abuela casi no puede hablar porque está enferma.", "Describe las mañanas de domingo en que la abuela hace tortillas para toda la familia."],
           ["Las palabras parecen quedarle chicas"],
           "La estrofa 5 dice que la abuela casi nunca dice “te quiero”. Por eso el resto del poema busca su amor en lo que hacen sus manos.",
@@ -227,7 +227,7 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "En la estrofa 1, la voz poética dice que las manos “Son mapas de todo lo que han hecho”. ¿Qué significa esta metáfora?",
           "Las marcas de sus manos cuentan la historia de su trabajo.",
-          ["Sus manos tienen líneas que parecen los caminos de un mapa.", "Usa las manos para indicar el camino cuando alguien se pierde.", "Sus manos son suaves por tantos años de descanso."],
+          ["Sus manos tienen líneas que parecen los caminos de un mapa.", "Usa las manos para indicar el camino cuando alguien se pierde.", "Sus manos son suaves y lisas después de tantos años de descanso."],
           ["una cicatriz blanca de una lata en 1979"],
           "Un mapa muestra por dónde ha pasado alguien. Las cicatrices y quemaduras de las manos de la abuela muestran el trabajo que ha hecho.",
         ],
@@ -258,8 +258,8 @@ export const L1_POEMS_INFO: Passage[] = [
     genre: "informational",
     structure: {
       kind: "compare-contrast",
-      en: [["Both", "But", "while", "also differ"], "The passage sets the two animals side by side: first how they are alike, then how their snouts, teeth, color, and homes differ."],
-      es: [["Ambos", "Pero", "mientras que", "también se diferencian"], "El texto pone a los dos animales lado a lado: primero en qué se parecen y luego cómo se diferencian su hocico, sus dientes, su color y dónde viven."],
+      en: [["Both", "But", "while", "on the other hand"], "The passage sets the two animals side by side: first how they are alike, then how their snouts, teeth, color, and homes differ."],
+      es: [["Ambos", "Pero", "mientras que", "en cambio"], "El texto pone a los dos animales lado a lado: primero en qué se parecen y luego cómo se diferencian su hocico, sus dientes, su color y dónde viven."],
     },
     en: [
       {
@@ -268,7 +268,7 @@ export const L1_POEMS_INFO: Passage[] = [
           "At first glance, alligators and crocodiles look almost identical. Both are large reptiles with armored skin, powerful tails, and eyes and nostrils on top of their heads, so they can watch and breathe while the rest of the body stays hidden underwater. Both belong to ancient groups whose relatives lived alongside the dinosaurs. But if you know where to look, telling them apart is not hard.",
           "The quickest clue is the snout. An alligator has a wide, rounded snout shaped like the letter U. A crocodile's snout is narrower and more pointed, closer to a V. The teeth offer a second clue. When an alligator closes its mouth, its upper jaw covers most of its lower teeth. When a crocodile closes its mouth, a large tooth near the front of the lower jaw still shows on each side, giving it a jagged grin.",
           "Color can help too, though less reliably. Adult alligators tend to be dark, almost black, while many crocodiles are lighter, closer to olive or tan.",
-          "The two animals also differ in where they live. Alligators live mainly in fresh water, such as swamps, rivers, and lakes. Only two species exist: the American alligator of the southeastern United States and the much rarer Chinese alligator. Crocodiles are found in tropical parts of Africa, Asia, Australia, and the Americas, and many crocodiles have glands that remove extra salt from their bodies, which lets them live in salty coastal waters.",
+          "The two animals also differ in where they live. Alligators live mainly in fresh water, such as swamps, rivers, and lakes. Only two species exist: the American alligator of the southeastern United States and the much rarer Chinese alligator. Crocodiles, on the other hand, are found in tropical parts of Africa, Asia, Australia, and the Americas, and many crocodiles have glands that remove extra salt from their bodies, which lets them live in salty coastal waters.",
           "There is one place on Earth where both animals live side by side in the wild: southern Florida. There, in the brackish water where rivers meet the sea, a lucky visitor might spot an American alligator and an American crocodile on the same muddy bank, and now you would know which is which.",
         ],
       },
@@ -280,7 +280,7 @@ export const L1_POEMS_INFO: Passage[] = [
           "A primera vista, los aligátores y los cocodrilos parecen casi idénticos. Ambos son reptiles grandes con piel acorazada, colas poderosas y los ojos y las fosas nasales en lo alto de la cabeza, así que pueden mirar y respirar mientras el resto del cuerpo queda escondido bajo el agua. Ambos pertenecen a grupos muy antiguos cuyos parientes vivieron junto a los dinosaurios. Pero si sabes dónde mirar, no es difícil distinguirlos.",
           "La pista más rápida es el hocico. El aligátor tiene un hocico ancho y redondeado, con forma de U. El hocico del cocodrilo es más angosto y puntiagudo, más parecido a una V. Los dientes dan una segunda pista. Cuando el aligátor cierra la boca, la mandíbula de arriba tapa casi todos los dientes de abajo. Cuando el cocodrilo cierra la boca, todavía se ve a cada lado un diente grande cerca del frente de la mandíbula inferior, lo que le da una sonrisa dentada.",
           "El color también ayuda, aunque es menos confiable. Los aligátores adultos suelen ser oscuros, casi negros, mientras que muchos cocodrilos son más claros, de color oliva o canela.",
-          "Los dos animales también se diferencian en dónde viven. Los aligátores viven sobre todo en agua dulce, como pantanos, ríos y lagos. Solo existen dos especies: el aligátor americano, del sureste de Estados Unidos, y el aligátor chino, mucho más escaso. Los cocodrilos viven en zonas tropicales de África, Asia, Australia y América, y muchos tienen glándulas que eliminan el exceso de sal de su cuerpo, lo que les permite vivir en las aguas saladas de la costa.",
+          "Los dos animales también se diferencian en dónde viven. Los aligátores viven sobre todo en agua dulce, como pantanos, ríos y lagos. Solo existen dos especies: el aligátor americano, del sureste de Estados Unidos, y el aligátor chino, mucho más escaso. Los cocodrilos, en cambio, viven en zonas tropicales de África, Asia, Australia y América, y muchos tienen glándulas que eliminan el exceso de sal de su cuerpo, lo que les permite vivir en las aguas saladas de la costa.",
           "Hay un solo lugar en la Tierra donde los dos animales viven juntos en estado salvaje: el sur de Florida. Allí, en el agua salobre donde los ríos se juntan con el mar, un visitante con suerte podría ver un aligátor americano y un cocodrilo americano en la misma orilla lodosa, y ahora sabría cuál es cuál.",
         ],
       },
@@ -291,7 +291,7 @@ export const L1_POEMS_INFO: Passage[] = [
         ["wrong-section-role", "wrong-section-role", "not-in-text"],
         [
           "What is the main purpose of paragraph 5?",
-          "To end by naming the one place where both animals could be seen together.",
+          "To end with the one place where you could see both animals.",
           ["To explain how crocodiles get rid of the extra salt in their bodies so they can live in salty water.", "To describe the differences between the two animals' snouts and teeth.", "To argue that Florida should protect crocodiles but not alligators."],
           ["There is one place on Earth where both animals live side by side in the wild: southern Florida."],
           "After the comparison, the last paragraph brings the two animals together in one real place and invites the reader to use the clues.",
@@ -346,14 +346,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "The author says a crocodile's visible tooth gives it a “jagged grin.” What does the word “grin” add?",
           "It makes the closed mouth look like a sly smile, so readers can picture it.",
-          ["It shows that crocodiles are friendly animals that enjoy meeting people up close.", "It means that the crocodile's teeth are broken.", "It shows that the author is afraid of crocodiles."],
+          ["It shows that crocodiles are friendly animals that like people.", "It means that the crocodile's teeth are broken.", "It shows that the author is afraid of crocodiles."],
           ["giving it a jagged grin"],
           "A grin is a wide smile. Using it for a row of showing teeth gives readers a vivid, slightly sly picture of the crocodile's face.",
         ],
         [
           "El texto dice que el diente visible le da al cocodrilo una “sonrisa dentada”. ¿Qué agrega la palabra “sonrisa”?",
           "Hace que la boca cerrada parezca una sonrisa pícara, así el lector puede imaginarla.",
-          ["Muestra que los cocodrilos son animales amistosos a los que les gusta conocer gente.", "Quiere decir que los dientes del cocodrilo están rotos.", "Muestra que al autor le dan miedo los cocodrilos."],
+          ["Muestra que los cocodrilos son animales amistosos con la gente.", "Quiere decir que los dientes del cocodrilo están rotos.", "Muestra que al autor le dan miedo los cocodrilos."],
           ["lo que le da una sonrisa dentada"],
           "Una sonrisa enseña los dientes. Usar esa palabra para los dientes que se asoman le da al lector una imagen viva, un poco pícara, de la cara del cocodrilo.",
         ],
@@ -418,14 +418,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "What is the central idea of the passage?",
           "Louis Braille, blind from childhood, turned an idea about raised dots into a reading system now used worldwide.",
-          ["Charles Barbier invented a code of raised dots so that soldiers could read messages in the dark without using a light.", "Many inventions change the way people live and work.", "Louis Braille became famous in Paris for writing music for blind students."],
+          ["Charles Barbier invented a code of raised dots so soldiers could read in the dark.", "Many inventions change the way people live and work.", "Louis Braille became famous in Paris for writing music for blind students."],
           ["Today braille is used around the world"],
           "The passage traces how Louis went from slow raised-letter books to his six-dot system, and it ends with braille used around the world.",
         ],
         [
           "¿Cuál es la idea central del texto?",
           "Louis Braille, ciego desde niño, convirtió una idea de puntos en relieve en un sistema de lectura usado en todo el mundo.",
-          ["Charles Barbier inventó un código de puntos en relieve para que los soldados pudieran leer mensajes a oscuras, sin encender ninguna luz.", "Muchos inventos cambian la manera en que la gente vive y trabaja.", "Louis Braille se hizo famoso en París por componer música para estudiantes ciegos."],
+          ["Charles Barbier inventó un código de puntos en relieve para que los soldados leyeran a oscuras.", "Muchos inventos cambian la manera en que la gente vive y trabaja.", "Louis Braille se hizo famoso en París por componer música para estudiantes ciegos."],
           ["Hoy el braille se usa en todo el mundo"],
           "El texto cuenta cómo Louis pasó de los libros lentos de letras en relieve a su sistema de seis puntos, y termina con el braille usado en todo el mundo.",
         ],
@@ -436,14 +436,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "What can you infer from the fact that braille “spread mostly from student to student” before 1854?",
           "Students found the system useful before the school officially accepted it.",
-          ["The teachers taught braille in every class from the very first day.", "Braille was a secret code that only former soldiers in the army knew how to read.", "Every blind person in France had learned braille by 1830."],
+          ["The teachers taught braille in every class from the very first day.", "Braille was a secret code that only former soldiers could read.", "Every blind person in France had learned braille by 1830."],
           ["For years, the system spread mostly from student to student."],
           "The school did not adopt braille until 1854, yet students kept passing it to each other. They would only do that if they found it useful.",
         ],
         [
           "¿Qué puedes inferir del hecho de que el braille “se difundió sobre todo de estudiante a estudiante” antes de 1854?",
           "A los estudiantes les sirvió el sistema antes de que la escuela lo aceptara oficialmente.",
-          ["Los maestros enseñaron braille en todas las clases desde el primer día.", "El braille era un código secreto que solo sabían leer los antiguos soldados del ejército francés.", "Todas las personas ciegas de Francia habían aprendido braille para 1830."],
+          ["Los maestros enseñaron braille en todas las clases desde el primer día.", "El braille era un código secreto que solo sabían leer los antiguos soldados.", "Todas las personas ciegas de Francia habían aprendido braille para 1830."],
           ["Durante años, el sistema se difundió sobre todo de estudiante a estudiante."],
           "La escuela no adoptó el braille hasta 1854, pero los estudiantes se lo seguían pasando entre ellos. Solo lo harían si les resultaba útil.",
         ],
@@ -454,14 +454,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "In paragraph 2, the author says reading the old books was “painfully slow.” Why does the author choose the word “painfully”?",
           "To stress how frustrating and tiring the old way of reading was.",
-          ["To show that touching the raised letters hurt the students' fingers.", "To show that the students did not want to learn to read.", "To suggest that the old books were a fun and pleasant challenge."],
+          ["To show that touching the raised letters hurt the students' fingers.", "To show that the students did not want to learn to read.", "To suggest that the old books were a fun challenge."],
           ["reading them was painfully slow"],
           "“Painfully” here means “so much that it was hard to bear.” It stresses how slow and frustrating the old books were, which makes Louis's invention matter more.",
         ],
         [
           "En el párrafo 2, el texto dice que leer los libros viejos era “dolorosamente lento”. ¿Por qué el autor elige la palabra “dolorosamente”?",
           "Para resaltar lo frustrante y cansado que era leer de la manera antigua.",
-          ["Para mostrar que tocar las letras en relieve lastimaba los dedos de los estudiantes.", "Para mostrar que los estudiantes no querían aprender a leer.", "Para sugerir que los libros viejos eran un reto divertido y agradable."],
+          ["Para mostrar que tocar las letras en relieve lastimaba los dedos de los estudiantes.", "Para mostrar que los estudiantes no querían aprender a leer.", "Para sugerir que los libros viejos eran un reto divertido."],
           ["leerlos era dolorosamente lento"],
           "Aquí “dolorosamente” quiere decir “tanto que costaba soportarlo”. Resalta lo lentos y frustrantes que eran los libros viejos, y eso hace más importante el invento de Louis.",
         ],
@@ -474,8 +474,8 @@ export const L1_POEMS_INFO: Passage[] = [
     genre: "informational",
     structure: {
       kind: "cause-effect",
-      en: [["because", "The first cause", "As a result", "most visible effect"], "The passage explains the causes of the Dust Bowl, plowing and drought, and then its effects, from the storms to the families who left."],
-      es: [["porque", "La primera causa", "Como resultado", "El efecto más visible"], "El texto explica las causas del desastre, el arado y la sequía, y luego sus efectos, desde las tormentas hasta las familias que se fueron."],
+      en: [["because", "so even more grass", "Without roots", "As a result"], "The passage explains the causes of the Dust Bowl, plowing and drought, and then its effects, from the storms to the families who left."],
+      es: [["porque", "así que se aró", "Sin raíces", "Como resultado"], "El texto explica las causas del desastre, el arado y la sequía, y luego sus efectos, desde las tormentas hasta las familias que se fueron."],
     },
     en: [
       {
@@ -526,14 +526,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "What is the central idea of the passage?",
           "Plowing removed the grass that held the soil, and then drought and wind blew the soil away.",
-          ["Families hung wet sheets over their doorways and windows to try to keep the blowing dust out of their homes.", "Weather can change the way people live.", "The Dust Bowl was caused only by a lack of rain."],
+          ["Families hung wet sheets over doorways to keep the blowing dust out of their homes.", "Weather can change the way people live.", "The Dust Bowl was caused only by a lack of rain."],
           ["It happened because human choices and natural forces combined at the worst possible time."],
           "The passage says the Dust Bowl had more than one cause: farmers plowed up the grass, and then drought and wind did the rest.",
         ],
         [
           "¿Cuál es la idea central del texto?",
           "El arado quitó el pasto que sujetaba el suelo, y luego la sequía y el viento se llevaron la tierra.",
-          ["Las familias colgaban sábanas mojadas en puertas y ventanas para intentar que el polvo no entrara a sus casas.", "El clima puede cambiar la forma en que vive la gente.", "El desastre se debió solo a la falta de lluvia."],
+          ["Las familias colgaban sábanas mojadas en las puertas para que el polvo no entrara.", "El clima puede cambiar la forma en que vive la gente.", "El desastre se debió solo a la falta de lluvia."],
           ["Ocurrió porque las decisiones humanas y las fuerzas de la naturaleza se juntaron en el peor momento posible."],
           "El texto dice que el desastre tuvo más de una causa: los agricultores araron el pasto, y luego la sequía y el viento hicieron el resto.",
         ],
@@ -544,14 +544,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "Based on paragraph 2, why did farmers keep plowing up more grassland?",
           "Big harvests in rainy years made plowing seem safe and profitable.",
-          ["They knew a long drought was coming and wanted to harvest as much wheat as they could before it arrived.", "The government had ordered them to protect the prairie grass.", "Farmers never think about what might happen in the future."],
+          ["They knew a drought was coming and wanted one last big harvest.", "The government had ordered them to protect the prairie grass.", "Farmers never think about what might happen in the future."],
           ["While the rain lasted, harvests were huge, so even more grass was plowed under."],
           "When it rained, the wheat grew well and prices were high. Those good years made more plowing look like a smart choice.",
         ],
         [
           "Según el párrafo 2, ¿por qué los agricultores siguieron arando más pastizal?",
           "Las grandes cosechas de los años lluviosos hacían que arar pareciera seguro y rentable.",
-          ["Sabían que venía una larga sequía y querían cosechar todo el trigo posible antes de que llegara.", "El gobierno les había ordenado proteger el pasto de la pradera.", "Los agricultores nunca piensan en lo que podría pasar en el futuro."],
+          ["Sabían que venía una sequía y querían una última gran cosecha.", "El gobierno les había ordenado proteger el pasto de la pradera.", "Los agricultores nunca piensan en lo que podría pasar en el futuro."],
           ["Mientras duraron las lluvias, las cosechas fueron enormes, así que se aró todavía más pasto."],
           "Cuando llovía, el trigo crecía bien y los precios estaban altos. Esos buenos años hacían que arar más pareciera una buena decisión.",
         ],
@@ -562,14 +562,14 @@ export const L1_POEMS_INFO: Passage[] = [
         [
           "Why does the author call the dust storms “black blizzards”?",
           "Like snowstorms, they filled the air and piled up drifts, but with dark dust.",
-          ["The storms brought dark-colored snow to the Plains.", "The storms happened only in the coldest months of winter.", "The storms were milder and much shorter than the regular snowstorms of a Plains winter."],
+          ["The storms brought dark-colored snow to the Plains.", "The storms happened only in the coldest months of winter.", "The storms were milder and shorter than regular snowstorms."],
           ["Dust piled against fences like snowdrifts"],
           "A blizzard is a storm so thick you cannot see. The dust storms were like that, and the dust even piled up like snow, but it was dark soil.",
         ],
         [
           "¿Por qué el autor llama a las tormentas de polvo “ventiscas negras”?",
           "Como las tormentas de nieve, llenaban el aire y formaban montones, pero de polvo oscuro.",
-          ["Las tormentas traían nieve de color oscuro a las Llanuras.", "Las tormentas solo ocurrían en los meses más fríos del invierno.", "Las tormentas eran más suaves y mucho más cortas que las tormentas de nieve del invierno en las Llanuras."],
+          ["Las tormentas traían nieve de color oscuro a las Llanuras.", "Las tormentas solo ocurrían en los meses más fríos del invierno.", "Las tormentas eran más suaves y más cortas que las de nieve."],
           ["El polvo se amontonaba contra las cercas como montones de nieve"],
           "Una ventisca es una tormenta tan espesa que no se ve nada. Las tormentas de polvo eran así, y el polvo hasta se amontonaba como nieve, pero era tierra oscura.",
         ],
