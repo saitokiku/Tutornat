@@ -35,7 +35,8 @@ test("a family's first evening", async ({ page }, info) => {
   await page.getByRole("button", { name: /Add a learner/ }).click();
   await page.getByLabel("Name or nickname").fill("Sofía");
   await page.getByRole("combobox", { name: "Grade", exact: true }).selectOption("6");
-  await page.getByRole("radio", { name: "Español", exact: true }).press("Space");
+  // The way a parent picks it: tap the language's label (the radio itself is visually hidden).
+  await page.getByRole("group", { name: "Language" }).getByText("Español", { exact: true }).click();
   await expect(page.getByRole("radio", { name: "Español", exact: true })).toBeChecked();
   await page.getByRole("button", { name: "Add learner" }).click();
   await noOverflow(page);

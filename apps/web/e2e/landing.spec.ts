@@ -85,7 +85,7 @@ test("the privacy notice and the terms are real pages, from the parents' section
     const link = name.length > 7 ? page.getByRole("link", { name, exact: true }) : page.getByRole("contentinfo").getByRole("link", { name, exact: true });
     await link.click();
     await expect(page).toHaveURL(url);
-    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible();
     await expect(page).toHaveTitle(`${title} · KaizenEDU`);
     await noOverflow(page);
   }
