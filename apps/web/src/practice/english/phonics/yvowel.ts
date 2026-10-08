@@ -89,22 +89,24 @@ function enReadQ([w, kind]: [string, "i" | "e" | "y"]): Q {
 
 /**
  * [word, a sentence that uses it (___ where it goes), wrong spellings as "word:CODE"]; I i for y, J y for i,
- * L ll for y, D a letter dropped, E the silent h dropped. The sentence is said aloud and shown with a
- * blank, so the word is known by its meaning. No wrong spelling is another Spanish word (rallo, re, esto),
- * since a child who hears "rallo" for rayo would be right.
+ * L ll for y, D a letter dropped, E the silent h dropped, C another consonant. The sentence is said aloud
+ * and shown with a blank, so the word is known by its meaning. No wrong spelling is another Spanish word
+ * (rallo, re, esto), since a child who hears "rallo" for rayo would be right, nor an English one (my, boy).
+ * Every wrong spelling reads aloud as Spanish and sounds close to the word (rel for rey), so hint 1 is true.
  */
 const ES_READ: [string, string, string][] = [
-  ["rey", "El ___ lleva una corona.", "rei:I ry:D"], ["hoy", "___ es lunes.", "hoi:I oy:E"], ["muy", "La sopa está ___ caliente.", "mui:I my:D"],
-  ["ley", "Tirar basura va contra la ___.", "lei:I ly:D"], ["buey", "El ___ jala la carreta.", "buei:I bue:D"], ["voy", "Yo ___ a la escuela.", "voi:I vo:D"],
-  ["estoy", "Yo ___ en mi casa.", "estoi:I etoy:D"], ["soy", "Yo ___ tu amigo.", "soi:I sy:D"], ["reina", "La ___ lleva una corona.", "reyna:J rena:D"],
-  ["aire", "El globo tiene ___.", "ayre:J aie:D"], ["oigo", "Yo ___ la música.", "oygo:J ogo:D"], ["playa", "Jugamos en la ___.", "plaia:I plalla:L"],
-  ["payaso", "El ___ tiene la nariz roja.", "paiaso:I pallaso:L"], ["rayo", "Cayó un ___.", "raio:I rao:D"], ["mayo", "Mi cumpleaños es en ___.", "maio:I myo:D"],
-  ["doy", "Yo te ___ un abrazo.", "doi:I dy:D"],
+  ["rey", "El ___ lleva una corona.", "rei:I rel:C"], ["hoy", "___ es lunes.", "hoi:I oy:E"], ["muy", "La sopa está ___ caliente.", "mui:I mul:C"],
+  ["ley", "Tirar basura va contra la ___.", "lei:I ler:C"], ["buey", "El ___ jala la carreta.", "buei:I bue:D"], ["voy", "Yo ___ a la escuela.", "voi:I vor:C"],
+  ["estoy", "Yo ___ en mi casa.", "estoi:I estol:C"], ["soy", "Yo ___ tu amigo.", "soi:I loy:C"], ["reina", "La ___ lleva una corona.", "reyna:J rena:D"],
+  ["aire", "El globo tiene ___.", "ayre:J aile:C"], ["oigo", "Yo ___ la música.", "oygo:J oico:C"], ["playa", "Jugamos en la ___.", "plaia:I plalla:L"],
+  ["payaso", "El ___ tiene la nariz roja.", "paiaso:I pallaso:L"], ["rayo", "Cayó un ___.", "raio:I rado:C"], ["mayo", "Mi cumpleaños es en ___.", "maio:I mado:C"],
+  ["doy", "Yo te ___ un abrazo.", "doi:I dol:C"],
 ];
-const ES_TAG: Record<string, string> = { I: "i-for-y", J: "y-for-i", L: "ll-for-y", D: "dropped-letter", E: "dropped-silent-letter" };
+const ES_TAG: Record<string, string> = { I: "i-for-y", J: "y-for-i", L: "ll-for-y", D: "dropped-letter", E: "dropped-silent-letter", C: "wrong-consonant" };
 function esReadQ([w, sentence, spec]: [string, string, string]): Q {
   const wrong = spec.split(" ").map((s) => s.split(":"));
-  const said = sentence.replace("___", w);
+  // A blank that opens the sentence takes a capital, so the spoken and shown sentence reads right.
+  const said = sentence.replace("___", sentence.startsWith("___") ? cap(w) : w);
   // Hint 2 states the rule for this word's kind of i or y; hint 3 takes the first step. Neither spells w.
   const [rule, step] = /y$/.test(w)
     ? ["La i débil al final, después de otra vocal, se escribe y: hay.", "Esta palabra termina con el sonido de i, después de otra vocal."]
@@ -115,7 +117,7 @@ function esReadQ([w, sentence, spec]: [string, string, string]): Q {
     prompt: `${sentence} ¿Cuál está bien escrita?`,
     say: `${said} ¿Qué palabra está bien escrita?`,
     choices: [word(w), ...wrong.map(([label, code]) => word(label, ES_TAG[code]))],
-    hints: ["Todas suenan casi igual. Mira la i y la y.", rule, step],
+    hints: ["Todas suenan parecido. Mira la i y la y.", rule, step],
     steps: [said, `Se escribe ${w}.`],
   };
 }

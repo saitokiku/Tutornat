@@ -50,8 +50,8 @@ function fitQ(locale: Locale, [s, k, ...others]: Fit): Q {
     choices: [word(k), ...others.map((d) => word(d, lookTag(k, d)))],
     hints: [
       tr(locale, "Read the sentence with each word.", "Lee la oración y prueba las palabras."),
-      tr(locale, "Only a single word fits.", "Solo sirve la palabra correcta."),
-      tr(locale, `“${fill(others[0])}” makes no sense.`, `“${fill(others[0])}” suena mal.`),
+      tr(locale, "Think about the meaning of the sentence.", "Piensa qué quiere decir la oración."),
+      tr(locale, `“${fill(others[0])}” makes no sense.`, `“${fill(others[0])}” no quiere decir nada.`),
     ],
     steps: [fill(k)],
   };

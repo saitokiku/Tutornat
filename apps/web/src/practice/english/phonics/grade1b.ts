@@ -97,11 +97,12 @@ const EN_FB_GAP: Gap[] = [
   ["fist", "✊", "fi___", "st", "s:D t:D sk:B"], ["golf", "⛳", "go___", "lf", "l:D f:D lt:B"], ["bank", "🏦", "ba___", "nk", "n:D k:D ng:B"],
   ["wolf", "🐺", "wo___", "lf", "l:D f:D lt:B"],
 ];
+// The word is spoken, so no fill may sound like it: n before v says m, so invierno never offers im.
 const ES_FB_GAP: Gap[] = [
   ["isla", "🏝️", "___la", "is", "i:D si:X in:C"], ["ancla", "⚓", "___cla", "an", "a:D na:X al:C"], ["escoba", "🧹", "___coba", "es", "e:D se:X en:C"],
   ["estrella", "⭐", "___trella", "es", "e:D se:X el:C"], ["insecto", "🐛", "___secto", "in", "i:D ni:X is:C"], ["antena", "📡", "___tena", "an", "a:D na:X al:C"],
   ["enchufe", "🔌", "___chufe", "en", "e:D ne:X es:C"], ["ensalada", "🥗", "___salada", "en", "e:D ne:X el:C"], ["espejo", "🪞", "___pejo", "es", "e:D se:X en:C"],
-  ["ardilla", "🐿️", "___dilla", "ar", "a:D ra:X al:C"], ["escalera", "🪜", "___calera", "es", "e:D se:X el:C"], ["invierno", "❄️", "___vierno", "in", "i:D ni:X im:C"],
+  ["ardilla", "🐿️", "___dilla", "ar", "a:D ra:X al:C"], ["escalera", "🪜", "___calera", "es", "e:D se:X el:C"], ["invierno", "❄️", "___vierno", "in", "i:D ni:X ir:C"],
   ["astronauta", "🧑‍🚀", "___tronauta", "as", "a:D sa:X an:C"], ["elfo", "🧝", "___fo", "el", "e:D le:X en:C"], ["arcoíris", "🌈", "___coíris", "ar", "a:D ra:X al:C"],
   ["hormiga", "🐜", "h___miga", "or", "o:D ro:X ol:C"],
 ];

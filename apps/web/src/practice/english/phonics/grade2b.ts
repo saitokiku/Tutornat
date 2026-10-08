@@ -112,7 +112,7 @@ function meanQ(locale: Locale, [w, a, b, meaning, reversed]: Mean): Q {
     choices: [word(meaning), word(reversed, "reversed-meaning"), word(one, "one-part-only")],
     hints: [
       tr(locale, "Find the two small words.", "Busca las dos palabras que la forman."),
-      tr(locale, "The last word names the thing. The first tells which kind.", "La primera palabra dice qué hace. La segunda dice con qué cosa."),
+      tr(locale, "The last word names the thing. The first tells which kind.", "La primera palabra dice qué hace; la segunda, a qué cosa: un matamoscas mata moscas."),
       tr(locale, `A ${w} is a kind of ${b}.`, `La palabra ${a} dice qué hace un ${w}.`),
     ],
     steps: [tr(locale, `${a} + ${b}: ${meaning}.`, `${a} + ${b}: ${meaning}.`)],

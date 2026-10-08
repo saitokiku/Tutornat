@@ -106,7 +106,7 @@ function esEdSpellQ([inf, key, spec]: Spell): Q {
     choices: [word(key), ...others],
     hints: [
       "Después de he va una palabra que termina en -ado o -ido, o una irregular.",
-      inf.endsWith("ar") ? "Los verbos en -ar terminan en -ado." : "Los verbos en -er o -ir terminan en -ido, pero algunos cambian: de freír, frito.",
+      inf.endsWith("ar") ? "Los verbos en -ar terminan en -ado." : "Los verbos en -er o -ir terminan en -ido, pero algunos cambian: de morir, muerto.",
       // Not "does not go after he": salado does (he salado, from salar). It is only not a form of salir.
       `Con ${inf} no se dice ${others[0].label}.`,
     ],

@@ -30,13 +30,14 @@ const EN_R_GAP: Gap[] = [
   ["spider", "🕷️", "spid___", "er", "ir:Y ur:Y e:D"],
 ];
 // Spanish: one r at the start of a word sounds strong (rata); between vowels r is soft (pera) and rr strong (perro).
-// At the start, rr would sound just like r ("rratón"), so those gaps ask for the right spelling (~).
+// At the start or before a consonant, rr would sound just like r ("rratón", "cerrdo"), so those gaps ask for
+// the right spelling (~), and cerdo's hint 2 says rr is never written before a consonant.
 const ES_R_GAP: Gap[] = [
   ["ratón", "🐭", "___atón", "r", "rr:W~ l:C"], ["rana", "🐸", "___ana", "r", "rr:W~ l:C"], ["rosa", "🌹", "___osa", "r", "rr:W~ l:C"],
   ["regalo", "🎁", "___egalo", "r", "rr:W~ l:C"], ["reloj", "⌚", "___eloj", "r", "rr:W~ l:C"], ["rata", "🐀", "___ata", "r", "rr:W~ l:C"],
   ["perro", "🐶", "pe___o", "rr", "r:S l:S"], ["guitarra", "🎸", "guita___a", "rr", "r:S l:S"], ["pera", "🍐", "pe___a", "r", "rr:W l:C"],
   ["loro", "🦜", "lo___o", "r", "rr:W l:C"], ["toro", "🐂", "to___o", "r", "rr:W l:C"], ["cara", "🙂", "ca___a", "r", "rr:W l:C"],
-  ["jirafa", "🦒", "ji___afa", "r", "rr:W l:C"], ["arroz", "🍚", "a___oz", "rr", "r:S l:S"], ["cerdo", "🐷", "ce___do", "r", "rr:W l:C"],
+  ["jirafa", "🦒", "ji___afa", "r", "rr:W l:C"], ["arroz", "🍚", "a___oz", "rr", "r:S l:S"], ["cerdo", "🐷", "ce___do", "r", "rr:W~ l:C"],
   ["barril", "🛢️", "ba___il", "rr", "r:S l:S"],
 ];
 const EN_R_READ: Read[] = [
@@ -48,7 +49,7 @@ const EN_R_READ: Read[] = [
 const ES_R_FIT: [string, string, string][] = [
   ["El ___ ladra.", "perro", "pero:S parro:V"], ["Quiero ir, ___ llueve.", "pero", "perro:W pelo:C"], ["Mi papá maneja el ___.", "carro", "caro:S callo:P"],
   ["Ese juguete es muy ___.", "caro", "carro:W cara:V"], ["Subimos al ___ a ver el paisaje.", "cerro", "cero:S cerdo:C"], ["Cinco menos cinco es ___.", "cero", "cerro:W celo:C"],
-  ["Yo ___ en el parque.", "corro", "coro:S corra:M"], ["El ___ canta muy bonito.", "coro", "corro:W cono:C"], ["Este regalo es ___ ti.", "para", "parra:W pala:C"],
+  ["Yo ___ en el parque.", "corro", "coro:S corra:M"], ["El ___ habla mucho.", "loro", "lorro:W lodo:C"], ["Este regalo es ___ ti.", "para", "parra:W pala:C"],
   ["La ___ da uvas.", "parra", "para:S barra:C"], ["___ vamos a comer.", "Ahora", "Ahorra:W Ahola:C"], ["Mi papá ___ dinero.", "ahorra", "ahora:S ahorro:M"],
   ["El perro quiere ___ su hueso.", "enterrar", "enterar:S enterras:M"], ["Sirve el agua de la ___.", "jarra", "jara:S jarro:M"], ["La ___ es muy alta.", "torre", "tore:S tose:S"],
   ["La ___ come queso.", "rata", "rrata:W lata:C"],
@@ -56,8 +57,11 @@ const ES_R_FIT: [string, string, string][] = [
 const R_SAME: [string, string] = ["Er, ir, and ur often sound the same. Think how the word looks.", ""];
 const R_SOUND: [string, string] = ["The r changes the vowel sound: jar, for.", ""];
 const ES_R_RULE: [string, string] = ["", "Al principio, r suena fuerte. Entre vocales, rr suena fuerte."];
+const ES_R_BEFORE: [string, string] = ["", "Antes de otra consonante se escribe una sola r: verde."];
+/** Cerdo's r comes before a consonant, where rr is never written. */
+const esRRule = (d: Gap): [string, string] => (/^[^aeiouáéíóú]/.test(d[2].split("___")[1]) ? ES_R_BEFORE : ES_R_RULE);
 export const R_CONTROLLED: Entry[][] = [
-  gapPairs(EN_R_GAP, ES_R_GAP, (d) => (["er", "ir", "ur"].includes(d[3]) ? R_SAME : R_SOUND), () => ES_R_RULE),
+  gapPairs(EN_R_GAP, ES_R_GAP, (d) => (["er", "ir", "ur"].includes(d[3]) ? R_SAME : R_SOUND), esRRule),
   EN_R_READ.map(([w, p, s], i) => ({
     en: readQ("en", w, p, s, ["Look at the vowel right before the r.", ""]),
     es: sentenceQ("es", ES_R_FIT[i][0], ES_R_FIT[i][1], ES_R_FIT[i][2], ["", "Entre vocales, r suena suave y rr suena fuerte: pera, perra."]),

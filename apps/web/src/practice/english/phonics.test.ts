@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { check } from "../answer";
+import { answerText, check } from "../answer";
 import { makeItem } from "../skills";
 import { ENGLISH_PHONICS, PHONICS_BANKS, type Q } from "./phonics";
 
@@ -150,6 +150,8 @@ describe.each(ENGLISH_PHONICS.map((s) => [s.id, s] as const))("%s generator", (i
           expect(item.choices!.filter((c) => c.why).length, where).toBe(q.choices.length - 1);
           expect(item.choices!.map((c) => c.label).sort(), where).toEqual(q.choices.map((c) => c.label).sort());
           item.choices!.forEach((_, i) => expect(check(item.answer, i).correct, `${where} choice ${i}`).toBe(i === index));
+          // "Show me" writes the key as answerText does; the checker must accept that text too.
+          expect(check(item.answer, answerText(item.answer)).correct, `${where} answerText`).toBe(true);
           positions.add(index);
           return slot;
         });
@@ -856,6 +858,7 @@ describe("answer keys, checked another way (y as a vowel)", () => {
           "ll-for-y": d === k.replace("y", "ll"),
           "dropped-letter": kinds(k, d).has("dropped-letter"),
           "dropped-silent-letter": d === k.replace(/^h/, ""),
+          "wrong-consonant": kinds(k, d).has("wrong-consonant"),
         }[c.why!];
         expect(ok, `${k}: ${d} (${c.why})`).toBe(true);
       }
@@ -871,7 +874,7 @@ describe("content audit: items a child could answer right and be marked wrong", 
     for (const [id] of TABLE) for (const q of qs(id, "en")) for (const s of strings(q)) expect(s, `${id}: ${s}`).not.toMatch(SPANISH);
   });
 
-  it("a spelling question names the picture, or says the word in a sentence with a blank", () => {
+  it("a spelling question points to the picture, or says the word in a sentence with a blank", () => {
     let seen = 0;
     for (const [id] of TABLE)
       for (const locale of LOCALES)
@@ -880,16 +883,52 @@ describe("content audit: items a child could answer right and be marked wrong", 
           seen++;
           if (q.picture) expect(q.prompt, `${id} ${q.prompt}`).toMatch(/picture|dibujo/);
           else expect(q.prompt.split("___").length, `${id} ${q.prompt}`).toBe(2);
+          // Some keys are not the picture's own name (rey on a crown, lamb on a sheep), so the item says "goes with".
+          for (const s of [q.prompt, q.say, ...q.hints, ...q.steps]) expect(s, `${id} ${q.prompt}`).not.toMatch(/names the picture|picture's name|nombre del dibujo/);
         }
     expect(seen).toBeGreaterThan(80);
   });
 
   it("Spanish y spelling: no wrong spelling is another Spanish word that would sound right", () => {
-    const REAL = ["re", "le", "esto", "do", "so", "mu", "are", "rallo", "mallo", "ayo", "oye"];
-    for (const q of lv("e.y.vowel", 2, "es")) for (const c of q.choices.slice(1)) expect(REAL, `${key(q)}: ${c.label}`).not.toContain(norm(c.label));
+    const REAL = ["re", "le", "esto", "do", "so", "mu", "are", "rallo", "mallo", "ayo", "oye", "sol", "res", "mus", "vos", "dos", "sor", "malo", "mago", "raso"];
+    // English words a bilingual child knows.
+    const ENGLISH = ["my", "boy", "toy", "ray", "hey", "may", "day", "say", "lay", "die", "lie"];
+    for (const q of lv("e.y.vowel", 2, "es"))
+      for (const c of q.choices.slice(1)) expect([...REAL, ...ENGLISH], `${key(q)}: ${c.label}`).not.toContain(norm(c.label));
+  });
+
+  it("Spanish y spelling: every wrong spelling reads aloud as Spanish, so hint 1 (they sound alike) is true", () => {
+    for (const q of lv("e.y.vowel", 2, "es")) {
+      expect(q.hints[0]).toBe("Todas suenan parecido. Mira la i y la y.");
+      for (const c of q.choices.slice(1)) {
+        // No y after a consonant (ry, myo), and every word has a vowel.
+        expect(c.label, `${key(q)}: ${c.label}`).not.toMatch(/[^aeiouy]y/);
+        expect(c.label, `${key(q)}: ${c.label}`).toMatch(/[aeiou]/);
+      }
+    }
+  });
+
+  it("Spanish y spelling: a sentence that opens with the word is said and shown with a capital", () => {
+    for (const q of lv("e.y.vowel", 2, "es")) {
+      expect(q.steps[0], q.prompt).toMatch(/^\p{Lu}/u);
+      expect(q.say, q.prompt).toMatch(/^\p{Lu}/u);
+    }
   });
 
   it("a heard gap never offers a fill that sounds like the word unless it asks for the spelling; hint 3 says which", () => {
+    // Spanish, the whole word as said in America: rr and r sound alike except between two vowels (rrata,
+    // cerrdo); n before b, v, p or m says m (imvierno); b and v, s and z or soft c, ll and y sound alike;
+    // h is silent.
+    const esHeard = (w: string) =>
+      norm(w)
+        .replace(/(?<![aeiou])rr|rr(?![aeiou])/g, "r")
+        .replace(/n(?=[bvpm])/g, "m")
+        .replace(/v/g, "b")
+        .replace(/z|c(?=[ei])/g, "s")
+        .replace(/ll/g, "y")
+        .replace(/(?<!c)h/g, "");
+    expect(["cerrdo", "imvierno", "rrata"].map(esHeard)).toEqual(["cerdo", "invierno", "rata"].map(esHeard));
+    expect(esHeard("perro")).not.toBe(esHeard("pero"));
     // Spellings that say the same sound in the same place. ow is in two groups (snow, cow).
     const SAME = [["ai", "ay"], ["ee", "ea"], ["oa", "ow"], ["oi", "oy"], ["ou", "ow"], ["er", "ir", "ur"], ["ei", "ey"], ["wh", "w"], ["ck", "k", "c"], ["ll", "y"]];
     const GAPS: [string, number][] = [...READING.map((id): [string, number] => [id, 1]), ["e.r.controlled", 1], ["e.diphthongs", 1]];
@@ -902,6 +941,7 @@ describe("content audit: items a child could answer right and be marked wrong", 
             SAME.some((g) => g.includes(k) && g.includes(fill)) ||
             // Spanish: a word starts with a strong r, so rr there sounds just like r.
             (locale === "es" && k === "r" && fill === "rr" && shown.startsWith("___")) ||
+            (locale === "es" && esHeard(shown.replace("___", fill)) === esHeard(shown.replace("___", k))) ||
             // English: one vowel left at the end of a word says its name (be, sno), like the team.
             (locale === "en" && /^[aeiou]{2}$/.test(k) && /^[aeiou]$/.test(fill) && shown.endsWith("___"));
           const same = q.choices.slice(1).map((c) => soundsLike(c.label));
@@ -968,6 +1008,27 @@ describe("content audit: hints, pictures and speech", () => {
     for (const [id] of TABLE)
       for (const locale of LOCALES)
         for (const q of qs(id, locale)) for (const s of strings(q)) for (const w of words(s)) expect(VULGAR, `${id} ${locale}: ${s}`).not.toContain(w);
+  });
+
+  it("sight words, level 2: hint 2 points to the meaning and hint 3 says the wrong fill means nothing", () => {
+    for (const id of SIGHT)
+      for (const locale of LOCALES)
+        for (const q of lv(id, 2, locale)) {
+          expect(q.hints[1], `${id} ${locale}`).toMatch(/meaning|quiere decir/);
+          expect(q.hints[2], `${id} ${locale}`).toMatch(/makes no sense\.$|no quiere decir nada\.$/);
+        }
+  });
+
+  it("Spanish compounds, level 2: hint 2 reads them as verb + the thing it acts on (a lavaplatos washes plates)", () => {
+    for (const q of lv("e.compound.words", 2, "es")) {
+      expect(q.hints[1]).toMatch(/a qué cosa/);
+      expect(q.hints[1]).not.toMatch(/con qué/);
+    }
+  });
+
+  it("Spanish participles: hint 2's irregular example has only one participle (not freír: freído and frito)", () => {
+    const TWO = ["freir", "frito", "freido", "imprimir", "impreso", "imprimido", "proveer", "provisto", "proveido"];
+    for (const q of qs("e.ending.ed", "es")) for (const w of words(q.hints[1])) expect(TWO, q.hints[1]).not.toContain(w);
   });
 
   it("Spanish middle vowels: a matched-consonants near miss keeps the consonants as heard (boca is not bici)", () => {

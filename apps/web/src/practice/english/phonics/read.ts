@@ -76,10 +76,11 @@ export const missHint = (locale: Locale, label: string, why: string) => {
 };
 
 /**
- * Asks for the correct spelling of the pictured word, when a misspelling would sound the same. It names the
- * picture, so a wrong choice that is another real word (to for two, pasa for pausa) is plainly wrong.
+ * Asks for the correct spelling of the pictured word, when a misspelling would sound the same. It points to
+ * the picture, so a wrong choice that is another real word (to for two, pasa for pausa) is plainly wrong. It
+ * says "goes with", not "names": some keys are not the picture's own name (rey on a crown, lamb on a sheep).
  */
-export const SPELLED: [string, string] = ["Which word names the picture, spelled right?", "¿Cuál es el nombre del dibujo, bien escrito?"];
+export const SPELLED: [string, string] = ["Which word goes with the picture and is spelled right?", "¿Qué palabra va con el dibujo y está bien escrita?"];
 
 /**
  * The screen-reader text for a picture whose name is the answer. Naming it would read the key aloud, so it
@@ -97,8 +98,13 @@ export function readQ(locale: Locale, w: string, picture: string, spec: string, 
     picture,
     alt: tr(locale, ...NAME_IT_ALT),
     choices: [word(w), ...others],
-    hints: [tr(locale, "Say the picture's name slowly.", "Di despacio el nombre del dibujo."), tr(locale, ...strategy), missHint(locale, others[0].label, others[0].why!)],
-    steps: [tr(locale, `${cap(w)} names the picture.`, `${cap(w)} va con el dibujo.`)],
+    // A spelling question (ask) does not say the key is the picture's name: rey goes with a crown.
+    hints: [
+      ask ? tr(locale, "Look at the picture. Then check the letters of each word.", "Mira el dibujo. Luego revisa las letras de cada palabra.") : tr(locale, "Say the picture's name slowly.", "Di despacio el nombre del dibujo."),
+      tr(locale, ...strategy),
+      missHint(locale, others[0].label, others[0].why!),
+    ],
+    steps: [ask ? tr(locale, `${cap(w)} goes with the picture.`, `${cap(w)} va con el dibujo.`) : tr(locale, `${cap(w)} names the picture.`, `${cap(w)} va con el dibujo.`)],
   };
 }
 
