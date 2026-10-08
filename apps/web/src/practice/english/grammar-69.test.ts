@@ -233,6 +233,9 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
         if (locale === "en") expect(ws.every((w) => PRONOUNS.en.includes(w)), `${shown}: ${l}`).toBe(true);
         else expect(ws.some((w) => PRONOUNS.es.includes(w)), `${shown}: ${l}`).toBe(true);
       }
+      // A wrong choice differs from the key in its pronoun, not only in a verb ending ("se acuerdan").
+      const pronouns = (l: string) => words(l).filter((w) => PRONOUNS[locale].includes(w)).join(" ");
+      for (const [w] of wrong) expect(pronouns(w), `${shown}: "${w}" has the key's pronoun`).not.toBe(pronouns(right));
       // A possessive blank is tied to the subject ("own", "propio", or a body part), so a distractor
       // cannot simply name a different owner.
       if (/^(my|our|your|his|her|its|their|su|sus|tu|tus|mi|mis|nuestr[oa]s?)$/.test(lc(right)))

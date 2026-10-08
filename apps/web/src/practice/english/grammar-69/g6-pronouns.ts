@@ -374,11 +374,11 @@ const SHIFTS: Bi<Entry>[] = [
   },
   {
     en: ["When we arrived at the museum, ___ had to wait in a long line.", "we", [["you", "shift-in-person"], ["they", "shift-in-person"]], "The sentence starts in the first person plural.", "Keep the same person all the way through."],
-    es: ["Uno ___ mejor de lo que escribe a mano.", "se acuerda", [["te acuerdas", "shift-in-person"], ["se acuerdan", "shift-in-number"]], "La oración empieza con “uno”, en tercera persona del singular.", "Con “uno” se mantiene la tercera persona del singular: “uno se acuerda”."],
+    es: ["Uno ___ mejor de lo que escribe a mano.", "se acuerda", [["te acuerdas", "shift-in-person"], ["nos acordamos", "shift-in-person"]], "La oración empieza con “uno”, en tercera persona del singular.", "Con “uno” se mantiene la tercera persona del singular: “uno se acuerda”."],
   },
   {
     en: ["The geese flew south because ___ needed a warmer place for winter.", "they", [["it", "shift-in-number"], ["we", "shift-in-person"]], "The pronoun points back to “the geese,” more than one bird.", "“Geese” is plural, so the pronoun is too."],
-    es: ["Cuando uno no duerme bien, al día siguiente ___ cansado.", "se siente", [["te sientes", "shift-in-person"], ["se sienten", "shift-in-number"]], "La oración empieza con “uno”, en tercera persona del singular.", "Con “uno” se mantiene la tercera persona del singular: “uno se siente”."],
+    es: ["Cuando uno no duerme bien, al día siguiente ___ cansado.", "se siente", [["te sientes", "shift-in-person"], ["nos sentimos", "shift-in-person"]], "La oración empieza con “uno”, en tercera persona del singular.", "Con “uno” se mantiene la tercera persona del singular: “uno se siente”."],
   },
   {
     en: ["Musicians in an orchestra must keep ___ eyes on the conductor.", "their", [["your", "shift-in-person"], ["his", "shift-in-number"]], "The pronoun points back to “musicians.”", "Plural “musicians” takes a plural pronoun."],
