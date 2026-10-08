@@ -70,6 +70,26 @@ describe("check", () => {
     expect(check({ kind: "expr", expr: "5x+2", form: "expanded" }, "2 + 5x").correct).toBe(true);
   });
 
+  it("expanded and simplified answers have the arithmetic done", () => {
+    // Distributing without working out the products is not the expanded answer.
+    const expanded = (expr: string) => (typed: string) => check({ kind: "expr", expr, form: "expanded" }, typed);
+    const key = expanded("16t + 64");
+    for (const typed of ["8*8 + 8*2t", "64 + 2t*8", "8·2t + 64", "16t + 8*8", "-8*-8 + 16t", "32t/2 + 64", "2^4t + 64"]) {
+      expect(key(typed), typed).toEqual({ correct: false, form: "expanded" });
+    }
+    for (const typed of ["16t + 64", "64 + 16t", "t*16 + 64", "16 t+64"]) expect(key(typed).correct, typed).toBe(true);
+    expect(expanded("8p + 4")("4*1 + 4*2p")).toEqual({ correct: false, form: "expanded" });
+    expect(expanded("21 + 28x")("7*3 + 7*4x")).toEqual({ correct: false, form: "expanded" });
+    expect(expanded("21 + 28x")("21 + 4x*7")).toEqual({ correct: false, form: "expanded" });
+    // A fraction coefficient, a decimal and π are worked-out numbers.
+    expect(expanded("x/2 + 3")("1/2x + 3").correct).toBe(true);
+    expect(expanded("x/2 + 3")("x/2 + 3").correct).toBe(true);
+    expect(expanded("0.5x + 3")("0.5x + 3").correct).toBe(true);
+    expect(expanded("2πr + 6")("2πr + 6").correct).toBe(true);
+    expect(check({ kind: "expr", expr: "6x^5", form: "simplified" }, "2*3x^5")).toEqual({ correct: false, form: "simplified" });
+    expect(check({ kind: "expr", expr: "6x^5", form: "simplified" }, "6x^5").correct).toBe(true);
+  });
+
   it("text answers ignore case, accents and punctuation", () => {
     expect(check({ kind: "text", accept: ["their"] }, " Their. ").correct).toBe(true);
     expect(check({ kind: "text", accept: ["sustantivo"] }, "Sustantívo").correct).toBe(true);

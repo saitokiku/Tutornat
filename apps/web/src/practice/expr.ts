@@ -2,6 +2,8 @@
 // + − × ÷ ^, parentheses, implicit multiplication (2x, 3(x+1), (x+1)(x−2)) and sqrt/π.
 // No eval. Two expressions are "the same" when they agree at several random points.
 
+import { gcd } from "./rng";
+
 export type Node =
   | { t: "num"; v: number }
   | { t: "var"; n: string }
@@ -218,9 +220,32 @@ function varCounts(n: Node, out = new Map<string, number>()): Map<string, number
   return out;
 }
 
-/** As simple as the expected answer: no more terms, and no variable written twice in one term (x·x, x^4·x^3). */
+/** A term's factors, split into what multiplies and what divides: −3x/4 → [3, x] over [4]. */
+function factorsOf(n: Node, top: Node[] = [], bottom: Node[] = []): [Node[], Node[]] {
+  if (n.t === "neg") factorsOf(n.a, top, bottom);
+  else if (n.t === "bin" && (n.op === "*" || n.op === "/")) {
+    factorsOf(n.a, top, bottom);
+    if (n.op === "*") factorsOf(n.b, top, bottom);
+    else factorsOf(n.b, bottom, top);
+  } else top.push(n);
+  return [top, bottom];
+}
+
+/** A term with arithmetic left to do: number × number (8·2t, 4·1), a number still to work out (2³x), or a fraction to reduce (6x/2). π counts as a name. */
+function hasArithmeticLeft(term: Node): boolean {
+  const numbers = (list: Node[]) => list.filter((f) => !hasVar(f) && !(f.t === "num" && f.v === Math.PI));
+  const [top, bottom] = factorsOf(term).map(numbers);
+  if (top.length > 1 || bottom.length > 1 || [...top, ...bottom].some((f) => f.t !== "num")) return true;
+  const [a, b] = [top[0], bottom[0]].map((f) => (f?.t === "num" ? f.v : 1));
+  return Number.isInteger(a) && Number.isInteger(b) && gcd(a, b) > 1;
+}
+
+/**
+ * As simple as the expected answer: no more terms, no variable written twice in one term (x·x, x^4·x^3)
+ * and no arithmetic left in a term (8·8 + 8·2t is not 64 + 16t worked out).
+ */
 export function isSimplified(got: Node, want: Node): boolean {
   const terms = termsOf(got);
   if (terms.length > termsOf(want).length) return false;
-  return terms.every((t) => [...varCounts(t).values()].every((c) => c <= 1));
+  return terms.every((t) => [...varCounts(t).values()].every((c) => c <= 1) && !hasArithmeticLeft(t));
 }
