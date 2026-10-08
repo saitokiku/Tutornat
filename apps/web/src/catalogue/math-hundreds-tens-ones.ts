@@ -302,7 +302,7 @@ const hundredsTensOnes: CatalogueEntry = {
               prompt: "What is 100 less than 608?",
               choices: ["508", "598", "607"],
               answer: 0,
-              hint: "Count back 100 from 608. How many hundreds are left?",
+              hint: "Take 1 hundred away from 608. How many hundreds are left?",
               explain: "The hundreds digit goes from 6 to 5. 608 − 100 = 508.",
             },
             {

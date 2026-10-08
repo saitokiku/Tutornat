@@ -303,7 +303,7 @@ const hundredsTensOnesEs: CatalogueEntry = {
               prompt: "¿Cuánto es 100 menos que 608?",
               choices: ["508", "598", "607"],
               answer: 0,
-              hint: "Cuenta 100 hacia atrás desde 608. ¿Cuántas centenas quedan?",
+              hint: "Quítale 1 centena a 608. ¿Cuántas centenas quedan?",
               explain: "La cifra de las centenas pasa de 6 a 5. 608 − 100 = 508.",
             },
             {
