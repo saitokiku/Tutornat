@@ -30,6 +30,14 @@ describe("English 6-9 writing and reading courses", () => {
     expect(Math.max(...counts), counts.join("/")).toBeLessThanOrEqual(qs.length / 2);
   });
 
+  // QuizView marks each answer as it goes. If a quiz never repeats a position, the last answer falls out by
+  // elimination, so most quizzes must reuse one.
+  it.each(IDS)("%s repeats an answer position in all but at most one quiz", (id) => {
+    const quizzes = course(id).lessons.flatMap((l) => l.scenes.flatMap((s) => (s.kind === "quiz" ? [s.questions.map((q) => q.answer)] : [])));
+    const allDifferent = quizzes.filter((a) => a.length >= 3 && new Set(a).size === a.length);
+    expect(allDifferent.length, allDifferent.map((a) => a.join("")).join(" ")).toBeLessThanOrEqual(1);
+  });
+
   it.each(IDS)("%s doesn't make the right choice the longest one", (id) => {
     const qs = questionsOf(id);
     const longest = qs.filter((q) => q.choices.every((c, i) => i === q.answer || c.length < q.choices[q.answer].length));
