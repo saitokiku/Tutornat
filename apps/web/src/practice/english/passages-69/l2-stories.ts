@@ -37,20 +37,20 @@ export const L2_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["too-narrow", "contradicts-text", "not-in-text"],
+        ["too-narrow", "contradicts-text", "contradicts-text"],
         [
           "Which statement best expresses a theme of the story?",
-          "Shielding people from hard truths can underestimate their strength.",
-          ["Careful records can matter more than first impressions.", "Children who translate for their parents end up knowing more than the adults do.", "Speaking two languages can sometimes make a person feel caught between two worlds."],
+          "Trusting someone with a hard truth shows more respect than shielding them from it.",
+          ["Careful records can matter more than first impressions.", "Children who translate for their parents end up knowing more than the adults do.", "Softening hurtful words can be the kindest way to protect a parent."],
           ["She had never thought about how much he could carry himself."],
-          "Lucía softens Ms. Pratt's words to protect her father, but he asks for all of it and handles it well. The story suggests that protecting someone can mean underestimating them.",
+          "Lucía softens Ms. Pratt's words to protect her father, but he asks for all of it and handles it well. The story suggests that trusting someone with the truth respects them more than shielding them does.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
-          "Proteger a alguien de una verdad dura puede ser subestimar su fuerza.",
-          ["Unos buenos registros pueden pesar más que la primera impresión.", "Los hijos que traducen para sus padres terminan sabiendo más que los adultos.", "Hablar dos idiomas a veces hace que alguien se sienta atrapado entre dos mundos."],
+          "Confiarle a alguien una verdad dura muestra más respeto que protegerlo de ella.",
+          ["Unos buenos registros pueden pesar más que la primera impresión.", "Los hijos que traducen para sus padres terminan sabiendo más que los adultos.", "Suavizar palabras hirientes puede ser la manera más amable de proteger a un padre."],
           ["Nunca había pensado en todo lo que él podía cargar solo."],
-          "Lucía suaviza las palabras de la señora Pratt para proteger a su padre, pero él pide escucharlo todo y lo maneja bien. El cuento sugiere que proteger a alguien puede ser subestimarlo.",
+          "Lucía suaviza las palabras de la señora Pratt para proteger a su padre, pero él pide escucharlo todo y lo maneja bien. El cuento sugiere que confiarle la verdad a alguien lo respeta más que protegerlo de ella.",
         ],
       ),
       q(
@@ -162,18 +162,18 @@ export const L2_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "contradicts-text", "wrong-character"],
+        ["topic-not-theme", "contradicts-text", "too-narrow"],
         [
           "Which statement best expresses a theme of the story?",
           "A bond can survive memory loss if you accept a person as they are now.",
-          ["Memory loss", "Once someone forgets your name, the relationship between you can never be repaired.", "The simplest fix is usually the right one."],
+          ["Memory loss", "Once someone forgets your name, the bond between you may start to fade.", "The simplest fix is usually the right one."],
           ["Now Minh only smiled and handed him the screwdriver."],
           "Ông cannot remember Minh's name, but working on the radio gives them a way to be together. By the end, Minh accepts the question and chooses to keep connecting.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "El lazo con alguien puede sobrevivir a la pérdida de memoria si lo aceptas como es ahora.",
-          ["El olvido", "Cuando alguien olvida tu nombre, la relación entre ustedes dos ya nunca se puede volver a reparar.", "La solución más sencilla suele ser la correcta."],
+          ["El olvido", "Cuando alguien olvida tu nombre, el lazo entre ustedes puede empezar a apagarse.", "La solución más sencilla suele ser la correcta."],
           ["Ahora Minh solo sonrió y le pasó el desarmador."],
           "Ông no recuerda el nombre de Minh, pero arreglar el radio les da una manera de estar juntos. Al final, Minh acepta la pregunta y elige seguir conectando con él.",
         ],
@@ -291,14 +291,14 @@ export const L2_STORIES: Passage[] = [
         [
           "Which statement best expresses a theme of the story?",
           "Careless words spread beyond your control, but you are still responsible for them.",
-          ["Daniela makes up a reason Priscilla skipped tryouts, and the story grows until half the team avoids her.", "People who start rumors are always found out in the end.", "A rumor grows a little bigger every time it is repeated."],
+          ["Daniela makes up a reason Priscilla skipped tryouts, and the story grows until half the team avoids her.", "Once a rumor spreads far from you, it is no longer yours to fix.", "A rumor can grow as it passes from person to person."],
           ["That was the strange part: the rumor had spread so far from her that it no longer seemed to belong to her at all."],
           "No one could trace the rumor back to Daniela, yet she chooses to own it and repair what she can. The story shows that responsibility does not depend on getting caught.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "Las palabras descuidadas se escapan de tu control, pero sigues siendo responsable de ellas.",
-          ["Daniela inventa por qué Priscilla faltó a las pruebas, y la historia crece hasta que la mitad del equipo la evita.", "Quienes empiezan un rumor siempre terminan descubiertos.", "Un rumor crece un poco cada vez que alguien lo repite."],
+          ["Daniela inventa por qué Priscilla faltó a las pruebas, y la historia crece hasta que la mitad del equipo la evita.", "Cuando un rumor se aleja mucho de ti, ya no te toca arreglarlo.", "Un rumor puede crecer al pasar de boca en boca."],
           ["Eso era lo raro: el rumor se había alejado tanto de ella que ya ni parecía suyo."],
           "Nadie podía saber que el rumor salió de Daniela, y aun así ella decide hacerse cargo y reparar lo que puede. El cuento muestra que la responsabilidad no depende de que te descubran.",
         ],
@@ -414,18 +414,18 @@ export const L2_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["topic-not-theme", "contradicts-text", "wrong-character"],
+        ["topic-not-theme", "not-in-text", "contradicts-text"],
         [
           "Which statement best expresses a theme of the story?",
           "Progress can be measured against your own past, not only against other people.",
-          ["Running", "Hard work always leads to winning a medal.", "A race only counts if you finish near the top."],
+          ["Running", "Hard work can lead to a medal if you keep at it.", "A race counts for little if you finish near the bottom."],
           ["But it was forty-one seconds faster than her best race before today."],
           "Wren places near the bottom, yet she counts the race as her best because she beat her own time. The story values that kind of progress.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
           "El progreso se puede medir contra tu propio pasado, no solo contra los demás.",
-          ["Correr", "El esfuerzo siempre lleva a ganar una medalla.", "Una carrera solo cuenta si llegas entre las primeras."],
+          ["Correr", "El esfuerzo puede llevarte a una medalla si no te rindes.", "Una carrera vale poco si llegas entre las últimas."],
           ["Pero eran cuarenta y un segundos menos que su mejor carrera hasta ese día."],
           "Wren llega entre las últimas, pero cuenta la carrera como la mejor porque superó su propio tiempo. El cuento valora ese tipo de progreso.",
         ],
@@ -539,18 +539,18 @@ export const L2_STORIES: Passage[] = [
     qs: [
       q(
         "theme.statement",
-        ["contradicts-text", "wrong-character", "too-narrow"],
+        ["contradicts-text", "contradicts-text", "too-narrow"],
         [
           "Which statement best expresses a theme of the story?",
-          "Trying to record a moment perfectly can keep you from actually living it.",
-          ["A good photograph captures a moment better than your own eyes can.", "Younger children notice more than older ones.", "Careful planning can still go wrong."],
+          "Living a moment matters more than recording it perfectly.",
+          ["A good photograph can capture a moment better than your own eyes.", "Watching quietly is a waste of a once-in-a-lifetime event.", "Careful planning can still go wrong."],
           ["None of them looked anything like what he was describing."],
           "Nadia gets a sharp photo but misses the eclipse itself, while Sami, who only watched, saw everything. The story's message comes from that contrast.",
         ],
         [
           "¿Qué oración expresa mejor un mensaje del cuento?",
-          "Intentar grabar un momento a la perfección puede impedirte vivirlo de verdad.",
-          ["Una buena foto capta un momento mejor de lo que pueden tus propios ojos.", "Los niños pequeños se fijan en más cosas que los mayores.", "Hasta el plan más cuidadoso puede salir mal."],
+          "Vivir un momento importa más que grabarlo a la perfección.",
+          ["Una buena foto puede captar un momento mejor que tus propios ojos.", "Quedarse mirando en silencio es desperdiciar algo que pasa una vez en la vida.", "Hasta el plan más cuidadoso puede salir mal."],
           ["Ninguna se parecía en nada a lo que él describía."],
           "Nadia logra una foto nítida, pero se pierde el eclipse, mientras que Sami, que solo miró, lo vio todo. El mensaje del cuento sale de ese contraste.",
         ],
