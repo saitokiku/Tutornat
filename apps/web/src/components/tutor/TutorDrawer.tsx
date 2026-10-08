@@ -8,6 +8,7 @@ import { HearContext } from "@/components/stage/hear";
 import { useT } from "@/i18n";
 import { evidenceProblem } from "@/lib/evidence";
 import { recordTutorHelp } from "@/lib/practice";
+import { reload } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 import { getSkill } from "@/practice/skills";
 import { TutorChat, type HelpGate } from "./TutorChat";
@@ -27,7 +28,10 @@ export function TutorDrawer({ learner, surface, children }: { learner: Profile; 
       recordTutorHelp(learner.id, c.item.skillId, c.item.seed, c.item.level, c.source);
       return true;
     } catch (e) {
-      return evidenceProblem(e);
+      // Another tab changed this (the learner, the question): read it again, as the chat then says.
+      const p = evidenceProblem(e);
+      if (p === "stale") reload();
+      return p;
     }
   };
   const open = (c: DockContext) => {
