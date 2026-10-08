@@ -82,8 +82,8 @@ const multiplyBigger: CatalogueEntry = {
             {
               id: "q1",
               prompt: "What is 8 × 50?",
-              choices: ["40", "400", "4,000"],
-              answer: 1,
+              choices: ["400", "40", "4,000"],
+              answer: 0,
               hint: "50 is 5 tens. What is 8 × 5 tens?",
               explain: "8 × 5 = 40, so 8 × 5 tens = 40 tens. 40 tens is 400.",
             },
@@ -98,8 +98,8 @@ const multiplyBigger: CatalogueEntry = {
             {
               id: "q3",
               prompt: "In 770, how does the value of the first 7 compare with the value of the second 7?",
-              choices: ["It is 10 times as much", "It is the same", "It is 100 times as much"],
-              answer: 0,
+              choices: ["It is the same", "It is 100 times as much", "It is 10 times as much"],
+              answer: 2,
               hint: "Which places are the two 7s in?",
               explain: "The first 7 is worth 700 and the second is worth 70. 700 is 10 times 70.",
             },
@@ -198,24 +198,24 @@ const multiplyBigger: CatalogueEntry = {
             {
               id: "q1",
               prompt: "What is 7 × 46?",
-              choices: ["322", "282", "2,842"],
-              answer: 0,
+              choices: ["282", "322", "2,842"],
+              answer: 1,
               hint: "Split 46 into 40 and 6. Multiply each part by 7.",
               explain: "7 × 40 = 280 and 7 × 6 = 42. 280 + 42 = 322.",
             },
             {
               id: "q2",
               prompt: "Which shows 4 × 1,203 split by place value?",
-              choices: ["4 × 1,000 + 4 × 200 + 4 × 3", "4 × 1 + 4 × 2 + 4 × 3", "4 × 1,000 + 200 + 3"],
-              answer: 0,
-              hint: "Every part of 1,203 needs to be multiplied by 4.",
+              choices: ["4 × 1 + 4 × 2 + 4 × 3", "4 × 1,000 + 200 + 3", "4 × 1,000 + 4 × 200 + 4 × 3"],
+              answer: 2,
+              hint: "Write 1,203 in expanded form first. What is each digit worth?",
               explain: "1,203 = 1,000 + 200 + 3. So 4 × 1,203 = 4,000 + 800 + 12 = 4,812.",
             },
             {
               id: "q3",
               prompt: "Lena estimates 6 × 389 by finding 6 × 400. What is her estimate?",
-              choices: ["240", "2,400", "24,000"],
-              answer: 1,
+              choices: ["2,400", "240", "24,000"],
+              answer: 0,
               hint: "6 × 4 hundreds is how many hundreds?",
               explain: "6 × 400 = 24 hundreds, which is 2,400. The exact product, 2,334, is close to it.",
             },
@@ -325,8 +325,8 @@ const multiplyBigger: CatalogueEntry = {
             {
               id: "q1",
               prompt: "What is 4 × 1,326?",
-              choices: ["5,304", "4,304", "5,284"],
-              answer: 0,
+              choices: ["4,304", "5,284", "5,304"],
+              answer: 2,
               hint: "Multiply each place by 4, starting with the ones. Add what you carry.",
               explain: "4 × 6 = 24, 4 × 20 = 80, 4 × 300 = 1,200 and 4 × 1,000 = 4,000. 4,000 + 1,200 + 80 + 24 = 5,304.",
             },
@@ -342,11 +342,11 @@ const multiplyBigger: CatalogueEntry = {
               id: "q3",
               prompt: "Sam says 5 × 1,980 = 990. How can you tell quickly that he is wrong?",
               choices: [
-                "1,980 is close to 2,000, and 5 × 2,000 = 10,000",
                 "990 is an even number",
+                "1,980 is close to 2,000, and 5 × 2,000 = 10,000",
                 "A product always has more digits than the numbers you multiply",
               ],
-              answer: 0,
+              answer: 1,
               hint: "Round 1,980 to a number that is easy to multiply.",
               explain: "5 × 2,000 = 10,000, so the product should be close to 10,000. The exact product is 9,900, so 990 is far too small.",
             },
@@ -391,8 +391,12 @@ const multiplyBigger: CatalogueEntry = {
           blocks: [
             { type: "visual", visual: { kind: "rect", w: 23, h: 14, unit: "units" }, alt: "A rectangle 23 units long and 14 units tall." },
             { type: "text", text: "This rectangle has an area of 23 × 14 square units." },
-            { type: "text", text: "Cut the long side into 20 and 3. Cut the short side into 10 and 4." },
-            { type: "text", text: "That makes four smaller rectangles, one for each partial product. Their areas add up to 322." },
+            { type: "text", text: "Cut the long side into 20 and 3. Cut the short side into 10 and 4. You get these four smaller rectangles:" },
+            { type: "visual", visual: { kind: "rect", w: 20, h: 10, unit: "units" }, alt: "A rectangle 20 units long and 10 units tall. Its area is 20 × 10 = 200 square units." },
+            { type: "visual", visual: { kind: "rect", w: 3, h: 10, unit: "units" }, alt: "A rectangle 3 units long and 10 units tall. Its area is 3 × 10 = 30 square units." },
+            { type: "visual", visual: { kind: "rect", w: 20, h: 4, unit: "units" }, alt: "A rectangle 20 units long and 4 units tall. Its area is 20 × 4 = 80 square units." },
+            { type: "visual", visual: { kind: "rect", w: 3, h: 4, unit: "units" }, alt: "A rectangle 3 units long and 4 units tall. Its area is 3 × 4 = 12 square units." },
+            { type: "text", text: "Each area is one partial product. Together they make the whole rectangle: 200 + 30 + 80 + 12 = 322." },
           ],
         },
         {
@@ -439,8 +443,8 @@ const multiplyBigger: CatalogueEntry = {
             {
               id: "q1",
               prompt: "What is 32 × 15?",
-              choices: ["480", "310", "160"],
-              answer: 0,
+              choices: ["160", "310", "480"],
+              answer: 2,
               hint: "Split 32 into 30 + 2 and 15 into 10 + 5. Find all four partial products.",
               explain: "30 × 10 = 300, 30 × 5 = 150, 2 × 10 = 20 and 2 × 5 = 10. 300 + 150 + 20 + 10 = 480. 310 uses only two of the four parts.",
             },
@@ -481,8 +485,9 @@ const multiplyBigger: CatalogueEntry = {
 };
 
 /** Practice on the skill map that fits each lesson (lesson id → skill ids). */
+// tens-hundreds: the whole-number level of m.pow10 is the nearest skill (it also divides, which this lesson leaves out).
 export const practice: Record<string, string[]> = {
-  "tens-hundreds": ["m.mult.multi"],
+  "tens-hundreds": ["m.pow10"],
   "split-place-value": ["m.mult.multi"],
   columns: ["m.mult.multi"],
   "two-by-two": ["m.mult.multi"],
