@@ -21,6 +21,8 @@ describe("resources", () => {
   it("find sources for a skill, by grade, in the learner's language", () => {
     const frac = resourcesFor({ skillId: "m.frac.equiv", locale: "en" });
     expect(frac[0].fits).toContain("m.frac.equiv");
+    // Skills a source teaches by name come first, not the general grade pages.
+    for (const id of ["m.place.1000", "m.expr.equiv"]) expect(resourcesFor({ skillId: id })[0].fits, id).toContain(id);
     expect(resourcesFor({ skillId: "m.add.10" }).some((r) => r.id === "khan-math-1")).toBe(true);
     expect(resourcesFor({ skillId: "s.density" }).every((r) => r.subject === "science")).toBe(true);
     const es = resourcesFor({ skillId: "s.states.matter", locale: "es" })[0];

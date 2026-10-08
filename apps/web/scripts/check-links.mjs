@@ -2,8 +2,10 @@
 // Checks that every resource link (url and urlEs in src/resources/list.ts) still loads.
 // HEAD first, GET if HEAD fails; redirects are followed; a link passes only if it ends at a 2xx.
 // Exits 1 and lists each failing link. Usage (from apps/web):
-//   node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-links.mjs
-// Those two flags quiet only Node's notices about loading a .ts file; every other warning still shows.
+//   npm run check:links
+// which runs node with --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON.
+// Those flags hide every ExperimentalWarning (type stripping is one) and the notice that package.json
+// names no module type; other warnings still show.
 import { readFile } from "node:fs/promises";
 
 const LIST = new URL("../src/resources/list.ts", import.meta.url);
