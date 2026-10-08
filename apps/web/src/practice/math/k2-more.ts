@@ -1190,55 +1190,56 @@ export const MATH_K_2_MORE: Skill[] = [
     content: "computed",
     levels: 3,
     generate(r, level, locale) {
+      // Blocks are 1 inch long, so a thing's length in blocks is its real length in inches.
       if (level === 1) {
-        const o = r.pick(THINGS), n = r.int(4, 12);
+        const o = r.pick(CUBE_THINGS), n = r.int(o.inch[0], o.inch[1]);
+        const ask = tr(locale, `How many blocks long is the ${o.en}?`, `¿Cuántos bloques mide ${el(o)} ${o.es}?`);
         return {
-          prompt: [tr(locale, `How many cubes long is the ${o.en}?`, `¿Cuántos cubos mide ${el(o)} ${o.es}?`)],
-          say: tr(locale, `How many cubes long is the ${o.en}?`, `¿Cuántos cubos mide ${el(o)} ${o.es}?`),
+          prompt: [ask],
+          say: ask,
           picture: o.pic,
-          visual: { kind: "array", rows: 1, cols: n },
-          alt: tr(locale, `A ${o.en} with cubes lined up along it, end to end`, `${cap(un(o))} ${o.es} con cubos en fila a lo largo, uno junto a otro`),
-          markable: true,
+          // A bar of n equal parts, all shaded: same-size blocks touching end to end, the way units are laid.
+          visual: { kind: "fraction", parts: n, shaded: n },
+          alt: tr(locale, `A ${o.en}, and a row of same-size blocks, end to end with no gaps, as long as the ${o.en}`, `${cap(un(o))} ${o.es} y una fila de bloques iguales, uno junto a otro y sin espacios, tan larga como ${el(o)} ${o.es}`),
           input: "keypad",
           answer: { kind: "number", value: n },
           wrong: misses(n, [[n - 1, "counted-the-gaps"], [n + 1, "miscounted-units"]]),
           hints: [
-            tr(locale, "Each cube is one unit long.", "Cada cubo mide una unidad."),
-            tr(locale, "Count the cubes from one end to the other.", "Cuenta los cubos de un extremo al otro."),
-            tr(locale, "Touch each cube as you count: 1, 2, 3…", "Toca cada cubo mientras cuentas: 1, 2, 3…"),
+            tr(locale, "Each block is one unit long.", "Cada bloque mide una unidad."),
+            tr(locale, "Count the blocks from one end to the other.", "Cuenta los bloques de un extremo al otro."),
+            tr(locale, "Point to each block as you count: 1, 2, 3…", "Señala cada bloque mientras cuentas: 1, 2, 3…"),
           ],
-          steps: [tr(locale, `There are ${n} cubes from end to end.`, `Hay ${n} cubos de un extremo al otro.`), tr(locale, `The ${o.en} is ${n} cubes long.`, `${cap(el(o))} ${o.es} mide ${n} cubos.`)],
+          steps: [tr(locale, `There are ${n} blocks from end to end.`, `Hay ${n} bloques de un extremo al otro.`), tr(locale, `The ${o.en} is ${n} blocks long.`, `${cap(el(o))} ${o.es} mide ${n} bloques.`)],
           seconds: 12,
         };
       }
       if (level === 2) {
-        const A = r.pick(THINGS);
-        let B = r.pick(THINGS);
-        while (B === A) B = r.pick(THINGS);
-        const a = r.int(6, 15), b = r.int(2, a - 2), d = a - b;
+        // A is longer than B in real life too (a book and a key, not a key and a book), and each length is real.
+        const [A, B] = longerPair(r);
+        const a = r.int(A.inch[0], A.inch[1]), b = r.int(B.inch[0], B.inch[1]), d = a - b;
         const longer = r.bool();
         const ask = longer
-          ? tr(locale, `How many cubes longer is the ${A.en}?`, `¿Cuántos cubos más ${A.f ? "larga" : "largo"} es ${el(A)} ${A.es}?`)
-          : tr(locale, `How many cubes shorter is the ${B.en}?`, `¿Cuántos cubos más ${B.f ? "corta" : "corto"} es ${el(B)} ${B.es}?`);
-        const text = tr(locale, `The ${A.en} is ${a} cubes long. The ${B.en} is ${b} cubes long. ${ask}`, `${cap(el(A))} ${A.es} mide ${a} cubos. ${cap(el(B))} ${B.es} mide ${b} cubos. ${ask}`);
+          ? tr(locale, `How many blocks longer is the ${A.en}?`, `¿Cuántos bloques más ${A.f ? "larga" : "largo"} es ${el(A)} ${A.es}?`)
+          : tr(locale, `How many blocks shorter is the ${B.en}?`, `¿Cuántos bloques más ${B.f ? "corta" : "corto"} es ${el(B)} ${B.es}?`);
+        const text = tr(locale, `The ${A.en} is ${a} blocks long. The ${B.en} is ${b} blocks long. ${ask}`, `${cap(el(A))} ${A.es} mide ${a} bloques. ${cap(el(B))} ${B.es} mide ${b} bloques. ${ask}`);
         return {
           prompt: [text],
           say: text,
           picture: A.pic,
-          alt: tr(locale, `A ${A.en} and a ${B.en}`, `${cap(un(A))} ${A.es} y ${un(B)} ${B.es}`),
+          alt: tr(locale, `A ${A.en}`, `${cap(un(A))} ${A.es}`),
           input: "keypad",
           answer: { kind: "number", value: d },
           wrong: misses(d, [[a + b, "added-instead-of-compared"], [a, "gave-a-length"], [b, "gave-a-length"]]),
           hints: [
-            tr(locale, "Which is longer? By how much?", "¿Cuál es más largo? ¿Por cuánto?"),
+            tr(locale, "Which is longer? By how much?", "¿Cuál mide más? ¿Por cuánto?"),
             tr(locale, `Count up from ${b} to ${a}.`, `Cuenta desde ${b} hasta ${a}.`),
             `${b} + ? = ${a}`,
           ],
           steps: [
             `${a} − ${b} = ${d}`,
             longer
-              ? tr(locale, `The ${A.en} is ${d} cubes longer.`, `${cap(el(A))} ${A.es} es ${d} cubos más ${A.f ? "larga" : "largo"}.`)
-              : tr(locale, `The ${B.en} is ${d} cubes shorter.`, `${cap(el(B))} ${B.es} es ${d} cubos más ${B.f ? "corta" : "corto"}.`),
+              ? tr(locale, `The ${A.en} is ${d} blocks longer.`, `${cap(el(A))} ${A.es} es ${d} bloques más ${A.f ? "larga" : "largo"}.`)
+              : tr(locale, `The ${B.en} is ${d} blocks shorter.`, `${cap(el(B))} ${B.es} es ${d} bloques más ${B.f ? "corta" : "corto"}.`),
           ],
           seconds: 30,
         };
@@ -1250,9 +1251,9 @@ export const MATH_K_2_MORE: Skill[] = [
         overlap: tr(locale, "The clips overlap each other.", "Los clips quedan superpuestos."),
         good: tr(locale, `${name} lines them up end to end, with no gaps.`, `${name} los pone uno junto al otro, sin espacios.`),
       }[way];
-      const text = `${tr(locale, `${name} measures a ${o.en} with paper clips.`, `${name} mide ${un(o)} ${o.es} con clips.`)} ${how} ${tr(locale, "Is the count too big, too small, or just right?", "¿La medida sale muy grande, muy pequeña o correcta?")}`;
-      const BIG: Choice = { label: tr(locale, "Too big", "Muy grande"), say: tr(locale, "Too big", "Muy grande") };
-      const SMALL: Choice = { label: tr(locale, "Too small", "Muy pequeña"), say: tr(locale, "Too small", "Muy pequeña") };
+      const text = `${tr(locale, `${name} measures a ${o.en} with paper clips.`, `${name} mide ${un(o)} ${o.es} con clips.`)} ${how} ${tr(locale, "Is the count too big, too small, or just right?", "¿La medida sale demasiado grande, demasiado pequeña o correcta?")}`;
+      const BIG: Choice = { label: tr(locale, "Too big", "Demasiado grande"), say: tr(locale, "Too big", "Demasiado grande") };
+      const SMALL: Choice = { label: tr(locale, "Too small", "Demasiado pequeña"), say: tr(locale, "Too small", "Demasiado pequeña") };
       const RIGHT: Choice = { label: tr(locale, "Just right", "Correcta"), say: tr(locale, "Just right", "Correcta") };
       const pick =
         way === "gaps"
@@ -1275,9 +1276,9 @@ export const MATH_K_2_MORE: Skill[] = [
               : [tr(locale, "Are there gaps or overlaps?", "¿Hay espacios o clips superpuestos?"), strat, tr(locale, "Check each clip touches the next one.", "Revisa que cada clip toque al siguiente.")],
         steps:
           way === "gaps"
-            ? [tr(locale, "Gaps leave parts with no clip.", "Los espacios dejan partes sin clip."), tr(locale, "Fewer clips get counted, so the count is too small.", "Se cuentan menos clips, así que la medida sale muy pequeña.")]
+            ? [tr(locale, "Gaps leave parts with no clip.", "Los espacios dejan partes sin clip."), tr(locale, "Fewer clips get counted, so the count is too small.", "Se cuentan menos clips, así que la medida sale demasiado pequeña.")]
             : way === "overlap"
-              ? [tr(locale, "Overlaps cover the same part twice.", "Al superponerse, cubren la misma parte dos veces."), tr(locale, "More clips get counted, so the count is too big.", "Se cuentan más clips, así que la medida sale muy grande.")]
+              ? [tr(locale, "Overlaps cover the same part twice.", "Al superponerse, cubren la misma parte dos veces."), tr(locale, "More clips get counted, so the count is too big.", "Se cuentan más clips, así que la medida sale demasiado grande.")]
               : [tr(locale, "No gaps and no overlaps.", "Sin espacios y sin clips superpuestos."), tr(locale, "The count is just right.", "La medida es correcta.")],
         seconds: 20,
       };
@@ -2398,10 +2399,13 @@ export const MATH_K_2_MORE: Skill[] = [
           const [c1, c2] = colors;
           const A = r.int(10, 40), B = r.int(5, A - 3), d = A - B;
           const ab = t2(locale, u.abbr);
+          // Units in full in the sentence, so a read-aloud says "20 inches", never "20 in"; the short form
+          // sits only after the answer box.
+          const [wa, wb] = [unitWord(u, A, locale), unitWord(u, B, locale)];
           const text = tr(
             locale,
-            `A ${c1[0]} ${thing[0]} is ${A} ${ab} long. A ${c2[0]} ${thing[0]} is ${B} ${ab} long. How much longer is the ${c1[0]} ${thing[0]}?`,
-            `Una ${thing[1]} ${c1[1]} mide ${A} ${ab}. Una ${thing[1]} ${c2[1]} mide ${B} ${ab}. ¿Cuánto más larga es la ${thing[1]} ${c1[1]}?`,
+            `A ${c1[0]} ${thing[0]} is ${A} ${wa} long. A ${c2[0]} ${thing[0]} is ${B} ${wb} long. How much longer is the ${c1[0]} ${thing[0]}?`,
+            `Una ${thing[1]} ${c1[1]} mide ${A} ${wa}. Una ${thing[1]} ${c2[1]} mide ${B} ${wb}. ¿Cuánto más larga es la ${thing[1]} ${c1[1]}?`,
           );
           const tf = tensFirst(A, "−", B, locale);
           return {
@@ -2457,7 +2461,8 @@ export const MATH_K_2_MORE: Skill[] = [
         say: text,
         picture: o.pic,
         visual: { kind: "number-line", min: 0, max: u.max, marks: Array.from({ length: u.max + 1 }, (_, i) => i), marker: end },
-        alt: tr(locale, `A ruler from 0 to ${u.max} ${t2("en", u.many)}. A ${o.en} lies on it and ends at a dot.`, `Una regla del 0 al ${u.max} en ${t2("es", u.many)}. ${cap(un(o))} ${o.es} está encima y termina en un punto.`),
+        // What is drawn: the thing's picture, and a ruler with a dot where the thing ends.
+        alt: tr(locale, `A ${o.en}, and a ruler from 0 to ${u.max} ${t2("en", u.many)} with a dot on one mark`, `${cap(un(o))} ${o.es} y una regla del 0 al ${u.max} en ${t2("es", u.many)}, con un punto en una marca`),
         input: "keypad",
         answer: { kind: "number", value: len },
         wrong: misses(len, level === 1 ? [[len + 1, "counted-the-marks"], [len - 1, "miscounted"]] : [[end, "read-the-end-number"], [len + 1, "counted-the-marks"]]),

@@ -624,19 +624,30 @@ describe("m.mental.100", () => {
 });
 
 describe("m.measure.units", () => {
-  it("level 1: the cubes in the row, counted; level 2: the shorter length plus the answer is the longer; level 3: gaps undercount, overlaps overcount", () => {
+  // Typical lengths in inches, kept here apart from the generator: a longer thing is never said to be shorter.
+  const TYPICAL: Record<string, number> = { pencil: 7, crayon: 3.5, spoon: 6, key: 2.5, carrot: 7, paintbrush: 8, caterpillar: 1.5, banana: 7, ribbon: 6, sock: 8, book: 10 };
+  it("level 1: the blocks in the row, counted; level 2: the shorter length plus the answer is the longer; level 3: gaps undercount, overlaps overcount", () => {
     for (const it of items("m.measure.units", 1)) {
       const v = it.visual!;
-      if (v.kind !== "array") throw new Error("expected a row of cubes");
-      expect(v.rows).toBe(1);
-      let cubes = 0;
-      for (let k = 0; k < v.cols; k++) cubes++;
-      expect(num(it.answer)).toBe(cubes);
+      // Units laid end to end: one bar of equal parts, every part a block (no gaps, unlike a row of dots).
+      if (v.kind !== "fraction") throw new Error("expected a row of touching blocks");
+      expect(v.shaded).toBe(v.parts);
+      let blocks = 0;
+      for (let k = 0; k < v.parts; k++) blocks++;
+      expect(num(it.answer)).toBe(blocks);
+      expect(it.markable).toBeUndefined();
+      const thing = /long is the (\w+)\?$/.exec(text(it))![1];
+      expect(Math.abs(blocks - TYPICAL[thing]), `a ${blocks}-inch ${thing}`).toBeLessThanOrEqual(4);
     }
     for (const locale of LOCALES)
       for (const it of items("m.measure.units", 2, locale)) {
         const [a, b] = ints(text(it));
         expect(b + num(it.answer)).toBe(a);
+        if (locale === "en") {
+          const [, A, B] = /^The (\w+) is \d+ blocks long\. The (\w+) is/.exec(text(it))!;
+          expect(TYPICAL[A], `${A} (${a}) longer than ${B} (${b})`).toBeGreaterThan(TYPICAL[B]);
+          expect(it.alt).toBe(`A ${A}`);
+        }
       }
     const seen = new Set<string>();
     for (const [en] of both("m.measure.units", 3)) {
@@ -1080,6 +1091,8 @@ describe("m.measure.ruler", () => {
         expect(v.marker! - s).toBe(num(it.answer));
         expect(v.marker! <= v.max && num(it.answer) >= 1).toBe(true);
         expect(s === 0).toBe(level === 1);
+        // The thing is not drawn on the ruler, so the description must not say it is.
+        expect(it.alt).not.toMatch(/lies on|está encima/);
       }
     for (const locale of LOCALES)
       for (const it of items("m.measure.ruler", 3, locale)) {
@@ -1087,6 +1100,10 @@ describe("m.measure.ruler", () => {
         if (it.input === "keypad") {
           const [a, b] = ints(t);
           expect(b + num(it.answer)).toBe(a);
+          // Read aloud and in the sentence, units are words; the short form only follows the answer box.
+          expect(it.say, "unit abbreviation in say").not.toMatch(/\d\s*(in|cm|pulg)\b/);
+          expect(t.split("▢")[0], "unit abbreviation in the sentence").not.toMatch(/\d\s*(in|cm|pulg)\b/);
+          expect(t.split("▢")[1].trim()).toMatch(locale === "es" ? /^(pulg\.|cm)$/ : /^(in\.|cm)$/);
         } else if (locale === "en") {
           const m = /^(\w+) measures a [\w ]+ in (inches|centimeters)\. (\w+) measures it in (inches|centimeters)\./.exec(t)!;
           expect(keyLabel(it)).toBe(m[2] === "centimeters" ? m[1] : m[3]);
