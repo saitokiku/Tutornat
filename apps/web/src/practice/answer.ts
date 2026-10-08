@@ -64,7 +64,8 @@ export function normTime(raw: string): string | null {
 }
 
 export function check(answer: Answer, response: string | number): Verdict {
-  if (answer.kind === "choice") return { correct: response === answer.index };
+  // A choice is answered by its index; the index written as text ("2", what answerText gives) counts too.
+  if (answer.kind === "choice") return { correct: (typeof response === "number" ? response : /^\s*\d+\s*$/.test(response) ? Number(response) : NaN) === answer.index };
   const text = String(response).trim();
   if (!text) return { correct: false };
 
