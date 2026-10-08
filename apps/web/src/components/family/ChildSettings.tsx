@@ -78,17 +78,21 @@ export function ChildSettings({ child }: { child: Profile }) {
           {SUBJECTS.map((x) => {
             const list = skillsFor(x);
             if (!list.length) return null;
+            // The label points at the select rather than wrapping it, so its name is the subject alone,
+            // not the subject plus every skill title in the list.
             return (
-              <label key={x} className="block space-y-1">
-                <span className="text-xs font-semibold text-muted">{t(`subject.${x}`)}</span>
-                <select className="k-input text-sm" value={startOf(child, x) ?? list[0].id} onChange={(e) => setStart(child.id, x, e.target.value)}>
+              <div key={x} className="space-y-1">
+                <label htmlFor={`start-${child.id}-${x}`} className="block text-xs font-semibold text-muted">
+                  {t(`subject.${x}`)}
+                </label>
+                <select id={`start-${child.id}-${x}`} className="k-input text-sm" value={startOf(child, x) ?? list[0].id} onChange={(e) => setStart(child.id, x, e.target.value)}>
                   {list.map((k) => (
                     <option key={k.id} value={k.id}>
                       {k.grade === "K" ? "K" : k.grade} · {k.title[child.locale]}
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
             );
           })}
         </div>
