@@ -25,13 +25,17 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("POST /api/ai/coach", () => {
-  it("screens every word the writer would read before any model call", async () => {
-    // A calendar title is the family's own words.
-    const res = await post({ comingUp: ["I want to die"] });
-    expect(res.status).toBe(422);
-    expect(await res.json()).toEqual({ error: "topic" });
-    expect(slot.writer!.doGenerateCalls).toHaveLength(0);
-    expect(await (await post({})).json()).toEqual({ note: "A calm week." });
+  it("screens every word the writer would read, and writes the note without the ones it stops", async () => {
+    // Calendar titles are the family's own words, or a school's: real ones the screen stops.
+    const school = ["Red Ribbon Week: drug-free pledge", "Health quiz: alcohol and tobacco", "Vaping prevention assembly", "History project: the atomic bomb", "Science: Bath bomb lab", "Sex ed permission slip due"];
+    for (const title of school) expect(screen(title, "en").kind).not.toBe("ok");
+    const res = await post({ comingUp: ["Math test on Friday", ...school.slice(0, 4), "I want to die"], helpOn: ["Equivalent fractions", "how to buy weed"] });
+    expect(await res.json()).toEqual({ note: "A calm week." });
+    const prompts = JSON.stringify(slot.writer!.doGenerateCalls.map((c) => c.prompt));
+    expect(prompts).toContain("Math test on Friday");
+    expect(prompts).toContain("Equivalent fractions");
+    for (const stopped of [...school.slice(0, 4), "I want to die", "weed"]) expect(prompts).not.toContain(stopped);
+    expect(slot.writer!.doGenerateCalls).toHaveLength(1);
   });
 
   it("never turns a note away for a skill's own name", () => {

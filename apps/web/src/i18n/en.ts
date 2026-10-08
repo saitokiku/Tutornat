@@ -690,6 +690,7 @@ const en = {
   "import.reading": "Reading…",
   "import.photoTooBig": "That photo is too big (over 6 MB). Try a smaller one.",
   "import.aiFailed": "The AI couldn't read that. Try again, or paste the text instead.",
+  "import.aiStopped": "Some words in this text are kept from the AI, even school ones like a health unit's, so it wasn't sent. “Find the dates” reads it here, without AI.",
   "import.aiGuesses": "What the AI had to guess — check these:",
 
   "resources.title": "Read, watch or try more",

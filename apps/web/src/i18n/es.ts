@@ -692,6 +692,7 @@ const es: Record<Key, string> = {
   "import.reading": "Leyendo…",
   "import.photoTooBig": "Esa foto es demasiado grande (más de 6 MB). Prueba con una más pequeña.",
   "import.aiFailed": "La IA no pudo leerlo. Inténtalo de nuevo o pega el texto.",
+  "import.aiStopped": "Algunas palabras de este texto no se envían a la IA, aunque sean de la escuela, como las de una unidad de salud, así que no se envió. “Buscar las fechas” lo lee aquí, sin IA.",
   "import.aiGuesses": "Lo que la IA tuvo que adivinar; revísalo:",
 
   "resources.title": "Lee, mira o prueba más",

@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { screen as screenText } from "@/lib/ai/safety";
 import { addClass, addEvent, classesOf, eventsOf } from "@/lib/school";
 import { read, resetMemory, update } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -8,7 +9,8 @@ import { icsDrafts, type FeedClass } from "@/lib/week";
 import { addDays, localDate } from "@/planner/dates";
 import { ImportPanel } from "./ImportPanel";
 
-vi.mock("@/lib/ai/client", () => ({ useAiMode: () => "demo" }));
+const ai = vi.hoisted(() => ({ mode: "demo" }));
+vi.mock("@/lib/ai/client", () => ({ useAiMode: () => ai.mode }));
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
 
@@ -22,6 +24,7 @@ const serve = (res: () => Response) => vi.stubGlobal("fetch", vi.fn(async () => 
 const md = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
 
 afterEach(() => {
+  ai.mode = "demo";
   vi.unstubAllGlobals();
   nav.push.mockReset();
   resetMemory();
@@ -97,6 +100,32 @@ describe("ImportPanel", () => {
     await user.click(screen.getByRole("button", { name: "Save 1" }));
     expect(eventsOf(read(), "p1")).toHaveLength(1);
     expect(onDone).toHaveBeenCalledWith("Saved: 0 new, 0 updated, 1 already here.", soon);
+  });
+
+  it("says plainly when the safety screen kept pasted school text from the AI, and the dates can still be found without it", async () => {
+    ai.mode = "anthropic";
+    const user = userEvent.setup();
+    // A real health unit: the server's screen stops it (422) before any model call.
+    const syllabus = `Health unit: alcohol and tobacco quiz - ${md(soon)}`;
+    expect(screenText(syllabus, "en").kind).toBe("offLimits");
+    serve(() => Response.json({ error: "topic" }, { status: 422 }));
+    render(<ImportPanel profile={ada} classes={[]} onDone={() => {}} />);
+    await user.type(screen.getByLabelText("School text to read"), syllabus);
+    await user.click(screen.getByRole("button", { name: "Read it with AI" }));
+    expect(await screen.findByText(/^Some words in this text are kept from the AI, even school ones like a health unit's, so it wasn't sent\./)).toBeInTheDocument();
+    expect(screen.queryByText(/Try again/)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Find the dates" }));
+    expect(screen.getByLabelText("Type: Health unit: alcohol and tobacco quiz")).toHaveValue("quiz");
+  });
+
+  it("a reading that breaks is still a failure worth trying again", async () => {
+    ai.mode = "anthropic";
+    const user = userEvent.setup();
+    serve(() => Response.json({ error: "model" }, { status: 502 }));
+    render(<ImportPanel profile={ada} classes={[]} onDone={() => {}} />);
+    await user.type(screen.getByLabelText("School text to read"), `Spelling quiz ${md(soon)}`);
+    await user.click(screen.getByRole("button", { name: "Read it with AI" }));
+    expect(await screen.findByText("The AI couldn't read that. Try again, or paste the text instead.")).toBeInTheDocument();
   });
 
   it("brings in a class calendar link by keyboard and keeps the link on a new class", async () => {

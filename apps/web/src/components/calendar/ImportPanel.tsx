@@ -137,13 +137,14 @@ export function ImportPanel({
     if (!got.ok) return setError(t(FEED_ERROR[got.error]));
     fromIcs(got.text);
   };
-  // AI reading of pasted text: the same review step; every guess the model made is listed.
+  // AI reading of pasted text: the same review step; every guess the model made is listed. Text the
+  // safety screen stops (422) never reaches the model, and retrying can't change that, so it says so.
   const readWithAi = async () => {
     setError(null);
     setBusy(true);
     try {
       const res = await fetch("/api/ai/extract", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "syllabus", today, locale: profile.locale, grade: profile.grade, text }) });
-      if (!res.ok) return setError(t("import.aiFailed"));
+      if (!res.ok) return setError(t(res.status === 422 ? "import.aiStopped" : "import.aiFailed"));
       const out = (await res.json()) as { events: { title: string; date: string; kind: Draft["kind"] }[]; skillIds: string[]; notes: string[] };
       const cls = classId || undefined;
       const list = out.events.map((e, i) => ({
