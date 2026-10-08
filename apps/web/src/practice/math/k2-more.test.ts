@@ -7,7 +7,7 @@ import { answerText, check, misconceptionOf } from "../answer";
 import { evaluate, parse } from "../expr";
 import { makeItem } from "../skills";
 import type { Answer, Item, Pad } from "../types";
-import { EVENTS, MATH_K_2_MORE, NAMES, ROW_STORIES, SHAPES, STORY_10, STORY_100, STORY_THREE, type Pair, type ShapeEntry, type Story } from "./k2-more";
+import { EVENTS, MATH_K_2_MORE, NAMES, ROW_STORIES, SHAPES, STORY_10, STORY_100, STORY_THREE, WHOLES, type Pair, type ShapeEntry, type Story } from "./k2-more";
 
 // K–2 to 1.0 depth. Every key is re-derived here by a different route than the generator used:
 // counting the counters in the picture one by one, putting the answer back into the story
@@ -822,6 +822,7 @@ describe("equal shares on the fraction bar", () => {
   it("exactly one bar the pad can make is right, and it is the cut and shading the words ask for, in both languages", () => {
     for (const [id, level] of BARS)
       for (const [en, es] of both(id, level)) {
+        if (en.input === "choices") continue; // a question about a drawn cut, checked below
         if (en.pad?.kind !== "fraction-bar") throw new Error(`${id} L${level} needs the bar pad`);
         const [k, d] = barAsked(text(en), "en");
         expect(barAsked(text(es), "es"), `${id} L${level} Spanish asks the same`).toEqual([k, d]);
@@ -835,6 +836,7 @@ describe("equal shares on the fraction bar", () => {
   it("an uncut bar, or the same amount on another cut, is wrong and named", () => {
     for (const [id, level] of BARS)
       for (const it of items(id, level)) {
+        if (it.input === "choices") continue;
         if (it.pad?.kind !== "fraction-bar") throw new Error("pad");
         const [k, d] = barAsked(text(it), "en");
         const states = barStates(it.pad).map(([s, p]) => barText(s, p));
@@ -852,13 +854,50 @@ describe("equal shares on the fraction bar", () => {
       }
   });
 
-  it("the whole the bar stands for varies, so a level is not a handful of items", () => {
+  it("with the whole's name and picture taken away, every level still has 12 different tasks", () => {
+    // A new noun is not a new task: "Cut the waffle into thirds" and "Cut the log into thirds" are one.
+    const nouns = WHOLES.flatMap((w) => [w.en, w.es, ...w.pl]).sort((a, b) => b.length - a.length);
+    const task = (it: Item) => {
+      let t = text(it);
+      for (const n of nouns) t = t.split(n).join("X");
+      t = t.replace(/\b(?:toda la|todo el|de la|del|la|el|una|un) X\b/gi, "X").replace(/\b(?:dividida|dividido|cortada|cortado)\b/g, "cut");
+      return JSON.stringify([t, it.visual, it.pad, it.input]);
+    };
     for (const id of ["m.shares.halves", "m.shares.thirds"])
       for (const level of levelsOf(id))
         for (const locale of LOCALES) {
-          const seen = new Set(items(id, level, locale).map((it) => JSON.stringify([it.prompt, it.visual, it.picture])));
+          const seen = new Set(items(id, level, locale).map(task));
           expect(seen.size, `${id} L${level} ${locale}`).toBeGreaterThanOrEqual(12);
         }
+  });
+
+  it("a question about a drawn cut: yes exactly when the parts are equal and there are as many as the share named", () => {
+    const kinds = new Set<string>();
+    for (const [id, level] of [["m.shares.halves", 1], ["m.shares.halves", 2], ["m.shares.halves", 3], ["m.shares.thirds", 1], ["m.shares.thirds", 2]] as const)
+      for (const [en, es] of both(id, level)) {
+        if (en.input !== "choices" || !/^Is (the|one) /.test(text(en))) continue;
+        const v = en.visual!;
+        if (v.kind !== "fraction") throw new Error("expected a bar");
+        // Equal means every drawn width is the same, measured from the picture's own numbers.
+        const widths = v.sizes ?? Array<number>(v.parts).fill(1);
+        expect(widths.length).toBe(v.parts);
+        const equal = widths.every((x) => x === widths[0]);
+        // "Is the waffle cut into thirds?", "…into equal parts?", or "Is one third of the waffle shaded?"
+        const shaded = /^Is one (\w+) of the .+ shaded\?$/.exec(text(en));
+        const named = shaded ? shaded[1] : /cut into (equal parts|\w+)\?$/.exec(text(en))![1].replace("equal parts", "equal");
+        const wanted = named === "equal" ? null : SHARE_EN[named];
+        if (named !== "equal") expect(wanted, named).toBeDefined();
+        expect(v.shaded).toBe(shaded ? 1 : 0);
+        const yes = equal && (wanted === null || wanted === v.parts);
+        expect(keyLabel(en), text(en)).toBe(yes ? "Yes" : "No");
+        expect(keyLabel(es)).toBe(yes ? "Sí" : "No");
+        const esShare = shaded ? /^¿Está coloread[ao] (?:una|un) (\w+) (?:de la|del) /.exec(text(es))?.[1] : /en (\w+)\?$/.exec(text(es))?.[1];
+        if (named !== "equal") expect(SHARE_ES[esShare!], text(es)).toBe(wanted);
+        // The description says what is drawn: how many parts, and whether they match in size.
+        expect(en.alt).toMatch(new RegExp(`${v.parts} parts, ${equal ? "all the same size" : "of different sizes"}`));
+        kinds.add(`${named === "equal" ? "equal" : shaded ? "shaded" : "share"}-${yes ? "yes" : equal ? "count" : "size"}`);
+      }
+    expect([...kinds].sort()).toEqual(["equal-size", "equal-yes", "shaded-count", "shaded-size", "shaded-yes", "share-count", "share-size", "share-yes"]);
   });
 });
 
@@ -867,6 +906,7 @@ describe("m.shares.halves", () => {
   it("level 3: names the shaded share, compares a half with a fourth, counts the shares in a whole", () => {
     for (const it of items("m.shares.halves", 3)) {
       const t = text(it);
+      if (/^Is one /.test(t)) continue; // checked with the other questions about a drawn cut
       let m: RegExpExecArray | null;
       if ((m = /^What part of the (.+) is shaded\?$/.exec(t))) {
         const v = it.visual!;
@@ -1323,12 +1363,14 @@ describe("m.shares.thirds", () => {
   it("the share named in words matches the parts; more parts make smaller shares", () => {
     const shaded = new Set<string>();
     for (const it of items("m.shares.thirds", 1)) {
+      if (it.input === "choices") continue;
       const [k, d] = barAsked(text(it), "en");
       expect(answerText(it.answer)).toBe(`${k}/${d}`);
       shaded.add(k === 1 ? "one" : k === d ? "all" : "some");
     }
     expect([...shaded].sort()).toEqual(["all", "one", "some"]);
     for (const it of items("m.shares.thirds", 2)) {
+      if (/^Is the /.test(text(it))) continue;
       const v = it.visual!;
       if (v.kind !== "fraction") throw new Error("expected a bar");
       expect(v.shaded).toBe(1);
