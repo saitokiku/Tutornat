@@ -8,7 +8,8 @@ import { GET as consentGet, POST as consentPost } from "@/app/api/consent/route"
 import { POST as syncRoute } from "@/app/api/sync/route";
 import { answerText } from "@/practice/answer";
 import { makeItem } from "@/practice/skills";
-import { grantConsent, learnerHeaders, loadConsent, registerConsentFlow, revokeConsent, signIn, signOut, signOutNote, signUp, useConsent } from "./auth";
+import { forgetHeldHelp, grantConsent, learnerHeaders, loadConsent, registerConsentFlow, revokeConsent, signIn, signOut, signOutNote, signUp, useConsent } from "./auth";
+import { RULES } from "@/learning/engine";
 import { attemptIdentity } from "@/learning/evidence";
 import { lessonAnswerId, record, sceneAttemptSource } from "./activity";
 import { addFromCatalogue, saveCourse } from "./courses";
@@ -301,25 +302,109 @@ describe("sync between devices", () => {
     expect(read().activity.filter((e) => e.type === "quiz_answered")).toEqual([expect.objectContaining({ id: answer.id, correct: true, assisted: true, choice: 0 })]);
   });
 
-  it("tutor help on a problem reaches the account; a hint on a problem left unanswered keeps the family here at sign-out", async () => {
+  it("tutor help on a problem reaches the account, and the tutor on the same problem on another device is taken", async () => {
     const email = await newFamily("laptop");
     const leo = learner();
     const setId = startSet(read(), { profile: leo, kind: "pick", skillIds: ["m.add.10"], now: Date.now() })!;
     const set = read().sets.find((x) => x.id === setId)!;
     const item = makeItem(set.slots[0].skillId, 1, set.slots[0].seed, "en");
     recordTutorHelp(leo.id, item.skillId, item.seed, 1, practiceSource(set, 0, 1));
-    recordHelp(practiceSource(set, 1, 1), { kind: "hint", key: "1" });
     await syncNow();
     on("phone");
     await signIn(email, PASS);
     // The phone knows about the tutor's help: the check clock agrees on both devices.
-    expect(read().attempts).toEqual([expect.objectContaining({ mode: "tutor", assisted: true, skillId: item.skillId })]);
-    on("laptop");
+    expect(read().attempts).toEqual([expect.objectContaining({ id: `${attemptIdentity(practiceSource(set, 0, 1))}:tutor`, mode: "tutor", assisted: true, skillId: item.skillId })]);
+    // The row came from the account without its question id; the tutor opening there again is still taken.
+    tick();
+    const there = read().sets.find((x) => x.id === setId)!;
+    recordTutorHelp(leo.id, item.skillId, item.seed, 1, practiceSource(there, 0, 1));
+    expect(read().helpExposures).toEqual([expect.objectContaining({ kind: "tutor", attemptId: attemptIdentity(practiceSource(set, 0, 1)) })]);
+    expect(read().attempts).toHaveLength(1);
+  });
+
+  it("help shown only on this device keeps the family's copy here while it still decides a check, says so, and lets go after", async () => {
+    const email = await newFamily("laptop");
+    const leo = learner();
+    const setId = startSet(read(), { profile: leo, kind: "pick", skillIds: ["m.add.10"], now: Date.now() })!;
+    const set = read().sets.find((x) => x.id === setId)!;
+    const item = makeItem(set.slots[0].skillId, 1, set.slots[0].seed, "en");
+    // The tutor's help goes up with its row; a hint on a problem left unanswered stays here (T12).
+    recordTutorHelp(leo.id, item.skillId, item.seed, 1, practiceSource(set, 0, 1));
+    const hintAt = Date.now();
+    recordHelp(practiceSource(set, 1, 1), { kind: "hint", key: "1" });
     vi.stubGlobal("location", { assign: vi.fn() });
-    // The hint lives only on the laptop until help syncs (T12): signing out keeps the family here.
     await signOut();
-    expect(signOutNote()).toMatchObject({ reason: "kept", kept: 1 });
+    const held = { reason: "help", problems: 1, until: hintAt + RULES.helpQuietMs, account: expect.any(String), ended: true };
+    expect(signOutNote()).toEqual(held);
     expect(read().profiles.map((p) => p.id)).toEqual([leo.id]);
+
+    // Signing in and out again a day later: the note says the same, and it is still true.
+    tick(24 * 3600_000);
+    await signIn(email, PASS);
+    expect(signOutNote()).toBeNull();
+    await signOut();
+    expect(signOutNote()).toEqual(held);
+    expect(read().profiles.map((p) => p.id)).toEqual([leo.id]);
+
+    // Once that help no longer decides when a check opens, a sign-out takes the copy off the device.
+    tick(RULES.helpQuietMs);
+    await signIn(email, PASS);
+    await signOut();
+    expect(signOutNote()).toBeNull();
+    expect(read().profiles).toEqual([]);
+    expect(read().helpExposures).toEqual([]);
+  });
+
+  it("the grown-up can take help shown only here off the device at once", async () => {
+    const email = await newFamily("laptop");
+    const leo = learner();
+    const setId = startSet(read(), { profile: leo, kind: "pick", skillIds: ["m.add.10"], now: Date.now() })!;
+    recordHelp(practiceSource(read().sets.find((x) => x.id === setId)!, 0, 1), { kind: "hint", key: "1" });
+    vi.stubGlobal("location", { assign: vi.fn() });
+    await signOut();
+    expect(signOutNote()).toMatchObject({ reason: "help", problems: 1 });
+    forgetHeldHelp();
+    expect(signOutNote()).toBeNull();
+    expect(read().profiles).toEqual([]);
+    expect(read().accounts).toEqual([]);
+    expect(read().helpExposures).toEqual([]);
+    expect(JSON.parse(localStorage.getItem("kaizenedu.sync.v1")!).accounts).toEqual({});
+    // The family is on the account; the hint never was.
+    await signIn(email, PASS);
+    expect(read().profiles.map((p) => p.nickname)).toEqual(["Leo"]);
+    expect(read().helpExposures).toEqual([]);
+  });
+
+  it("an answer only the journal kept (the device was full, offline) goes up after a reload, and keeps sign-out from dropping it", async () => {
+    const email = await newFamily("laptop");
+    const leo = learner();
+    const setId = startSet(read(), { profile: leo, kind: "pick", skillIds: ["m.add.10"], now: Date.now() })!;
+    const set = read().sets.find((x) => x.id === setId)!;
+    await syncNow();
+    const laptop = current!;
+    laptop.online = false;
+    const save = Storage.prototype.setItem;
+    const full = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+      if (key === STORE_KEY) throw new DOMException("Full", "QuotaExceededError");
+      save.call(this, key, value);
+    });
+    tick();
+    recordAnswer(setId, { slot: 0, level: 1, correct: true, assisted: false, seconds: 5, response: answerText(makeItem(set.slots[0].skillId, 1, set.slots[0].seed, "en").answer) });
+    full.mockRestore();
+    // The tab closes and opens again: the answer is back from the journal, and still waits to go up.
+    on("laptop");
+    expect(read().attempts.map((a) => a.id)).toEqual([`${setId}:0`]);
+    vi.stubGlobal("location", { assign: vi.fn() });
+    await signOut();
+    expect(signOutNote()).toEqual({ reason: "kept", kept: 1, ended: false });
+    expect(read().attempts).toHaveLength(1);
+
+    laptop.online = true;
+    await signIn(email, PASS);
+    expect(renderHook(() => useSyncState()).result.current).toMatchObject({ pending: 0, refused: 0 });
+    on("phone");
+    await signIn(email, PASS);
+    expect(read().attempts).toEqual([expect.objectContaining({ id: `${setId}:0`, correct: true })]);
   });
 
   it("signed out elsewhere: this device stops, keeps its unsent work, and sends it after signing in", async () => {

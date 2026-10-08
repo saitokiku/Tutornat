@@ -73,8 +73,14 @@ export const emptyState = (): StoreState => ({
 const SERVER_SNAPSHOT = emptyState();
 let state: StoreState | null = null;
 let health: StoreHealth = "ok";
-/** Evidence journal keys the last load replayed: removed by the next document save that succeeds. */
+/**
+ * Journal keys the next document save that succeeds makes redundant (that document holds their rows,
+ * or dropped them on purpose): the keys the last load replayed, and keys written while the document
+ * couldn't be saved.
+ */
 let leftover: string[] = [];
+/** Rows the journal put back on load, by list and id, until sync takes them (lib/sync.ts captureLocal). */
+const replayed = new Map<string, EvidenceRow>();
 const listeners = new Set<() => void>();
 
 function load(): StoreState {
@@ -90,7 +96,9 @@ function load(): StoreState {
     const parsed = JSON.parse(raw) as StoreState;
     if (!validShape(parsed)) throw new Error("shape");
     const loaded = { ...emptyState(), ...parsed };
-    leftover = replayJournal(loaded);
+    const journal = replayJournal(loaded);
+    leftover = journal.keys;
+    for (const r of journal.rows) replayed.set(`${r.list}\u0000${r.record.id}`, r);
     return loaded;
   } catch {
     health = "reset";
@@ -137,8 +145,8 @@ const UNCHANGED = Symbol("unchanged");
  * Applies `change` to what is saved now and saves the document. A change returning UNCHANGED found
  * nothing to do: no save, no notice. With a journal, the new evidence rows are written to their own
  * key first; once the document holding them is saved the key is removed, together with every
- * leftover key this load replayed (the document now holds those rows, or dropped them on purpose).
- * If the document can't be saved the key stays, and the next load replays it.
+ * leftover key (the document now holds those rows, or dropped them on purpose). If the document can't
+ * be saved the key stays: the next load replays it, or the next save that succeeds removes it.
  */
 function write(change: (draft: StoreState) => unknown, remote: boolean, journal?: Journal): StoreState {
   // Start from what is saved now, not this tab's cached copy, so two open tabs never undo each other.
@@ -168,9 +176,13 @@ function write(change: (draft: StoreState) => unknown, remote: boolean, journal?
     leftover = [];
   } catch {
     health = "memory";
+    // The key holds what the document couldn't. The next save that succeeds holds it instead (or
+    // dropped it on purpose: a removed course), so that save removes the key.
+    if (logged) leftover.push(journal!.key);
   }
-  // Per-record merges with other devices happen in sync; this only says what this write changed.
-  if (!remote) captureLocal(prev, draft);
+  // Per-record merges with other devices happen in sync; this says what this write changed (and, on
+  // any write, hands sync the evidence a load put back from the journal).
+  captureLocal(prev, draft, remote);
   listeners.forEach((fn) => fn());
   return draft;
 }
@@ -200,6 +212,7 @@ export function clearAll() {
     for (const key of journalKeys()) localStorage.removeItem(key);
   } catch {}
   leftover = [];
+  replayed.clear();
   state = emptyState();
   listeners.forEach((fn) => fn());
 }
@@ -209,6 +222,7 @@ export function resetMemory() {
   state = null;
   health = "ok";
   leftover = [];
+  replayed.clear();
 }
 
 /** Reads the saved document again (another tab changed what a screen holds). Kept in memory when storage is off. */
@@ -247,10 +261,14 @@ function journalKeys() {
   return keys;
 }
 
-/** Puts journalled rows the document doesn't have into it (rows never change, so the document's copy wins). */
-function replayJournal(s: StoreState): string[] {
+/**
+ * Puts journalled rows the document doesn't have into it (rows never change, so the document's copy
+ * wins). Returns the journal's keys, and the rows it put in: no write has reported those to sync.
+ */
+function replayJournal(s: StoreState): { keys: string[]; rows: EvidenceRow[] } {
   const keys = journalKeys();
-  if (!keys.length) return keys;
+  const rows: EvidenceRow[] = [];
+  if (!keys.length) return { keys, rows };
   const learners = new Set(s.profiles.map((p) => p.id));
   const held = new Map<EvidenceList, Set<string>>();
   for (const key of keys) {
@@ -263,10 +281,25 @@ function replayJournal(s: StoreState): string[] {
         if (ids.has(record.id)) continue;
         ids.add(record.id);
         (s[list] as EvidenceRecord[]).push(record);
+        rows.push({ list, record } as EvidenceRow);
       }
     } catch { /* A malformed journal entry never resets the family's document. */ }
   }
-  return keys;
+  return { keys, rows };
+}
+
+/**
+ * Takes the rows a load put back from the journal that `mine` picks (sync takes the signed-in
+ * account's), so they go up like a new write. The rest wait for their account.
+ */
+export function takeReplayed(mine: (row: EvidenceRow) => boolean): EvidenceRow[] {
+  const out: EvidenceRow[] = [];
+  for (const [key, row] of replayed)
+    if (mine(row)) {
+      out.push(row);
+      replayed.delete(key);
+    }
+  return out;
 }
 
 /** Why evidence was not taken: this device can't keep a proof, or the screen's copy is out of date. */
@@ -277,12 +310,17 @@ export class EvidenceError extends Error {
   }
 }
 
-/** Whether `s` already holds this row; an id held for another learner or question is out of date. */
+/**
+ * Whether `s` already holds this row; an id held for another learner or question is out of date. A row
+ * that came from the account has no question id (the server keeps fixed attempt columns), and its own
+ * id already names the question (`${setId}:${slot}`, `${attemptId}:tutor`), so it holds the row.
+ */
 function holds(s: StoreState, { list, record }: EvidenceRow) {
   const have = (s[list] as EvidenceRecord[]).find((r) => r.id === record.id);
   if (!have) return false;
   const attempt = (r: EvidenceRecord) => ("attemptId" in r ? r.attemptId : undefined);
-  if (have.profileId !== record.profileId || attempt(have) !== attempt(record)) throw new EvidenceError("stale");
+  const [mine, theirs] = [attempt(have), attempt(record)];
+  if (have.profileId !== record.profileId || (mine !== undefined && theirs !== undefined && mine !== theirs)) throw new EvidenceError("stale");
   return true;
 }
 

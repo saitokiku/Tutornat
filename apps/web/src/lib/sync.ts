@@ -18,8 +18,9 @@ import {
   type SyncRequest,
   type SyncResponse,
 } from "./server/db/wire";
+import { RULES } from "@/learning/engine";
 import { getSkill } from "@/practice/skills";
-import { applyRemote, read, storeHealth, update, type StoreState } from "./store";
+import { applyRemote, read, storeHealth, takeReplayed, update, type StoreState } from "./store";
 import type { Account } from "./types";
 
 // Server mode in the browser. The store stays the working copy every screen reads; this keeps it in
@@ -251,10 +252,24 @@ function enqueue(accountId: string, changes: Change[], account: boolean, at = Da
   schedule();
 }
 
-/** Called by the store after every local write (store.ts). */
-export function captureLocal(prev: StoreState, next: StoreState) {
+/**
+ * Evidence a load put back from the store's journal: rows a save never got into the document (the
+ * device was full), so no write reported them. They go into the outbox like a new write.
+ */
+function captureReplayed(accountId: string, s: StoreState) {
+  const mine = new Set(s.profiles.filter((p) => p.accountId === accountId).map((p) => p.id));
+  const changes: Change[] = [];
+  for (const { list, record } of takeReplayed((r) => mine.has(r.record.profileId)))
+    if ((SYNC_LISTS as readonly string[]).includes(list)) changes.push([list as SyncList, idOf(list as SyncList, record), false]);
+  enqueue(accountId, changes, false);
+}
+
+/** Called by the store after every write (store.ts). What came from the server is not queued again. */
+export function captureLocal(prev: StoreState, next: StoreState, remote = false) {
   const accountId = activeAccount();
   if (!accountId) return;
+  captureReplayed(accountId, next);
+  if (remote) return;
   const { changes, account } = diff(prev, next, accountId);
   enqueue(accountId, changes, account);
   // Someone else picked up the device: the server hears at once, for the consent gate on AI and voice.
@@ -476,7 +491,9 @@ async function rounds(accountId: string) {
   const gone = () => activeAccount() !== accountId;
   for (let round = 0; round < 50; round++) {
     if (gone()) return;
-    const { body, sent, rest, tooBig } = buildPush(read(), metaFor(loadMeta(), accountId), accountId);
+    const s = read();
+    captureReplayed(accountId, s);
+    const { body, sent, rest, tooBig } = buildPush(s, metaFor(loadMeta(), accountId), accountId);
     if (tooBig.length) setAside(accountId, tooBig);
     // "Saving" only while something is going up; pulling alone changes nothing on screen.
     if (sent.size) setPhase("syncing");
@@ -635,8 +652,15 @@ const withTimeout = (p: Promise<void>, ms: number) =>
     void p.finally(() => (clearTimeout(t), resolve()));
   });
 
-/** What a sign-out left behind, for the sign-in page to say. */
-export type SignOutNote = { reason: "elsewhere" } | { reason: "kept"; kept: number; ended: boolean } | { reason: "offline"; ended: false };
+/**
+ * What a sign-out left behind, for the sign-in page to say. "help": only help shown on this device
+ * keeps the family's copy here (on `problems` problems); it stops mattering at `until`.
+ */
+export type SignOutNote =
+  | { reason: "elsewhere" }
+  | { reason: "kept"; kept: number; ended: boolean }
+  | { reason: "help"; problems: number; until: number; account: string; ended: boolean }
+  | { reason: "offline"; ended: false };
 
 async function endServerSession(): Promise<boolean> {
   try {
@@ -652,6 +676,8 @@ async function endServerSession(): Promise<boolean> {
  * Signing out of a server account: send what's waiting, end the session, then take the family's
  * copy off this device (the server has it). Anything the server hasn't got (unsent, or refused)
  * keeps the copy here, so nothing is lost; it goes up the next time this account signs in here.
+ * Recent help shown only here keeps it too, for as long as that help still matters (helpOnlyHere),
+ * and the grown-up can let it go (forgetHeldHelp).
  * A sign-out that couldn't reach the server is sent again when the device is back online.
  * Returns what the sign-in page should say, or null when everything is done.
  */
@@ -666,29 +692,71 @@ export async function signedOut(): Promise<SignOutNote | null> {
   setPhase("idle");
   const ended = await endServerSession();
   if (!ended) setLocal(SIGNOUT_KEY, "1");
+  captureReplayed(accountId, read());
   const meta = loadMeta();
   const m = metaFor(meta, accountId);
-  const kept = pendingCount(m) + refusedCount(m) + unsentHelp(read(), accountId);
-  if (kept === 0) {
+  const kept = pendingCount(m) + refusedCount(m);
+  const help = kept ? null : helpOnlyHere(read(), accountId, Date.now());
+  if (!kept && !help) {
     delete meta.accounts[accountId];
     saveMeta(meta);
     forgetAccount(accountId);
   }
-  const note: SignOutNote | null = kept ? { reason: "kept", kept, ended } : ended ? null : { reason: "offline", ended: false };
+  const note: SignOutNote | null = kept
+    ? { reason: "kept", kept, ended }
+    : help
+      ? { reason: "help", ...help, account: accountId, ended }
+      : ended
+        ? null
+        : { reason: "offline", ended: false };
   setLocal(NOTE_KEY, note ? JSON.stringify(note) : null);
   return note;
 }
 
 /**
- * Help shown on this device that no synced answer carries yet: a hint on a problem left unanswered.
- * Help lists stay on the device until they sync (T12), and the mastery law reads them (the check
- * clock), so a sign-out keeps the family's copy here while any is left. Lesson questions and AI
- * topics have no skill the law reads, so their help doesn't hold a sign-out.
+ * Help shown on this device that no synced row carries yet (a hint on a problem left unanswered, or
+ * answered on the learner's own on another device), from within the mastery law's help wait: help
+ * lists stay on the device until they sync (T12), and only help from the last RULES.helpQuietMs can
+ * still change when a check opens. A problem's helped answer, or its tutor row, carries its help.
+ * Lesson questions and AI topics have no skill the law reads, so their help holds nothing. Returns
+ * how many problems, and when the last of that help stops mattering; null when there is none.
  */
-function unsentHelp(s: StoreState, accountId: string) {
+function helpOnlyHere(s: StoreState, accountId: string, now: number): { problems: number; until: number } | null {
   const mine = new Set(s.profiles.filter((p) => p.accountId === accountId).map((p) => p.id));
-  const carried = new Set(s.attempts.map((a) => a.attemptId));
-  return s.helpExposures.filter((h) => mine.has(h.profileId) && !carried.has(h.attemptId) && getSkill(h.skillId)).length;
+  const contexts = new Map(s.attemptContexts.map((c) => [c.id, c]));
+  // Rows the account has that say a problem was helped: by row id (a row pulled from the account has
+  // no question id; its id names the question) and by question id.
+  const helped = new Set<string>();
+  for (const a of s.attempts) if (a.assisted) helped.add(a.id).add(a.attemptId ?? a.id);
+  const carried = (attemptId: string) => {
+    const c = contexts.get(attemptId);
+    return helped.has(attemptId) || helped.has(`${attemptId}:tutor`) || (c?.kind === "set-slot" && helped.has(`${c.setId}:${c.slotId}`));
+  };
+  const problems = new Set<string>();
+  let until = 0;
+  for (const h of s.helpExposures) {
+    const ends = (h.receivedAt ?? h.capturedAt) + RULES.helpQuietMs;
+    if (!mine.has(h.profileId) || !getSkill(h.skillId) || ends <= now || carried(h.attemptId)) continue;
+    problems.add(h.attemptId);
+    until = Math.max(until, ends);
+  }
+  return problems.size ? { problems: problems.size, until } : null;
+}
+
+/**
+ * The grown-up takes the family's copy off this device after a sign-out kept it only for help shown
+ * here. Nothing else waits for the account; that help never reached it, so it goes with the copy.
+ */
+export function forgetHeldHelp() {
+  const note = signOutNote();
+  if (note?.reason !== "help" || activeAccount()) return;
+  const meta = loadMeta();
+  const m = meta.accounts[note.account];
+  if (m && pendingCount(m) + refusedCount(m)) return;
+  delete meta.accounts[note.account];
+  saveMeta(meta);
+  forgetAccount(note.account);
+  setLocal(NOTE_KEY, null);
 }
 
 /** A sign-out that didn't reach the server: tried again on the next load and when back online. */
@@ -759,6 +827,7 @@ export async function resume() {
     // device hadn't sent stays in its outbox and goes up then.
     const a = s.accounts.find((x) => x.id === s.session.accountId);
     if (a && !a.passwordHash) {
+      captureReplayed(a.id, s);
       setLocal(NOTE_KEY, JSON.stringify({ reason: "elsewhere" } satisfies SignOutNote));
       applyRemote((d) => void (d.session = { accountId: null, profileId: null }));
     }

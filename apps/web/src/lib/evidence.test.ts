@@ -93,6 +93,18 @@ describe("the evidence journal", () => {
     expect(read().activity).toEqual([]);
   });
 
+  it("a remote deletion arriving in the same tab, once space is freed, is not resurrected either", () => {
+    const full = documentFull();
+    appendEvidence([{ list: "activity", record: { id: "activity-1", profileId: "p", courseId: "c", lessonId: "l", type: "quiz_answered", at: NOW, correct: true } }]);
+    full.mockRestore();
+    applyRemote((s) => {
+      s.activity = [];
+    });
+    expect(journalKeys()).toEqual([]);
+    resetMemory();
+    expect(read().activity).toEqual([]);
+  });
+
   it("another tab's evidence is kept when this tab writes next", () => {
     read();
     const other = JSON.parse(localStorage.getItem(STORE_KEY)!);
@@ -210,6 +222,24 @@ describe("durable question evidence", () => {
     expect(read().helpExposures).toEqual([]);
     expect(read().attemptContexts).toEqual([]);
     expect(journalKeys()).toEqual([]);
+  });
+
+  it("a course removed once space is freed, in the same tab with no reload, stays removed with its journal", () => {
+    const lesson = sceneAttemptSource("p", "course-1", "l1", "s2", "s2:q1");
+    update((s) => void s.courses.push({ id: "course-1", profileId: "p", title: "Sun", goal: "", subject: "science", grade: "3", locale: "en", lessons: [], createdAt: NOW, updatedAt: NOW } as never));
+    const full = documentFull();
+    recordHelp(lesson, { kind: "hint" });
+    appendEvidence([{ list: "activity", record: { id: `${attemptIdentity(lesson)}:right`, profileId: "p", courseId: "course-1", lessonId: "l1", sceneId: "s2:q1", type: "quiz_answered", correct: true, assisted: true, at: NOW } }]);
+    expect(journalKeys()).toHaveLength(2);
+    // The grown-up frees space, as the notice says, and deletes the course.
+    full.mockRestore();
+    removeCourse("course-1");
+    expect(journalKeys()).toEqual([]);
+    resetMemory();
+    expect(read().courses).toEqual([]);
+    expect(read().activity).toEqual([]);
+    expect(read().helpExposures).toEqual([]);
+    expect(read().attemptContexts).toEqual([]);
   });
 });
 

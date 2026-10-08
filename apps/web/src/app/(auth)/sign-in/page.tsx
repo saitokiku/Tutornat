@@ -6,9 +6,11 @@ import { AuthCard, TextLink } from "@/components/auth/AuthFrame";
 import { Guard } from "@/components/gate";
 import { useTitle } from "@/components/LangSync";
 import { Button, Field, Notice } from "@/components/ui";
-import { useT } from "@/i18n";
+import { useLocale, useT } from "@/i18n";
 import type { Key } from "@/i18n/en";
-import { signIn, signOutNote } from "@/lib/auth";
+import { RULES } from "@/learning/engine";
+import { forgetHeldHelp, signIn, signOutNote } from "@/lib/auth";
+import { dayLabel, timeLabel } from "@/lib/format";
 
 /** Only follow a ?next= that stays on this site (blocks //evil and /\\evil tricks). */
 function sameSite(next: string | null) {
@@ -23,6 +25,7 @@ function sameSite(next: string | null) {
 
 export default function SignInPage() {
   const t = useT();
+  const locale = useLocale();
   useTitle(t("auth.signIn"));
   const router = useRouter();
   const next = useSearchParams().get("next");
@@ -31,7 +34,14 @@ export default function SignInPage() {
   const [error, setError] = useState<{ key: Key; minutes?: number } | null>(null);
   const [busy, setBusy] = useState(false);
   // What the last sign-out on this device left behind (it clears once someone signs in).
-  const [note] = useState(signOutNote);
+  const [note, setNote] = useState(signOutNote);
+  const [removed, setRemoved] = useState(false);
+
+  function removeHelp() {
+    forgetHeldHelp();
+    setNote(signOutNote());
+    setRemoved(true);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,13 +56,28 @@ export default function SignInPage() {
     <Guard need="guest">
       <AuthCard title={t("auth.signInTitle")} footer={<>{t("auth.noAccount")} <TextLink href="/sign-up">{t("auth.signUp")}</TextLink></>}>
         <form onSubmit={submit} className="space-y-5" noValidate>
+          {removed && !note && !error && <Notice>{t("acct.signedOut.helpRemoved")}</Notice>}
           {note && !error && (
-            <Notice tone="warn">
+            <Notice
+              tone="warn"
+              action={
+                note.reason === "help" && (
+                  <Button variant="secondary" size="sm" onClick={removeHelp}>
+                    {t("acct.signedOut.helpRemove")}
+                  </Button>
+                )
+              }
+            >
               {note.reason === "elsewhere" ? (
                 t("acct.signedOut.elsewhere")
               ) : (
                 <>
                   {note.reason === "kept" && <span className="block">{t("acct.signedOut.kept", { n: note.kept })}</span>}
+                  {note.reason === "help" && (
+                    <span className="block">
+                      {t("acct.signedOut.help", { n: note.problems, days: RULES.helpQuietMs / 86_400_000, when: `${dayLabel(note.until, locale)}, ${timeLabel(note.until, locale)}` })}
+                    </span>
+                  )}
                   {!note.ended && <span className="block">{t("acct.signedOut.offline")}</span>}
                 </>
               )}

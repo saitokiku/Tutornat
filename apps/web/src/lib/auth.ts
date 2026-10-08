@@ -5,6 +5,7 @@ import type { PublicAccount } from "./server/db/wire";
 import { newId, read, update, useStore } from "./store";
 import {
   activeAccount,
+  forgetHeldHelp,
   knownStatus,
   receipts,
   serverStatus,
@@ -193,8 +194,11 @@ export async function resetPassword(token: string, password: string): Promise<Re
   return { ok: true };
 }
 
-/** What the last sign-out on this device left behind (unsent work, an unfinished sign-out, or signed out elsewhere). */
-export { signOutNote };
+/**
+ * What the last sign-out on this device left behind (unsent work, help shown only here, an unfinished
+ * sign-out, or signed out elsewhere), and the grown-up's way to let help shown only here go.
+ */
+export { forgetHeldHelp, signOutNote };
 export type { SignOutNote };
 
 // ---- consent for the AI tutor and voice (parent-first; see server/db/policy.ts) ------------------

@@ -22,6 +22,11 @@ Finishing codex 02b84e3 (help and first answers kept across a reload). The maste
 - **Tutor drawer openings, from the review's fix list:** grades 3–9 open with "Which part is
   tricky?"; K–2 open with the first vetted hint, saved as help before it shows (live-tutor spec
   §2.5). That wording is still the spec's proposal for the owner to approve.
+- **Sign-out and help shown only on this device** (help lists don't sync until T12): a hint from
+  the last 48 hours (`RULES.helpQuietMs`) that no synced row carries keeps the family's copy on the
+  device at sign-out, because it still decides when a check opens. The sign-in page says so, with the
+  time it stops mattering, and offers "Remove it from this device now". Older help no longer holds
+  the copy. Question for the owner: on shared devices, should sign-out ask instead?
 
 ## 2026-10-07 (night) — the learning fabric (current)
 
