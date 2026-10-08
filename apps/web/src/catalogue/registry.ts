@@ -62,7 +62,7 @@ import cellsEs from "./science-cells-es";
 import ecosystemsEs from "./science-ecosystems-es";
 import heredityEs from "./science-heredity-es";
 
-// Ordered by grade, then subject (math, science, English) where it matters; the index sorts for display.
+// Append new courses here; display order (grade, then subject) comes from the sort in index.ts.
 export const REGISTRY: CatalogueEntry[] = [
   argument,
   mainIdea,
