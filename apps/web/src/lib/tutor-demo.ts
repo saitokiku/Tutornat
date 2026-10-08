@@ -5,7 +5,7 @@ import { addDays, fromLocalDate } from "@/planner/dates";
 import { readSchoolText } from "@/planner/intake";
 import { joinCompounds, matchSkills, sameWord, tokens } from "@/planner/skillmatch";
 import type { EventKind } from "@/planner/types";
-import { getSkill, SKILLS } from "@/practice/skills";
+import { getSkill, gradeIndex, SKILLS } from "@/practice/skills";
 import type { Item } from "@/practice/types";
 import { linkOf, resourcesFor } from "@/resources";
 import { suitable } from "./ai/safety";
@@ -201,7 +201,7 @@ export function aboutIn(text: string): string {
  * The skill a typed problem belongs to, from its shape: "3/4 + 1/6" → unlike denominators, "7 × 8" →
  * multiplication facts, "2x + 3 = 11" → two-step equations. Never works out the answer.
  */
-export function problemSkill(text: string): string | null {
+export function problemSkill(text: string, grade?: Grade): string | null {
   // One spelling per operator: "7 x 8" and "7*8" are ×; "12 / 3" (spaced) is ÷, "3/4" stays a fraction.
   const s = text
     .toLowerCase()
@@ -226,6 +226,14 @@ export function problemSkill(text: string): string | null {
     const op = fracs[3];
     if (op === "+" || op === "-") return pick(fracs[2] === fracs[5] ? "m.frac.addlike" : "m.frac.addunlike");
     return pick(op === "×" ? "m.frac.mult" : "m.frac.div");
+  }
+  // Two fractions said to be equal ("1/2 = 2/4", "why does 1/2 equal 2/4?") or weighed against each other
+  // ("is 3/4 bigger than 2/3?"). Grade 3 meets both with pictures (3.NF.A.3); grade 4 with numbers.
+  const pair = /\d+\s*\/\s*\d+(.{0,30}?)\d+\s*\/\s*\d+/.exec(s);
+  if (pair) {
+    const pictures = grade !== undefined && gradeIndex(grade) <= gradeIndex("3") ? pick("m.frac.equiv.model") : null;
+    if (/=|\b(?:equals?|equal to|equivalent|same|igual(?:es)?|equivalen?|mism[oa]s?)\b/.test(pair[1])) return pictures ?? pick("m.frac.equiv");
+    if (/[<>]|\b(?:bigger|greater|larger|smaller|less|more|mayor|menor|m[aá]s)\b/.test(s)) return pictures ?? pick("m.frac.compare");
   }
   if (/(simplify|simplifica|reduce)\s+\d+\/\d+/.test(s)) return pick("m.frac.equiv");
   if (/\d+\/\d+\s+(of|de)\s+\d/.test(s)) return pick("m.frac.mult");
@@ -256,7 +264,7 @@ const HELP =
 const ANSWER = /\b(?:tell me|give me|just|what'?s|what is|dime|dame|cual es)\b.*\b(?:the answers?|la respuesta|las respuestas)\b/;
 
 /** What the learner is asking for. With a problem on screen, the words mean help with that problem. */
-export function askOf(text: string, hasProblem: boolean): Ask {
+export function askOf(text: string, hasProblem: boolean, grade?: Grade): Ask {
   const s = text.toLowerCase().trim();
   const p = plain(s);
   if (/^(hi|hello|hey|hola|buenas|buenos dias|good (morning|afternoon|evening))\b[\s!.,]*$/.test(p)) return { kind: "greet" };
@@ -286,10 +294,11 @@ export function askOf(text: string, hasProblem: boolean): Ask {
   }
   if (/\b(hint|pista)\b/.test(s) || HELP.test(clip(p).replace(/\s+/g, " ")) || ANSWER.test(p)) return { kind: "hint" };
   if (/\b(similar|example|ejemplo|parecido|another one|otro)\b/.test(s)) return { kind: "similar" };
-  if (/different way|another way|other way|explain (it )?again|de otra (manera|forma)|otra vez|don.?t (get|understand)|no entiendo/.test(s)) return { kind: "different" };
+  // "I don't get why 1/2 = 2/4" is about that problem, not "explain the last thing differently".
+  const skillId = problemSkill(s, grade);
+  if (/different way|another way|other way|explain (it )?again|de otra (manera|forma)|otra vez|don.?t (get|understand)|no entiendo/.test(s) && !skillId) return { kind: "different" };
   if (/where do i start|how do i start|first step|por d[oó]nde empiezo|primer paso/.test(s)) return { kind: "step" };
   if (/^(is it|i got|my answer is|the answer is|es|me dio|mi respuesta es)\s+-?\d/.test(s)) return { kind: "check" };
-  const skillId = problemSkill(s);
   if (skillId) return { kind: "problem", skillId };
   return { kind: "topic", topic: lookupTopic(text) ?? undefined };
 }
@@ -336,8 +345,12 @@ export function lessonFor(topic: string, grade: Grade, locale: Locale): LessonCa
       const scored = slides.map((sc) => ({ sc, hit: matched(slideText(sc)) }));
       const top = scored.reduce((a, b) => (b.hit.length > a.hit.length ? b : a));
       const covered = new Set([...head, ...top.hit]);
-      // Every word found, or most of them including one that is specific to a few courses.
-      const enough = covered.size === words.length || (covered.size * 2 >= words.length && [...covered].some((w) => coursesWith(w) <= 3));
+      // Every word found, or most of them including one that is specific to a few courses. A word left
+      // out may only be one no course uses ("logical" in "logical fallacy"): a word other courses teach
+      // means the ask is about something else ("equivalent fractions" is not the lesson on equivalent ratios).
+      const missing = words.filter((w) => !covered.has(w));
+      const enough =
+        covered.size === words.length || (covered.size * 2 >= words.length && [...covered].some((w) => coursesWith(w) <= 3) && missing.every((w) => coursesWith(w) === 0));
       const score = head.length * 2 + top.hit.length;
       if (!enough || (best && score <= best.score)) continue;
       const scene = top.hit.length ? top.sc : slides[0];
@@ -458,7 +471,7 @@ export async function demoAnswer(text: string, ctx: DemoContext, state: DemoStat
   const l = ctx.locale;
   const say = (key: Parameters<typeof t>[1], vars?: Record<string, string | number>) => t(l, key, vars);
   const item = ctx.item;
-  const ask = askOf(text, !!item);
+  const ask = askOf(text, !!item, ctx.grade);
   const shown = (key: string) => state.shown.includes(key);
   const next = (patch: Partial<DemoState>, add: string[] = []): DemoState => ({ ...state, ...patch, shown: [...state.shown, ...add] });
 
