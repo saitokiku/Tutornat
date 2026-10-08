@@ -10,7 +10,8 @@ import {
   RULES,
   skillStatus,
 } from "./engine";
-import type { Attempt, Mode } from "./types";
+import { makeItem } from "@/practice/skills";
+import type { Attempt, Mode, Slot } from "./types";
 
 const H = 3600_000, D = 24 * H;
 const T0 = new Date("2026-09-01T16:00:00").getTime();
@@ -149,6 +150,22 @@ describe("building sets", () => {
     expect(slots).toHaveLength(RULES.checkSize);
     expect(new Set(slots.map((s) => s.seed)).size).toBe(RULES.checkSize);
     expect(slots.every((s) => s.level === 2 && s.role === "check")).toBe(true);
+  });
+
+  it("sets never show the same problem twice while the skill has others", () => {
+    // e.text.features has 13–14 hand-written questions a level; drawn one by one, most 10-problem sets
+    // would repeat a passage and question, and over half of 5-problem checks would.
+    const textOf = (s: Slot, level: number) => {
+      const it = makeItem(s.skillId, level, s.seed, "en");
+      return JSON.stringify([it.passage, it.prompt]);
+    };
+    for (let run = 0; run < 30; run++) {
+      const practice = buildPracticeSlots({ skillId: "e.text.features", grade: "3", statuses: {}, now: T0, seed });
+      // A main problem's level is set as the set goes, so it must be new at every level.
+      for (const level of [1, 2]) expect(new Set(practice.map((s) => textOf(s, level))).size, `run ${run} level ${level}`).toBe(practice.length);
+      const check = buildCheckSlots("e.text.features", seed);
+      expect(new Set(check.map((s) => textOf(s, s.level!))).size, `run ${run} check`).toBe(RULES.checkSize);
+    }
   });
 
   it("review sets interleave skills", () => {
