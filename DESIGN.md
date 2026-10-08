@@ -116,11 +116,13 @@ The old page steps back in 160ms, the new one rises and settles in 380ms. Give t
 bar `k-vt-rail` / `k-vt-tabbar` (and a focus header `k-vt-header`) so they never move.
 
 **Reduced motion:** nothing travels and nothing loops (`--rise: 0`, loops stop, view transitions are
-instant), but colour, opacity and outline changes still play, and enters become a 160ms fade — a press, a
-selection and an arrival stay legible.
+instant), but colour, opacity and outline changes still play (except on buttons and chips, below), and
+enters become a 160ms fade — a press, a selection and an arrival stay legible.
 
-Control labels keep contrast throughout a state change. Buttons and chips switch foreground,
-background and disabled opacity together; border, shadow and press motion can still animate.
+**Buttons and chips change colour instantly, on purpose, in every motion setting.** A fade between
+two states passes through in-between colours where the label drops below contrast (measured by axe
+mid-transition), so foreground, background and disabled opacity switch together; border, shadow and
+press motion can still animate. This is a taste call awaiting the owner's confirmation.
 Small answer-key labels use ink over the pale green review row.
 
 ## Browser surfaces

@@ -258,7 +258,8 @@
 
 @utility k-btn {
   @apply inline-flex min-h-target items-center justify-center gap-2 rounded-full px-5 py-2 text-center text-sm leading-tight font-semibold;
-  /* Enable/disable and inverted colours change together: interpolating them makes labels unreadable. */
+  /* Colour changes are instant on purpose (hover included): enable/disable and inverted colours change
+     together, because interpolating them makes labels unreadable mid-fade. */
   transition-property: border-color, box-shadow, transform;
   transition-duration: var(--duration-quick), var(--duration-quick), var(--duration-instant);
   transition-timing-function: var(--ease-out-quart);
@@ -557,7 +558,8 @@
 ::view-transition-new(k-rail), ::view-transition-new(k-tabbar), ::view-transition-new(k-header) { animation: none; }
 
 /* Reduced motion: nothing travels, nothing loops. Colour, opacity and outline changes still play,
-   so a press, a selection and an arrival stay legible. */
+   so a press, a selection and an arrival stay legible. Buttons and chips are the exception, on
+   purpose and in every motion setting: their colours switch instantly (see k-btn, DESIGN.md Motion). */
 @media (prefers-reduced-motion: reduce) {
   :root { --rise: 0px; }
   *, *::before, *::after {
