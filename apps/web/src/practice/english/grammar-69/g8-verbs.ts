@@ -203,7 +203,7 @@ const MOOD_NAME = cats<Mood>(
       es: ["Cierra la puerta, por favor.", "imperative", "¿Le dice a alguien que haga algo?", "“Cierra” da una orden: está en imperativo.", "Cierra"],
     },
     {
-      en: ["Did you finish the science project?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "Did you finish"],
+      en: ["Is the science project due on Friday?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "Is"],
       es: ["Ojalá llueva mañana.", "subjunctive", "“Ojalá” expresa un deseo.", "“Llueva” expresa un deseo: está en subjuntivo.", "llueva"],
     },
     {
@@ -223,7 +223,7 @@ const MOOD_NAME = cats<Mood>(
       es: ["Es importante que llegues temprano.", "subjunctive", "Después de “es importante que”, lo que sigue todavía no es un hecho.", "“Llegues” está en subjuntivo.", "llegues"],
     },
     {
-      en: ["Where did you put the scissors?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "did you put"],
+      en: ["Where are the scissors?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "are"],
       es: ["Saturno es el sexto planeta desde el Sol.", "indicative", "¿Presenta algo como un hecho real?", "“Es” presenta un hecho: está en indicativo.", "es"],
     },
     {
@@ -243,7 +243,7 @@ const MOOD_NAME = cats<Mood>(
       es: ["Ven a ver el arcoíris.", "imperative", "¿Le dice a alguien que haga algo?", "“Ven” da una orden: está en imperativo.", "Ven"],
     },
     {
-      en: ["Have you ever seen a shooting star?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "Have you ever seen"],
+      en: ["Was the museum open on Monday?", "interrogative", "Look at the end mark.", "It asks a question, so it is interrogative.", "Was"],
       es: ["La maestra pidió que trajéramos tijeras.", "subjunctive", "Lo que pidió la maestra todavía no es un hecho.", "“Trajéramos” está en pretérito de subjuntivo.", "trajéramos"],
     },
     {

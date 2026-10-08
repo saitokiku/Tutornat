@@ -333,11 +333,12 @@ describe("grades 6–9 grammar and rhetoric: bank content, checked by independen
           const form: Record<string, RegExp> = {
             [indicative]: /^(is|\p{L}+s)$/u,
             [imperative]: new RegExp(`^(please )?${esc(lc(target!))}\\b`),
-            [interrogative]: /^(did|do|does|have|has|is|are|will|can) \p{L}+/u,
+            // The question's verb comes before its subject, first or right after a question word.
+            [interrogative]: new RegExp(`^((who|what|where|when|why|how) )?${esc(lc(target!))} `),
             [conditional]: /^(would|could) \p{L}+$/u,
             [subjunctive]: /^(were|\p{L}*[^s])$/u,
           };
-          expect(right === imperative ? lc(shown) : lc(target!), `${right}: ${target}`).toMatch(form[right]);
+          expect(right === imperative || right === interrogative ? lc(shown) : lc(target!), `${right}: ${target}`).toMatch(form[right]);
         } else expect(words(shown), shown).toContain(lc(target!));
       }
     }
